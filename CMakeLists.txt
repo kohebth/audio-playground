@@ -1,0 +1,57 @@
+cmake_minimum_required(VERSION 3.15)
+project(audio_playground)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -D_REENTRANT")
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PIPEWIRE REQUIRED libpipewire-0.3)
+
+include_directories(
+    ${CMAKE_SOURCE_DIR}/inc/
+    ${CMAKE_SOURCE_DIR}/inc/util
+    ${CMAKE_SOURCE_DIR}/inc/part
+    ${CMAKE_SOURCE_DIR}/inc/unit
+    ${CMAKE_SOURCE_DIR}/inc/intf
+    ${PIPEWIRE_INCLUDE_DIRS}
+)
+
+set(UTIL_SOURCES
+    src/unit/reverse_delay.c
+    src/unit/unit.c
+    src/unit/wah.c
+    src/unit/noise_gate.c
+    src/util/fast_lut.c
+    src/util/fast_chunk.c
+    src/util/fast_math.c
+    src/part/env.c
+    src/part/iir.c
+    src/part/fir.c
+    src/part/mod.c
+    src/part/ring.c
+    src/part/fft.c
+    src/part/lfo.c
+    src/wave.c
+    src/effect.c
+)
+
+file(GLOB ATOM_SOURCES src/atom/*.c)
+list(APPEND UTIL_SOURCES ${ATOM_SOURCES})
+
+add_executable(live
+    src/live.c
+    ${UTIL_SOURCES}
+)
+target_link_libraries(live
+    ${PIPEWIRE_LIBRARIES}
+    m
+)
+
+add_executable(fast_math_test
+    src/fast_math_test.c
+    ${UTIL_SOURCES}
+)
+target_link_libraries(fast_math_test
+    m
+)

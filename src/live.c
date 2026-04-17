@@ -4,6 +4,8 @@
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
 
+#include <atom/dsp_atoms.h>
+
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
