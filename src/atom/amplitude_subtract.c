@@ -2,12 +2,9 @@
 
 #define CHUNK_LENGTH 512
 
-Signal amplitude_subtract(Signal signal_a, Signal signal_b) {
-    if (signal_a == NULL || signal_b == NULL) return signal_a;
-    
+void amplitude_subtract(amplitude_subtract_out_t out, amplitude_subtract_in_t in, void *params, void *state) {
+    if (out.signal == NULL || in.signal_a == NULL || in.signal_b == NULL) return;
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        signal_a[i] -= signal_b[i];
+        out.signal[i] = in.signal_a[i] - in.signal_b[i];
     }
-    
-    return signal_a;
 }

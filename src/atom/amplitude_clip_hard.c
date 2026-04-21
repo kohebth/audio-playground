@@ -3,13 +3,13 @@
 
 #define CHUNK_LENGTH 512
 
-Signal amplitude_clip_hard(Signal signal, ClipParams params) {
-    if (signal == NULL) return NULL;
-    
+void amplitude_clip_hard(amplitude_clip_hard_out_t out, amplitude_clip_hard_in_t in, amplitude_clip_hard_params_t params, void *state) {
+    if (out.signal == NULL || in.signal == NULL) return;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        if (signal[i] > params.threshold) signal[i] = params.threshold;
-        else if (signal[i] < -params.threshold) signal[i] = -params.threshold;
+        float s = in.signal[i];
+        if (s > params.threshold) s = params.threshold;
+        else if (s < -params.threshold) s = -params.threshold;
+        out.signal[i] = s;
     }
-    
-    return signal;
 }

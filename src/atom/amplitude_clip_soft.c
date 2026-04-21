@@ -4,22 +4,18 @@
 
 #define CHUNK_LENGTH 512
 
-Signal amplitude_clip_soft(Signal signal, ClipParams params, float curve) {
-    if (signal == NULL) return NULL;
-    
-    // Simple soft clipping using tanh-like function if curve > 0
-    // Otherwise fall back to a simple saturator
+void amplitude_clip_soft(amplitude_clip_soft_out_t out, amplitude_clip_soft_in_t in, amplitude_clip_soft_params_t params, void *state) {
+    if (out.signal == NULL || in.signal == NULL) return;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        float x = signal[i] / params.threshold;
-        if (curve > 0) {
-            signal[i] = params.threshold * tanhf(x * curve) / tanhf(curve);
+        float x = in.signal[i] / (params.threshold + 1e-6f);
+        if (params.curve == 1) {
+            out.signal[i] = params.threshold * tanhf(x);
         } else {
-            // Default soft knee
-            if (x > 1.0f) signal[i] = params.threshold;
-            else if (x < -1.0f) signal[i] = -params.threshold;
-            else signal[i] = params.threshold * (x - (x * x * x) / 3.0f);
+            // Default cubic soft knee
+            if (x > 1.0f) out.signal[i] = params.threshold * (2.0f/3.0f);
+            else if (x < -1.0f) out.signal[i] = -params.threshold * (2.0f/3.0f);
+            else out.signal[i] = params.threshold * (x - (x * x * x) / 3.0f);
         }
     }
-    
-    return signal;
 }

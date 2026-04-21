@@ -1,20 +1,25 @@
 #include <atom/dsp_atoms.h>
 
-float interpolation_lagrange(LagrangeInterpParams params) {
-    if (params.samples == NULL) return 0.0f;
-    
-    uint32_t n = params.order;
-    float t = params.t;
-    float result = 0.0f;
-    
-    for (uint32_t i = 0; i <= n; ++i) {
-        float l_i = 1.0f;
-        for (uint32_t j = 0; j <= n; ++j) {
-            if (i == j) continue;
-            l_i *= (t - (float)j) / ((float)i - (float)j);
+#define CHUNK_LENGTH 512
+
+void interpolation_lagrange(interpolation_lagrange_out_t out, interpolation_lagrange_in_t in, interpolation_lagrange_params_t params, void *state) {
+    if (out.signal == NULL || in.samples == NULL || in.t == NULL) return;
+
+    int n = params.order;
+    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+        float pos = in.t[i];
+        int base = (int)floorf(pos) - n / 2;
+        float frac = pos - floorf(pos) + (float)(n / 2);
+        
+        float result = 0.0f;
+        for (int k = 0; k <= n; ++k) {
+            float l_k = 1.0f;
+            for (int j = 0; j <= n; ++j) {
+                if (k == j) continue;
+                l_k *= (frac - (float)j) / ((float)k - (float)j);
+            }
+            result += in.samples[base + k] * l_k;
         }
-        result += params.samples[i] * l_i;
+        out.signal[i] = result;
     }
-    
-    return result;
 }

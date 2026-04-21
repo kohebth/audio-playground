@@ -2,16 +2,13 @@
 
 #define CHUNK_LENGTH 512
 
-Signal detect_slope(Signal signal) {
-    if (signal == NULL) return NULL;
-    
-    static float last_sample = 0.0f;
-    static float out_buffer[CHUNK_LENGTH];
-    
+void detect_slope(detect_slope_out_t out, detect_slope_in_t in, void *params, detect_slope_state_t *state) {
+    if (out.slope == NULL || in.signal == NULL || state == NULL) return;
+
+    float last = state->prev_sample;
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        out_buffer[i] = signal[i] - last_sample;
-        last_sample = signal[i];
+        out.slope[i] = in.signal[i] - last;
+        last = in.signal[i];
     }
-    
-    return out_buffer;
+    state->prev_sample = last;
 }

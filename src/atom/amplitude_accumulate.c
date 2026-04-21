@@ -2,14 +2,13 @@
 
 #define CHUNK_LENGTH 512
 
-Signal amplitude_accumulate(Signal signal) {
-    if (signal == NULL) return NULL;
-    
-    float sum = 0.0f;
+void amplitude_accumulate(amplitude_accumulate_out_t out, amplitude_accumulate_in_t in, void *params, amplitude_accumulate_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || state == NULL) return;
+
+    float sum = state->accumulator;
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        sum += signal[i];
-        signal[i] = sum;
+        sum += in.signal[i];
+        out.signal[i] = sum;
     }
-    
-    return signal;
+    state->accumulator = sum;
 }

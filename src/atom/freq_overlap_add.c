@@ -3,33 +3,24 @@
 #include <stdlib.h>
 
 #define MAX_OVERLAP_WINDOW 8192
+#define CHUNK_LENGTH 512
 
-Signal freq_overlap_add(OverlapAddParams params) {
-    if (params.frames == NULL) return NULL;
-    
-    static float overlap_buffer[MAX_OVERLAP_WINDOW] = {0};
-    static float out_signal[512]; // CHUNK_LENGTH
-    
-    uint32_t N = params.block_size;
-    uint32_t H = params.hop_size;
+void freq_overlap_add(freq_overlap_add_out_t out, freq_overlap_add_in_t in, freq_overlap_add_params_t params, freq_overlap_add_state_t *state) {
+    if (out.signal == NULL || in.frame == NULL || state == NULL || state->buffer == NULL) return;
+
+    int N = params.block_size;
+    int H = params.hop_size;
     if (N > MAX_OVERLAP_WINDOW) N = MAX_OVERLAP_WINDOW;
-    
-    // For each frame (we assume 1 frame is provided per call for now, or we iterate)
-    // Actually, OverlapAddParams usually refers to a single frame being added
-    Buffer frame = params.frames[0]; 
-    
-    for (uint32_t i = 0; i < N; i++) {
-        overlap_buffer[i] += frame[i];
+    if (H > CHUNK_LENGTH) H = CHUNK_LENGTH;
+
+    for (int i = 0; i < N; i++) {
+        state->buffer[i] += in.frame[i];
     }
-    
-    // Output one hop size of data
-    for (uint32_t i = 0; i < H; i++) {
-        out_signal[i] = overlap_buffer[i];
+
+    for (int i = 0; i < H; i++) {
+        out.signal[i] = state->buffer[i];
     }
-    
-    // Shift the overlap buffer
-    memmove(overlap_buffer, overlap_buffer + H, (MAX_OVERLAP_WINDOW - H) * sizeof(float));
-    memset(overlap_buffer + (MAX_OVERLAP_WINDOW - H), 0, H * sizeof(float));
-    
-    return out_signal;
+
+    memmove(state->buffer, state->buffer + H, (MAX_OVERLAP_WINDOW - H) * sizeof(float));
+    memset(state->buffer + (MAX_OVERLAP_WINDOW - H), 0, H * sizeof(float));
 }

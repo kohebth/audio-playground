@@ -2,15 +2,10 @@
 
 #define CHUNK_LENGTH 512
 
-Signal delay_tap_feedforward(Buffer delay_line, TapParams params) {
-    if (delay_line == NULL) return NULL;
-    
-    static float out_buffer[CHUNK_LENGTH];
-    uint32_t tap_idx = (uint32_t)params.tap_position;
-    
+void delay_tap_feedforward(delay_tap_feedforward_out_t out, delay_tap_feedforward_in_t in, delay_tap_feedforward_params_t params, void *state) {
+    if (out.signal == NULL || in.buffer == NULL) return;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        out_buffer[i] = delay_line[tap_idx + i] * params.coefficient;
+        out.signal[i] = in.buffer[in.tap_position] * params.coefficient;
     }
-    
-    return out_buffer;
 }

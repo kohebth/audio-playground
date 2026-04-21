@@ -3,19 +3,19 @@
 
 #define CHUNK_LENGTH 512
 
-Signal generation_impulse(uint32_t interval, uint32_t sample_rate) {
-    static float buffer[CHUNK_LENGTH];
-    static uint32_t counter = 0;
-    
+void generation_impulse(generation_impulse_out_t out, void *in, generation_impulse_params_t params, generation_impulse_state_t *state) {
+    if (out.signal == NULL || state == NULL) return;
+
+    int interval_samples = (int)(params.interval * params.sample_rate);
+    if (interval_samples < 1) interval_samples = 1;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        if (counter == 0) {
-            buffer[i] = 1.0f;
-            counter = interval;
+        if (state->counter <= 0) {
+            out.signal[i] = 1.0f;
+            state->counter = interval_samples - 1;
         } else {
-            buffer[i] = 0.0f;
-            counter--;
+            out.signal[i] = 0.0f;
+            state->counter--;
         }
     }
-    
-    return buffer;
 }

@@ -5,38 +5,29 @@
 #define CHUNK_LENGTH 512
 #define MAX_FM_DELAY 4096
 
-Signal modulation_frequency(Signal signal, ModulationParams params) {
-    if (signal == NULL || params.modulator == NULL) return signal;
-    
-    static float *delay_buffer = NULL;
-    static float current_delay = 0.0f;
-    static uint32_t write_idx = 0;
-    static float out_buffer[CHUNK_LENGTH];
-    
-    if (delay_buffer == NULL) {
-        delay_buffer = (float *)calloc(MAX_FM_DELAY, sizeof(float));
-    }
-    
+void modulation_frequency(modulation_frequency_out_t out, modulation_frequency_in_t in, modulation_frequency_params_t params, modulation_frequency_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || in.modulator == NULL || state == NULL || state->buffer == NULL) return;
+
+    int write_pos = state->write_pos;
+    float current_delay = state->current_delay;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        // Integrate frequency modulation signal to get delay position (phase)
-        current_delay += params.modulator[i] * params.depth;
-        
-        // Clamp current_delay to safe range
+        current_delay += in.modulator[i] * params.depth;
         if (current_delay < 0) current_delay = 0;
         if (current_delay > MAX_FM_DELAY - 1) current_delay = MAX_FM_DELAY - 1;
-        
-        float read_pos = (float)write_idx - current_delay;
+
+        float read_pos = (float)write_pos - current_delay;
         if (read_pos < 0) read_pos += MAX_FM_DELAY;
-        
-        uint32_t idx_a = (uint32_t)floorf(read_pos);
+
+        uint32_t idx_a = (uint32_t)floorf(read_pos) % MAX_FM_DELAY;
         uint32_t idx_b = (idx_a + 1) % MAX_FM_DELAY;
         float frac = read_pos - floorf(read_pos);
-        
-        out_buffer[i] = delay_buffer[idx_a] * (1.0f - frac) + delay_buffer[idx_b] * frac;
-        
-        delay_buffer[write_idx] = signal[i];
-        write_idx = (write_idx + 1) % MAX_FM_DELAY;
+
+        out.signal[i] = state->buffer[idx_a] * (1.0f - frac) + state->buffer[idx_b] * frac;
+        state->buffer[write_pos] = in.signal[i];
+        write_pos = (write_pos + 1) % MAX_FM_DELAY;
     }
-    
-    return out_buffer;
+
+    state->write_pos = write_pos;
+    state->current_delay = current_delay;
 }

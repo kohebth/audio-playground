@@ -2,18 +2,10 @@
 
 #define CHUNK_LENGTH 512
 
-Signal delay_tap_feedback(Buffer delay_line, TapParams params) {
-    if (delay_line == NULL) return NULL;
-    
-    static float out_buffer[CHUNK_LENGTH];
-    uint32_t tap_idx = (uint32_t)params.tap_position;
-    
+void delay_tap_feedback(delay_tap_feedback_out_t out, delay_tap_feedback_in_t in, delay_tap_feedback_params_t params, void *state) {
+    if (out.signal == NULL || in.buffer == NULL) return;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        // This is a simplified implementation. 
-        // Real circular taps require a write head which is not provided in the signature.
-        // We assume delay_line is large enough and we are accessing it with some external knowledge.
-        out_buffer[i] = delay_line[tap_idx + i] * params.coefficient;
+        out.signal[i] = in.buffer[in.tap_position] * params.coefficient;
     }
-    
-    return out_buffer;
 }

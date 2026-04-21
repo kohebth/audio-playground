@@ -2,12 +2,9 @@
 
 #define CHUNK_LENGTH 512
 
-Signal amplitude_multiply(Signal signal, float scalar) {
-    if (signal == NULL) return NULL;
-    
+void amplitude_multiply(amplitude_multiply_out_t out, amplitude_multiply_in_t in, void *params, void *state) {
+    if (out.signal == NULL || in.signal_a == NULL || in.signal_b == NULL) return;
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        signal[i] *= scalar;
+        out.signal[i] = in.signal_a[i] * in.signal_b[i];
     }
-    
-    return signal;
 }

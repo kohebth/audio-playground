@@ -1,5 +1,6 @@
-#include <effect.h>
-#include <fast_chunk.h>
+#include <unit/sustainer.h>
+#include <unit/chorus.h>
+#include <util/fast_chunk.h>
 
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
@@ -45,7 +46,8 @@ static void on_capture_process(void *userdata) {
         volatile uint8_t *idx = &node->buffer->write_idx;
         LiveChunk *chunk = &node->buffer->chunks[*idx];
 
-        if (size > CHUNK_LENGTH) size = CHUNK_LENGTH;
+        uint32_t max_bytes = CHUNK_LENGTH * sizeof(float);
+        if (size > max_bytes) size = max_bytes;
 
         // Write to buffer if not in use
         if (!chunk->ready) {
@@ -77,16 +79,51 @@ static void on_playback_process(void *userdata) {
         // Read from buffer if ready
         if (chunk->ready) {
             uint16_t size = chunk->length;
+            if (size > buf->datas[0].maxsize) size = buf->datas[0].maxsize;
 
-            if (size > buf->datas[0].maxsize)
-                size = buf->datas[0].maxsize;
+            static SustainerState s_state = {0};
+            static ChorusState c_state = {0};
+            static float chorus_buffer[4096] = {0};
+            static int initialized = 0;
 
-            // Process chunk in chain
-            chain_procces(chunk);
+            if (!initialized) {
+                c_state.mod_state.buffer = chorus_buffer;
+                initialized = 1;
+            }
+
+            SustainerParams s_params = {
+                .gain = 40.0f,
+                .threshold = -50.0f,
+                .attack = 0.010f,
+                .release = 0.200f,
+                .sample_rate = 48000
+            };
+
+            float processed_data[CHUNK_LENGTH];
+            sustainer_process(
+                (sustainer_out_t){ processed_data },
+                (sustainer_in_t){ chunk->data },
+                s_params,
+                &s_state
+            );
+
+            ChorusParams c_params = {
+                .rate = 5.0f,
+                .depth = 1.0f,
+                .sample_rate = 48000
+            };
+
+            float final_data[CHUNK_LENGTH];
+            chorus_process(
+                (chorus_out_t){ final_data },
+                (chorus_in_t){ processed_data },
+                c_params,
+                &c_state
+            );
 
             // Output
-            memcpy(buf->datas[0].data, chunk->data, size*sizeof(float));
-            buf->datas[0].chunk->size = size*sizeof(float);
+            memcpy(buf->datas[0].data, final_data, size * sizeof(float));
+            buf->datas[0].chunk->size = size * sizeof(float);
             buf->datas[0].chunk->stride = 4;
 
             __sync_synchronize(); // Memory barrier
@@ -115,21 +152,18 @@ static const struct pw_stream_events playback_events = {
 };
 
 static void do_quit(void *loop, int signal_number) {
-    chain_deinit();
-
     pw_main_loop_quit(loop);
 }
 
-int main(int argc, char *argv[]) {
-    chain_init();
 
+int main(int argc, char *argv[]) {
     const struct spa_pod *params[1];
     uint8_t buffer[1024];
     struct spa_pod_builder b = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
     pw_init(&argc, &argv);
     struct pw_main_loop *loop = pw_main_loop_new(NULL);
-    pw_loop_add_signal(pw_main_loop_get_loop(loop), SIGINT, do_quit, &loop);
-    pw_loop_add_signal(pw_main_loop_get_loop(loop), SIGTERM, do_quit, &loop);
+    pw_loop_add_signal(pw_main_loop_get_loop(loop), SIGINT, do_quit, loop);
+    pw_loop_add_signal(pw_main_loop_get_loop(loop), SIGTERM, do_quit, loop);
 
     struct IOBuffers io_buffer = {.chunks = {0}, .write_idx = 0, .read_idx = 0};
 
@@ -143,6 +177,7 @@ int main(int argc, char *argv[]) {
                 PW_KEY_MEDIA_TYPE, "Audio",
                 PW_KEY_MEDIA_CATEGORY, "Capture",
                 PW_KEY_MEDIA_ROLE, "Music",
+                // PW_KEY_TARGET_OBJECT, "alsa_input.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__hw_sofhdadsp__source",
                 NULL
             ),
             &capture_events,
@@ -161,6 +196,7 @@ int main(int argc, char *argv[]) {
                 PW_KEY_MEDIA_TYPE, "Audio",
                 PW_KEY_MEDIA_CATEGORY, "Playback",
                 PW_KEY_MEDIA_ROLE, "Music",
+                // PW_KEY_TARGET_OBJECT, "alsa_output.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__hw_sofhdadsp__sink",
                 NULL
             ),
             &playback_events,
@@ -169,7 +205,7 @@ int main(int argc, char *argv[]) {
         .buffer = &io_buffer
     };
 
-    // Set audio format: 48kHz, 16-bit, 1 channels (stereo)
+    // Set audio format: 48kHz, f32, 1 channels (mono)
     struct spa_audio_info_raw audio_info = {
         .format = SPA_AUDIO_FORMAT_F32,
         .rate = 48000,
@@ -215,8 +251,6 @@ int main(int argc, char *argv[]) {
     pw_stream_destroy(playback.stream);
     pw_main_loop_destroy(loop);
     pw_deinit();
-
-    chain_deinit();
 
     return 0;
 }

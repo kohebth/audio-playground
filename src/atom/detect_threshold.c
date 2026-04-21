@@ -2,14 +2,10 @@
 
 #define CHUNK_LENGTH 512
 
-Signal detect_threshold(Signal signal, ThresholdParams params) {
-    if (signal == NULL) return NULL;
-    
-    static float out_buffer[CHUNK_LENGTH];
-    
+void detect_threshold(detect_threshold_out_t out, detect_threshold_in_t in, detect_threshold_params_t params, void *state) {
+    if (out.gate == NULL || in.signal == NULL) return;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        out_buffer[i] = (signal[i] >= params.threshold) ? 1.0f : 0.0f;
+        out.gate[i] = (in.signal[i] >= params.threshold) ? 1.0f : 0.0f;
     }
-    
-    return out_buffer;
 }

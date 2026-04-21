@@ -3,13 +3,9 @@
 
 #define CHUNK_LENGTH 512
 
-Signal src_antialias(Signal signal, FilterParams params) {
-    if (signal == NULL) return NULL;
-    
-    // Simple 2nd order Butterworth LPF for anti-aliasing
-    static float x1 = 0.0f, x2 = 0.0f, y1 = 0.0f, y2 = 0.0f;
-    static float out_buffer[CHUNK_LENGTH];
-    
+void src_antialias(src_antialias_out_t out, src_antialias_in_t in, src_antialias_params_t params, src_antialias_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || state == NULL) return;
+
     float ff = params.cutoff / params.sample_rate;
     float ita = 1.0f / tanf(M_PI * ff);
     float q = M_SQRT1_2;
@@ -18,16 +14,18 @@ Signal src_antialias(Signal signal, FilterParams params) {
     float b2 = b0;
     float a1 = 2.0f * (1.0f - ita * ita) * b0;
     float a2 = (1.0f - ita / q + ita * ita) * b0;
-    
+
+    float z1 = state->z1;
+    float z2 = state->z2;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        float x0 = signal[i];
-        float y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
-        
-        out_buffer[i] = y0;
-        
-        x2 = x1; x1 = x0;
-        y2 = y1; y1 = y0;
+        float x0 = in.signal[i];
+        float y0 = b0 * x0 + z1;
+        z1 = b1 * x0 - a1 * y0 + z2;
+        z2 = b2 * x0 - a2 * y0;
+        out.signal[i] = y0;
     }
-    
-    return out_buffer;
+
+    state->z1 = z1;
+    state->z2 = z2;
 }

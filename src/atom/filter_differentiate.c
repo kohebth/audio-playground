@@ -2,17 +2,14 @@
 
 #define CHUNK_LENGTH 512
 
-Signal filter_differentiate(Signal signal) {
-    if (signal == NULL) return NULL;
-    
-    static float last_x = 0.0f;
-    static float out_buffer[CHUNK_LENGTH];
-    
+void filter_differentiate(filter_differentiate_out_t out, filter_differentiate_in_t in, void *params, filter_differentiate_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || state == NULL) return;
+
+    float last = state->prev_sample;
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        float x0 = signal[i];
-        out_buffer[i] = x0 - last_x;
-        last_x = x0;
+        float x0 = in.signal[i];
+        out.signal[i] = x0 - last;
+        last = x0;
     }
-    
-    return out_buffer;
+    state->prev_sample = last;
 }

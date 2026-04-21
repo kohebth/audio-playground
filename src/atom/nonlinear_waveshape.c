@@ -4,26 +4,23 @@
 #define CHUNK_LENGTH 512
 #define TABLE_SIZE 1024
 
-Signal nonlinear_waveshape(Signal signal, WaveshapeParams params) {
-    if (signal == NULL || params.transfer_table == NULL) return signal;
-    
-    static float out_buffer[CHUNK_LENGTH];
-    
+void nonlinear_waveshape(nonlinear_waveshape_out_t out, nonlinear_waveshape_in_t in, nonlinear_waveshape_params_t params, void *state) {
+    if (out.signal == NULL || in.signal == NULL || params.transfer_table == NULL) return;
+
+    int size = params.table_size;
     for (int i = 0; i < CHUNK_LENGTH; i++) {
-        // Map [-1.0, 1.0] to [0, TABLE_SIZE - 1]
-        float x = signal[i];
-        float pos = (x + 1.0f) * 0.5f * (TABLE_SIZE - 1);
-        
-        if (pos < 0) pos = 0;
-        if (pos > TABLE_SIZE - 2) pos = TABLE_SIZE - 2;
-        
+        // Map [-1.0, 1.0] to [0, table_size - 1]
+        float x = in.signal[i];
+        float pos = (x + 1.0f) * 0.5f * (float)(size - 1);
+
+        if (pos < 0.0f) pos = 0.0f;
+        if (pos > (float)size - 2.0f) pos = (float)size - 2.0f;
+
         uint32_t idx_a = (uint32_t)floorf(pos);
         uint32_t idx_b = idx_a + 1;
         float frac = pos - floorf(pos);
-        
+
         // Linear interpolation in the transfer table
-        out_buffer[i] = params.transfer_table[idx_a] * (1.0f - frac) + params.transfer_table[idx_b] * frac;
+        out.signal[i] = params.transfer_table[idx_a] * (1.0f - frac) + params.transfer_table[idx_b] * frac;
     }
-    
-    return out_buffer;
 }

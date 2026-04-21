@@ -17,27 +17,11 @@ include_directories(
     ${PIPEWIRE_INCLUDE_DIRS}
 )
 
-set(UTIL_SOURCES
-    src/unit/reverse_delay.c
-    src/unit/unit.c
-    src/unit/wah.c
-    src/unit/noise_gate.c
-    src/util/fast_lut.c
-    src/util/fast_chunk.c
-    src/util/fast_math.c
-    src/part/env.c
-    src/part/iir.c
-    src/part/fir.c
-    src/part/mod.c
-    src/part/ring.c
-    src/part/fft.c
-    src/part/lfo.c
-    src/wave.c
-    src/effect.c
-)
-
 file(GLOB ATOM_SOURCES src/atom/*.c)
+file(GLOB UNIT_SOURCES src/unit/*.c)
+file(GLOB UTIL_SOURCES src/util/*.c)
 list(APPEND UTIL_SOURCES ${ATOM_SOURCES})
+list(APPEND UTIL_SOURCES ${UNIT_SOURCES})
 
 add_executable(live
     src/live.c

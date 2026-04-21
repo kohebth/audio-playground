@@ -2,17 +2,14 @@
 
 #define CHUNK_LENGTH 512
 
-Signal delay_unit(Signal signal) {
-    if (signal == NULL) return NULL;
-    
-    static float last_sample = 0.0f;
-    static float buffer[CHUNK_LENGTH];
-    
+void delay_unit(delay_unit_out_t out, delay_unit_in_t in, void *params, delay_unit_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || state == NULL) return;
+
+    float last = state->prev_sample;
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        float current = signal[i];
-        buffer[i] = last_sample;
-        last_sample = current;
+        float current = in.signal[i];
+        out.signal[i] = last;
+        last = current;
     }
-    
-    return buffer;
+    state->prev_sample = last;
 }

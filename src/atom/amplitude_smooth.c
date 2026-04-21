@@ -3,16 +3,19 @@
 
 #define CHUNK_LENGTH 512
 
-Signal amplitude_smooth(Signal signal, SmoothParams params) {
-    if (signal == NULL) return NULL;
-    
-    static float last_out = 0.0f;
-    float alpha = 1.0f - expf(-1.0f / (params.time * params.sample_rate));
-    
+void amplitude_smooth(amplitude_smooth_out_t out, amplitude_smooth_in_t in, amplitude_smooth_params_t params, amplitude_smooth_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || state == NULL) return;
+
+    float alpha_att = 1.0f - expf(-1.0f / (params.attack * params.sample_rate + 1.0f));
+    float alpha_rel = 1.0f - expf(-1.0f / (params.release * params.sample_rate + 1.0f));
+    float last_out = state->prev_value;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        last_out += alpha * (signal[i] - last_out);
-        signal[i] = last_out;
+        float input = in.signal[i];
+        float alpha = (input > last_out) ? alpha_att : alpha_rel;
+        last_out += alpha * (input - last_out);
+        out.signal[i] = last_out;
     }
-    
-    return signal;
+
+    state->prev_value = last_out;
 }

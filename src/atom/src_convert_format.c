@@ -2,11 +2,11 @@
 
 #define CHUNK_LENGTH 512
 
-Signal src_convert_format(Signal signal, uint32_t from_format, uint32_t to_format) {
-    if (signal == NULL) return NULL;
-    
-    // For now, this atom acts as a pass-through as Signal is always float*
-    // In a more complex implementation, this might handle endianness or fixed-point conversion
-    
-    return signal;
+void src_convert_format(src_convert_format_out_t out, src_convert_format_in_t in, src_convert_format_params_t params, void *state) {
+    if (out.signal == NULL || in.signal == NULL) return;
+
+    // Signal is always float* in this library, so this is currently a copy
+    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+        out.signal[i] = in.signal[i];
+    }
 }

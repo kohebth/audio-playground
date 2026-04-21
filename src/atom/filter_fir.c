@@ -5,31 +5,26 @@
 #define CHUNK_LENGTH 512
 #define MAX_FIR_SIZE 1024
 
-Signal filter_fir(Signal signal, float *kernel, uint32_t kernel_size) {
-    if (signal == NULL || kernel == NULL) return signal;
-    
-    static float history[MAX_FIR_SIZE];
-    static uint32_t history_idx = 0;
-    static float out_buffer[CHUNK_LENGTH];
-    
-    uint32_t k_size = kernel_size;
+void filter_fir(filter_fir_out_t out, filter_fir_in_t in, filter_fir_params_t params, filter_fir_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || state == NULL || state->buffer == NULL) return;
+
+    int k_size = params.kernel_size;
     if (k_size > MAX_FIR_SIZE) k_size = MAX_FIR_SIZE;
-    
+    int write_pos = state->write_pos;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        // Update history
-        history[history_idx] = signal[i];
-        
-        // FIR Convolution
+        state->buffer[write_pos] = in.signal[i];
+
         float acc = 0.0f;
-        for (uint32_t k = 0; k < k_size; ++k) {
-            int32_t idx = (int32_t)history_idx - (int32_t)k;
-            if (idx < 0) idx += MAX_FIR_SIZE;
-            acc += history[idx] * kernel[k];
+        for (int k = 0; k < k_size; ++k) {
+            int read_pos = write_pos - k;
+            if (read_pos < 0) read_pos += MAX_FIR_SIZE;
+            acc += state->buffer[read_pos] * params.kernel[k];
         }
-        
-        out_buffer[i] = acc;
-        history_idx = (history_idx + 1) % MAX_FIR_SIZE;
+
+        out.signal[i] = acc;
+        write_pos = (write_pos + 1) % MAX_FIR_SIZE;
     }
-    
-    return out_buffer;
+
+    state->write_pos = write_pos;
 }

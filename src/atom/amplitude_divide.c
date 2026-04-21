@@ -2,16 +2,13 @@
 
 #define CHUNK_LENGTH 512
 
-Signal amplitude_divide(float numerator, Signal denominator) {
-    if (denominator == NULL) return NULL;
-    
+void amplitude_divide(amplitude_divide_out_t out, amplitude_divide_in_t in, amplitude_divide_params_t params, void *state) {
+    if (out.signal == NULL || in.numerator == NULL || in.denominator == NULL) return;
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        if (denominator[i] != 0.0f) {
-            denominator[i] = numerator / denominator[i];
+        if (in.denominator[i] > params.epsilon || in.denominator[i] < -params.epsilon) {
+            out.signal[i] = in.numerator[i] / in.denominator[i];
         } else {
-            denominator[i] = 0.0f; // Prevent division by zero
+            out.signal[i] = 0.0f;
         }
     }
-    
-    return denominator;
 }

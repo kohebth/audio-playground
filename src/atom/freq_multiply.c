@@ -2,25 +2,17 @@
 
 #define MAX_SPECTRUM_SIZE 4096
 
-Spectrum freq_multiply(FreqMultiplyParams params) {
-    if (params.spectrum_a == NULL || params.spectrum_b == NULL) return NULL;
-    
-    static float out_spectrum[MAX_SPECTRUM_SIZE * 2];
-    
-    // We assume both spectra have the same length. 
-    // Since we don't have the length in params, we'll use a standard max or assume CHUNK_LENGTH.
-    // However, Spectrum size is usually block_size. we'll use 512 as default for now if unknown.
-    uint32_t n = 512; 
-    
-    for (uint32_t i = 0; i < n; i++) {
-        float a_re = params.spectrum_a[2 * i];
-        float a_im = params.spectrum_a[2 * i + 1];
-        float b_re = params.spectrum_b[2 * i];
-        float b_im = params.spectrum_b[2 * i + 1];
-        
-        out_spectrum[2 * i] = a_re * b_re - a_im * b_im;
-        out_spectrum[2 * i + 1] = a_re * b_im + a_im * b_re;
+void freq_multiply(freq_multiply_out_t out, freq_multiply_in_t in, freq_multiply_params_t params, void *state) {
+    if (out.real == NULL || out.imag == NULL || in.real_a == NULL || 
+        in.imag_a == NULL || in.real_b == NULL || in.imag_b == NULL) return;
+
+    for (int i = 0; i < params.block_size; i++) {
+        float a_re = in.real_a[i];
+        float a_im = in.imag_a[i];
+        float b_re = in.real_b[i];
+        float b_im = in.imag_b[i];
+
+        out.real[i] = a_re * b_re - a_im * b_im;
+        out.imag[i] = a_re * b_im + a_im * b_re;
     }
-    
-    return out_spectrum;
 }

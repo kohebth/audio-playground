@@ -5,31 +5,22 @@
 #define CHUNK_LENGTH 512
 #define MAX_DELAY_SAMPLES 192000 // 4 seconds at 48kHz
 
-Signal delay_line(Signal signal, DelayLineParams params) {
-    if (signal == NULL) return NULL;
-    
-    static float *delay_buffer = NULL;
-    static uint32_t write_idx = 0;
-    static float out_buffer[CHUNK_LENGTH];
-    
-    if (delay_buffer == NULL) {
-        delay_buffer = (float *)calloc(MAX_DELAY_SAMPLES, sizeof(float));
-    }
-    
-    uint32_t delay_samples = params.length;
+void delay_line(delay_line_out_t out, delay_line_in_t in, delay_line_params_t params, delay_line_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || state == NULL || state->buffer == NULL) return;
+
+    int write_pos = state->write_pos;
+    int delay_samples = params.length;
     if (delay_samples > MAX_DELAY_SAMPLES) delay_samples = MAX_DELAY_SAMPLES;
-    
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        // Read delayed sample
-        int32_t read_idx = (int32_t)write_idx - (int32_t)delay_samples;
-        if (read_idx < 0) read_idx += MAX_DELAY_SAMPLES;
-        
-        out_buffer[i] = delay_buffer[read_idx];
-        
-        // Write new sample
-        delay_buffer[write_idx] = signal[i];
-        write_idx = (write_idx + 1) % MAX_DELAY_SAMPLES;
+        int read_pos = write_pos - delay_samples;
+        if (read_pos < 0) read_pos += MAX_DELAY_SAMPLES;
+
+        out.signal[i] = state->buffer[read_pos % MAX_DELAY_SAMPLES];
+        state->buffer[write_pos] = in.signal[i];
+
+        write_pos = (write_pos + 1) % MAX_DELAY_SAMPLES;
     }
-    
-    return out_buffer;
+
+    state->write_pos = write_pos;
 }

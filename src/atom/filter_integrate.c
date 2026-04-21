@@ -2,20 +2,16 @@
 
 #define CHUNK_LENGTH 512
 
-Signal filter_integrate(Signal signal) {
-    if (signal == NULL) return NULL;
-    
-    static float last_y = 0.0f;
-    static float out_buffer[CHUNK_LENGTH];
-    
-    // Leaky integrator to prevent DC build-up/overflow
+void filter_integrate(filter_integrate_out_t out, filter_integrate_in_t in, void *params, filter_integrate_state_t *state) {
+    if (out.signal == NULL || in.signal == NULL || state == NULL) return;
+
+    float acc = state->accumulator;
     const float leakage = 0.999f;
-    
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        float y0 = signal[i] + leakage * last_y;
-        out_buffer[i] = y0;
-        last_y = y0;
+        acc = in.signal[i] + leakage * acc;
+        out.signal[i] = acc;
     }
-    
-    return out_buffer;
+
+    state->accumulator = acc;
 }

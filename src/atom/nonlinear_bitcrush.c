@@ -3,16 +3,12 @@
 
 #define CHUNK_LENGTH 512
 
-Signal nonlinear_bitcrush(Signal signal, BitcrushParams params) {
-    if (signal == NULL) return NULL;
-    
-    static float out_buffer[CHUNK_LENGTH];
+void nonlinear_bitcrush(nonlinear_bitcrush_out_t out, nonlinear_bitcrush_in_t in, nonlinear_bitcrush_params_t params, void *state) {
+    if (out.signal == NULL || in.signal == NULL) return;
+
     float levels = powf(2.0f, params.bit_depth);
-    
+
     for (int i = 0; i < CHUNK_LENGTH; i++) {
-        // Quantize signal
-        out_buffer[i] = roundf(signal[i] * levels) / levels;
+        out.signal[i] = roundf(in.signal[i] * levels) / levels;
     }
-    
-    return out_buffer;
 }

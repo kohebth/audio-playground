@@ -2,12 +2,10 @@
 
 #define CHUNK_LENGTH 512
 
-Signal modulation_amplitude(Signal signal, ModulationParams params) {
-    if (signal == NULL || params.modulator == NULL) return signal;
-    
+void modulation_amplitude(modulation_amplitude_out_t out, modulation_amplitude_in_t in, modulation_amplitude_params_t params, void *state) {
+    if (out.signal == NULL || in.signal == NULL || in.modulator == NULL) return;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        signal[i] *= (1.0f + params.depth * params.modulator[i]);
+        out.signal[i] = in.signal[i] * (1.0f + params.depth * in.modulator[i]);
     }
-    
-    return signal;
 }

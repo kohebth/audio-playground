@@ -2,16 +2,13 @@
 
 #define CHUNK_LENGTH 512
 
-Signal src_downsample(Signal signal, SrcParams params) {
-    if (signal == NULL) return NULL;
-    
-    static float out_buffer[CHUNK_LENGTH];
-    uint32_t M = params.factor;
-    if (M == 0) M = 1;
-    
+void src_downsample(src_downsample_out_t out, src_downsample_in_t in, src_downsample_params_t params, void *state) {
+    if (out.signal == NULL || in.signal == NULL) return;
+
+    int M = params.factor;
+    if (M < 1) M = 1;
+
     for (int i = 0; i < CHUNK_LENGTH / M; ++i) {
-        out_buffer[i] = signal[i * M];
+        out.signal[i] = in.signal[i * M];
     }
-    
-    return out_buffer;
 }

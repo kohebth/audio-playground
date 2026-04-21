@@ -4,36 +4,37 @@
 
 #define CHUNK_LENGTH 512
 
-Signal generation_oscillator(OscillatorParams params) {
-    static float buffer[CHUNK_LENGTH];
-    float phase = params.phase;
+void generation_oscillator(generation_oscillator_out_t out, void *in, generation_oscillator_params_t params, generation_oscillator_state_t *state) {
+    if (out.signal == NULL || state == NULL) return;
+
+    float phase = state->phase;
     float phase_inc = params.frequency / params.sample_rate;
-    
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
+        float p = phase + params.phase_offset;
+        p -= floorf(p);
+
         switch (params.waveform) {
             case WAVEFORM_SINE:
-                buffer[i] = sinf(2.0f * M_PI * phase);
+                out.signal[i] = sinf(2.0f * (float)M_PI * p);
                 break;
             case WAVEFORM_SAW:
-                buffer[i] = 2.0f * (phase - floorf(phase + 0.5f));
+                out.signal[i] = 2.0f * (p - floorf(p + 0.5f));
                 break;
             case WAVEFORM_SQUARE:
-                buffer[i] = (phase - floorf(phase) < 0.5f) ? 1.0f : -1.0f;
+                out.signal[i] = (p < 0.5f) ? 1.0f : -1.0f;
                 break;
             case WAVEFORM_TRIANGLE:
-                buffer[i] = 4.0f * fabsf(phase - floorf(phase + 0.75f) + 0.25f) - 1.0f;
+                out.signal[i] = 4.0f * fabsf(p - floorf(p + 0.75f) + 0.25f) - 1.0f;
                 break;
             default:
-                buffer[i] = 0.0f;
+                out.signal[i] = 0.0f;
                 break;
         }
-        
+
         phase += phase_inc;
-        if (phase >= 1.0f) phase -= 1.0f;
+        phase -= floorf(phase);
     }
-    
-    // Note: The updated phase is not returned to the caller as per the current signature.
-    // This atom expects the caller to calculate the next starting phase.
-    
-    return buffer;
+
+    state->phase = phase;
 }

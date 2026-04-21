@@ -3,39 +3,41 @@
 
 #define CHUNK_LENGTH 512
 
-Signal generation_noise(WaveformType color, uint32_t seed) {
-    static float buffer[CHUNK_LENGTH];
-    static uint32_t last_seed = 0;
-    
-    if (seed != 0) srand(seed);
-    
+void generation_noise(generation_noise_out_t out, void *in, generation_noise_params_t params, generation_noise_state_t *state) {
+    if (out.signal == NULL || state == NULL) return;
+
+    uint32_t seed = state->seed;
+    float prev_value = state->prev_value;
+
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        float white = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-        
-        switch (color) {
+        // Linear Congruential Generator
+        seed = seed * 1664525u + 1013904223u;
+        float white = ((float)seed / 4294967296.0f) * 2.0f - 1.0f;
+
+        float value = 0.0f;
+        switch (params.color) {
             case WAVEFORM_NOISE_WHITE:
-                buffer[i] = white;
+                value = white;
                 break;
             case WAVEFORM_NOISE_PINK:
-                // Simple Voss-McCartney approximation or similar could be here
-                // For now, fall back to white with some filtering
-                buffer[i] = white * 0.5f; 
+                // Crude pink noise approximation
+                value = (prev_value + white) * 0.5f;
                 break;
             case WAVEFORM_NOISE_BROWN:
-                // Simple integration
-                {
-                    static float brown_state = 0.0f;
-                    brown_state += white * 0.1f;
-                    if (brown_state > 1.0f) brown_state = 1.0f;
-                    if (brown_state < -1.0f) brown_state = -1.0f;
-                    buffer[i] = brown_state;
-                }
+                // Brownian noise
+                value = prev_value + white * 0.1f;
+                if (value > 1.0f) value = 1.0f;
+                if (value < -1.0f) value = -1.0f;
                 break;
             default:
-                buffer[i] = white;
+                value = white;
                 break;
         }
+
+        out.signal[i] = value * params.amplitude;
+        prev_value = value;
     }
-    
-    return buffer;
+
+    state->seed = seed;
+    state->prev_value = prev_value;
 }
