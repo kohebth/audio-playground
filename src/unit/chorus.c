@@ -1,5 +1,6 @@
-#include <unit/chorus.h>
 #include <math.h>
+#include <stddef.h>
+#include <unit/chorus.h>
 
 #define CHUNK_LENGTH 512
 
@@ -40,45 +41,31 @@ void chorus_process(
     float wet_signal[CHUNK_LENGTH];
 
     // 1. osc: generation_lfo
-    generation_lfo(
-        (generation_lfo_out_t){ lfo_out },
-        NULL,
-        (generation_lfo_params_t){ params.rate, WAVEFORM_SINE, 0.0f, (float)params.sample_rate },
-        (generation_lfo_state_t *)&state->lfo_state
-    );
+    generation_lfo_out_t    lfo_o = { lfo_out };
+    generation_lfo_params_t lfo_p = { params.rate, WAVEFORM_SINE, 0.0f, (float)params.sample_rate };
+    generation_lfo(&lfo_o, NULL, &lfo_p, (generation_lfo_state_t *)&state->lfo_state);
 
     // 2. pre: filter_biquad (High Shelf Boost)
     filter_biquad_params_t pre_bq = calculate_high_shelf(3000.0f, 6.0f, 0.707f, (float)params.sample_rate);
-    filter_biquad(
-        (filter_biquad_out_t){ pre_out },
-        (filter_biquad_in_t){ in.signal },
-        (filter_biquad_params_t){ pre_bq.b0, pre_bq.b1, pre_bq.b2, pre_bq.a1, pre_bq.a2 },
-        (filter_biquad_state_t *)&state->pre_shelf_state
-    );
+    filter_biquad_out_t pre_o = { pre_out };
+    filter_biquad_in_t  pre_i = { in.signal };
+    filter_biquad(&pre_o, &pre_i, &pre_bq, (filter_biquad_state_t *)&state->pre_shelf_state);
 
     // 3. modulate: modulation_phase
-    // Note: modulation_phase needs a buffer in state. It should be initialized by caller.
-    modulation_phase(
-        (modulation_phase_out_t){ mod_out },
-        (modulation_phase_in_t){ pre_out, lfo_out },
-        (modulation_phase_params_t){ params.depth },
-        (modulation_phase_state_t *)&state->mod_state
-    );
+    modulation_phase_out_t    mp_o = { mod_out };
+    modulation_phase_in_t     mp_i = { pre_out, lfo_out };
+    modulation_phase_params_t mp_p = { params.depth };
+    modulation_phase(&mp_o, &mp_i, &mp_p, (modulation_phase_state_t *)&state->mod_state);
 
     // 4. de: filter_biquad (High Shelf Cut)
     filter_biquad_params_t de_bq = calculate_high_shelf(3000.0f, -6.0f, 0.707f, (float)params.sample_rate);
-    filter_biquad(
-        (filter_biquad_out_t){ wet_signal },
-        (filter_biquad_in_t){ mod_out },
-        (filter_biquad_params_t){ de_bq.b0, de_bq.b1, de_bq.b2, de_bq.a1, de_bq.a2 },
-        (filter_biquad_state_t *)&state->de_shelf_state
-    );
+    filter_biquad_out_t de_o = { wet_signal };
+    filter_biquad_in_t  de_i = { mod_out };
+    filter_biquad(&de_o, &de_i, &de_bq, (filter_biquad_state_t *)&state->de_shelf_state);
 
     // 5. blend: mix_wet_dry
-    mix_wet_dry(
-        (mix_wet_dry_out_t){ out.signal },
-        (mix_wet_dry_in_t){ in.signal, wet_signal },
-        (mix_wet_dry_params_t){ 0.5f },
-        NULL
-    );
+    mix_wet_dry_out_t    mw_o = { out.signal };
+    mix_wet_dry_in_t     mw_i = { in.signal, wet_signal };
+    mix_wet_dry_params_t mw_p = { 0.5f };
+    mix_wet_dry(&mw_o, &mw_i, &mw_p, NULL);
 }

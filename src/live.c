@@ -1,11 +1,8 @@
-#include <unit/sustainer.h>
-#include <unit/chorus.h>
+#include <runtime.h>
 #include <util/fast_chunk.h>
 
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
-
-#include <atom/dsp_atoms.h>
 
 #include <signal.h>
 #include <stdio.h>
@@ -25,6 +22,7 @@ struct AudioNode {
     struct pw_main_loop *loop;
     struct pw_stream *stream;
     struct IOBuffers *buffer;
+    runtime_unit_t *unit;   // YAML-loaded DSP unit (NULL for capture)
 };
 
 inline bool is_not_null(void *ptr) {
@@ -81,48 +79,16 @@ static void on_playback_process(void *userdata) {
             uint16_t size = chunk->length;
             if (size > buf->datas[0].maxsize) size = buf->datas[0].maxsize;
 
-            static SustainerState s_state = {0};
-            static ChorusState c_state = {0};
-            static float chorus_buffer[4096] = {0};
-            static int initialized = 0;
+            float output_data[CHUNK_LENGTH];
 
-            if (!initialized) {
-                c_state.mod_state.buffer = chorus_buffer;
-                initialized = 1;
+            if (node->unit) {
+                runtime_unit_process(node->unit, chunk->data, output_data);
+            } else {
+                memcpy(output_data, chunk->data, size * sizeof(float));
             }
 
-            SustainerParams s_params = {
-                .gain = 40.0f,
-                .threshold = -50.0f,
-                .attack = 0.010f,
-                .release = 0.200f,
-                .sample_rate = 48000
-            };
-
-            float processed_data[CHUNK_LENGTH];
-            sustainer_process(
-                (sustainer_out_t){ processed_data },
-                (sustainer_in_t){ chunk->data },
-                s_params,
-                &s_state
-            );
-
-            ChorusParams c_params = {
-                .rate = 5.0f,
-                .depth = 1.0f,
-                .sample_rate = 48000
-            };
-
-            float final_data[CHUNK_LENGTH];
-            chorus_process(
-                (chorus_out_t){ final_data },
-                (chorus_in_t){ processed_data },
-                c_params,
-                &c_state
-            );
-
             // Output
-            memcpy(buf->datas[0].data, final_data, size * sizeof(float));
+            memcpy(buf->datas[0].data, output_data, size * sizeof(float));
             buf->datas[0].chunk->size = size * sizeof(float);
             buf->datas[0].chunk->stride = 4;
 
@@ -167,6 +133,16 @@ int main(int argc, char *argv[]) {
 
     struct IOBuffers io_buffer = {.chunks = {0}, .write_idx = 0, .read_idx = 0};
 
+    // Load DSP unit from YAML
+    runtime_context_t rt_ctx = { .sample_rate = 48000, .chunk_length = CHUNK_LENGTH };
+    runtime_unit_t *unit = runtime_unit_load("../units/chorus.unit.yaml", rt_ctx);
+    if (!unit) {
+        fprintf(stderr, "Failed to load unit YAML\n");
+        pw_main_loop_destroy(loop);
+        pw_deinit();
+        return 1;
+    }
+
     // Create capture stream (microphone)
     struct AudioNode capture = {
         .loop = loop,
@@ -202,7 +178,8 @@ int main(int argc, char *argv[]) {
             &playback_events,
             &playback
         ),
-        .buffer = &io_buffer
+        .buffer = &io_buffer,
+        .unit = unit
     };
 
     // Set audio format: 48kHz, f32, 1 channels (mono)
@@ -250,6 +227,7 @@ int main(int argc, char *argv[]) {
     pw_stream_destroy(capture.stream);
     pw_stream_destroy(playback.stream);
     pw_main_loop_destroy(loop);
+    runtime_unit_destroy(unit);
     pw_deinit();
 
     return 0;

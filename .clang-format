@@ -1,0 +1,23 @@
+# learn more at http://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
+BasedOnStyle: LLVM
+
+UseTab: Never
+TabWidth: 4
+IndentWidth: 4
+ColumnLimit: 120
+
+AlignAfterOpenBracket: BlockIndent
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments:
+  Enabled: true
+AlignConsecutiveBitFields:
+  Enabled: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+AlignConsecutiveMacros:
+  Enabled: true
+AlignEscapedNewlines: LeftWithLastLine
+AllowShortBlocksOnASingleLine: Always
+BinPackParameters: OnePerLine
+

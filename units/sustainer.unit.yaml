@@ -1,0 +1,147 @@
+# sustainer.unit.yaml
+
+name:    sustainer
+version: 1.0.0
+
+# ─────────────────────────────────────────────
+# USER-FACING PARAMETERS
+# ─────────────────────────────────────────────
+params:
+  gain:      { min: 1.0,   max: 10000.0,  default: 100.0,  unit: linear      }
+  threshold: { min: 0.0001, max: 1.0,   default: 0.01, unit: linear    }
+  attack:    { min: 0.001, max: 0.500, default: 0.010, unit: seconds }
+  release:   { min: 0.010, max: 2.000, default: 0.200, unit: seconds }
+
+# ─────────────────────────────────────────────
+# DESIGNER-CONTROLLED FIXED VALUES
+# ─────────────────────────────────────────────
+internal:
+  target_level:    0.25118864
+  smooth_attack:   0.020
+  smooth_release:  0.100
+  output_gain:     1.0
+  mix:             1.0
+
+# ─────────────────────────────────────────────
+# SIGNAL DECLARATIONS
+# ─────────────────────────────────────────────
+signals:
+  - name: input
+  - name: output
+  - name: envelope
+  - name: gate
+  - name: raw_gain
+  - name: clamped_gain
+  - name: smooth_gain
+  - name: gated_gain
+  - name: sustained
+  - name: filtered
+
+# ─────────────────────────────────────────────
+# PIPELINE
+# ─────────────────────────────────────────────
+pipeline:
+
+  - id:   detect
+    fn:   detect_envelope
+    out:
+      envelope:     envelope
+    in:
+      signal:       ${signals.input}
+    config:
+      attack:       ${params.attack}
+      release:      ${params.release}
+      sample_rate:  ${context.sample_rate}
+    state:
+      prev_envelope: 0.0
+
+  - id:   gate
+    fn:   detect_threshold
+    out:
+      gate:         gate
+    in:
+      signal:       envelope
+    config:
+      threshold:    ${params.threshold}
+    state: ~
+
+  - id:   calc_gain
+    fn:   amplitude_divide
+    out:
+      signal:       raw_gain
+    in:
+      numerator:    ${internal.target_level}
+      denominator:  envelope
+    config:
+      epsilon:      0.000001
+    state: ~
+
+  - id:   clamp_gain
+    fn:   amplitude_clip_hard
+    out:
+      signal:       clamped_gain
+    in:
+      signal:       raw_gain
+    config:
+      threshold:    ${params.gain}
+    state: ~
+
+  - id:   smooth
+    fn:   amplitude_smooth
+    out:
+      signal:       smooth_gain
+    in:
+      signal:       clamped_gain
+    config:
+      attack:       ${internal.smooth_attack}
+      release:      ${internal.smooth_release}
+      sample_rate:  ${context.sample_rate}
+    state:
+      prev_value:   0.0
+
+  - id:   gate_gain
+    fn:   amplitude_multiply
+    out:
+      signal:       gated_gain
+    in:
+      signal_a:     smooth_gain
+      signal_b:     gate
+    config: ~
+    state: ~
+
+  - id:   apply_gain
+    fn:   amplitude_multiply
+    out:
+      signal:       sustained
+    in:
+      signal_a:     ${signals.input}
+      signal_b:     gated_gain
+    config: ~
+    state: ~
+
+  - id:   tone
+    fn:   filter_biquad
+    out:
+      signal:       filtered
+    in:
+      signal:       sustained
+    config:
+      b0:           0.0674
+      b1:           0.1349
+      b2:           0.0674
+      a1:           -1.1430
+      a2:           0.4128
+    state:
+      z1:           0.0
+      z2:           0.0
+
+  - id:   blend
+    fn:   mix_wet_dry
+    out:
+      signal:       ${signals.output}
+    in:
+      dry:          ${signals.input}
+      wet:          filtered
+    config:
+      mix:          ${internal.mix}
+    state: ~

@@ -51,87 +51,63 @@ void sustainer_process(
     float gain_linear_max = powf(10.0f, params.gain / 20.0f);
 
     // 1. detect: detect_envelope
-    detect_envelope(
-        (detect_envelope_out_t){ env },
-        (detect_envelope_in_t){ in.signal },
-        (detect_envelope_params_t){ params.attack, params.release, (float)params.sample_rate },
-        (detect_envelope_state_t *)&state->detect_env_state
-    );
+    detect_envelope_out_t    de_out = { env };
+    detect_envelope_in_t     de_in  = { in.signal };
+    detect_envelope_params_t de_cfg = { params.attack, params.release, (float)params.sample_rate };
+    detect_envelope(&de_out, &de_in, &de_cfg, (detect_envelope_state_t *)&state->detect_env_state);
 
     // 2. compare: detect_threshold
-    detect_threshold(
-        (detect_threshold_out_t){ gate },
-        (detect_threshold_in_t){ env },
-        (detect_threshold_params_t){ threshold_linear },
-        NULL
-    );
+    detect_threshold_out_t    dt_out = { gate };
+    detect_threshold_in_t     dt_in  = { env };
+    detect_threshold_params_t dt_cfg = { threshold_linear };
+    detect_threshold(&dt_out, &dt_in, &dt_cfg, NULL);
 
     // 3. calc_gain: amplitude_divide
     float target_sig[CHUNK_LENGTH];
     for (int i = 0; i < CHUNK_LENGTH; i++) target_sig[i] = target_linear;
-    amplitude_divide(
-        (amplitude_divide_out_t){ raw_gain },
-        (amplitude_divide_in_t){ target_sig, env },
-        (amplitude_divide_params_t){ 1e-6f },
-        NULL
-    );
+    amplitude_divide_out_t    ad_out = { raw_gain };
+    amplitude_divide_in_t     ad_in  = { target_sig, env };
+    amplitude_divide_params_t ad_cfg = { 1e-6f };
+    amplitude_divide(&ad_out, &ad_in, &ad_cfg, NULL);
 
     // 4. clamp_gain: amplitude_clip_hard
-    amplitude_clip_hard(
-        (amplitude_clip_hard_out_t){ clamped_gain },
-        (amplitude_clip_hard_in_t){ raw_gain },
-        (amplitude_clip_hard_params_t){ gain_linear_max },
-        NULL
-    );
+    amplitude_clip_hard_out_t    ac_out = { clamped_gain };
+    amplitude_clip_hard_in_t     ac_in  = { raw_gain };
+    amplitude_clip_hard_params_t ac_cfg = { gain_linear_max };
+    amplitude_clip_hard(&ac_out, &ac_in, &ac_cfg, NULL);
 
     // 5. smooth: amplitude_smooth
-    amplitude_smooth(
-        (amplitude_smooth_out_t){ smooth_gain },
-        (amplitude_smooth_in_t){ clamped_gain },
-        (amplitude_smooth_params_t){ 0.020f, 0.100f, (float)params.sample_rate },
-        (amplitude_smooth_state_t *)&state->smooth_state
-    );
+    amplitude_smooth_out_t    as_out = { smooth_gain };
+    amplitude_smooth_in_t     as_in  = { clamped_gain };
+    amplitude_smooth_params_t as_cfg = { 0.020f, 0.100f, (float)params.sample_rate };
+    amplitude_smooth(&as_out, &as_in, &as_cfg, (amplitude_smooth_state_t *)&state->smooth_state);
 
     // 6. gate_gain: amplitude_multiply
-    amplitude_multiply(
-        (amplitude_multiply_out_t){ gated_gain },
-        (amplitude_multiply_in_t){ smooth_gain, gate },
-        NULL,
-        NULL
-    );
+    amplitude_multiply_out_t am1_out = { gated_gain };
+    amplitude_multiply_in_t  am1_in  = { smooth_gain, gate };
+    amplitude_multiply(&am1_out, &am1_in, NULL, NULL);
 
     // 7. apply_gain: amplitude_multiply
-    amplitude_multiply(
-        (amplitude_multiply_out_t){ sustained },
-        (amplitude_multiply_in_t){ in.signal, gated_gain },
-        NULL,
-        NULL
-    );
+    amplitude_multiply_out_t am2_out = { sustained };
+    amplitude_multiply_in_t  am2_in  = { in.signal, gated_gain };
+    amplitude_multiply(&am2_out, &am2_in, NULL, NULL);
 
     // 8. tone: filter_biquad
     filter_biquad_params_t bq = calculate_lpf_coeffs(8000.0f, 0.707f, (float)params.sample_rate);
-    filter_biquad(
-        (filter_biquad_out_t){ filtered },
-        (filter_biquad_in_t){ sustained },
-        (filter_biquad_params_t){ bq.b0, bq.b1, bq.b2, bq.a1, bq.a2 },
-        (filter_biquad_state_t *)&state->biquad_state
-    );
+    filter_biquad_out_t fb_out = { filtered };
+    filter_biquad_in_t  fb_in  = { sustained };
+    filter_biquad(&fb_out, &fb_in, &bq, (filter_biquad_state_t *)&state->biquad_state);
 
     // 9. trim: amplitude_multiply
     float unity[CHUNK_LENGTH];
-    for (int i = 0; i < CHUNK_LENGTH; i++) unity[i] = 1.0f; 
-    amplitude_multiply(
-        (amplitude_multiply_out_t){ trimmed },
-        (amplitude_multiply_in_t){ filtered, unity },
-        NULL,
-        NULL
-    );
+    for (int i = 0; i < CHUNK_LENGTH; i++) unity[i] = 1.0f;
+    amplitude_multiply_out_t am3_out = { trimmed };
+    amplitude_multiply_in_t  am3_in  = { filtered, unity };
+    amplitude_multiply(&am3_out, &am3_in, NULL, NULL);
 
     // 10. blend: mix_wet_dry
-    mix_wet_dry(
-        (mix_wet_dry_out_t){ out.signal },
-        (mix_wet_dry_in_t){ in.signal, trimmed },
-        (mix_wet_dry_params_t){ 1.0f },
-        NULL
-    );
+    mix_wet_dry_out_t    mw_out = { out.signal };
+    mix_wet_dry_in_t     mw_in  = { in.signal, trimmed };
+    mix_wet_dry_params_t mw_cfg = { 1.0f };
+    mix_wet_dry(&mw_out, &mw_in, &mw_cfg, NULL);
 }

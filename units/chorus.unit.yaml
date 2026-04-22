@@ -1,0 +1,103 @@
+# chorus.unit.yaml
+
+name:    chorus
+version: 1.0.0
+
+# ─────────────────────────────────────────────
+# USER-FACING PARAMETERS
+# ─────────────────────────────────────────────
+params:
+  rate:      { min: 0.1,   max: 20.0,   default: 5.0,   unit: Hz      }
+  depth:     { min: 0.0,   max: 1000.0, default: 150.0, unit: samples }
+  mix:       { min: 0.0,   max: 1.0,    default: 0.5,   unit: linear  }
+
+# ─────────────────────────────────────────────
+# DESIGNER-CONTROLLED FIXED VALUES
+# ─────────────────────────────────────────────
+internal:
+  waveform: 0 # WAVEFORM_SINE
+
+# ─────────────────────────────────────────────
+# SIGNAL DECLARATIONS
+# ─────────────────────────────────────────────
+signals:
+  - name: input
+  - name: output
+  - name: lfo_out
+  - name: pre_out
+  - name: mod_out
+  - name: wet_signal
+
+# ─────────────────────────────────────────────
+# PIPELINE
+# ─────────────────────────────────────────────
+pipeline:
+
+  - id:   osc
+    fn:   generation_lfo
+    out:
+      signal:       lfo_out
+    in: ~
+    config:
+      frequency:    ${params.rate}
+      waveform:     ${internal.waveform}
+      phase_offset: 0.0
+      sample_rate:  ${context.sample_rate}
+    state:
+      phase:        0.0
+
+  - id:   pre_eq
+    fn:   filter_biquad
+    out:
+      signal:       pre_out
+    in:
+      signal:       ${signals.input}
+    config:
+      # High Shelf Boost: 3kHz, 6dB, Q=0.707 @ 48kHz
+      b0:           1.815099
+      b1:           -2.789923
+      b2:           1.135624
+      a1:           -1.358169
+      a2:           0.518969
+    state:
+      z1:           0.0
+      z2:           0.0
+
+  - id:   modulate
+    fn:   modulation_phase
+    out:
+      signal:       mod_out
+    in:
+      signal:       pre_out
+      modulator:    lfo_out
+    config:
+      depth:        ${params.depth}
+    state: ~
+
+  - id:   de_eq
+    fn:   filter_biquad
+    out:
+      signal:       wet_signal
+    in:
+      signal:       mod_out
+    config:
+      # High Shelf Cut: 3kHz, -6dB, Q=0.707 @ 48kHz
+      b0:           0.550934
+      b1:           -0.748262
+      b2:           0.285918
+      a1:           -1.537064
+      a2:           0.625654
+    state:
+      z1:           0.0
+      z2:           0.0
+
+  - id:   blend
+    fn:   mix_wet_dry
+    out:
+      signal:       ${signals.output}
+    in:
+      dry:          ${signals.input}
+      wet:          wet_signal
+    config:
+      mix:          ${params.mix}
+    state: ~
