@@ -1,0 +1,117 @@
+name: spring_reverb
+version: 1.0.0
+params:
+  mix:
+    default: 0.5
+  boing:
+    default: 0.6
+  decay:
+    default: 0.8
+signals:
+  - input
+  - output
+  - filtered_in
+  - ap1_out
+  - ap2_out
+  - ap3_out
+  - ap4_out
+  - ap5_out
+  - ap6_out
+  - spring_tail
+pipeline:
+  # 1. Spring pre-filter (thin, high-pass-ish)
+  - id: pre_filter
+    fn: filter_biquad
+    out:
+      signal: filtered_in
+    in:
+      signal: input
+    config:
+      b0: 0.5
+      b1: -0.5
+      b2: 0.0
+      a1: -0.8
+      a2: 0.0
+
+  # 2. Chain of short all-passes (creates the "boing")
+  - id: ap1
+    fn: filter_allpass
+    out:
+      signal: ap1_out
+    in:
+      signal: filtered_in
+    config:
+      delay_samples: 156
+      coefficient: ${params.boing}
+
+  - id: ap2
+    fn: filter_allpass
+    out:
+      signal: ap2_out
+    in:
+      signal: ap1_out
+    config:
+      delay_samples: 223
+      coefficient: ${params.boing}
+
+  - id: ap3
+    fn: filter_allpass
+    out:
+      signal: ap3_out
+    in:
+      signal: ap2_out
+    config:
+      delay_samples: 311
+      coefficient: ${params.boing}
+
+  - id: ap4
+    fn: filter_allpass
+    out:
+      signal: ap4_out
+    in:
+      signal: ap3_out
+    config:
+      delay_samples: 442
+      coefficient: ${params.boing}
+
+  - id: ap5
+    fn: filter_allpass
+    out:
+      signal: ap5_out
+    in:
+      signal: ap4_out
+    config:
+      delay_samples: 611
+      coefficient: ${params.boing}
+
+  - id: ap6
+    fn: filter_allpass
+    out:
+      signal: ap6_out
+    in:
+      signal: ap5_out
+    config:
+      delay_samples: 843
+      coefficient: ${params.boing}
+
+  # 3. Longer feedback comb to add decay
+  - id: spring_decay
+    fn: filter_comb_fb
+    out:
+      signal: spring_tail
+    in:
+      signal: ap6_out
+    config:
+      delay_samples: 3121
+      coefficient: ${params.decay}
+
+  # 4. Final Mix
+  - id: final_mix
+    fn: mix_wet_dry
+    out:
+      signal: output
+    in:
+      dry: input
+      wet: spring_tail
+    config:
+      mix: ${params.mix}

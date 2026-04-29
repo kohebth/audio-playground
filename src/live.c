@@ -10,6 +10,7 @@
 
 #define CHUNK_COUNT 16
 #define CHUNK_LENGTH 512
+#define SAMPLE_RATE 48000
 #define BOUND 32767.0
 
 struct IOBuffers {
@@ -22,7 +23,8 @@ struct AudioNode {
     struct pw_main_loop *loop;
     struct pw_stream *stream;
     struct IOBuffers *buffer;
-    runtime_unit_t *unit;   // YAML-loaded DSP unit (NULL for capture)
+    runtime_unit_t *units[8];
+    int             n_units;
 };
 
 inline bool is_not_null(void *ptr) {
@@ -71,37 +73,42 @@ static void on_playback_process(void *userdata) {
     const struct spa_buffer *buf = b->buffer;
 
     if (is_not_null(buf->datas[0].data)) {
-        volatile uint8_t *idx = &node->buffer->read_idx;
-        LiveChunk *chunk = &node->buffer->chunks[*idx];
+        uint32_t size = CHUNK_LENGTH;
+        if (size * sizeof(float) > buf->datas[0].maxsize) {
+            size = buf->datas[0].maxsize / sizeof(float);
+        }
 
-        // Read from buffer if ready
+        float output_data[CHUNK_LENGTH];
+        memset(output_data, 0, sizeof(output_data));
+
+        volatile uint8_t *read_idx = &node->buffer->read_idx;
+        volatile uint8_t *write_idx = &node->buffer->write_idx;
+        LiveChunk *chunk = &node->buffer->chunks[*read_idx];
+
         if (chunk->ready) {
-            uint16_t size = chunk->length;
-            if (size > buf->datas[0].maxsize) size = buf->datas[0].maxsize;
+            uint32_t chunk_size = chunk->length;
+            if (chunk_size > size) chunk_size = size;
 
-            float output_data[CHUNK_LENGTH];
+            float *current_in = chunk->data;
+            float *current_out = output_data;
 
-            if (node->unit) {
-                runtime_unit_process(node->unit, chunk->data, output_data);
+            if (node->n_units > 0) {
+                for (int i = 0; i < node->n_units; i++) {
+                    runtime_unit_process(node->units[i], current_in, current_out);
+                    current_in = current_out; // Output of this unit is input to next
+                }
             } else {
-                memcpy(output_data, chunk->data, size * sizeof(float));
+                memcpy(output_data, chunk->data, chunk_size * sizeof(float));
             }
 
-            // Output
-            memcpy(buf->datas[0].data, output_data, size * sizeof(float));
-            buf->datas[0].chunk->size = size * sizeof(float);
-            buf->datas[0].chunk->stride = 4;
-
-            __sync_synchronize(); // Memory barrier
+            __sync_synchronize();
             chunk->ready = 0;
-            *idx = (*idx + 1) & (CHUNK_COUNT - 1);
+            *read_idx = (*read_idx + 1) & (CHUNK_COUNT - 1);
         }
-        // else {
-            // Output silence if no data available
-            // memset(buf->datas[0].data, 0, buf->datas[0].maxsize);
-            // buf->datas[0].chunk->size = buf->datas[0].maxsize;
-            // buf->datas[0].chunk->stride = 1;
-        // }
+
+        memcpy(buf->datas[0].data, output_data, size * sizeof(float));
+        buf->datas[0].chunk->size = size * sizeof(float);
+        buf->datas[0].chunk->stride = 4;
     }
 
     pw_stream_queue_buffer(node->stream, b);
@@ -133,16 +140,6 @@ int main(int argc, char *argv[]) {
 
     struct IOBuffers io_buffer = {.chunks = {0}, .write_idx = 0, .read_idx = 0};
 
-    // Load DSP unit from YAML
-    runtime_context_t rt_ctx = { .sample_rate = 48000, .chunk_length = CHUNK_LENGTH };
-    runtime_unit_t *unit = runtime_unit_load("../units/chorus.unit.yaml", rt_ctx);
-    if (!unit) {
-        fprintf(stderr, "Failed to load unit YAML\n");
-        pw_main_loop_destroy(loop);
-        pw_deinit();
-        return 1;
-    }
-
     // Create capture stream (microphone)
     struct AudioNode capture = {
         .loop = loop,
@@ -153,13 +150,15 @@ int main(int argc, char *argv[]) {
                 PW_KEY_MEDIA_TYPE, "Audio",
                 PW_KEY_MEDIA_CATEGORY, "Capture",
                 PW_KEY_MEDIA_ROLE, "Music",
-                // PW_KEY_TARGET_OBJECT, "alsa_input.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__hw_sofhdadsp__source",
+                PW_KEY_NODE_LATENCY, "512/48000",
+                PW_KEY_NODE_RATE, "1/48000",
                 NULL
             ),
             &capture_events,
             &capture
         ),
-        .buffer = &io_buffer
+        .buffer = &io_buffer,
+        .n_units = 0
     };
 
     // Create playback stream (speaker)
@@ -172,20 +171,39 @@ int main(int argc, char *argv[]) {
                 PW_KEY_MEDIA_TYPE, "Audio",
                 PW_KEY_MEDIA_CATEGORY, "Playback",
                 PW_KEY_MEDIA_ROLE, "Music",
-                // PW_KEY_TARGET_OBJECT, "alsa_output.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__hw_sofhdadsp__sink",
+                PW_KEY_NODE_LATENCY, "512/48000",
+                PW_KEY_NODE_RATE, "1/48000",
                 NULL
             ),
             &playback_events,
             &playback
         ),
         .buffer = &io_buffer,
-        .unit = unit
+        .n_units = 0
     };
+
+    // Load DSP units from YAML arguments
+    runtime_context_t rt_ctx = {.sample_rate = SAMPLE_RATE, .chunk_length = CHUNK_LENGTH};
+    if (argc > 1) {
+        for (int i = 1; i < argc && playback.n_units < 8; i++) {
+            printf("Loading unit: %s\n", argv[i]);
+            playback.units[playback.n_units] = runtime_unit_load(argv[i], rt_ctx);
+            if (playback.units[playback.n_units]) {
+                playback.n_units++;
+            } else {
+                fprintf(stderr, "Failed to load unit: %s\n", argv[i]);
+            }
+        }
+    } else {
+        // Default to shimmer if no args
+        playback.units[0] = runtime_unit_load("../units/cave_reverb.unit.yaml", rt_ctx);
+        if (playback.units[0]) playback.n_units = 1;
+    }
 
     // Set audio format: 48kHz, f32, 1 channels (mono)
     struct spa_audio_info_raw audio_info = {
         .format = SPA_AUDIO_FORMAT_F32,
-        .rate = 48000,
+        .rate = SAMPLE_RATE,
         .channels = 1,
     };
 
@@ -227,7 +245,9 @@ int main(int argc, char *argv[]) {
     pw_stream_destroy(capture.stream);
     pw_stream_destroy(playback.stream);
     pw_main_loop_destroy(loop);
-    runtime_unit_destroy(unit);
+    for (int i = 0; i < playback.n_units; i++) {
+        runtime_unit_destroy(playback.units[i]);
+    }
     pw_deinit();
 
     return 0;

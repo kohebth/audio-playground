@@ -1,0 +1,221 @@
+name: church_reverb
+version: 1.0.0
+params:
+  mix:
+    default: 0.5
+  decay:
+    default: 0.66
+  diffusion:
+    default: 0.5
+  damping:
+    default: 0.4
+signals:
+  - input
+  - output
+  - pre_in
+  - c1_out
+  - c2_out
+  - c3_out
+  - c4_out
+  - c5_out
+  - c6_out
+  - sum12
+  - sum34
+  - sum56
+  - comb_mix
+  - ap1_out
+  - ap2_out
+  - reverb_tail
+  - damped_tail
+  - tail_fb
+pipeline:
+  # 1. Input Scaling
+  - id: input_scaler
+    fn: generation_dc
+    out:
+      signal: rev_scale
+    config:
+      value: 0.1
+
+  - id: apply_input_scale
+    fn: amplitude_multiply
+    out:
+      signal: pre_in
+    in:
+      signal_a: input
+      signal_b: rev_scale
+
+  # 2. Parallel Combs (Prime numbered delays for density)
+  - id: comb1
+    fn: filter_comb_fb
+    out:
+      signal: c1_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 4771
+      coefficient: ${params.decay}
+
+  - id: comb2
+    fn: filter_comb_fb
+    out:
+      signal: c2_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 5303
+      coefficient: ${params.decay}
+
+  - id: comb3
+    fn: filter_comb_fb
+    out:
+      signal: c3_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 6113
+      coefficient: ${params.decay}
+
+  - id: comb4
+    fn: filter_comb_fb
+    out:
+      signal: c4_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 7211
+      coefficient: ${params.decay}
+
+  - id: comb5
+    fn: filter_comb_fb
+    out:
+      signal: c5_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 8419
+      coefficient: ${params.decay}
+
+  - id: comb6
+    fn: filter_comb_fb
+    out:
+      signal: c6_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 9661
+      coefficient: ${params.decay}
+
+  # 3. Summing and Averaging Combs
+  - id: sum_12
+    fn: amplitude_add
+    out:
+      signal: sum12
+    in:
+      signal_a: c1_out
+      signal_b: c2_out
+
+  - id: sum_34
+    fn: amplitude_add
+    out:
+      signal: sum34
+    in:
+      signal_a: c3_out
+      signal_b: c4_out
+
+  - id: sum_56
+    fn: amplitude_add
+    out:
+      signal: sum56
+    in:
+      signal_a: c5_out
+      signal_b: c6_out
+
+  - id: sum_all
+    fn: amplitude_add
+    out:
+      signal: comb_mix_raw
+    in:
+      signal_a: sum12
+      signal_b: sum34
+
+  - id: sum_final
+    fn: amplitude_add
+    out:
+      signal: comb_mix_final
+    in:
+      signal_a: comb_mix_raw
+      signal_b: sum56
+
+  - id: avg_scale
+    fn: generation_dc
+    out:
+      signal: avg_val
+    config:
+      value: 0.166  # 1/6
+
+  - id: normalize_combs
+    fn: amplitude_multiply
+    out:
+      signal: comb_mix
+    in:
+      signal_a: comb_mix_final
+      signal_b: avg_val
+
+  # 4. Serial All-passes (Diffusion)
+  - id: allpass1
+    fn: filter_allpass
+    out:
+      signal: ap1_out
+    in:
+      signal: comb_mix
+    config:
+      delay_samples: 1051
+      coefficient: ${params.diffusion}
+
+  - id: allpass2
+    fn: filter_allpass
+    out:
+      signal: ap2_out
+    in:
+      signal: ap1_out
+    config:
+      delay_samples: 337
+      coefficient: ${params.diffusion}
+
+  - id: allpass3
+    fn: filter_allpass
+    out:
+      signal: reverb_tail
+    in:
+      signal: ap2_out
+    config:
+      delay_samples: 113
+      coefficient: ${params.diffusion}
+
+  # 5. Damping (Low-pass Filter)
+  # Simple 1st order LP: y[n] = (1-d)*x[n] + d*y[n-1]
+  # We use biquad to approximate damping
+  - id: damp_filter
+    fn: filter_biquad
+    out:
+      signal: damped_tail
+    in:
+      signal: reverb_tail
+    config:
+      b0: 0.5
+      b1: 0.5
+      b2: 0.0
+      a1: -0.5  # This is a very rough low-pass
+      a2: 0.0
+
+  # 6. Final Mix
+  - id: final_mix
+    fn: mix_wet_dry
+    out:
+      signal: output
+    in:
+      dry: input
+      wet: damped_tail
+    config:
+      mix: ${params.mix}

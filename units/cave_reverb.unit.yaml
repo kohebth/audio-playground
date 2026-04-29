@@ -1,0 +1,137 @@
+name: cave_reverb
+version: 1.0.0
+params:
+  mix:
+    default: 0.6
+  decay:
+    default: 0.8
+  damping:
+    default: 0.7
+  resonance:
+    default: 0.4
+signals:
+  - input
+  - output
+  - pre_in
+  - c1_out
+  - c2_out
+  - c3_out
+  - sum12
+  - comb_mix
+  - ap1_out
+  - reverb_tail
+  - damped_tail
+pipeline:
+  # 1. Dark Input Filtering (Cave is dark)
+  - id: input_scaler
+    fn: generation_dc
+    out:
+      signal: rev_scale
+    config:
+      value: 0.12
+
+  - id: apply_input_scale
+    fn: amplitude_multiply
+    out:
+      signal: pre_in
+    in:
+      signal_a: input
+      signal_b: rev_scale
+
+  # 2. Resonant Parallel Combs (Smaller count than church for more distinct echoes)
+  - id: comb1
+    fn: filter_comb_fb
+    out:
+      signal: c1_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 3121
+      coefficient: ${params.decay}
+
+  - id: comb2
+    fn: filter_comb_fb
+    out:
+      signal: c2_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 4423
+      coefficient: ${params.decay}
+
+  - id: comb3
+    fn: filter_comb_fb
+    out:
+      signal: c3_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 5119
+      coefficient: ${params.decay}
+
+  - id: sum_12
+    fn: amplitude_add
+    out:
+      signal: sum12
+    in:
+      signal_a: c1_out
+      signal_b: c2_out
+
+  - id: sum_all
+    fn: amplitude_add
+    out:
+      signal: comb_mix_raw
+    in:
+      signal_a: sum12
+      signal_b: c3_out
+
+  - id: avg_scale
+    fn: generation_dc
+    out:
+      signal: avg_val
+    config:
+      value: 0.33
+
+  - id: normalize_combs
+    fn: amplitude_multiply
+    out:
+      signal: comb_mix
+    in:
+      signal_a: comb_mix_raw
+      signal_b: avg_val
+
+  # 3. Diffusion
+  - id: allpass1
+    fn: filter_allpass
+    out:
+      signal: reverb_tail
+    in:
+      signal: comb_mix
+    config:
+      delay_samples: 773
+      coefficient: ${params.resonance}
+
+  # 4. Aggressive Damping (Cave walls absorb high freq)
+  - id: damp_filter
+    fn: filter_biquad
+    out:
+      signal: damped_tail
+    in:
+      signal: reverb_tail
+    config:
+      b0: 0.3
+      b1: 0.3
+      b2: 0.0
+      a1: -0.4
+      a2: 0.0
+
+  # 5. Final Mix
+  - id: final_mix
+    fn: mix_wet_dry
+    out:
+      signal: output
+    in:
+      dry: input
+      wet: damped_tail
+    config:
+      mix: ${params.mix}

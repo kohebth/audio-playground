@@ -1,0 +1,95 @@
+name: analog_delay
+version: 1.0.0
+params:
+  mix:
+    default: 0.4
+  feedback:
+    default: 0.6
+  delay_time:
+    default: 1.0 # Not used for delay_samples, but as a placeholder
+signals:
+  - input
+  - output
+  - pre_in
+  - loop_in
+  - delay_out
+  - damped_out
+  - fb_signal
+  - fb_gain_val
+pipeline:
+  # 1. Input Scaling
+  - id: input_scaler
+    fn: generation_dc
+    out:
+      signal: rev_scale
+    config:
+      value: 0.5
+
+  - id: apply_input_scale
+    fn: amplitude_multiply
+    out:
+      signal: pre_in
+    in:
+      signal_a: input
+      signal_b: rev_scale
+
+  # 2. Feedback Loop Mixer
+  - id: loop_mixer
+    fn: amplitude_add
+    out:
+      signal: loop_in
+    in:
+      signal_a: pre_in
+      signal_b: fb_signal
+
+  # 3. Pure Delay Line (Allpass with 0 coefficient)
+  - id: delay_line
+    fn: filter_allpass
+    out:
+      signal: delay_out
+    in:
+      signal: loop_in
+    config:
+      delay_samples: 14400 # 300ms at 48kHz
+      coefficient: 0.0
+
+  # 4. Analog Damping (LP Filter)
+  - id: damp_filter
+    fn: filter_biquad
+    out:
+      signal: damped_out
+    in:
+      signal: delay_out
+    config:
+      b0: 0.2
+      b1: 0.2
+      b2: 0.0
+      a1: -0.6
+      a2: 0.0
+
+  # 5. Feedback Gain
+  - id: fb_level
+    fn: generation_dc
+    out:
+      signal: fb_gain_val
+    config:
+      value: ${params.feedback}
+
+  - id: apply_fb_gain
+    fn: amplitude_multiply
+    out:
+      signal: fb_signal
+    in:
+      signal_a: damped_out
+      signal_b: fb_gain_val
+
+  # 6. Final Mix
+  - id: final_mix
+    fn: mix_wet_dry
+    out:
+      signal: output
+    in:
+      dry: input
+      wet: damped_out
+    config:
+      mix: ${params.mix}

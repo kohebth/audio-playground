@@ -1,0 +1,218 @@
+name: shimmer_reverb
+version: 1.0.0
+params:
+  mix:
+    default: 0.4
+  feedback:
+    default: 0.15
+  shimmer:
+    default: 0.5
+  room_size:
+    default: 0.7
+signals:
+  - input
+  - output
+  - rev_in
+  - c1_out
+  - c2_out
+  - c3_out
+  - c4_out
+  - sum12
+  - sum34
+  - combined_combs_raw
+  - combined_combs
+  - ap1_out
+  - reverb_out
+  - shim_mod_val
+  - shifted_signal
+  - shim_amt
+  - fb_signal
+  - scaled_rev_in
+  - avg_scale_val
+  - rev_scale
+pipeline:
+  # 1. Scale down input to prevent explosion
+  - id: input_scaler
+    fn: generation_dc
+    out:
+      signal: rev_scale
+    config:
+      value: 0.1
+
+  - id: apply_input_scale
+    fn: amplitude_multiply
+    out:
+      signal: scaled_rev_in
+    in:
+      signal_a: input
+      signal_b: rev_scale
+
+  # 2. Mix scaled input with shimmer feedback
+  - id: input_mixer
+    fn: amplitude_add
+    out:
+      signal: rev_in
+    in:
+      signal_a: scaled_rev_in
+      signal_b: fb_signal
+
+  # 3. Parallel Comb Filters (Schroeder) - Decay controlled by room_size
+  - id: comb1
+    fn: filter_comb_fb
+    out:
+      signal: c1_out
+    in:
+      signal: rev_in
+    config:
+      delay_samples: 4464
+      coefficient: ${params.room_size}
+
+  - id: comb2
+    fn: filter_comb_fb
+    out:
+      signal: c2_out
+    in:
+      signal: rev_in
+    config:
+      delay_samples: 5424
+      coefficient: ${params.room_size}
+
+  - id: comb3
+    fn: filter_comb_fb
+    out:
+      signal: c3_out
+    in:
+      signal: rev_in
+    config:
+      delay_samples: 5688
+      coefficient: ${params.room_size}
+
+  - id: comb4
+    fn: filter_comb_fb
+    out:
+      signal: c4_out
+    in:
+      signal: rev_in
+    config:
+      delay_samples: 5964
+      coefficient: ${params.room_size}
+
+  # 4. Average Parallel Combs
+  - id: sum_combs_12
+    fn: amplitude_add
+    out:
+      signal: sum12
+    in:
+      signal_a: c1_out
+      signal_b: c2_out
+
+  - id: sum_combs_34
+    fn: amplitude_add
+    out:
+      signal: sum34
+    in:
+      signal_a: c3_out
+      signal_b: c4_out
+
+  - id: sum_all_combs
+    fn: amplitude_add
+    out:
+      signal: combined_combs_raw
+    in:
+      signal_a: sum12
+      signal_b: sum34
+
+  - id: average_scale
+    fn: generation_dc
+    out:
+      signal: avg_scale_val
+    config:
+      value: 0.25
+
+  - id: average_combs
+    fn: amplitude_multiply
+    out:
+      signal: combined_combs
+    in:
+      signal_a: combined_combs_raw
+      signal_b: avg_scale_val
+
+  # 5. Serial All-pass Filters
+  - id: allpass1
+    fn: filter_allpass
+    out:
+      signal: ap1_out
+    in:
+      signal: combined_combs
+    config:
+      delay_samples: 900
+      coefficient: 0.5
+
+  - id: allpass2
+    fn: filter_allpass
+    out:
+      signal: reverb_out
+    in:
+      signal: ap1_out
+    config:
+      delay_samples: 2224
+      coefficient: 0.5
+
+  # 6. Shimmer Path - Feedback controlled by 'feedback' param
+  - id: shimmer_mod
+    fn: generation_dc
+    out:
+      signal: shim_mod_val
+    config:
+      value: -0.05
+
+  - id: pitch_shifter
+    fn: modulation_frequency
+    out:
+      signal: shifted_signal
+    in:
+      signal: reverb_out
+      modulator: shim_mod_val
+    config:
+      depth: 1.0
+
+  - id: shimmer_level
+    fn: generation_dc
+    out:
+      signal: shim_amt
+    config:
+      value: ${params.shimmer}
+
+  - id: loop_feedback_val
+    fn: generation_dc
+    out:
+      signal: loop_fb
+    config:
+      value: ${params.feedback}
+
+  - id: shimmer_gain_base
+    fn: amplitude_multiply
+    out:
+      signal: shim_gained
+    in:
+      signal_a: shifted_signal
+      signal_b: shim_amt
+
+  - id: shimmer_feedback_gain
+    fn: amplitude_multiply
+    out:
+      signal: fb_signal
+    in:
+      signal_a: shim_gained
+      signal_b: loop_fb
+
+  # 7. Final Mix
+  - id: final_mix
+    fn: mix_wet_dry
+    out:
+      signal: output
+    in:
+      dry: input
+      wet: reverb_out
+    config:
+      mix: ${params.mix}

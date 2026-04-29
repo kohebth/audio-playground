@@ -1,0 +1,76 @@
+name: overdrive
+version: 1.0.0
+params:
+  drive:
+    default: 5.0
+  tone:
+    default: 0.5
+  level:
+    default: 0.7
+signals:
+  - input
+  - output
+  - boosted_in
+  - clipped_signal
+  - toned_signal
+  - drive_val
+  - level_val
+pipeline:
+  # 1. Input Drive (Gain)
+  - id: drive_level
+    fn: generation_dc
+    out:
+      signal: drive_val
+    config:
+      value: ${params.drive}
+
+  - id: apply_drive
+    fn: amplitude_multiply
+    out:
+      signal: boosted_in
+    in:
+      signal_a: input
+      signal_b: drive_val
+
+  # 2. Dual-Stage Soft Clipping
+  - id: clipper
+    fn: amplitude_clip_soft
+    out:
+      signal: clipped_signal
+    in:
+      signal: boosted_in
+    config:
+      threshold: 0.8
+      curve: 1 # tanh
+
+  # 3. Tone Control (Biquad Filter)
+  # We use a low-pass filter where the tone param controls the cutoff
+  - id: tone_filter
+    fn: filter_biquad
+    out:
+      signal: toned_signal
+    in:
+      signal: clipped_signal
+    config:
+      # Simple LP approximation
+      b0: 0.3
+      b1: 0.3
+      b2: 0.0
+      a1: -0.4
+      a2: 0.0
+
+  # 4. Output Level
+  - id: output_level
+    fn: generation_dc
+    out:
+      signal: level_val
+    config:
+      value: ${params.level}
+
+  - id: apply_level
+    fn: amplitude_multiply
+    out:
+      signal: output
+    in:
+      signal_a: toned_signal
+      signal_b: level_val

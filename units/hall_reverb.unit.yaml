@@ -1,0 +1,191 @@
+name: hall_reverb
+version: 1.0.0
+params:
+  mix:
+    default: 0.4
+  decay:
+    default: 0.75
+  diffusion:
+    default: 0.6
+  damping:
+    default: 0.3
+signals:
+  - input
+  - output
+  - pre_in
+  - c1_out
+  - c2_out
+  - c3_out
+  - c4_out
+  - sum12
+  - sum34
+  - comb_mix
+  - ap1_out
+  - ap2_out
+  - ap3_out
+  - ap4_out
+  - reverb_tail
+  - damped_tail
+pipeline:
+  # 1. Input Scaling
+  - id: input_scaler
+    fn: generation_dc
+    out:
+      signal: rev_scale
+    config:
+      value: 0.2
+
+  - id: apply_input_scale
+    fn: amplitude_multiply
+    out:
+      signal: pre_in
+    in:
+      signal_a: input
+      signal_b: rev_scale
+
+  # 2. Parallel Combs (Schroeder)
+  - id: comb1
+    fn: filter_comb_fb
+    out:
+      signal: c1_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 1116
+      coefficient: ${params.decay}
+
+  - id: comb2
+    fn: filter_comb_fb
+    out:
+      signal: c2_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 1356
+      coefficient: ${params.decay}
+
+  - id: comb3
+    fn: filter_comb_fb
+    out:
+      signal: c3_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 1422
+      coefficient: ${params.decay}
+
+  - id: comb4
+    fn: filter_comb_fb
+    out:
+      signal: c4_out
+    in:
+      signal: pre_in
+    config:
+      delay_samples: 1491
+      coefficient: ${params.decay}
+
+  # 3. Summing and Averaging Combs
+  - id: sum_12
+    fn: amplitude_add
+    out:
+      signal: sum12
+    in:
+      signal_a: c1_out
+      signal_b: c2_out
+
+  - id: sum_34
+    fn: amplitude_add
+    out:
+      signal: sum34
+    in:
+      signal_a: c3_out
+      signal_b: c4_out
+
+  - id: sum_all
+    fn: amplitude_add
+    out:
+      signal: comb_mix_raw
+    in:
+      signal_a: sum12
+      signal_b: sum34
+
+  - id: avg_scale
+    fn: generation_dc
+    out:
+      signal: avg_val
+    config:
+      value: 0.25
+
+  - id: normalize_combs
+    fn: amplitude_multiply
+    out:
+      signal: comb_mix
+    in:
+      signal_a: comb_mix_raw
+      signal_b: avg_val
+
+  # 4. High Diffusion chain (4 all-passes)
+  - id: ap1
+    fn: filter_allpass
+    out:
+      signal: ap1_out
+    in:
+      signal: comb_mix
+    config:
+      delay_samples: 556
+      coefficient: ${params.diffusion}
+
+  - id: ap2
+    fn: filter_allpass
+    out:
+      signal: ap2_out
+    in:
+      signal: ap1_out
+    config:
+      delay_samples: 441
+      coefficient: ${params.diffusion}
+
+  - id: ap3
+    fn: filter_allpass
+    out:
+      signal: ap3_out
+    in:
+      signal: ap2_out
+    config:
+      delay_samples: 341
+      coefficient: ${params.diffusion}
+
+  - id: ap4
+    fn: filter_allpass
+    out:
+      signal: reverb_tail
+    in:
+      signal: ap3_out
+    config:
+      delay_samples: 225
+      coefficient: ${params.diffusion}
+
+  # 5. Balanced Damping
+  - id: damp_filter
+    fn: filter_biquad
+    out:
+      signal: damped_tail
+    in:
+      signal: reverb_tail
+    config:
+      b0: 0.4
+      b1: 0.4
+      b2: 0.0
+      a1: -0.2
+      a2: 0.0
+
+  # 6. Final Mix
+  - id: final_mix
+    fn: mix_wet_dry
+    out:
+      signal: output
+    in:
+      dry: input
+      wet: damped_tail
+    config:
+      mix: ${params.mix}

@@ -4,15 +4,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-// ─────────────────────────────────────────────
-// Uniform calling convention for all atoms
-// ─────────────────────────────────────────────
-
 typedef struct {
-    void *out;      // pointer to allocated out struct (passed by value via thunk)
-    void *in;       // pointer to allocated in struct  (passed by value via thunk)
-    void *config;   // pointer to allocated params struct
-    void *state;    // pointer to allocated state struct
+    void *out;
+    void *in;
+    void *config;
+    void *state;
 } atom_call_t;
 
 typedef void (*atom_thunk_fn)(atom_call_t *call);
@@ -43,22 +39,14 @@ typedef struct {
 typedef struct {
     const char              *name;          // atom name, e.g. "detect_envelope"
     atom_thunk_fn            thunk;         // generic wrapper function
-
-    const atom_field_desc_t *out_fields;
-    int                      n_out;
     size_t                   out_size;      // sizeof(out struct)
-
-    const atom_field_desc_t *in_fields;
-    int                      n_in;
     size_t                   in_size;       // sizeof(in struct), 0 if void*
-
-    const atom_field_desc_t *config_fields;
-    int                      n_config;
     size_t                   config_size;   // sizeof(params struct), 0 if void*
-
-    const atom_field_desc_t *state_fields;
-    int                      n_state;
     size_t                   state_size;    // sizeof(state struct), 0 if void*
+    const atom_field_desc_t *state_fields;  // layout descriptors for state
+    int                      n_state_fields;
+    const atom_field_desc_t *config_fields; // layout descriptors for config
+    int                      n_config_fields;
 } atom_registry_entry_t;
 
 // ─────────────────────────────────────────────

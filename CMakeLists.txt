@@ -9,35 +9,47 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(PIPEWIRE REQUIRED libpipewire-0.3)
 
 include_directories(
-    ${CMAKE_SOURCE_DIR}/inc/
-    ${CMAKE_SOURCE_DIR}/inc/util
-    ${CMAKE_SOURCE_DIR}/inc/runtime
-    ${CMAKE_SOURCE_DIR}/inc/unit
-    ${CMAKE_SOURCE_DIR}/inc/util
-    ${PIPEWIRE_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/inc/
+        ${CMAKE_SOURCE_DIR}/inc/runtime
+        ${CMAKE_SOURCE_DIR}/inc/unit
+        ${CMAKE_SOURCE_DIR}/inc/util
+        ${CMAKE_SOURCE_DIR}/inc/yaml
+        ${PIPEWIRE_INCLUDE_DIRS}
 )
 
 file(GLOB ATOM_SOURCES src/atom/*.c)
-file(GLOB RUNTIME_SOURCES src/runtime/*.c)
+file(GLOB RUNT_SOURCES src/runtime/*.c)
 file(GLOB UNIT_SOURCES src/unit/*.c)
 file(GLOB UTIL_SOURCES src/util/*.c)
+file(GLOB YAML_SOURCES src/yaml/*.c)
 list(APPEND UTIL_SOURCES ${ATOM_SOURCES})
 list(APPEND UTIL_SOURCES ${UNIT_SOURCES})
-list(APPEND UTIL_SOURCES ${RUNTIME_SOURCES})
+list(APPEND UTIL_SOURCES ${RUNT_SOURCES})
+list(APPEND UTIL_SOURCES ${YAML_SOURCES})
 
 add_executable(live
-    src/live.c
-    ${UTIL_SOURCES}
+        src/live.c
+        ${UTIL_SOURCES}
 )
 target_link_libraries(live
-    ${PIPEWIRE_LIBRARIES}
-    m
+        ${PIPEWIRE_LIBRARIES}
+        m
 )
 
 add_executable(fast_math_test
-    src/fast_math_test.c
-    ${UTIL_SOURCES}
+        src/fast_math_test.c
+        ${UTIL_SOURCES}
+        inc/atom/dsp_types.h
 )
 target_link_libraries(fast_math_test
-    m
+        m
+)
+
+add_executable(test_runtime
+        src/test_runtime.c
+        ${UTIL_SOURCES}
+)
+target_link_libraries(test_runtime
+        ${PIPEWIRE_LIBRARIES}
+        m
 )
