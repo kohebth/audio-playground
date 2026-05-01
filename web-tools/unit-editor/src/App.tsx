@@ -94,6 +94,10 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleYamlChange = (newYaml: string) => {
+    setUnit(parseYaml(newYaml));
+  };
+
   const yamlText = useMemo(() => serializeYaml(unit), [unit]);
 
   return (
@@ -116,7 +120,7 @@ export default function App() {
           </button>
           <input ref={fileRef} type="file" accept=".yaml,.yml" hidden onChange={handleFileInput} />
           <button className="btn btn--ghost" onClick={() => setShowYaml(v => !v)}>
-            {showYaml ? 'Hide' : 'YAML'} Preview
+            {showYaml ? 'Hide' : 'YAML'} Editor
           </button>
           <button className="btn btn--primary" onClick={exportYaml}>
             Export YAML
@@ -173,7 +177,7 @@ export default function App() {
       {/* YAML Preview drawer */}
       {showYaml && (
         <div className="yaml-drawer">
-          <YamlPreview yaml={yamlText} />
+          <YamlPreview yaml={yamlText} onChange={handleYamlChange} />
         </div>
       )}
     </div>

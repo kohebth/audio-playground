@@ -574,12 +574,33 @@ body {
   flex-shrink: 0;
 }
 
+.yaml-preview__title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+}
+
 .yaml-preview__title {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.yaml-preview__error {
+  font-size: 10px;
+  color: var(--danger);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yaml-preview__status {
+  font-size: 10px;
+  color: var(--accent);
 }
 
 .yaml-preview__copy {
@@ -593,7 +614,8 @@ body {
 }
 .yaml-preview__copy:hover { color: var(--text-primary); }
 
-.yaml-preview__code {
+.yaml-preview__code,
+.yaml-preview__editor {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-primary);
@@ -603,6 +625,23 @@ body {
   line-height: 1.6;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+}
+
+.yaml-preview__editor {
+  background: transparent;
+  border: none;
+  resize: none;
+  outline: none;
+  width: 100%;
+}
+
+.yaml-preview__editor--error {
+  border-left: 2px solid var(--danger);
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.yaml-preview__editor:focus {
+  background: rgba(59, 130, 246, 0.03);
 }
 
 /* ─── React Flow overrides ───────────────────────────────────────────────── */
