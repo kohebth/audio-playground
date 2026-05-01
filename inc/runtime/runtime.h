@@ -9,10 +9,10 @@
 // Constants
 // ─────────────────────────────────────────────
 
-#define RT_MAX_SIGNALS   32
-#define RT_MAX_STEPS     32
-#define RT_MAX_PARAMS    16
-#define RT_MAX_INTERNALS 16
+#define RT_MAX_SIGNALS   128
+#define RT_MAX_STEPS     128
+#define RT_MAX_PARAMS    64
+#define RT_MAX_INTERNALS 64
 #define RT_CHUNK_LENGTH  512
 
 // ─────────────────────────────────────────────
@@ -85,7 +85,8 @@ typedef struct {
 
     // Memory pool for state buffers (delay lines)
     float           *state_pool;
-    int              state_pool_used;
+    size_t           state_pool_used;
+    size_t           state_pool_size;
 
     // Dirty flag — reconfigure on param change
     volatile bool    is_changed;

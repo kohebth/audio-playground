@@ -86,7 +86,7 @@ static int lex_scalar(lex_t *L) {
         char c = L->src[L->i];
         if (c == '\n' || c == '#') break;
         if (L->flow && (c == ',' || c == '}')) break;
-        if (!L->flow && c == ':' &&
+        if (c == ':' &&
             (L->i + 1 == L->n || isspace((unsigned char)L->src[L->i + 1])))
             break;
         advance(L, 1);

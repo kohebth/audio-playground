@@ -1,191 +1,579 @@
 name: hall_reverb
-version: 1.0.0
+version: 2.0.0
+
 params:
   mix:
-    default: 0.4
+    default: 0.35          # wet/dry blend
+    range: [0.0, 1.0]
   decay:
-    default: 0.75
+    default: 0.85          # base feedback (per-comb staggered around this)
+    range: [0.5, 0.95]
   diffusion:
-    default: 0.6
+    default: 0.7           # allpass coefficient
+    range: [0.5, 0.85]
   damping:
-    default: 0.3
+    default: 4500.0        # damping cutoff in Hz (lowpass in feedback loops)
+    range: [1500.0, 12000.0]
+  size:
+    default: 1.0           # delay scaling — 1.0 = hall, <1 smaller, >1 cathedral
+    range: [0.7, 1.5]
+  pre_delay_ms:
+    default: 30.0          # ms before reverb begins
+    range: [0.0, 100.0]
+  modulation_depth:
+    default: 4.0           # samples of LFO modulation on combs
+    range: [0.0, 10.0]
+  modulation_rate:
+    default: 0.4           # Hz, slow movement
+    range: [0.1, 2.0]
+  er_level:
+    default: 0.5           # early reflection contribution
+    range: [0.0, 1.0]
+  tail_level:
+    default: 0.7           # late reverb contribution
+    range: [0.0, 1.0]
+
 signals:
+  # --- input chain ---
   - input
-  - output
-  - pre_in
-  - c1_out
-  - c2_out
-  - c3_out
-  - c4_out
-  - sum12
-  - sum34
+  - input_scaled
+  # --- pre-delay & early reflections ---
+  - pre_delayed
+  - er_tap1
+  - er_tap2
+  - er_tap3
+  - er_tap4
+  - er_tap1_scaled
+  - er_tap2_scaled
+  - er_tap3_scaled
+  - er_tap4_scaled
+  - er_sum_a
+  - er_sum_b
+  - er_sum
+  - er_out
+  # --- modulation ---
+  - mod_lfo_a
+  - mod_lfo_b
+  # --- comb bank (8 damped combs) ---
+  - c1_raw
+  - c1_damped
+  - c2_raw
+  - c2_damped
+  - c3_raw
+  - c3_damped
+  - c4_raw
+  - c4_damped
+  - c5_raw
+  - c5_damped
+  - c6_raw
+  - c6_damped
+  - c7_raw
+  - c7_damped
+  - c8_raw
+  - c8_damped
+  # --- comb summing tree ---
+  - sum_12
+  - sum_34
+  - sum_56
+  - sum_78
+  - sum_1234
+  - sum_5678
+  - comb_mix_raw
   - comb_mix
+  - comb_scale
+  # --- diffusion chain ---
   - ap1_out
   - ap2_out
   - ap3_out
   - ap4_out
-  - reverb_tail
-  - damped_tail
-pipeline:
-  # 1. Input Scaling
-  - id: input_scaler
-    fn: generation_dc
-    out:
-      signal: rev_scale
-    config:
-      value: 0.2
+  - ap5_out
+  - ap6_out
+  # --- final stages ---
+  - dc_clean
+  - tail_scaled
+  - er_contribution
+  - reverb_total
+  - output
 
-  - id: apply_input_scale
+pipeline:
+
+  # ═══════════════════════════════════════════════════════════
+  # 1. Input scaling — prevent feedback loops from exploding
+  # ═══════════════════════════════════════════════════════════
+
+  - id: input_scaler_dc
+    fn: generation_dc
+    out: { signal: input_scale_const }
+    config:
+      value: 0.3                       # -10 dB headroom for combs
+
+  - id: scale_input
     fn: amplitude_multiply
-    out:
-      signal: pre_in
+    out: { signal: input_scaled }
     in:
       signal_a: input
-      signal_b: rev_scale
+      signal_b: input_scale_const
 
-  # 2. Parallel Combs (Schroeder)
-  - id: comb1
-    fn: filter_comb_fb
-    out:
-      signal: c1_out
+  # ═══════════════════════════════════════════════════════════
+  # 2. Pre-delay — distance from source to first reflection
+  # ═══════════════════════════════════════════════════════════
+
+  - id: pre_delay
+    fn: delay_line
+    out: { signal: pre_delayed }
     in:
-      signal: pre_in
+      signal: input_scaled
     config:
-      delay_samples: 1116
-      coefficient: ${params.decay}
+      max_delay_samples: 9600          # up to 200 ms @ 48k
+      delay_samples: 1440              # 30 ms — typical hall pre-delay
 
-  - id: comb2
-    fn: filter_comb_fb
-    out:
-      signal: c2_out
-    in:
-      signal: pre_in
+  # ═══════════════════════════════════════════════════════════
+  # 3. Early Reflections — multi-tap discrete echoes
+  # Define the room's spatial signature
+  # Tap times chosen as ratios typical of medium-large halls
+  # ═══════════════════════════════════════════════════════════
+
+  - id: er_tap_1
+    fn: delay_line
+    out: { signal: er_tap1 }
+    in: { signal: input_scaled }
     config:
-      delay_samples: 1356
-      coefficient: ${params.decay}
+      max_delay_samples: 9600
+      delay_samples: 877               # ~18 ms — close wall
 
-  - id: comb3
-    fn: filter_comb_fb
-    out:
-      signal: c3_out
-    in:
-      signal: pre_in
+  - id: er_tap_2
+    fn: delay_line
+    out: { signal: er_tap2 }
+    in: { signal: input_scaled }
     config:
-      delay_samples: 1422
-      coefficient: ${params.decay}
+      max_delay_samples: 9600
+      delay_samples: 1153              # ~24 ms — side wall
 
-  - id: comb4
-    fn: filter_comb_fb
-    out:
-      signal: c4_out
-    in:
-      signal: pre_in
+  - id: er_tap_3
+    fn: delay_line
+    out: { signal: er_tap3 }
+    in: { signal: input_scaled }
     config:
-      delay_samples: 1491
-      coefficient: ${params.decay}
+      max_delay_samples: 9600
+      delay_samples: 1559              # ~32 ms — back wall (prime)
 
-  # 3. Summing and Averaging Combs
-  - id: sum_12
-    fn: amplitude_add
-    out:
-      signal: sum12
-    in:
-      signal_a: c1_out
-      signal_b: c2_out
+  - id: er_tap_4
+    fn: delay_line
+    out: { signal: er_tap4 }
+    in: { signal: input_scaled }
+    config:
+      max_delay_samples: 9600
+      delay_samples: 2161              # ~45 ms — ceiling/far (prime)
 
-  - id: sum_34
-    fn: amplitude_add
-    out:
-      signal: sum34
-    in:
-      signal_a: c3_out
-      signal_b: c4_out
-
-  - id: sum_all
-    fn: amplitude_add
-    out:
-      signal: comb_mix_raw
-    in:
-      signal_a: sum12
-      signal_b: sum34
-
-  - id: avg_scale
+  # Each ER tap is progressively quieter (energy loss with distance)
+  - id: er_gain_1
     fn: generation_dc
-    out:
-      signal: avg_val
+    out: { signal: er_g1 }
+    config: { value: 0.7 }
+
+  - id: er_gain_2
+    fn: generation_dc
+    out: { signal: er_g2 }
+    config: { value: 0.55 }
+
+  - id: er_gain_3
+    fn: generation_dc
+    out: { signal: er_g3 }
+    config: { value: 0.4 }
+
+  - id: er_gain_4
+    fn: generation_dc
+    out: { signal: er_g4 }
+    config: { value: 0.3 }
+
+  - id: er_scale_1
+    fn: amplitude_multiply
+    out: { signal: er_tap1_scaled }
+    in: { signal_a: er_tap1, signal_b: er_g1 }
+
+  - id: er_scale_2
+    fn: amplitude_multiply
+    out: { signal: er_tap2_scaled }
+    in: { signal_a: er_tap2, signal_b: er_g2 }
+
+  - id: er_scale_3
+    fn: amplitude_multiply
+    out: { signal: er_tap3_scaled }
+    in: { signal_a: er_tap3, signal_b: er_g3 }
+
+  - id: er_scale_4
+    fn: amplitude_multiply
+    out: { signal: er_tap4_scaled }
+    in: { signal_a: er_tap4, signal_b: er_g4 }
+
+  - id: er_add_a
+    fn: amplitude_add
+    out: { signal: er_sum_a }
+    in: { signal_a: er_tap1_scaled, signal_b: er_tap2_scaled }
+
+  - id: er_add_b
+    fn: amplitude_add
+    out: { signal: er_sum_b }
+    in: { signal_a: er_tap3_scaled, signal_b: er_tap4_scaled }
+
+  - id: er_add_total
+    fn: amplitude_add
+    out: { signal: er_out }
+    in: { signal_a: er_sum_a, signal_b: er_sum_b }
+
+  # ═══════════════════════════════════════════════════════════
+  # 4. Modulation LFOs — subtle delay modulation kills metallic ringing
+  # Two LFOs at different rates, applied to different comb pairs
+  # ═══════════════════════════════════════════════════════════
+
+  - id: lfo_a
+    fn: generation_lfo
+    out: { signal: mod_lfo_a }
     config:
-      value: 0.25
+      frequency: ${params.modulation_rate}     # ~0.4 Hz
+      waveform: sine
+      depth: ${params.modulation_depth}
+
+  - id: lfo_b
+    fn: generation_lfo
+    out: { signal: mod_lfo_b }
+    config:
+      frequency: 0.27                          # incommensurate with lfo_a
+      waveform: sine
+      depth: ${params.modulation_depth}
+
+  # ═══════════════════════════════════════════════════════════
+  # 5. Damped Parallel Comb Bank — 8 combs, ALL PRIMES
+  # Around 3000 samples (~62 ms) for hall-scale
+  # Coefficients staggered for natural decay envelope
+  # Lowpass after each comb simulates damping inside feedback
+  # (true Moorer-style requires LP inside loop — close approximation)
+  # ═══════════════════════════════════════════════════════════
+
+  # --- Comb 1 ---
+  - id: comb_1
+    fn: filter_comb_fb
+    out: { signal: c1_raw }
+    in:
+      signal: pre_delayed
+      modulation: mod_lfo_a
+    config:
+      delay_samples: 2999                      # prime
+      coefficient: ${params.decay}             # 0.85 base
+
+  - id: comb_1_damp
+    fn: filter_biquad
+    out: { signal: c1_damped }
+    in: { signal: c1_raw }
+    config:
+      type: lowpass
+      cutoff: ${params.damping}
+      q: 0.707
+
+  # --- Comb 2 ---
+  - id: comb_2
+    fn: filter_comb_fb
+    out: { signal: c2_raw }
+    in:
+      signal: pre_delayed
+      modulation: mod_lfo_b
+    config:
+      delay_samples: 3119                      # prime
+      coefficient: 0.84
+
+  - id: comb_2_damp
+    fn: filter_biquad
+    out: { signal: c2_damped }
+    in: { signal: c2_raw }
+    config:
+      type: lowpass
+      cutoff: ${params.damping}
+      q: 0.707
+
+  # --- Comb 3 ---
+  - id: comb_3
+    fn: filter_comb_fb
+    out: { signal: c3_raw }
+    in:
+      signal: pre_delayed
+      modulation: mod_lfo_a
+    config:
+      delay_samples: 3257                      # prime
+      coefficient: 0.83
+
+  - id: comb_3_damp
+    fn: filter_biquad
+    out: { signal: c3_damped }
+    in: { signal: c3_raw }
+    config:
+      type: lowpass
+      cutoff: ${params.damping}
+      q: 0.707
+
+  # --- Comb 4 ---
+  - id: comb_4
+    fn: filter_comb_fb
+    out: { signal: c4_raw }
+    in:
+      signal: pre_delayed
+      modulation: mod_lfo_b
+    config:
+      delay_samples: 3413                      # prime
+      coefficient: 0.82
+
+  - id: comb_4_damp
+    fn: filter_biquad
+    out: { signal: c4_damped }
+    in: { signal: c4_raw }
+    config:
+      type: lowpass
+      cutoff: ${params.damping}
+      q: 0.707
+
+  # --- Comb 5 ---
+  - id: comb_5
+    fn: filter_comb_fb
+    out: { signal: c5_raw }
+    in:
+      signal: pre_delayed
+      modulation: mod_lfo_a
+    config:
+      delay_samples: 3571                      # prime
+      coefficient: 0.81
+
+  - id: comb_5_damp
+    fn: filter_biquad
+    out: { signal: c5_damped }
+    in: { signal: c5_raw }
+    config:
+      type: lowpass
+      cutoff: ${params.damping}
+      q: 0.707
+
+  # --- Comb 6 ---
+  - id: comb_6
+    fn: filter_comb_fb
+    out: { signal: c6_raw }
+    in:
+      signal: pre_delayed
+      modulation: mod_lfo_b
+    config:
+      delay_samples: 3719                      # prime
+      coefficient: 0.80
+
+  - id: comb_6_damp
+    fn: filter_biquad
+    out: { signal: c6_damped }
+    in: { signal: c6_raw }
+    config:
+      type: lowpass
+      cutoff: ${params.damping}
+      q: 0.707
+
+  # --- Comb 7 ---
+  - id: comb_7
+    fn: filter_comb_fb
+    out: { signal: c7_raw }
+    in:
+      signal: pre_delayed
+      modulation: mod_lfo_a
+    config:
+      delay_samples: 3851                      # prime
+      coefficient: 0.79
+
+  - id: comb_7_damp
+    fn: filter_biquad
+    out: { signal: c7_damped }
+    in: { signal: c7_raw }
+    config:
+      type: lowpass
+      cutoff: ${params.damping}
+      q: 0.707
+
+  # --- Comb 8 ---
+  - id: comb_8
+    fn: filter_comb_fb
+    out: { signal: c8_raw }
+    in:
+      signal: pre_delayed
+      modulation: mod_lfo_b
+    config:
+      delay_samples: 3989                      # prime
+      coefficient: 0.78
+
+  - id: comb_8_damp
+    fn: filter_biquad
+    out: { signal: c8_damped }
+    in: { signal: c8_raw }
+    config:
+      type: lowpass
+      cutoff: ${params.damping}
+      q: 0.707
+
+  # ═══════════════════════════════════════════════════════════
+  # 6. Sum the comb bank (binary tree for clarity)
+  # ═══════════════════════════════════════════════════════════
+
+  - id: add_12
+    fn: amplitude_add
+    out: { signal: sum_12 }
+    in: { signal_a: c1_damped, signal_b: c2_damped }
+
+  - id: add_34
+    fn: amplitude_add
+    out: { signal: sum_34 }
+    in: { signal_a: c3_damped, signal_b: c4_damped }
+
+  - id: add_56
+    fn: amplitude_add
+    out: { signal: sum_56 }
+    in: { signal_a: c5_damped, signal_b: c6_damped }
+
+  - id: add_78
+    fn: amplitude_add
+    out: { signal: sum_78 }
+    in: { signal_a: c7_damped, signal_b: c8_damped }
+
+  - id: add_1234
+    fn: amplitude_add
+    out: { signal: sum_1234 }
+    in: { signal_a: sum_12, signal_b: sum_34 }
+
+  - id: add_5678
+    fn: amplitude_add
+    out: { signal: sum_5678 }
+    in: { signal_a: sum_56, signal_b: sum_78 }
+
+  - id: add_all
+    fn: amplitude_add
+    out: { signal: comb_mix_raw }
+    in: { signal_a: sum_1234, signal_b: sum_5678 }
+
+  # Normalize the 8-comb sum (1/8 = 0.125)
+  - id: comb_norm_dc
+    fn: generation_dc
+    out: { signal: comb_scale }
+    config:
+      value: 0.125
 
   - id: normalize_combs
     fn: amplitude_multiply
-    out:
-      signal: comb_mix
+    out: { signal: comb_mix }
     in:
       signal_a: comb_mix_raw
-      signal_b: avg_val
+      signal_b: comb_scale
 
-  # 4. High Diffusion chain (4 all-passes)
-  - id: ap1
+  # ═══════════════════════════════════════════════════════════
+  # 7. Series Allpass Diffusion — 6 stages, mutually prime, ascending
+  # Each stage roughly doubles echo density
+  # Ascending order = natural buildup (small → large)
+  # ═══════════════════════════════════════════════════════════
+
+  - id: ap_1
     fn: filter_allpass
-    out:
-      signal: ap1_out
-    in:
-      signal: comb_mix
+    out: { signal: ap1_out }
+    in: { signal: comb_mix }
     config:
-      delay_samples: 556
+      delay_samples: 113                       # prime
       coefficient: ${params.diffusion}
 
-  - id: ap2
+  - id: ap_2
     fn: filter_allpass
-    out:
-      signal: ap2_out
-    in:
-      signal: ap1_out
+    out: { signal: ap2_out }
+    in: { signal: ap1_out }
     config:
-      delay_samples: 441
+      delay_samples: 173                       # prime
       coefficient: ${params.diffusion}
 
-  - id: ap3
+  - id: ap_3
     fn: filter_allpass
-    out:
-      signal: ap3_out
-    in:
-      signal: ap2_out
+    out: { signal: ap3_out }
+    in: { signal: ap2_out }
     config:
-      delay_samples: 341
-      coefficient: ${params.diffusion}
+      delay_samples: 269                       # prime
+      coefficient: 0.65                        # slightly less to avoid blur-out
 
-  - id: ap4
+  - id: ap_4
     fn: filter_allpass
-    out:
-      signal: reverb_tail
-    in:
-      signal: ap3_out
+    out: { signal: ap4_out }
+    in: { signal: ap3_out }
     config:
-      delay_samples: 225
-      coefficient: ${params.diffusion}
+      delay_samples: 379                       # prime
+      coefficient: 0.65
 
-  # 5. Balanced Damping
-  - id: damp_filter
-    fn: filter_biquad
-    out:
-      signal: damped_tail
-    in:
-      signal: reverb_tail
+  - id: ap_5
+    fn: filter_allpass
+    out: { signal: ap5_out }
+    in: { signal: ap4_out }
     config:
-      b0: 0.4
-      b1: 0.4
-      b2: 0.0
-      a1: -0.2
-      a2: 0.0
+      delay_samples: 547                       # prime
+      coefficient: 0.6
 
-  # 6. Final Mix
+  - id: ap_6
+    fn: filter_allpass
+    out: { signal: ap6_out }
+    in: { signal: ap5_out }
+    config:
+      delay_samples: 661                       # prime
+      coefficient: 0.6
+
+  # ═══════════════════════════════════════════════════════════
+  # 8. DC blocker — prevents DC offset accumulation in feedback
+  # ═══════════════════════════════════════════════════════════
+
+  - id: dc_block
+    fn: filter_dc_block
+    out: { signal: dc_clean }
+    in: { signal: ap6_out }
+    config:
+      cutoff: 20.0
+
+  # ═══════════════════════════════════════════════════════════
+  # 9. Combine ER + Late tail with independent levels
+  # ═══════════════════════════════════════════════════════════
+
+  - id: er_level_dc
+    fn: generation_dc
+    out: { signal: er_level_const }
+    config:
+      value: ${params.er_level}
+
+  - id: tail_level_dc
+    fn: generation_dc
+    out: { signal: tail_level_const }
+    config:
+      value: ${params.tail_level}
+
+  - id: scale_er
+    fn: amplitude_multiply
+    out: { signal: er_contribution }
+    in:
+      signal_a: er_out
+      signal_b: er_level_const
+
+  - id: scale_tail
+    fn: amplitude_multiply
+    out: { signal: tail_scaled }
+    in:
+      signal_a: dc_clean
+      signal_b: tail_level_const
+
+  - id: combine_er_tail
+    fn: amplitude_add
+    out: { signal: reverb_total }
+    in:
+      signal_a: er_contribution
+      signal_b: tail_scaled
+
+  # ═══════════════════════════════════════════════════════════
+  # 10. Final wet/dry blend
+  # ═══════════════════════════════════════════════════════════
+
   - id: final_mix
     fn: mix_wet_dry
-    out:
-      signal: output
+    out: { signal: output }
     in:
       dry: input
-      wet: damped_tail
+      wet: reverb_total
     config:
       mix: ${params.mix}

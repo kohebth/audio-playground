@@ -152,9 +152,12 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
 
     u->signal_pool_count = RT_MAX_SIGNALS;
     u->signal_pool = calloc(u->signal_pool_count * u->ctx.chunk_length, sizeof(float));
-    u->state_pool = calloc(1000000, sizeof(float)); // 4MB state pool
-    u->state_pool_used = 0;
-
+    u->state_pool_size = 4000000; // 16MB state pool
+    u->state_pool = calloc(u->state_pool_size, sizeof(float));
+    if (!u->signal_pool || !u->state_pool) {
+        fprintf(stderr, "runtime: pool allocation failed\n");
+        return NULL;
+    }
     rt_alloc_signal(u, "input");
     rt_alloc_signal(u, "output");
 
@@ -163,6 +166,7 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
     for (size_t i = 0; i < uc.params_len && u->n_params < RT_MAX_PARAMS; i++) {
         u->params[u->n_params].name = strdup(uc.params[i].name);
         u->params[u->n_params].value = (float)uc.params[i].def;
+        printf("runtime: param '%s' = %f\n", u->params[u->n_params].name, u->params[u->n_params].value);
         u->n_params++;
     }
 
@@ -197,6 +201,10 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
         // Auto-allocate buffers in state
         for (int j = 0; j < atom->n_state_fields; j++) {
             if (atom->state_fields[j].type == FIELD_BUFFER) {
+                if (u->state_pool_used + 65536 > u->state_pool_size) {
+                    fprintf(stderr, "runtime: state pool exhausted allocating buffer for '%s'\n", st->id);
+                    continue;
+                }
                 float **ptr = (float **)((char *)step->state + atom->state_fields[j].offset);
                 *ptr = &u->state_pool[u->state_pool_used];
                 u->state_pool_used += 65536; // Default buffer size: 64k samples

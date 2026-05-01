@@ -4,18 +4,19 @@
 
 int main() {
     runtime_context_t rt_ctx = {.sample_rate = 48000, .chunk_length = 512};
-    runtime_unit_t *unit = runtime_unit_load("../units/overdrive.unit.yaml", rt_ctx);
+    runtime_unit_t *unit = runtime_unit_load("../units/hall_reverb.unit.yaml", rt_ctx);
     if (!unit) {
         printf("Failed to load unit\n");
         return 1;
     }
     
-    float in[512];
+    float in[512] = {0};
     float out[512];
-    for (int i = 0; i < 512; i++) in[i] = (float)sin(2.0 * M_PI * 440.0 * i / 48000.0); 
+    in[0] = 1.0f; // Single impulse
     
-    for (int chunk = 0; chunk < 50; chunk++) {
+    for (int chunk = 0; chunk < 100; chunk++) {
         runtime_unit_process(unit, in, out);
+        if (chunk == 0) in[0] = 0.0f; // Clear impulse after first chunk
         
         float rms = 0;
         int nan_count = 0;
