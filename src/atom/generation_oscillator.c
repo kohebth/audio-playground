@@ -15,10 +15,15 @@ void generation_oscillator(
     if (out->signal == NULL || state == NULL)
         return;
 
-    float phase     = state->phase;
-    float phase_inc = params->frequency / params->sample_rate;
+    float phase = state->phase;
 
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
+        float freq = (in->frequency != NULL) ? in->frequency[i] : params->frequency;
+        float sr = params->sample_rate;
+        if (sr <= 0.0f) sr = 48000.0f;
+        float phase_inc = freq / sr;
+        if (!isfinite(phase_inc)) phase_inc = 0.0f;
+
         float p = phase + params->phase_offset;
         p -= floorf(p);
 

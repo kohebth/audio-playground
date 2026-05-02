@@ -1,0 +1,241 @@
+name: vocal_rhodes
+version: 1.0.0
+
+params:
+  body_attack:
+    default: 0.025
+    range: [0.005, 0.15]
+  body_release:
+    default: 0.9
+    range: [0.05, 4.0]
+
+  tine_attack:
+    default: 0.001
+    range: [0.0005, 0.02]
+  tine_release:
+    default: 0.11
+    range: [0.02, 0.5]
+
+  tine_amount:
+    default: 1.0
+    range: [0.0, 2.0]
+
+  pitch_smooth:
+    default: 0.015
+    range: [0.001, 0.1]
+
+  level:
+    default: 0.7
+    range: [0.0, 1.5]
+  sample_rate:
+    default: 48000.0
+
+signals:
+  - input
+  - output
+  # analysis
+  - pitch_raw
+  - pitch
+  - env_in
+  - body_env
+  - tine_env
+  # pitch math
+  - tine_ratio_val
+  - tine_freq
+  # oscillators
+  - body_tone
+  - tine_tone
+  # shaping
+  - body_shaped
+  - tine_raw
+  - tine_amount_val
+  - tine_shaped
+  # mix
+  - mixed_tone
+  - warm_tone
+  - level_val
+
+pipeline:
+  # ─────────────────────────────────────────────────────────────────────
+  # 1. ANALYSIS
+  # ─────────────────────────────────────────────────────────────────────
+  - id: detect_voice_pitch
+    fn: detect_pitch
+    in:
+      signal: input
+    out:
+      pitch: pitch_raw
+    config:
+      max_lag: 2400
+      sample_rate: ${params.sample_rate}
+
+  - id: smooth_pitch
+    fn: amplitude_smooth
+    in:
+      signal: pitch_raw
+    out:
+      signal: pitch
+    config:
+      attack: ${params.pitch_smooth}
+      release: ${params.pitch_smooth}
+      sample_rate: ${params.sample_rate}
+
+  - id: detect_voice_env
+    fn: detect_envelope
+    in:
+      signal: input
+    out:
+      envelope: env_in
+    config:
+      attack: 0.005
+      release: 0.05
+      sample_rate: ${params.sample_rate}
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 2. TWO ENVELOPES — body slow, tine fast
+  # ─────────────────────────────────────────────────────────────────────
+  - id: shape_body_env
+    fn: amplitude_smooth
+    in:
+      signal: env_in
+    out:
+      signal: body_env
+    config:
+      attack: ${params.body_attack}
+      release: ${params.body_release}
+      sample_rate: ${params.sample_rate}
+
+  - id: shape_tine_env
+    fn: amplitude_smooth
+    in:
+      signal: env_in
+    out:
+      signal: tine_env
+    config:
+      attack: ${params.tine_attack}
+      release: ${params.tine_release}
+      sample_rate: ${params.sample_rate}
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 3. PITCH MATH — tine = pitch × 4 (two octaves up, octave-fused)
+  # ─────────────────────────────────────────────────────────────────────
+  - id: tine_ratio_const
+    fn: generation_dc
+    out:
+      signal: tine_ratio_val
+    config:
+      value: 4.0
+
+  - id: calc_tine_freq
+    fn: amplitude_multiply
+    in:
+      signal_a: pitch
+      signal_b: tine_ratio_val
+    out:
+      signal: tine_freq
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 4. TWO SINE OSCILLATORS — fundamental + tine
+  # ─────────────────────────────────────────────────────────────────────
+  - id: body_osc
+    fn: generation_oscillator
+    in:
+      frequency: pitch
+    out:
+      signal: body_tone
+    config:
+      frequency: 220.0
+      waveform: 0
+      phase_offset: 0.0
+      sample_rate: ${params.sample_rate}
+
+  - id: tine_osc
+    fn: generation_oscillator
+    in:
+      frequency: tine_freq
+    out:
+      signal: tine_tone
+    config:
+      frequency: 880.0
+      waveform: 0
+      phase_offset: 0.0
+      sample_rate: ${params.sample_rate}
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 5. APPLY ENVELOPES
+  # ─────────────────────────────────────────────────────────────────────
+  - id: shape_body
+    fn: amplitude_multiply
+    in:
+      signal_a: body_tone
+      signal_b: body_env
+    out:
+      signal: body_shaped
+
+  - id: shape_tine
+    fn: amplitude_multiply
+    in:
+      signal_a: tine_tone
+      signal_b: tine_env
+    out:
+      signal: tine_raw
+
+  - id: tine_amount_const
+    fn: generation_dc
+    out:
+      signal: tine_amount_val
+    config:
+      value: ${params.tine_amount}
+
+  - id: scale_tine
+    fn: amplitude_multiply
+    in:
+      signal_a: tine_raw
+      signal_b: tine_amount_val
+    out:
+      signal: tine_shaped
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 6. MIX — body + tine
+  # ─────────────────────────────────────────────────────────────────────
+  - id: mix_layers
+    fn: amplitude_add
+    in:
+      signal_a: body_shaped
+      signal_b: tine_shaped
+    out:
+      signal: mixed_tone
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 7. WARMTH
+  # ─────────────────────────────────────────────────────────────────────
+  - id: warmth_filter
+    fn: filter_biquad
+    in:
+      signal: mixed_tone
+    out:
+      signal: warm_tone
+    config:
+      b0: 0.35
+      b1: 0.50
+      b2: 0.20
+      a1: -0.18
+      a2: 0.04
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 8. OUTPUT
+  # ─────────────────────────────────────────────────────────────────────
+  - id: level_const
+    fn: generation_dc
+    out:
+      signal: level_val
+    config:
+      value: ${params.level}
+
+  - id: apply_level
+    fn: amplitude_multiply
+    in:
+      signal_a: warm_tone
+      signal_b: level_val
+    out:
+      signal: output

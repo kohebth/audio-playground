@@ -6,6 +6,8 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
   addEdge,
   type Connection,
   type Node,
@@ -22,7 +24,7 @@ import { AtomNode } from './components/AtomNode';
 import { Inspector } from './components/Inspector';
 import { PipelineSidebar } from './components/PipelineSidebar';
 import { UnitHeader } from './components/UnitHeader';
-import { YamlPreview } from './components/YamlPreview';
+import { YamlEditor } from './components/YamlEditor.tsx';
 import './App.css';
 
 const nodeTypes: NodeTypes = { atomNode: AtomNode as any };
@@ -34,6 +36,65 @@ const EMPTY_UNIT: UnitConfig = {
   signals: ['input', 'output'],
   pipeline: [],
 };
+
+function FlowCanvas({ focusNodeId }: { focusNodeId: string | null }) {
+  const { setCenter, getNodes } = useReactFlow();
+
+  useEffect(() => {
+    if (focusNodeId) {
+      const nodeId = `stage-${focusNodeId}`;
+      const nodes = getNodes();
+      const node = nodes.find(n => n.id === nodeId);
+      if (node) {
+        setCenter(node.position.x + 120, node.position.y + 80, { zoom: 1, duration: 300 });
+      }
+    }
+  }, [focusNodeId, setCenter, getNodes]);
+
+  return null;
+}
+
+function NodeFlow({
+  nodes,
+  edges,
+  focusNodeId,
+  onNodesChange,
+  onEdgesChange,
+  onConnect,
+  onNodeClick,
+}: {
+  nodes: Node[];
+  edges: Edge[];
+  focusNodeId: string | null;
+  onNodesChange: any;
+  onEdgesChange: any;
+  onConnect: (params: Connection) => void;
+  onNodeClick: (_: React.MouseEvent, node: Node) => void;
+}) {
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onNodeClick={onNodeClick}
+      fitView
+      fitViewOptions={{ padding: 0.1 }}
+      minZoom={0.1}
+      maxZoom={2}
+    >
+      <FlowCanvas focusNodeId={focusNodeId} />
+      <Background color="#1e293b" gap={20} />
+      <Controls />
+      <MiniMap
+        nodeColor={(n: any) => n.data?.color ?? '#374151'}
+        style={{ background: '#0f172a' }}
+      />
+    </ReactFlow>
+  );
+}
 
 export default function App() {
   const [unit, setUnit] = useState<UnitConfig>(EMPTY_UNIT);
@@ -65,6 +126,22 @@ export default function App() {
       alert('Failed to parse YAML: ' + (e as Error).message);
     }
   };
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+      e.preventDefault();
+      setUnit(u => ({
+        ...u,
+        pipeline: u.pipeline.filter(s => s.id !== selectedId),
+      }));
+      setSelectedId(null);
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -147,26 +224,17 @@ export default function App() {
               <p>or use the <strong>Open YAML</strong> button above</p>
             </div>
           ) : (
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              fitView
-              fitViewOptions={{ padding: 0.1 }}
-              minZoom={0.1}
-              maxZoom={2}
-            >
-              <Background color="#1e293b" gap={20} />
-              <Controls />
-              <MiniMap
-                nodeColor={(n: any) => n.data?.color ?? '#374151'}
-                style={{ background: '#0f172a' }}
+            <ReactFlowProvider>
+              <NodeFlow
+                nodes={nodes}
+                edges={edges}
+                focusNodeId={selectedId}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
               />
-            </ReactFlow>
+            </ReactFlowProvider>
           )}
         </main>
 
@@ -177,7 +245,7 @@ export default function App() {
       {/* YAML Preview drawer */}
       {showYaml && (
         <div className="yaml-drawer">
-          <YamlPreview yaml={yamlText} onChange={handleYamlChange} />
+          <YamlEditor yaml={yamlText} onChange={handleYamlChange} />
         </div>
       )}
     </div>

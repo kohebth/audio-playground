@@ -10,6 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/lang-yaml": "^6.1.2",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.36.4",
+    "@codemirror/search": "^6.5.10",
+    "@codemirror/commands": "^6.8.0",
     "@types/js-yaml": "^4.0.9",
     "@xyflow/react": "^12.10.2",
     "dagre": "^0.8.5",

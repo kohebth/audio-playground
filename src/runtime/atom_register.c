@@ -22,6 +22,7 @@
     _(amplitude_normalize) \
     _(amplitude_smooth) \
     _(amplitude_subtract) \
+    _(amplitude_latch) \
     _(delay_fractional) \
     _(delay_line) \
     _(delay_tap_feedback) \
@@ -30,6 +31,7 @@
     _(detect_autocorrelate) \
     _(detect_envelope) \
     _(detect_peak) \
+    _(detect_pitch) \
     _(detect_rms) \
     _(detect_slope) \
     _(detect_threshold) \
@@ -47,6 +49,7 @@
     _(freq_multiply) \
     _(freq_overlap_add) \
     _(freq_overlap_save) \
+    _(freq_shift) \
     _(freq_window) \
     _(generation_dc) \
     _(generation_envelope) \
@@ -72,6 +75,7 @@
     _(nonlinear_bitcrush) \
     _(nonlinear_samplerate_reduce) \
     _(nonlinear_waveshape) \
+    _(freq_quantize) \
     _(src_antialias) \
     _(src_antiimage) \
     _(src_convert_format) \
@@ -100,6 +104,15 @@ static const atom_field_desc_t amplitude_clip_soft_config_fields[] = {
 
 static const atom_field_desc_t amplitude_divide_config_fields[] = {
     { "epsilon", FIELD_FLOAT, offsetof(amplitude_divide_params_t, epsilon) },
+};
+
+static const atom_field_desc_t amplitude_latch_config_fields[] = {
+    { "threshold", FIELD_FLOAT, offsetof(amplitude_latch_params_t, threshold) },
+};
+
+static const atom_field_desc_t amplitude_latch_state_fields[] = {
+    { "latched_value", FIELD_FLOAT, offsetof(amplitude_latch_state_t, latched_value) },
+    { "prev_gate", FIELD_INT, offsetof(amplitude_latch_state_t, prev_gate) },
 };
 
 static const atom_field_desc_t amplitude_normalize_config_fields[] = {
@@ -159,6 +172,26 @@ static const atom_field_desc_t detect_autocorrelate_config_fields[] = {
 static const atom_field_desc_t detect_autocorrelate_state_fields[] = {
     { "buffer", FIELD_BUFFER, offsetof(detect_autocorrelate_state_t, buffer) },
     { "write_pos", FIELD_INT, offsetof(detect_autocorrelate_state_t, write_pos) },
+};
+
+static const atom_field_desc_t detect_pitch_config_fields[] = {
+    { "max_lag", FIELD_INT, offsetof(detect_pitch_params_t, max_lag) },
+    { "sample_rate", FIELD_FLOAT, offsetof(detect_pitch_params_t, sample_rate) },
+};
+static const atom_field_desc_t detect_pitch_state_fields[] = {
+    { "buffer", FIELD_BUFFER, offsetof(detect_pitch_state_t, buffer) },
+    { "write_pos", FIELD_INT, offsetof(detect_pitch_state_t, write_pos) },
+};
+
+static const atom_field_desc_t freq_shift_config_fields[] = {
+    { "block_size", FIELD_INT, offsetof(freq_shift_params_t, block_size) },
+};
+static const atom_field_desc_t freq_shift_state_fields[] = {
+    { "window", FIELD_BUFFER, offsetof(freq_shift_state_t, window) },
+    { "real", FIELD_BUFFER, offsetof(freq_shift_state_t, real) },
+    { "imag", FIELD_BUFFER, offsetof(freq_shift_state_t, imag) },
+    { "write_pos", FIELD_INT, offsetof(freq_shift_state_t, write_pos) },
+    { "read_ptr", FIELD_FLOAT, offsetof(freq_shift_state_t, read_ptr) },
 };
 
 static const atom_field_desc_t detect_envelope_config_fields[] = {
@@ -498,6 +531,7 @@ static const atom_field_desc_t src_upsample_config_fields[] = {
 
 static atom_registry_entry_t g_registry[] = {
     ENTRY_WITH_FIELDS(amplitude_accumulate, NULL, 0, amplitude_accumulate_state_fields, sizeof(amplitude_accumulate_state_fields)/sizeof(amplitude_accumulate_state_fields[0]))
+    ENTRY_WITH_FIELDS(amplitude_latch, amplitude_latch_config_fields, sizeof(amplitude_latch_config_fields)/sizeof(amplitude_latch_config_fields[0]), amplitude_latch_state_fields, sizeof(amplitude_latch_state_fields)/sizeof(amplitude_latch_state_fields[0]))
     ENTRY_WITH_FIELDS(amplitude_add, NULL, 0, NULL, 0)
     ENTRY_WITH_FIELDS(amplitude_clip_hard, amplitude_clip_hard_config_fields, sizeof(amplitude_clip_hard_config_fields)/sizeof(amplitude_clip_hard_config_fields[0]), NULL, 0)
     ENTRY_WITH_FIELDS(amplitude_clip_soft, amplitude_clip_soft_config_fields, sizeof(amplitude_clip_soft_config_fields)/sizeof(amplitude_clip_soft_config_fields[0]), NULL, 0)
@@ -512,6 +546,8 @@ static atom_registry_entry_t g_registry[] = {
     ENTRY_WITH_FIELDS(delay_tap_feedforward, delay_tap_feedforward_config_fields, sizeof(delay_tap_feedforward_config_fields)/sizeof(delay_tap_feedforward_config_fields[0]), NULL, 0)
     ENTRY_WITH_FIELDS(delay_unit, NULL, 0, delay_unit_state_fields, sizeof(delay_unit_state_fields)/sizeof(delay_unit_state_fields[0]))
     ENTRY_WITH_FIELDS(detect_autocorrelate, detect_autocorrelate_config_fields, sizeof(detect_autocorrelate_config_fields)/sizeof(detect_autocorrelate_config_fields[0]), detect_autocorrelate_state_fields, sizeof(detect_autocorrelate_state_fields)/sizeof(detect_autocorrelate_state_fields[0]))
+    ENTRY_WITH_FIELDS(detect_pitch, detect_pitch_config_fields, sizeof(detect_pitch_config_fields)/sizeof(detect_pitch_config_fields[0]), detect_pitch_state_fields, sizeof(detect_pitch_state_fields)/sizeof(detect_pitch_state_fields[0]))
+
     ENTRY_WITH_FIELDS(detect_envelope, detect_envelope_config_fields, sizeof(detect_envelope_config_fields)/sizeof(detect_envelope_config_fields[0]), detect_envelope_state_fields, sizeof(detect_envelope_state_fields)/sizeof(detect_envelope_state_fields[0]))
     ENTRY_WITH_FIELDS(detect_peak, detect_peak_config_fields, sizeof(detect_peak_config_fields)/sizeof(detect_peak_config_fields[0]), detect_peak_state_fields, sizeof(detect_peak_state_fields)/sizeof(detect_peak_state_fields[0]))
     ENTRY_WITH_FIELDS(detect_rms, detect_rms_config_fields, sizeof(detect_rms_config_fields)/sizeof(detect_rms_config_fields[0]), detect_rms_state_fields, sizeof(detect_rms_state_fields)/sizeof(detect_rms_state_fields[0]))
@@ -532,6 +568,8 @@ static atom_registry_entry_t g_registry[] = {
     ENTRY_WITH_FIELDS(freq_overlap_add, freq_overlap_add_config_fields, sizeof(freq_overlap_add_config_fields)/sizeof(freq_overlap_add_config_fields[0]), freq_overlap_add_state_fields, sizeof(freq_overlap_add_state_fields)/sizeof(freq_overlap_add_state_fields[0]))
     ENTRY_WITH_FIELDS(freq_overlap_save, freq_overlap_save_config_fields, sizeof(freq_overlap_save_config_fields)/sizeof(freq_overlap_save_config_fields[0]), freq_overlap_save_state_fields, sizeof(freq_overlap_save_state_fields)/sizeof(freq_overlap_save_state_fields[0]))
     ENTRY_WITH_FIELDS(freq_window, freq_window_config_fields, sizeof(freq_window_config_fields)/sizeof(freq_window_config_fields[0]), NULL, 0)
+    ENTRY_WITH_FIELDS(freq_shift, freq_shift_config_fields, sizeof(freq_shift_config_fields)/sizeof(freq_shift_config_fields[0]), freq_shift_state_fields, sizeof(freq_shift_state_fields)/sizeof(freq_shift_state_fields[0]))
+
     ENTRY_WITH_FIELDS(generation_dc, generation_dc_config_fields, sizeof(generation_dc_config_fields)/sizeof(generation_dc_config_fields[0]), NULL, 0)
     ENTRY_WITH_FIELDS(generation_envelope, generation_envelope_config_fields, sizeof(generation_envelope_config_fields)/sizeof(generation_envelope_config_fields[0]), generation_envelope_state_fields, sizeof(generation_envelope_state_fields)/sizeof(generation_envelope_state_fields[0]))
     ENTRY_WITH_FIELDS(generation_impulse, generation_impulse_config_fields, sizeof(generation_impulse_config_fields)/sizeof(generation_impulse_config_fields[0]), generation_impulse_state_fields, sizeof(generation_impulse_state_fields)/sizeof(generation_impulse_state_fields[0]))
@@ -561,6 +599,7 @@ static atom_registry_entry_t g_registry[] = {
     ENTRY_WITH_FIELDS(src_convert_format, src_convert_format_config_fields, sizeof(src_convert_format_config_fields)/sizeof(src_convert_format_config_fields[0]), NULL, 0)
     ENTRY_WITH_FIELDS(src_downsample, src_downsample_config_fields, sizeof(src_downsample_config_fields)/sizeof(src_downsample_config_fields[0]), NULL, 0)
     ENTRY_WITH_FIELDS(src_upsample, src_upsample_config_fields, sizeof(src_upsample_config_fields)/sizeof(src_upsample_config_fields[0]), NULL, 0)
+    ENTRY_WITH_FIELDS(freq_quantize, NULL, 0, NULL, 0)
 };
 
 static const int g_registry_count = sizeof(g_registry) / sizeof(g_registry[0]);

@@ -21,6 +21,7 @@
     _(amplitude_add)                \
     _(amplitude_subtract)           \
     _(amplitude_accumulate)         \
+    _(amplitude_latch)              \
     _(delay_unit)                   \
     _(delay_line)                   \
     _(delay_fractional)             \
@@ -41,6 +42,7 @@
     _(detect_zero_crossing)         \
     _(detect_slope)                 \
     _(detect_autocorrelate)         \
+    _(detect_pitch)                 \
     _(modulation_phase)             \
     _(modulation_ring)              \
     _(modulation_amplitude)         \
@@ -61,6 +63,8 @@
     _(freq_multiply)                \
     _(freq_overlap_add)             \
     _(freq_overlap_save)            \
+    _(freq_shift)                   \
+    _(freq_quantize)               \
     _(mix_crossfade)                \
     _(mix_wet_dry)                  \
     _(mix_matrix)                   \

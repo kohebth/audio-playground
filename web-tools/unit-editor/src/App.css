@@ -614,34 +614,26 @@ body {
 }
 .yaml-preview__copy:hover { color: var(--text-primary); }
 
-.yaml-preview__code,
-.yaml-preview__editor {
-  font-family: var(--font-mono);
-  font-size: 12px;
+.yaml-preview__search {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
-  padding: 12px 16px;
-  overflow-y: auto;
-  flex: 1;
-  line-height: 1.6;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  font-size: 11px;
+  padding: 3px 8px;
+  outline: none;
+  width: 120px;
 }
+.yaml-preview__search:focus { border-color: var(--accent); }
+.yaml-preview__search::placeholder { color: var(--text-muted); }
 
 .yaml-preview__editor {
-  background: transparent;
-  border: none;
-  resize: none;
-  outline: none;
-  width: 100%;
+  flex: 1;
+  overflow: hidden;
 }
 
-.yaml-preview__editor--error {
-  border-left: 2px solid var(--danger);
-  background: rgba(239, 68, 68, 0.02);
-}
-
-.yaml-preview__editor:focus {
-  background: rgba(59, 130, 246, 0.03);
+.yaml-preview__editor .cm-editor {
+  height: 100%;
 }
 
 /* ─── React Flow overrides ───────────────────────────────────────────────── */

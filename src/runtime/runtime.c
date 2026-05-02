@@ -38,22 +38,38 @@ static float *rt_alloc_signal(runtime_unit_t *u, const char *name) {
 }
 
 static float rt_resolve_value(runtime_unit_t *u, const char *expr) {
-    if (strncmp(expr, "params.", 7) == 0) {
-        const char *key = expr + 7;
+    if (!expr) return 0.0f;
+
+    // Clean up the expression: remove quotes and ${ } wrapper
+    char clean[256];
+    const char *start = expr;
+    while (*start && (*start == ' ' || *start == '"' || *start == '\'' || *start == '$' || *start == '{')) start++;
+    
+    strncpy(clean, start, 255);
+    clean[255] = '\0';
+    
+    char *end = clean + strlen(clean) - 1;
+    while (end > clean && (*end == ' ' || *end == '"' || *end == '\'' || *end == '}')) {
+        *end = '\0';
+        end--;
+    }
+
+    if (strncmp(clean, "params.", 7) == 0) {
+        const char *key = clean + 7;
         for (int i = 0; i < u->n_params; i++)
             if (strcmp(u->params[i].name, key) == 0)
                 return u->params[i].value;
     }
-    if (strncmp(expr, "internal.", 9) == 0) {
-        const char *key = expr + 9;
+    if (strncmp(clean, "internal.", 9) == 0) {
+        const char *key = clean + 9;
         for (int i = 0; i < u->n_internals; i++)
             if (strcmp(u->internals[i].name, key) == 0)
                 return u->internals[i].value;
     }
-    if (strcmp(expr, "context.sample_rate") == 0) {
+    if (strcmp(clean, "context.sample_rate") == 0) {
         return u->ctx.sample_rate;
     }
-    return strtof(expr, NULL);
+    return strtof(clean, NULL);
 }
 
 static float *rt_resolve_signal(runtime_unit_t *u, const char *expr) {
@@ -67,6 +83,23 @@ static float *rt_resolve_signal(runtime_unit_t *u, const char *expr) {
 // ─────────────────────────────────────────────
 // Pipeline execution
 // ─────────────────────────────────────────────
+
+static void rt_sanitize_signals(runtime_unit_t *unit) {
+    int total_samples = unit->n_signals * unit->ctx.chunk_length;
+    int nan_count = 0;
+    for (int i = 0; i < total_samples; i++) {
+        if (isnan(unit->signal_pool[i]) || !isfinite(unit->signal_pool[i])) {
+            unit->signal_pool[i] = 0.0f;
+            nan_count++;
+        }
+    }
+    if (nan_count > 0) {
+        static int warn_limiter = 0;
+        if (warn_limiter++ % 100 == 0) {
+            fprintf(stderr, "runtime: sanitized %d invalid samples (NaN/Inf)\n", nan_count);
+        }
+    }
+}
 
 void runtime_unit_process(runtime_unit_t *unit, float *in, float *out) {
     if (!unit || !in || !out) return;
@@ -85,20 +118,30 @@ void runtime_unit_process(runtime_unit_t *unit, float *in, float *out) {
         call.config = step->config;
         call.state  = step->state;
         step->atom->thunk(&call);
-    }
 
-    // Copy "output" signal to output buffer with NaN detection
-    float *output_sig = rt_find_signal(unit, "output");
-    if (output_sig) {
-        for (int i = 0; i < unit->ctx.chunk_length; i++) {
-            if (isnan(output_sig[i])) {
-                static int nan_warn = 0;
-                if (nan_warn++ % 100 == 0) fprintf(stderr, "runtime: WARNING: NaN detected in output!\n");
-                output_sig[i] = 0.0f; 
+        // 🛡️ NaN Protection: Sanitize all signals after each step to prevent propagation
+        // and report the culprit step.
+        int total_samples = unit->n_signals * unit->ctx.chunk_length;
+        int nan_count = 0;
+        for (int k = 0; k < total_samples; k++) {
+            if (isnan(unit->signal_pool[k]) || !isfinite(unit->signal_pool[k])) {
+                unit->signal_pool[k] = 0.0f;
+                nan_count++;
             }
         }
+        if (nan_count > 0) {
+            static int warn_limiter = 0;
+            if (warn_limiter++ % 100 == 0) {
+                fprintf(stderr, "runtime: step '%s' (%s) produced %d invalid samples\n", 
+                        step->id ? step->id : "?", step->atom->name, nan_count);
+            }
+        }
+    }
+
+    // Copy "output" signal to output buffer
+    float *output_sig = rt_find_signal(unit, "output");
+    if (output_sig) {
         memcpy(out, output_sig, unit->ctx.chunk_length * sizeof(float));
-        
     }
 }
 

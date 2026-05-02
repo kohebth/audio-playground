@@ -48,20 +48,20 @@ typedef enum {
 
 /* 🔷 Signal Generation */
 
-typedef struct { float *signal; }                                     generation_oscillator_out_t;
-typedef struct { /* no members */ }                                   generation_oscillator_in_t;
+typedef struct { float *signal; }                                                        generation_oscillator_out_t;
+typedef struct { float *frequency; }                                                     generation_oscillator_in_t;
 typedef struct { float frequency; int waveform; float phase_offset; float sample_rate; } generation_oscillator_params_t;
-typedef struct { float phase; }                                       generation_oscillator_state_t;
+typedef struct { float phase; }                                                          generation_oscillator_state_t;
 
 typedef struct { float *signal; }                   generation_noise_out_t;
 typedef struct { /* no members */ }                 generation_noise_in_t;
 typedef struct { float amplitude; int color; }      generation_noise_params_t;
 typedef struct { uint32_t seed; float prev_value; } generation_noise_state_t;
 
-typedef struct { float *signal; }                                           generation_envelope_out_t;
-typedef struct { float *gate; }                                             generation_envelope_in_t;
+typedef struct { float *signal; }                                                              generation_envelope_out_t;
+typedef struct { float *gate; }                                                                generation_envelope_in_t;
 typedef struct { float attack; float decay; float sustain; float release; float sample_rate; } generation_envelope_params_t;
-typedef struct { float current_level; int stage; }                          generation_envelope_state_t;
+typedef struct { float current_level; int stage; }                                             generation_envelope_state_t;
 
 typedef struct { float *signal; }                                     generation_lfo_out_t;
 typedef struct { /* no members */ }                                   generation_lfo_in_t;
@@ -177,7 +177,7 @@ typedef struct { int delay_samples; float coefficient; } filter_comb_ff_params_t
 typedef struct { float *buffer; int write_pos; }         filter_comb_ff_state_t;
 
 typedef struct { float *signal; }                        filter_comb_fb_out_t;
-typedef struct { float *signal; }                        filter_comb_fb_in_t;
+typedef struct { float *signal; float *delay; }                        filter_comb_fb_in_t;
 typedef struct { int delay_samples; float coefficient; } filter_comb_fb_params_t;
 typedef struct { float *buffer; int write_pos; }         filter_comb_fb_state_t;
 
@@ -232,6 +232,11 @@ typedef struct { float *correlation; }           detect_autocorrelate_out_t;
 typedef struct { float *signal; }                detect_autocorrelate_in_t;
 typedef struct { int max_lag; }                  detect_autocorrelate_params_t;
 typedef struct { float *buffer; int write_pos; } detect_autocorrelate_state_t;
+
+typedef struct { float *pitch; }      detect_pitch_out_t;
+typedef struct { float *signal; }     detect_pitch_in_t;
+typedef struct { int max_lag; float sample_rate; } detect_pitch_params_t;
+typedef struct { float *buffer; int write_pos; } detect_pitch_state_t;
 
 /* 🔷 Modulation */
 
@@ -341,6 +346,11 @@ typedef struct { float *signal; }                freq_overlap_save_in_t;
 typedef struct { int block_size; int hop_size; } freq_overlap_save_params_t;
 typedef struct { float *buffer; int write_pos; } freq_overlap_save_state_t;
 
+typedef struct { float *signal; }                     freq_shift_out_t;
+typedef struct { float *signal; float *pitch_shift; } freq_shift_in_t;
+typedef struct { int block_size; }                    freq_shift_params_t;
+typedef struct { float *window; float *real; float *imag; int write_pos; float read_ptr; } freq_shift_state_t;
+
 /* 🔷 Mixing & Routing */
 
 typedef struct { float *signal; }                    mix_crossfade_out_t;
@@ -389,5 +399,15 @@ typedef struct { float *signal; }                 nonlinear_samplerate_reduce_ou
 typedef struct { float *signal; }                 nonlinear_samplerate_reduce_in_t;
 typedef struct { float factor; }                  nonlinear_samplerate_reduce_params_t;
 typedef struct { float last_val; float counter; } nonlinear_samplerate_reduce_state_t;
+
+typedef struct { float *signal; }                 freq_quantize_out_t;
+typedef struct { float *signal; }                 freq_quantize_in_t;
+typedef struct { float unused; }                  freq_quantize_params_t;
+typedef struct { float unused; }                  freq_quantize_state_t;
+
+typedef struct { float *signal; }                 amplitude_latch_out_t;
+typedef struct { float *signal; float *gate; }    amplitude_latch_in_t;
+typedef struct { float threshold; }               amplitude_latch_params_t;
+typedef struct { float latched_value; int prev_gate; } amplitude_latch_state_t;
 
 #endif // AUDIO_PLAYGROUND_DSP_TYPES_H

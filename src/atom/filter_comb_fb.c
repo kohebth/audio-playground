@@ -11,11 +11,16 @@ void filter_comb_fb(
         return;
 
     int write_pos = state->write_pos;
-    int delay     = params->delay_samples;
-    if (delay > MAX_COMB_DELAY)
-        delay = MAX_COMB_DELAY;
 
     for (int i = 0; i < CHUNK_LENGTH; ++i) {
+        float delay_val = (in->delay != NULL) ? in->delay[i] : (float)params->delay_samples;
+        if (delay_val != delay_val || delay_val < 1.0f)
+            delay_val = 1.0f;
+
+        int delay = (int)delay_val;
+        if (delay > MAX_COMB_DELAY)
+            delay = MAX_COMB_DELAY;
+
         int read_pos = write_pos - delay;
         if (read_pos < 0)
             read_pos += MAX_COMB_DELAY;
