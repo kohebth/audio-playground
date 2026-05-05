@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 project(audio_playground)
+enable_testing()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -55,3 +56,25 @@ target_link_libraries(test_runtime
         ${PIPEWIRE_LIBRARIES}
         m
 )
+
+set(TEST_TARGETS
+        test_atom_basic
+        test_unit_load_all
+        test_ctrl_transition
+        test_offline_chain
+)
+
+foreach(TEST_TARGET ${TEST_TARGETS})
+    add_executable(${TEST_TARGET}
+            test/${TEST_TARGET}.c
+            ${UTIL_SOURCES}
+    )
+    target_link_libraries(${TEST_TARGET}
+            ${PIPEWIRE_LIBRARIES}
+            m
+    )
+    add_test(NAME ${TEST_TARGET} COMMAND ${TEST_TARGET})
+    set_tests_properties(${TEST_TARGET} PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+endforeach()
