@@ -1,3 +1,4 @@
+#include <ctrl/ctrls.h>
 #include <runtime.h>
 #include <util/fast_chunk.h>
 
@@ -24,6 +25,7 @@ struct AudioNode {
     struct pw_stream *stream;
     struct IOBuffers *buffer;
     runtime_unit_t *units[8];
+    ctrl_unit_t     ctrls[8];
     int             n_units;
 };
 
@@ -32,7 +34,7 @@ inline bool is_not_null(void *ptr) {
 }
 
 static void on_capture_process(void *userdata) {
-    const struct AudioNode *node = (struct AudioNode *)(userdata);
+    struct AudioNode *node = (struct AudioNode *)(userdata);
     struct pw_buffer *b;
 
     if ((b = pw_stream_dequeue_buffer(node->stream)) == NULL) {
@@ -63,7 +65,7 @@ static void on_capture_process(void *userdata) {
 }
 
 static void on_playback_process(void *userdata) {
-    const struct AudioNode *node = (struct AudioNode *)(userdata);
+    struct AudioNode *node = (struct AudioNode *)(userdata);
     struct pw_buffer *b;
 
     if ((b = pw_stream_dequeue_buffer(node->stream)) == NULL) {
@@ -94,7 +96,7 @@ static void on_playback_process(void *userdata) {
 
             if (node->n_units > 0) {
                 for (int i = 0; i < node->n_units; i++) {
-                    runtime_unit_process(node->units[i], current_in, current_out);
+                    ctrl_unit_process(&node->ctrls[i], current_in, current_out);
                     current_in = current_out; // Output of this unit is input to next
                 }
             } else {
@@ -187,17 +189,24 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         for (int i = 1; i < argc && playback.n_units < 8; i++) {
             printf("Loading unit: %s\n", argv[i]);
-            playback.units[playback.n_units] = runtime_unit_load(argv[i], rt_ctx);
-            if (playback.units[playback.n_units]) {
+            int unit_index = playback.n_units;
+            playback.units[unit_index] = runtime_unit_load(argv[i], rt_ctx);
+            if (playback.units[unit_index] && ctrl_unit_init(&playback.ctrls[unit_index], playback.units[unit_index], argv[i])) {
                 playback.n_units++;
             } else {
                 fprintf(stderr, "Failed to load unit: %s\n", argv[i]);
+                if (playback.units[unit_index]) {
+                    runtime_unit_destroy(playback.units[unit_index]);
+                    playback.units[unit_index] = NULL;
+                }
             }
         }
     } else {
         // Default to shimmer if no args
         playback.units[0] = runtime_unit_load("../units/cave_reverb.unit.yaml", rt_ctx);
-        if (playback.units[0]) playback.n_units = 1;
+        if (playback.units[0] && ctrl_unit_init(&playback.ctrls[0], playback.units[0], "../units/cave_reverb.unit.yaml")) {
+            playback.n_units = 1;
+        }
     }
 
     // Set audio format: 48kHz, f32, 1 channels (mono)
@@ -246,6 +255,7 @@ int main(int argc, char *argv[]) {
     pw_stream_destroy(playback.stream);
     pw_main_loop_destroy(loop);
     for (int i = 0; i < playback.n_units; i++) {
+        ctrl_unit_destroy(&playback.ctrls[i]);
         runtime_unit_destroy(playback.units[i]);
     }
     pw_deinit();

@@ -10,7 +10,7 @@ pkg_check_modules(PIPEWIRE REQUIRED libpipewire-0.3)
 
 include_directories(
         ${CMAKE_SOURCE_DIR}/inc/
-        ${CMAKE_SOURCE_DIR}/inc/runtime
+        ${CMAKE_SOURCE_DIR}/inc/rte
         ${CMAKE_SOURCE_DIR}/inc/unit
         ${CMAKE_SOURCE_DIR}/inc/util
         ${CMAKE_SOURCE_DIR}/inc/yaml
@@ -18,11 +18,13 @@ include_directories(
 )
 
 file(GLOB ATOM_SOURCES src/atom/*.c)
-file(GLOB RUNT_SOURCES src/runtime/*.c)
+file(GLOB CTRL_SOURCES src/ctrl/*.c)
+file(GLOB RUNT_SOURCES src/rte/*.c)
 file(GLOB UNIT_SOURCES src/unit/*.c)
 file(GLOB UTIL_SOURCES src/util/*.c)
 file(GLOB YAML_SOURCES src/yaml/*.c)
 list(APPEND UTIL_SOURCES ${ATOM_SOURCES})
+list(APPEND UTIL_SOURCES ${CTRL_SOURCES})
 list(APPEND UTIL_SOURCES ${UNIT_SOURCES})
 list(APPEND UTIL_SOURCES ${RUNT_SOURCES})
 list(APPEND UTIL_SOURCES ${YAML_SOURCES})
