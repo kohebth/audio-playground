@@ -75,6 +75,7 @@ set(TEST_TARGETS
         test_unit_adapters_frame_limits
         test_unit_v2_validate
         test_unit_v2_compile
+        test_unit_v2_runtime
         test_offline_chain
         test_hall_reverb
 )

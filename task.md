@@ -78,8 +78,8 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 
 ### Batch B: v2 Execution MVP
 
-- [ ] Define an `apg_v2_runtime_t` or equivalent execution context that owns signal buffers, param values, and atom call storage.
-- [ ] Add a runtime init function from `apg_v2_compiled_unit_t` that allocates buffers for audio signals and initializes param defaults.
+- [x] Define an `apg_v2_runtime_t` or equivalent execution context that owns signal buffers, param values, and atom call storage.
+- [x] Add a runtime init function from `apg_v2_compiled_unit_t` that allocates buffers for audio signals and initializes param defaults.
 - [ ] Implement a mono `simple_gain` execution path using the compiled schedule and existing atom registry thunks.
 - [ ] Add a CTest that runs `units-v2/simple_gain.unit.v2.yaml` over a small buffer and verifies gain output samples.
 
