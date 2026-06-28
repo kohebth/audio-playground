@@ -73,7 +73,8 @@ static void mark_node_outputs_available(const apg_v2_compiled_node_t *node, int 
     }
 }
 
-static uc_status validate_output_port_signals_produced(const apg_unit_v2_t *unit, const int *signal_available, uc_error *err) {
+static uc_status
+validate_output_port_signals_produced(const apg_unit_v2_t *unit, const int *signal_available, uc_error *err) {
     for (size_t i = 0; i < unit->output_ports_len; i++) {
         if (!port_is_audio(&unit->output_ports[i]))
             continue;
@@ -119,32 +120,67 @@ static int key_in_list(const char *key, const char *const *keys, size_t keys_len
     return 0;
 }
 
+typedef struct {
+    const char        *atom;
+    apg_bind_section_t section;
+    const char *const *keys;
+    size_t             keys_len;
+} apg_atom_binding_schema_t;
+
+static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, apg_bind_section_t section) {
+    static const char *const               generation_dc_out[]    = {"signal"};
+    static const char *const               generation_dc_config[] = {"value"};
+    static const char *const               pair_in[]              = {"signal_a", "signal_b"};
+    static const char *const               mono_in[]              = {"signal"};
+    static const char *const               mono_out[]             = {"signal"};
+    static const char *const               clip_hard_config[]     = {"threshold"};
+    static const char *const               clip_soft_config[]     = {"threshold", "curve"};
+    static const char *const               mix_wet_dry_in[]       = {"dry", "wet"};
+    static const char *const               mix_wet_dry_config[]   = {"mix"};
+    static const apg_atom_binding_schema_t schemas[]              = {
+        {      "generation_dc",    APG_BIND_SECTION_OUT,    generation_dc_out,
+         sizeof(generation_dc_out) / sizeof(generation_dc_out[0])                                                                },
+        {      "generation_dc", APG_BIND_SECTION_CONFIG, generation_dc_config,
+         sizeof(generation_dc_config) / sizeof(generation_dc_config[0])                                                          },
+        { "amplitude_multiply",     APG_BIND_SECTION_IN,              pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
+        { "amplitude_multiply",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {      "amplitude_add",     APG_BIND_SECTION_IN,              pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
+        {      "amplitude_add",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        { "amplitude_subtract",     APG_BIND_SECTION_IN,              pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
+        { "amplitude_subtract",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {"amplitude_clip_hard",     APG_BIND_SECTION_IN,              mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {"amplitude_clip_hard",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {"amplitude_clip_hard", APG_BIND_SECTION_CONFIG,     clip_hard_config,
+         sizeof(clip_hard_config) / sizeof(clip_hard_config[0])                                                                  },
+        {"amplitude_clip_soft",     APG_BIND_SECTION_IN,              mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {"amplitude_clip_soft",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {"amplitude_clip_soft", APG_BIND_SECTION_CONFIG,     clip_soft_config,
+         sizeof(clip_soft_config) / sizeof(clip_soft_config[0])                                                                  },
+        {        "mix_wet_dry",     APG_BIND_SECTION_IN,       mix_wet_dry_in, sizeof(mix_wet_dry_in) / sizeof(mix_wet_dry_in[0])},
+        {        "mix_wet_dry",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {        "mix_wet_dry", APG_BIND_SECTION_CONFIG,   mix_wet_dry_config,
+         sizeof(mix_wet_dry_config) / sizeof(mix_wet_dry_config[0])                                                              },
+    };
+
+    if (!atom)
+        return NULL;
+    for (size_t i = 0; i < sizeof(schemas) / sizeof(schemas[0]); i++) {
+        if (schemas[i].section == section && strcmp(schemas[i].atom, atom) == 0)
+            return &schemas[i];
+    }
+    return NULL;
+}
+
+static int atom_has_schema(const char *atom) {
+    return find_binding_schema(atom, APG_BIND_SECTION_IN) || find_binding_schema(atom, APG_BIND_SECTION_OUT) ||
+           find_binding_schema(atom, APG_BIND_SECTION_CONFIG);
+}
+
 static int atom_binding_key_allowed(const char *atom, apg_bind_section_t section, const char *key) {
-    static const char *const generation_dc_out[]    = {"signal"};
-    static const char *const generation_dc_config[] = {"value"};
-    static const char *const amplitude_multiply_in[]  = {"signal_a", "signal_b"};
-    static const char *const amplitude_multiply_out[] = {"signal"};
-
-    if (!atom || !key)
-        return 0;
-
-    if (strcmp(atom, "generation_dc") == 0) {
-        if (section == APG_BIND_SECTION_OUT)
-            return key_in_list(key, generation_dc_out, sizeof(generation_dc_out) / sizeof(generation_dc_out[0]));
-        if (section == APG_BIND_SECTION_CONFIG)
-            return key_in_list(key, generation_dc_config, sizeof(generation_dc_config) / sizeof(generation_dc_config[0]));
-        return 0;
-    }
-
-    if (strcmp(atom, "amplitude_multiply") == 0) {
-        if (section == APG_BIND_SECTION_IN)
-            return key_in_list(key, amplitude_multiply_in, sizeof(amplitude_multiply_in) / sizeof(amplitude_multiply_in[0]));
-        if (section == APG_BIND_SECTION_OUT)
-            return key_in_list(key, amplitude_multiply_out, sizeof(amplitude_multiply_out) / sizeof(amplitude_multiply_out[0]));
-        return 0;
-    }
-
-    return 1;
+    const apg_atom_binding_schema_t *schema = find_binding_schema(atom, section);
+    if (schema)
+        return key && key_in_list(key, schema->keys, schema->keys_len);
+    return !atom_has_schema(atom);
 }
 
 static uc_status validate_binding_key(const char *atom, apg_bind_section_t section, const char *key, uc_error *err) {
@@ -154,6 +190,37 @@ static uc_status validate_binding_key(const char *atom, apg_bind_section_t secti
     char msg[128];
     snprintf(msg, sizeof(msg), "atom '%s' does not accept binding key '%s'", atom ? atom : "", key ? key : "");
     return set_error(err, UC_E_MISSING, msg);
+}
+
+static int binding_key_present(const apg_unit_v2_binding_t *bindings, size_t bindings_len, const char *key) {
+    for (size_t i = 0; i < bindings_len; i++) {
+        if (bindings[i].key && strcmp(bindings[i].key, key) == 0)
+            return 1;
+    }
+    return 0;
+}
+
+static uc_status validate_required_binding_keys(
+    const char                  *atom,
+    apg_bind_section_t           section,
+    const apg_unit_v2_binding_t *bindings,
+    size_t                       bindings_len,
+    uc_error                    *err
+) {
+    const apg_atom_binding_schema_t *schema = find_binding_schema(atom, section);
+    if (!schema)
+        return UC_OK;
+
+    for (size_t i = 0; i < schema->keys_len; i++) {
+        if (!binding_key_present(bindings, bindings_len, schema->keys[i])) {
+            char msg[160];
+            snprintf(
+                msg, sizeof(msg), "atom '%s' is missing required binding key '%s'", atom ? atom : "", schema->keys[i]
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
+    }
+    return UC_OK;
 }
 
 static uc_status compile_signal_bindings(
@@ -167,8 +234,11 @@ static uc_status compile_signal_bindings(
     size_t                      *out_len,
     uc_error                    *err
 ) {
-    *out_bindings = NULL;
-    *out_len      = 0;
+    *out_bindings    = NULL;
+    *out_len         = 0;
+    uc_status status = validate_required_binding_keys(atom, section, bindings, bindings_len, err);
+    if (status != UC_OK)
+        return status;
     if (bindings_len == 0)
         return UC_OK;
 
@@ -177,7 +247,7 @@ static uc_status compile_signal_bindings(
         return set_error(err, UC_E_OOM, "arena OOM");
 
     for (size_t i = 0; i < bindings_len; i++) {
-        uc_status status = validate_binding_key(atom, section, bindings[i].key, err);
+        status = validate_binding_key(atom, section, bindings[i].key, err);
         if (status != UC_OK)
             return status;
         if (bindings[i].value.kind != UC_VAL_LITERAL)
@@ -185,7 +255,9 @@ static uc_status compile_signal_bindings(
         int signal_index = find_signal_index(unit, bindings[i].value.text);
         if (signal_index < 0) {
             char msg[128];
-            snprintf(msg, sizeof(msg), "unknown signal binding '%s'", bindings[i].value.text ? bindings[i].value.text : "");
+            snprintf(
+                msg, sizeof(msg), "unknown signal binding '%s'", bindings[i].value.text ? bindings[i].value.text : ""
+            );
             return set_error(err, UC_E_MISSING, msg);
         }
 
@@ -210,8 +282,11 @@ static uc_status compile_config_bindings(
     size_t                      *out_len,
     uc_error                    *err
 ) {
-    *out_bindings = NULL;
-    *out_len      = 0;
+    *out_bindings    = NULL;
+    *out_len         = 0;
+    uc_status status = validate_required_binding_keys(atom, APG_BIND_SECTION_CONFIG, bindings, bindings_len, err);
+    if (status != UC_OK)
+        return status;
     if (bindings_len == 0)
         return UC_OK;
 
@@ -220,7 +295,7 @@ static uc_status compile_config_bindings(
         return set_error(err, UC_E_OOM, "arena OOM");
 
     for (size_t i = 0; i < bindings_len; i++) {
-        uc_status status = validate_binding_key(atom, APG_BIND_SECTION_CONFIG, bindings[i].key, err);
+        status = validate_binding_key(atom, APG_BIND_SECTION_CONFIG, bindings[i].key, err);
         if (status != UC_OK)
             return status;
 
@@ -233,7 +308,10 @@ static uc_status compile_config_bindings(
             int         param_index = find_param_index(unit, param_name);
             if (param_index < 0) {
                 char msg[128];
-                snprintf(msg, sizeof(msg), "unknown config parameter '%s'", bindings[i].value.text ? bindings[i].value.text : "");
+                snprintf(
+                    msg, sizeof(msg), "unknown config parameter '%s'",
+                    bindings[i].value.text ? bindings[i].value.text : ""
+                );
                 return set_error(err, UC_E_MISSING, msg);
             }
             compiled[i].kind  = APG_BIND_PARAM;
@@ -249,22 +327,18 @@ static uc_status compile_config_bindings(
     return UC_OK;
 }
 
-uc_status apg_v2_compile_unit(
-    const apg_unit_v2_t    *unit,
-    uc_arena               *arena,
-    apg_v2_compiled_unit_t *out,
-    uc_error               *err
-) {
+uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2_compiled_unit_t *out, uc_error *err) {
     if (!unit || !arena || !out || !err)
         return UC_E_TYPE;
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
 
-    apg_v2_compiled_node_t *nodes            = uc_arena_alloc(arena, unit->nodes_len * sizeof(*nodes), sizeof(void *));
-    uint32_t               *schedule         = uc_arena_alloc(arena, unit->nodes_len * sizeof(*schedule), sizeof(uint32_t));
-    int                    *node_scheduled   = uc_arena_alloc(arena, unit->nodes_len * sizeof(*node_scheduled), sizeof(int));
-    int                    *signal_available = uc_arena_alloc(arena, unit->signals_len * sizeof(*signal_available), sizeof(int));
-    if (((!nodes || !schedule || !node_scheduled) && unit->nodes_len > 0) || (!signal_available && unit->signals_len > 0))
+    apg_v2_compiled_node_t *nodes    = uc_arena_alloc(arena, unit->nodes_len * sizeof(*nodes), sizeof(void *));
+    uint32_t               *schedule = uc_arena_alloc(arena, unit->nodes_len * sizeof(*schedule), sizeof(uint32_t));
+    int *node_scheduled              = uc_arena_alloc(arena, unit->nodes_len * sizeof(*node_scheduled), sizeof(int));
+    int *signal_available = uc_arena_alloc(arena, unit->signals_len * sizeof(*signal_available), sizeof(int));
+    if (((!nodes || !schedule || !node_scheduled) && unit->nodes_len > 0) ||
+        (!signal_available && unit->signals_len > 0))
         return set_error(err, UC_E_OOM, "arena OOM");
     for (size_t i = 0; i < unit->nodes_len; i++)
         node_scheduled[i] = 0;
@@ -277,7 +351,7 @@ uc_status apg_v2_compile_unit(
 
     atom_registry_init();
     for (size_t i = 0; i < unit->nodes_len; i++) {
-        const apg_unit_v2_node_t   *src  = &unit->nodes[i];
+        const apg_unit_v2_node_t    *src  = &unit->nodes[i];
         const atom_registry_entry_t *atom = atom_registry_find(src->atom);
         if (!atom)
             return set_error(err, UC_E_MISSING, "unknown atom during compile");
@@ -295,7 +369,9 @@ uc_status apg_v2_compile_unit(
         );
         if (status != UC_OK)
             return status;
-        status = compile_config_bindings(unit, src->atom, src->config, src->config_len, arena, &nodes[i].config, &nodes[i].config_len, err);
+        status = compile_config_bindings(
+            unit, src->atom, src->config, src->config_len, arena, &nodes[i].config, &nodes[i].config_len, err
+        );
         if (status != UC_OK)
             return status;
     }
