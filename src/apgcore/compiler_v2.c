@@ -57,20 +57,13 @@ static uc_status mark_input_port_signals(const apg_unit_v2_t *unit, int *signal_
     return UC_OK;
 }
 
-static uc_status validate_node_inputs_available(
-    const apg_v2_compiled_node_t *node,
-    const int                    *signal_available,
-    uc_error                     *err
-) {
+static int node_inputs_available(const apg_v2_compiled_node_t *node, const int *signal_available) {
     for (size_t i = 0; i < node->in_len; i++) {
         size_t signal_index = node->in[i].index;
-        if (node->in[i].kind == APG_BIND_SIGNAL && !signal_available[signal_index]) {
-            char msg[128];
-            snprintf(msg, sizeof(msg), "node '%s' reads signal before it is produced", node->id ? node->id : "");
-            return set_error(err, UC_E_MISSING, msg);
-        }
+        if (node->in[i].kind == APG_BIND_SIGNAL && !signal_available[signal_index])
+            return 0;
     }
-    return UC_OK;
+    return 1;
 }
 
 static void mark_node_outputs_available(const apg_v2_compiled_node_t *node, int *signal_available) {
@@ -89,6 +82,31 @@ static uc_status validate_output_port_signals_produced(const apg_unit_v2_t *unit
             return set_error(err, UC_E_MISSING, "output audio port is missing matching graph signal");
         if (!signal_available[signal_index])
             return set_error(err, UC_E_MISSING, "output audio port signal is not produced by the graph");
+    }
+    return UC_OK;
+}
+
+static uc_status build_schedule(
+    const apg_v2_compiled_node_t *nodes,
+    size_t                        nodes_len,
+    uint32_t                     *schedule,
+    int                          *node_scheduled,
+    int                          *signal_available,
+    uc_error                     *err
+) {
+    size_t scheduled_len = 0;
+    while (scheduled_len < nodes_len) {
+        int progressed = 0;
+        for (size_t i = 0; i < nodes_len; i++) {
+            if (node_scheduled[i] || !node_inputs_available(&nodes[i], signal_available))
+                continue;
+            schedule[scheduled_len++] = (uint32_t)i;
+            node_scheduled[i]         = 1;
+            mark_node_outputs_available(&nodes[i], signal_available);
+            progressed = 1;
+        }
+        if (!progressed)
+            return set_error(err, UC_E_MISSING, "graph contains unresolved dependency or direct cycle");
     }
     return UC_OK;
 }
@@ -242,11 +260,14 @@ uc_status apg_v2_compile_unit(
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
 
-    apg_v2_compiled_node_t *nodes    = uc_arena_alloc(arena, unit->nodes_len * sizeof(*nodes), sizeof(void *));
-    uint32_t               *schedule = uc_arena_alloc(arena, unit->nodes_len * sizeof(*schedule), sizeof(uint32_t));
+    apg_v2_compiled_node_t *nodes            = uc_arena_alloc(arena, unit->nodes_len * sizeof(*nodes), sizeof(void *));
+    uint32_t               *schedule         = uc_arena_alloc(arena, unit->nodes_len * sizeof(*schedule), sizeof(uint32_t));
+    int                    *node_scheduled   = uc_arena_alloc(arena, unit->nodes_len * sizeof(*node_scheduled), sizeof(int));
     int                    *signal_available = uc_arena_alloc(arena, unit->signals_len * sizeof(*signal_available), sizeof(int));
-    if (((!nodes || !schedule) && unit->nodes_len > 0) || (!signal_available && unit->signals_len > 0))
+    if (((!nodes || !schedule || !node_scheduled) && unit->nodes_len > 0) || (!signal_available && unit->signals_len > 0))
         return set_error(err, UC_E_OOM, "arena OOM");
+    for (size_t i = 0; i < unit->nodes_len; i++)
+        node_scheduled[i] = 0;
     for (size_t i = 0; i < unit->signals_len; i++)
         signal_available[i] = 0;
 
@@ -277,13 +298,11 @@ uc_status apg_v2_compile_unit(
         status = compile_config_bindings(unit, src->atom, src->config, src->config_len, arena, &nodes[i].config, &nodes[i].config_len, err);
         if (status != UC_OK)
             return status;
-        status = validate_node_inputs_available(&nodes[i], signal_available, err);
-        if (status != UC_OK)
-            return status;
-        mark_node_outputs_available(&nodes[i], signal_available);
-
-        schedule[i] = (uint32_t)i;
     }
+
+    status = build_schedule(nodes, unit->nodes_len, schedule, node_scheduled, signal_available, err);
+    if (status != UC_OK)
+        return status;
 
     status = validate_output_port_signals_produced(unit, signal_available, err);
     if (status != UC_OK)

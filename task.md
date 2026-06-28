@@ -60,6 +60,7 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 - [x] Reject duplicate v2 param and port names during unit loading to keep public name resolution unambiguous.
 - [x] Reject duplicate v2 node binding keys during unit loading so atom binding resolution is unambiguous.
 - [x] Validate v2 `compatibility` as a non-empty map of boolean target flags.
+- [x] Add MVP topological scheduling in the v2 compiler so forward node references are reordered and unresolved dependencies still fail.
 - [x] Phase 1 runtime sizing: add `runtime_unit_process_frames(...)` so processing can use an explicit frame count up to the allocated `chunk_length` capacity while preserving `runtime_unit_process(...)` compatibility.
 - [x] Add CTest coverage for explicit-frame runtime processing with sentinel checks and over-capacity rejection.
 - [x] Phase 1 live/control adapter: add `ctrl_unit_process_frames(...)` and pass live playback chunk length through to the runtime.

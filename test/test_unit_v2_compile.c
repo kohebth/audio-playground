@@ -267,6 +267,79 @@ static int test_control_ports_compile(void) {
     return expect_compile_valid(yaml, "control port without signal");
 }
 
+static int test_forward_references_scheduled(void) {
+    const char *yaml =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: forward_ref\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "    - gain_value\n"
+        "  nodes:\n"
+        "    - id: apply_gain\n"
+        "      atom: amplitude_multiply\n"
+        "      in:\n"
+        "        signal_a: input\n"
+        "        signal_b: gain_value\n"
+        "      out:\n"
+        "        signal: output\n"
+        "    - id: gain_value\n"
+        "      atom: generation_dc\n"
+        "      out:\n"
+        "        signal: gain_value\n"
+        "      config:\n"
+        "        value: ${params.gain}\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err = {0};
+    uc_status status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "load error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to load forward reference unit");
+    }
+
+    apg_v2_compiled_unit_t plan;
+    status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "compile error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to compile forward reference unit");
+    }
+
+    if (plan.schedule_len != 2u || plan.schedule[0] != 1u || plan.schedule[1] != 0u) {
+        uc_arena_free(&arena);
+        return fail("unexpected topological schedule for forward reference unit");
+    }
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_signal_dependencies_rejected(void) {
     const char *unproduced_internal =
         "kind: apg.unit\n"
@@ -351,6 +424,8 @@ int main(void) {
     if (test_unknown_binding_key_rejected())
         return 1;
     if (test_control_ports_compile())
+        return 1;
+    if (test_forward_references_scheduled())
         return 1;
     if (test_signal_dependencies_rejected())
         return 1;
