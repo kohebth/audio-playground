@@ -85,10 +85,10 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 
 ### Batch C: Schema Fixtures
 
-- [ ] Add `units-v2/simple_mix.unit.v2.yaml` using two inputs and `amplitude_add` or `mix_wet_dry`.
-- [ ] Add `units-v2/simple_clip.unit.v2.yaml` using gain plus clipping to exercise literal config and chained processing.
-- [ ] Add loader/compile fixture tests that iterate all `units-v2/*.yaml` files.
-- [ ] Keep fixtures intentionally small and deterministic; avoid large generated audio files.
+- [x] Add `units-v2/simple_mix.unit.v2.yaml` using two inputs and `amplitude_add` or `mix_wet_dry`.
+- [x] Add `units-v2/simple_clip.unit.v2.yaml` using gain plus clipping to exercise literal config and chained processing.
+- [x] Add loader/compile fixture tests that iterate all `units-v2/*.yaml` files.
+- [x] Keep fixtures intentionally small and deterministic; avoid large generated audio files.
 
 ### Batch D: Error Quality
 

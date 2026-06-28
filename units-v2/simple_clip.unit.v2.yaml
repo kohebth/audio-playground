@@ -1,0 +1,63 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: simple_clip
+version: 2.0.0
+
+meta:
+  title: Simple Clip
+  category: dynamics
+  description: Applies mono gain and hard clipping with literal threshold config.
+
+params:
+  gain:
+    type: float
+    default: 1.5
+    min: 0.0
+    max: 4.0
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - gain_value
+    - gained
+    - output
+
+  nodes:
+    - id: gain_value
+      atom: generation_dc
+      out:
+        signal: gain_value
+      config:
+        value: ${params.gain}
+
+    - id: apply_gain
+      atom: amplitude_multiply
+      in:
+        signal_a: input
+        signal_b: gain_value
+      out:
+        signal: gained
+
+    - id: clip_output
+      atom: amplitude_clip_hard
+      in:
+        signal: gained
+      out:
+        signal: output
+      config:
+        threshold: 0.75
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  offline_render: true

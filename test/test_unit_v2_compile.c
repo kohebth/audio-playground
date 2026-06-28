@@ -1,6 +1,7 @@
 #include <apgcore/compiler_v2.h>
 #include <apgcore/unit_v2.h>
 
+#include <dirent.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -534,6 +535,54 @@ static int test_forward_references_scheduled(void) {
     return 0;
 }
 
+static int has_unit_v2_yaml_suffix(const char *name) {
+    size_t len    = name ? strlen(name) : 0u;
+    size_t suffix = strlen(".unit.v2.yaml");
+    return len >= suffix && strcmp(name + len - suffix, ".unit.v2.yaml") == 0;
+}
+
+static int test_compile_all_unit_v2_fixtures(void) {
+    DIR *dir = opendir("units-v2");
+    if (!dir)
+        return fail("failed to open units-v2 fixture directory");
+
+    size_t fixture_count = 0;
+    for (struct dirent *entry = readdir(dir); entry; entry = readdir(dir)) {
+        if (!has_unit_v2_yaml_suffix(entry->d_name))
+            continue;
+
+        char path[256];
+        snprintf(path, sizeof(path), "units-v2/%s", entry->d_name);
+
+        uc_arena arena;
+        if (uc_arena_init(&arena, 1024 * 1024) != 0) {
+            closedir(dir);
+            return fail("arena init failed");
+        }
+
+        apg_unit_v2_t unit;
+        uc_error      err    = {0};
+        uc_status     status = apg_unit_v2_load_file(path, &arena, &unit, &err);
+        if (status == UC_OK) {
+            apg_v2_compiled_unit_t plan;
+            status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
+        }
+        uc_arena_free(&arena);
+
+        if (status != UC_OK) {
+            fprintf(stderr, "failed fixture %s: %s\n", path, err.msg);
+            closedir(dir);
+            return fail("failed to load and compile unit-v2 fixture");
+        }
+        fixture_count++;
+    }
+    closedir(dir);
+
+    if (fixture_count < 3u)
+        return fail("expected at least three unit-v2 fixtures");
+    return 0;
+}
+
 static int test_signal_dependencies_rejected(void) {
     const char *unproduced_internal = "kind: apg.unit\n"
                                       "schema: apg.unit.v2\n"
@@ -624,6 +673,8 @@ int main(void) {
     if (test_forward_references_scheduled())
         return 1;
     if (test_signal_dependencies_rejected())
+        return 1;
+    if (test_compile_all_unit_v2_fixtures())
         return 1;
     return 0;
 }
