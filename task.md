@@ -67,7 +67,52 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 - [x] Phase 1 unit adapter migration: add frame-aware `chorus_process_frames(...)` and `sustainer_process_frames(...)` with per-call scratch allocation and focused CTest coverage.
 - [x] Stabilization: inspect the changed runtime/control/unit adapter surface and keep the CMake/CTest suite green before starting schema/compiler work.
 
+## Next Work Queue
+
+### Batch A: Compiler Contracts
+
+- [ ] Add required-binding validation for MVP atoms so missing `in`, `out`, or `config` keys fail with clear errors.
+- [ ] Extend the compiler binding metadata beyond `generation_dc` and `amplitude_multiply` for the next simple atoms: `amplitude_add`, `amplitude_subtract`, `amplitude_clip_*`, and `mix_wet_dry`.
+- [ ] Store node output producer indexes in the compiled plan so later runtime execution can bind buffers without re-scanning nodes.
+- [ ] Add focused compile tests for missing required bindings, extra bindings, and multi-node topological ordering.
+
+### Batch B: v2 Execution MVP
+
+- [ ] Define an `apg_v2_runtime_t` or equivalent execution context that owns signal buffers, param values, and atom call storage.
+- [ ] Add a runtime init function from `apg_v2_compiled_unit_t` that allocates buffers for audio signals and initializes param defaults.
+- [ ] Implement a mono `simple_gain` execution path using the compiled schedule and existing atom registry thunks.
+- [ ] Add a CTest that runs `units-v2/simple_gain.unit.v2.yaml` over a small buffer and verifies gain output samples.
+
+### Batch C: Schema Fixtures
+
+- [ ] Add `units-v2/simple_mix.unit.v2.yaml` using two inputs and `amplitude_add` or `mix_wet_dry`.
+- [ ] Add `units-v2/simple_clip.unit.v2.yaml` using gain plus clipping to exercise literal config and chained processing.
+- [ ] Add loader/compile fixture tests that iterate all `units-v2/*.yaml` files.
+- [ ] Keep fixtures intentionally small and deterministic; avoid large generated audio files.
+
+### Batch D: Error Quality
+
+- [ ] Include node IDs, binding section names, and binding keys in v2 compiler error messages.
+- [ ] Include param/port/signal names in loader validation errors when rejecting duplicates or invalid fields.
+- [ ] Add tests that assert representative error messages contain the useful identifier.
+
+### Batch E: Tooling and Docs
+
+- [ ] Refresh `docs/schemas/unit-v2.md` to reflect implemented validation rules and current MVP limitations.
+- [ ] Add a short v2 compiler architecture note covering loader, compiler plan, topological scheduling, and future runtime execution.
+- [ ] Update `AGENTS.md` if build/test or v2 workflow conventions change.
+- [ ] Keep using `./build-and-test.sh` once per completed implementation slice.
+
 ## Per-Slice Workflow
+
+1. Pick one batch item or a tight group of related batch items.
+2. Implement only the files needed for that batch item.
+3. Add focused CTest coverage before broadening behavior.
+4. Format touched C/H files with `clang-format` when source layout changes.
+5. Verify once with `./build-and-test.sh`.
+6. Commit completed task slices with `git commit -m "<which tasks are done>"`.
+
+Legacy atom migration checklist, retained for future atom work:
 
 1. Pick a small atom group with similar behavior.
 2. Add `*_process(..., const apg_process_info_t *info)` declarations to `inc/atom/dsp_atoms.h`.
