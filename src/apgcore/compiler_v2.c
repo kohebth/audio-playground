@@ -73,6 +73,20 @@ static void mark_node_outputs_available(const apg_v2_compiled_node_t *node, int 
     }
 }
 
+static uc_status record_node_output_producers(
+    const apg_v2_compiled_node_t *node, uint32_t node_index, uint32_t *signal_producers, uc_error *err
+) {
+    for (size_t i = 0; i < node->out_len; i++) {
+        if (node->out[i].kind != APG_BIND_SIGNAL)
+            continue;
+        size_t signal_index = node->out[i].index;
+        if (signal_producers[signal_index] != UINT32_MAX)
+            return set_error(err, UC_E_MISSING, "graph signal has multiple producers");
+        signal_producers[signal_index] = node_index;
+    }
+    return UC_OK;
+}
+
 static uc_status
 validate_output_port_signals_produced(const apg_unit_v2_t *unit, const int *signal_available, uc_error *err) {
     for (size_t i = 0; i < unit->output_ports_len; i++) {
@@ -335,15 +349,18 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
 
     apg_v2_compiled_node_t *nodes    = uc_arena_alloc(arena, unit->nodes_len * sizeof(*nodes), sizeof(void *));
     uint32_t               *schedule = uc_arena_alloc(arena, unit->nodes_len * sizeof(*schedule), sizeof(uint32_t));
-    int *node_scheduled              = uc_arena_alloc(arena, unit->nodes_len * sizeof(*node_scheduled), sizeof(int));
-    int *signal_available = uc_arena_alloc(arena, unit->signals_len * sizeof(*signal_available), sizeof(int));
+    int      *node_scheduled         = uc_arena_alloc(arena, unit->nodes_len * sizeof(*node_scheduled), sizeof(int));
+    int      *signal_available = uc_arena_alloc(arena, unit->signals_len * sizeof(*signal_available), sizeof(int));
+    uint32_t *signal_producers = uc_arena_alloc(arena, unit->signals_len * sizeof(*signal_producers), sizeof(uint32_t));
     if (((!nodes || !schedule || !node_scheduled) && unit->nodes_len > 0) ||
-        (!signal_available && unit->signals_len > 0))
+        ((!signal_available || !signal_producers) && unit->signals_len > 0))
         return set_error(err, UC_E_OOM, "arena OOM");
     for (size_t i = 0; i < unit->nodes_len; i++)
         node_scheduled[i] = 0;
-    for (size_t i = 0; i < unit->signals_len; i++)
+    for (size_t i = 0; i < unit->signals_len; i++) {
         signal_available[i] = 0;
+        signal_producers[i] = UINT32_MAX;
+    }
 
     uc_status status = mark_input_port_signals(unit, signal_available, err);
     if (status != UC_OK)
@@ -369,6 +386,9 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
         );
         if (status != UC_OK)
             return status;
+        status = record_node_output_producers(&nodes[i], (uint32_t)i, signal_producers, err);
+        if (status != UC_OK)
+            return status;
         status = compile_config_bindings(
             unit, src->atom, src->config, src->config_len, arena, &nodes[i].config, &nodes[i].config_len, err
         );
@@ -384,10 +404,12 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
     if (status != UC_OK)
         return status;
 
-    out->unit         = unit;
-    out->nodes        = nodes;
-    out->nodes_len    = unit->nodes_len;
-    out->schedule     = schedule;
-    out->schedule_len = unit->nodes_len;
+    out->unit                 = unit;
+    out->nodes                = nodes;
+    out->nodes_len            = unit->nodes_len;
+    out->schedule             = schedule;
+    out->schedule_len         = unit->nodes_len;
+    out->signal_producers     = signal_producers;
+    out->signal_producers_len = unit->signals_len;
     return UC_OK;
 }

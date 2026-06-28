@@ -73,7 +73,7 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 
 - [x] Add required-binding validation for MVP atoms so missing `in`, `out`, or `config` keys fail with clear errors.
 - [x] Extend the compiler binding metadata beyond `generation_dc` and `amplitude_multiply` for the next simple atoms: `amplitude_add`, `amplitude_subtract`, `amplitude_clip_*`, and `mix_wet_dry`.
-- [ ] Store node output producer indexes in the compiled plan so later runtime execution can bind buffers without re-scanning nodes.
+- [x] Store node output producer indexes in the compiled plan so later runtime execution can bind buffers without re-scanning nodes.
 - [x] Add focused compile tests for missing required bindings, extra bindings, and multi-node topological ordering.
 
 ### Batch B: v2 Execution MVP

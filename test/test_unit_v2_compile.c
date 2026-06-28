@@ -1,6 +1,7 @@
 #include <apgcore/compiler_v2.h>
 #include <apgcore/unit_v2.h>
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -35,6 +36,9 @@ static int test_simple_gain_compile(void) {
         return fail("unexpected compiled plan shape");
     if (plan.schedule[0] != 0u || plan.schedule[1] != 1u)
         return fail("unexpected compiled schedule");
+    if (plan.signal_producers_len != 3u || plan.signal_producers[0] != UINT32_MAX || plan.signal_producers[1] != 1u ||
+        plan.signal_producers[2] != 0u)
+        return fail("unexpected simple_gain producer map");
 
     const apg_v2_compiled_node_t *dc = &plan.nodes[0];
     if (strcmp(dc->id, "gain_value") != 0 || !dc->atom || strcmp(dc->atom->name, "generation_dc") != 0)
@@ -519,6 +523,11 @@ static int test_forward_references_scheduled(void) {
     if (plan.schedule_len != 2u || plan.schedule[0] != 1u || plan.schedule[1] != 0u) {
         uc_arena_free(&arena);
         return fail("unexpected topological schedule for forward reference unit");
+    }
+    if (plan.signal_producers_len != 3u || plan.signal_producers[0] != UINT32_MAX || plan.signal_producers[1] != 0u ||
+        plan.signal_producers[2] != 1u) {
+        uc_arena_free(&arena);
+        return fail("unexpected producer map for forward reference unit");
     }
 
     uc_arena_free(&arena);
