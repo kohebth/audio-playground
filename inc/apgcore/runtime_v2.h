@@ -1,6 +1,7 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_RUNTIME_V2_H
 #define AUDIO_PLAYGROUND_APGCORE_RUNTIME_V2_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -20,6 +21,7 @@ typedef struct {
 typedef struct {
     const apg_v2_compiled_unit_t *plan;
     apg_process_info_t            process_info;
+    uint32_t                      frame_capacity;
     float                        *signal_pool;
     float                       **signals;
     size_t                        signals_len;
@@ -32,6 +34,8 @@ typedef struct {
 uc_status apg_v2_runtime_init(
     const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, float sample_rate, apg_v2_runtime_t *out, uc_error *err
 );
+
+bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames);
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime);
 

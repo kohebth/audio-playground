@@ -47,8 +47,9 @@ static int test_runtime_init_simple_gain(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    if (runtime.plan != &plan || runtime.process_info.frames != 16u || runtime.process_info.output_frames != 16u ||
-        runtime.process_info.sample_rate != 44100.0f || runtime.process_info.channels != 1u)
+    if (runtime.plan != &plan || runtime.frame_capacity != 16u || runtime.process_info.frames != 16u ||
+        runtime.process_info.output_frames != 16u || runtime.process_info.sample_rate != 44100.0f ||
+        runtime.process_info.channels != 1u)
         return fail("unexpected runtime process metadata");
     if (runtime.signals_len != unit.signals_len || runtime.signals_len != 3u || !runtime.signal_pool ||
         !runtime.signals)
@@ -85,6 +86,48 @@ static int test_runtime_init_simple_gain(void) {
     return 0;
 }
 
+static int test_simple_gain_process_mono(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_simple_gain(&arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize v2 runtime");
+    }
+
+    runtime.params[0]     = 2.0f;
+    const float input[4]  = {0.25f, -0.5f, 1.5f, -2.0f};
+    float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
+        return fail("simple_gain processing failed");
+
+    const float expected[4] = {0.5f, -1.0f, 3.0f, -4.0f};
+    for (size_t i = 0; i < 4u; i++) {
+        if (output[i] != expected[i])
+            return fail("unexpected simple_gain output sample");
+    }
+    if (runtime.process_info.frames != 4u || runtime.process_info.output_frames != 4u)
+        return fail("runtime process metadata did not track requested frames");
+    if (apg_v2_runtime_process_mono(&runtime, input, output, 9u))
+        return fail("simple_gain accepted over-capacity frame count");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_init_rejects_zero_capacity(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -108,6 +151,8 @@ static int test_runtime_init_rejects_zero_capacity(void) {
 
 int main(void) {
     if (test_runtime_init_simple_gain())
+        return 1;
+    if (test_simple_gain_process_mono())
         return 1;
     if (test_runtime_init_rejects_zero_capacity())
         return 1;

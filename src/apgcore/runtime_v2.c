@@ -1,5 +1,6 @@
 #include <apgcore/runtime_v2.h>
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -10,6 +11,24 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
 }
 
 static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
+
+static int signal_index_by_name(const apg_unit_v2_t *unit, const char *name) {
+    if (!unit || !name)
+        return -1;
+    for (size_t i = 0; i < unit->signals_len; i++) {
+        if (unit->signals[i] && strcmp(unit->signals[i], name) == 0)
+            return (int)i;
+    }
+    return -1;
+}
+
+static int first_audio_port_signal_index(const apg_unit_v2_t *unit, const apg_unit_v2_port_t *ports, size_t ports_len) {
+    for (size_t i = 0; i < ports_len; i++) {
+        if (ports[i].type && strcmp(ports[i].type, "audio") == 0)
+            return signal_index_by_name(unit, ports[i].name);
+    }
+    return -1;
+}
 
 static float parse_param_default(const apg_unit_v2_param_t *param) {
     if (!param || !param->default_value)
@@ -51,6 +70,53 @@ static uc_status init_params(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_
     return UC_OK;
 }
 
+static uc_status bind_signal_fields(
+    const apg_v2_compiled_binding_t *bindings, size_t bindings_len, apg_v2_runtime_t *out, void *storage, uc_error *err
+) {
+    float **fields = (float **)storage;
+    for (size_t i = 0; i < bindings_len; i++) {
+        if (bindings[i].kind != APG_BIND_SIGNAL || bindings[i].index >= out->signals_len)
+            return set_error(err, UC_E_MISSING, "v2 runtime signal binding is invalid");
+        fields[i] = out->signals[bindings[i].index];
+    }
+    return UC_OK;
+}
+
+static const atom_field_desc_t *find_config_field(const atom_registry_entry_t *atom, const char *key) {
+    for (int i = 0; i < atom->n_config_fields; i++) {
+        if (atom->config_fields[i].name && strcmp(atom->config_fields[i].name, key) == 0)
+            return &atom->config_fields[i];
+    }
+    return NULL;
+}
+
+static float compiled_config_value(const apg_v2_compiled_binding_t *binding, const apg_v2_runtime_t *runtime) {
+    if (binding->kind == APG_BIND_PARAM)
+        return binding->index < runtime->params_len ? runtime->params[binding->index] : 0.0f;
+    if (binding->kind == APG_BIND_LITERAL)
+        return binding->literal ? strtof(binding->literal, NULL) : 0.0f;
+    return 0.0f;
+}
+
+static uc_status refresh_node_config(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_t *runtime, uc_error *err) {
+    apg_v2_runtime_node_t *node = &runtime->nodes[compiled - runtime->plan->nodes];
+    for (size_t i = 0; i < compiled->config_len; i++) {
+        const atom_field_desc_t *field = find_config_field(compiled->atom, compiled->config[i].key);
+        if (!field)
+            return set_error(err, UC_E_MISSING, "v2 runtime config field metadata is missing");
+
+        void *addr  = (char *)node->config_storage + field->offset;
+        float value = compiled_config_value(&compiled->config[i], runtime);
+        if (field->type == FIELD_INT)
+            *(int *)addr = (int)value;
+        else if (field->type == FIELD_FLOAT)
+            *(float *)addr = value;
+        else
+            return set_error(err, UC_E_TYPE, "v2 runtime config field type is not scalar");
+    }
+    return UC_OK;
+}
+
 static uc_status init_node_calls(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_t *out, uc_error *err) {
     out->nodes_len = plan->nodes_len;
     if (out->nodes_len == 0u)
@@ -78,6 +144,16 @@ static uc_status init_node_calls(const apg_v2_compiled_unit_t *plan, apg_v2_runt
         node->call.config = node->config_storage;
         node->call.state  = node->state_storage;
         node->call.info   = &out->process_info;
+
+        uc_status status = bind_signal_fields(plan->nodes[i].out, plan->nodes[i].out_len, out, node->out_storage, err);
+        if (status != UC_OK)
+            return status;
+        status = bind_signal_fields(plan->nodes[i].in, plan->nodes[i].in_len, out, node->in_storage, err);
+        if (status != UC_OK)
+            return status;
+        status = refresh_node_config(&plan->nodes[i], out, err);
+        if (status != UC_OK)
+            return status;
     }
     return UC_OK;
 }
@@ -93,6 +169,7 @@ uc_status apg_v2_runtime_init(
         return set_error(err, UC_E_RANGE, "v2 runtime frame capacity must be greater than zero");
 
     out->plan                       = plan;
+    out->frame_capacity             = frame_capacity;
     out->process_info.sample_rate   = sample_rate > 0.0f ? sample_rate : 48000.0f;
     out->process_info.frames        = frame_capacity;
     out->process_info.output_frames = frame_capacity;
@@ -112,6 +189,37 @@ uc_status apg_v2_runtime_init(
 fail:
     apg_v2_runtime_destroy(out);
     return status;
+}
+
+bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit || !input || !output || frames == 0u)
+        return false;
+    if (frames > runtime->frame_capacity)
+        return false;
+
+    const apg_unit_v2_t *unit         = runtime->plan->unit;
+    int                  input_index  = first_audio_port_signal_index(unit, unit->input_ports, unit->input_ports_len);
+    int                  output_index = first_audio_port_signal_index(unit, unit->output_ports, unit->output_ports_len);
+    if (input_index < 0 || output_index < 0)
+        return false;
+
+    memcpy(runtime->signals[input_index], input, frames * sizeof(float));
+    runtime->process_info.frames        = frames;
+    runtime->process_info.output_frames = frames;
+
+    uc_error err = {0};
+    for (size_t i = 0; i < runtime->plan->schedule_len; i++) {
+        uint32_t scheduled_index = runtime->plan->schedule[i];
+        if (scheduled_index >= runtime->nodes_len)
+            return false;
+        const apg_v2_compiled_node_t *compiled = &runtime->plan->nodes[scheduled_index];
+        if (refresh_node_config(compiled, runtime, &err) != UC_OK)
+            return false;
+        compiled->atom->thunk(&runtime->nodes[scheduled_index].call);
+    }
+
+    memcpy(output, runtime->signals[output_index], frames * sizeof(float));
+    return true;
 }
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
