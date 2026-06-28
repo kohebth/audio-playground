@@ -2,21 +2,24 @@
 #include <math.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-#define TABLE_SIZE   1024
+#define TABLE_SIZE 1024
 
-void nonlinear_waveshape(
+void nonlinear_waveshape_process(
     nonlinear_waveshape_out_t    *out,
     nonlinear_waveshape_in_t     *in,
     nonlinear_waveshape_params_t *params,
-    nonlinear_waveshape_state_t  *state
+    nonlinear_waveshape_state_t  *state,
+    const apg_process_info_t     *info
 ) {
     if (out->signal == NULL || in->signal == NULL || params->transfer_table == NULL)
         return;
 
-    int size = params->table_size;
-    for (int i = 0; i < CHUNK_LENGTH; i++) {
-        // Map [-1.0, 1.0] to [0, table_size - 1]
+    const uint32_t frames = apg_process_frames_or_default(info);
+    int            size   = params->table_size;
+    if (size < 2)
+        return;
+
+    for (uint32_t i = 0; i < frames; ++i) {
         float x   = in->signal[i];
         float pos = (x + 1.0f) * 0.5f * (float)(size - 1);
 
@@ -29,7 +32,16 @@ void nonlinear_waveshape(
         uint32_t idx_b = idx_a + 1;
         float    frac  = pos - floorf(pos);
 
-        // Linear interpolation in the transfer table
         out->signal[i] = params->transfer_table[idx_a] * (1.0f - frac) + params->transfer_table[idx_b] * frac;
     }
+}
+
+void nonlinear_waveshape(
+    nonlinear_waveshape_out_t    *out,
+    nonlinear_waveshape_in_t     *in,
+    nonlinear_waveshape_params_t *params,
+    nonlinear_waveshape_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    nonlinear_waveshape_process(out, in, params, state, &info);
 }

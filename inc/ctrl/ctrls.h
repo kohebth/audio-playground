@@ -1,10 +1,10 @@
 #ifndef AUDIO_PLAYGROUND_CTRLS_H
 #define AUDIO_PLAYGROUND_CTRLS_H
 
-#include <stdbool.h>
 #include <runtime.h>
+#include <stdbool.h>
 
-#define CTRL_MAX_PARAMS 64
+#define CTRL_MAX_PARAMS   64
 #define CTRL_MAX_BINDINGS 256
 
 typedef struct {
@@ -42,6 +42,7 @@ bool ctrl_unit_set_smoothing_ms(ctrl_unit_t *ctrl, const char *name, float smoot
 bool ctrl_unit_set_all_smoothing_ms(ctrl_unit_t *ctrl, float smoothing_ms);
 
 void ctrl_unit_tick(ctrl_unit_t *ctrl, int n_samples);
+bool ctrl_unit_process_frames(ctrl_unit_t *ctrl, float *in, float *out, uint32_t frames);
 void ctrl_unit_process(ctrl_unit_t *ctrl, float *in, float *out);
 
 #endif

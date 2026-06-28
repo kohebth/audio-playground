@@ -1,0 +1,567 @@
+#include <apgcore/unit_v2.h>
+
+#include <stdio.h>
+#include <string.h>
+
+static int fail(const char *msg) {
+    fprintf(stderr, "FAIL: %s\n", msg);
+    return 1;
+}
+
+static int expect_valid_fixture(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err = {0};
+    uc_status status = apg_unit_v2_load_file("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "validator error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("simple_gain v2 fixture did not validate");
+    }
+
+    if (strcmp(unit.name, "simple_gain") != 0)
+        return fail("unexpected v2 unit name");
+    if (strcmp(unit.version, "2.0.0") != 0)
+        return fail("unexpected v2 unit version");
+    if (unit.params_len != 1u || unit.input_ports_len != 1u || unit.output_ports_len != 1u)
+        return fail("unexpected v2 unit public surface counts");
+    if (unit.signals_len != 3u || unit.nodes_len != 2u)
+        return fail("unexpected v2 unit graph counts");
+    if (!unit.params || strcmp(unit.params[0].name, "gain") != 0 || strcmp(unit.params[0].type, "float") != 0)
+        return fail("unexpected parsed v2 param metadata");
+    if (strcmp(unit.params[0].default_value, "1.0") != 0 || strcmp(unit.params[0].min_value, "0.0") != 0 ||
+        strcmp(unit.params[0].max_value, "4.0") != 0 || strcmp(unit.params[0].smoothing_ms, "10") != 0)
+        return fail("unexpected parsed v2 param values");
+    if (!unit.input_ports || strcmp(unit.input_ports[0].name, "input") != 0 || strcmp(unit.input_ports[0].type, "audio") != 0)
+        return fail("unexpected parsed v2 input port");
+    if (!unit.output_ports || strcmp(unit.output_ports[0].name, "output") != 0 || strcmp(unit.output_ports[0].channels, "1") != 0)
+        return fail("unexpected parsed v2 output port");
+    if (!unit.signals || strcmp(unit.signals[0], "input") != 0 || strcmp(unit.signals[2], "gain_value") != 0)
+        return fail("unexpected parsed v2 signal list");
+    if (!unit.nodes || strcmp(unit.nodes[0].id, "gain_value") != 0 || strcmp(unit.nodes[0].atom, "generation_dc") != 0)
+        return fail("unexpected parsed v2 first node");
+    if (unit.nodes[0].config_len != 1u || strcmp(unit.nodes[0].config[0].key, "value") != 0 ||
+        unit.nodes[0].config[0].value.kind != UC_VAL_VARREF || strcmp(unit.nodes[0].config[0].value.text, "params.gain") != 0)
+        return fail("unexpected parsed v2 config binding");
+    if (strcmp(unit.nodes[1].id, "apply_gain") != 0 || unit.nodes[1].in_len != 2u || unit.nodes[1].out_len != 1u)
+        return fail("unexpected parsed v2 second node bindings");
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int expect_invalid(const char *yaml, const char *label) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err = {0};
+    uc_status status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
+    uc_arena_free(&arena);
+
+    if (status == UC_OK) {
+        fprintf(stderr, "accepted invalid case: %s\n", label);
+        return 1;
+    }
+    return 0;
+}
+
+static int expect_valid(const char *yaml, const char *label) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err = {0};
+    uc_status status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
+    uc_arena_free(&arena);
+
+    if (status != UC_OK) {
+        fprintf(stderr, "rejected valid case %s: %s\n", label, err.msg);
+        return 1;
+    }
+    return 0;
+}
+
+int main(void) {
+    if (expect_valid_fixture())
+        return 1;
+
+    const char *bool_param =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bool_param\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  bypass:\n"
+        "    type: bool\n"
+        "    default: false\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: pass\n"
+        "      atom: amplitude_multiply\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_valid(bool_param, "bool param without numeric bounds"))
+        return 1;
+
+    const char *unknown_param_type =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  label:\n"
+        "    type: string\n"
+        "    default: clean\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: pass\n"
+        "      atom: amplitude_multiply\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(unknown_param_type, "unknown param type"))
+        return 1;
+
+    const char *numeric_param_missing_bounds =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: pass\n"
+        "      atom: amplitude_multiply\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(numeric_param_missing_bounds, "numeric param missing bounds"))
+        return 1;
+
+    const char *duplicate_param =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 0.5\n"
+        "    min: 0.0\n"
+        "    max: 1.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: pass\n"
+        "      atom: amplitude_multiply\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(duplicate_param, "duplicate param name"))
+        return 1;
+
+    const char *missing_port_signal =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "  nodes:\n"
+        "    - id: gain_value\n"
+        "      atom: generation_dc\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(missing_port_signal, "missing matching output signal"))
+        return 1;
+
+    const char *control_port =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: control_port\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "    - name: bypass\n"
+        "      type: control\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "    - gain_value\n"
+        "  nodes:\n"
+        "    - id: gain_value\n"
+        "      atom: generation_dc\n"
+        "      out:\n"
+        "        signal: gain_value\n"
+        "      config:\n"
+        "        value: ${params.gain}\n"
+        "    - id: apply_gain\n"
+        "      atom: amplitude_multiply\n"
+        "      in:\n"
+        "        signal_a: input\n"
+        "        signal_b: gain_value\n"
+        "      out:\n"
+        "        signal: output\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_valid(control_port, "control port without channels or graph signal"))
+        return 1;
+
+    const char *unknown_port_type =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: event\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: bad\n"
+        "      atom: generation_dc\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(unknown_port_type, "unknown port type"))
+        return 1;
+
+    const char *duplicate_port =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "    - name: input\n"
+        "      type: control\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: bad\n"
+        "      atom: generation_dc\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(duplicate_port, "duplicate port name"))
+        return 1;
+
+    const char *duplicate_signal =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: gain_value\n"
+        "      atom: generation_dc\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(duplicate_signal, "duplicate graph signal"))
+        return 1;
+
+    const char *duplicate_binding_key =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "    - gain_value\n"
+        "  nodes:\n"
+        "    - id: apply_gain\n"
+        "      atom: amplitude_multiply\n"
+        "      in:\n"
+        "        signal_a: input\n"
+        "        signal_a: gain_value\n"
+        "      out:\n"
+        "        signal: output\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(duplicate_binding_key, "duplicate node binding key"))
+        return 1;
+
+    const char *unknown_atom =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: bad\n"
+        "      atom: not_an_atom\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(unknown_atom, "unknown atom"))
+        return 1;
+
+    const char *unknown_param_ref =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "    - gain_value\n"
+        "  nodes:\n"
+        "    - id: gain_value\n"
+        "      atom: generation_dc\n"
+        "      out:\n"
+        "        signal: gain_value\n"
+        "      config:\n"
+        "        value: ${params.missing}\n"
+        "compatibility:\n"
+        "  desktop_full: true\n";
+    if (expect_invalid(unknown_param_ref, "unknown param ref"))
+        return 1;
+
+    const char *compatibility_not_map =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: pass\n"
+        "      atom: amplitude_multiply\n"
+        "compatibility: true\n";
+    if (expect_invalid(compatibility_not_map, "compatibility not map"))
+        return 1;
+
+    const char *compatibility_non_bool =
+        "kind: apg.unit\n"
+        "schema: apg.unit.v2\n"
+        "name: bad_unit\n"
+        "version: 2.0.0\n"
+        "params:\n"
+        "  gain:\n"
+        "    type: float\n"
+        "    default: 1.0\n"
+        "    min: 0.0\n"
+        "    max: 2.0\n"
+        "ports:\n"
+        "  inputs:\n"
+        "    - name: input\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "  outputs:\n"
+        "    - name: output\n"
+        "      type: audio\n"
+        "      channels: 1\n"
+        "graph:\n"
+        "  signals:\n"
+        "    - input\n"
+        "    - output\n"
+        "  nodes:\n"
+        "    - id: pass\n"
+        "      atom: amplitude_multiply\n"
+        "compatibility:\n"
+        "  desktop_full: maybe\n";
+    if (expect_invalid(compatibility_non_bool, "compatibility non-bool flag"))
+        return 1;
+
+    return 0;
+}

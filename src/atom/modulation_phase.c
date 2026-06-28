@@ -2,22 +2,22 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define CHUNK_LENGTH  512
 #define MAX_MOD_DELAY 4096
 
-void modulation_phase(
+void modulation_phase_process(
     modulation_phase_out_t    *out,
     modulation_phase_in_t     *in,
     modulation_phase_params_t *params,
-    modulation_phase_state_t  *state
+    modulation_phase_state_t  *state,
+    const apg_process_info_t  *info
 ) {
     if (out->signal == NULL || in->signal == NULL || in->modulator == NULL || state == NULL || state->buffer == NULL)
         return;
 
-    int write_pos = state->write_pos;
+    const uint32_t frames    = apg_process_frames_or_default(info);
+    int            write_pos = state->write_pos;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        // Center modulation around depth samples
+    for (uint32_t i = 0; i < frames; ++i) {
         float delay_samples = params->depth * (1.0f + in->modulator[i] * 0.5f);
         if (delay_samples < 0)
             delay_samples = 0;
@@ -28,7 +28,6 @@ void modulation_phase(
         if (read_pos < 0)
             read_pos += MAX_MOD_DELAY;
 
-        // Cubic Interpolation (4-point Catmull-Rom)
         uint32_t idx1 = (uint32_t)floorf(read_pos) % MAX_MOD_DELAY;
         uint32_t idx0 = (idx1 > 0) ? idx1 - 1 : MAX_MOD_DELAY - 1;
         uint32_t idx2 = (idx1 + 1) % MAX_MOD_DELAY;
@@ -54,4 +53,14 @@ void modulation_phase(
     }
 
     state->write_pos = write_pos;
+}
+
+void modulation_phase(
+    modulation_phase_out_t    *out,
+    modulation_phase_in_t     *in,
+    modulation_phase_params_t *params,
+    modulation_phase_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    modulation_phase_process(out, in, params, state, &info);
 }

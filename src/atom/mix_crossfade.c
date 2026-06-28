@@ -1,12 +1,15 @@
 #include <atom/dsp_atoms.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-
-void mix_crossfade(
-    mix_crossfade_out_t *out, mix_crossfade_in_t *in, mix_crossfade_params_t *params, mix_crossfade_state_t *state
+void mix_crossfade_process(
+    mix_crossfade_out_t      *out,
+    mix_crossfade_in_t       *in,
+    mix_crossfade_params_t   *params,
+    mix_crossfade_state_t    *state,
+    const apg_process_info_t *info
 ) {
-    if (out->signal == NULL || in->signal_a == NULL || in->signal_b == NULL)
+    (void)state;
+    if (out->signal == NULL || in->signal_a == NULL || in->signal_b == NULL || params == NULL)
         return;
 
     float t = params->t;
@@ -15,7 +18,15 @@ void mix_crossfade(
     if (t > 1.0f)
         t = 1.0f;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    const uint32_t frames = apg_process_frames_or_default(info);
+    for (uint32_t i = 0; i < frames; ++i) {
         out->signal[i] = (1.0f - t) * in->signal_a[i] + t * in->signal_b[i];
     }
+}
+
+void mix_crossfade(
+    mix_crossfade_out_t *out, mix_crossfade_in_t *in, mix_crossfade_params_t *params, mix_crossfade_state_t *state
+) {
+    apg_process_info_t info = apg_process_info_default();
+    mix_crossfade_process(out, in, params, state, &info);
 }

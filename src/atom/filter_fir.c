@@ -2,19 +2,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CHUNK_LENGTH 512
 #define MAX_FIR_SIZE 1024
 
-void filter_fir(filter_fir_out_t *out, filter_fir_in_t *in, filter_fir_params_t *params, filter_fir_state_t *state) {
+void filter_fir_process(
+    filter_fir_out_t         *out,
+    filter_fir_in_t          *in,
+    filter_fir_params_t      *params,
+    filter_fir_state_t       *state,
+    const apg_process_info_t *info
+) {
     if (out->signal == NULL || in->signal == NULL || state == NULL || state->buffer == NULL)
         return;
 
     int k_size = params->kernel_size;
     if (k_size > MAX_FIR_SIZE)
         k_size = MAX_FIR_SIZE;
-    int write_pos = state->write_pos;
+    if (k_size < 0)
+        k_size = 0;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    const uint32_t frames    = apg_process_frames_or_default(info);
+    int            write_pos = state->write_pos;
+
+    for (uint32_t i = 0; i < frames; ++i) {
         state->buffer[write_pos] = in->signal[i];
 
         float acc = 0.0f;
@@ -30,4 +39,9 @@ void filter_fir(filter_fir_out_t *out, filter_fir_in_t *in, filter_fir_params_t 
     }
 
     state->write_pos = write_pos;
+}
+
+void filter_fir(filter_fir_out_t *out, filter_fir_in_t *in, filter_fir_params_t *params, filter_fir_state_t *state) {
+    const apg_process_info_t info = apg_process_info_default();
+    filter_fir_process(out, in, params, state, &info);
 }

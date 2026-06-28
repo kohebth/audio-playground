@@ -2,22 +2,22 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CHUNK_LENGTH 512
-
-void generation_impulse(
+void generation_impulse_process(
     generation_impulse_out_t    *out,
     generation_impulse_in_t     *in,
     generation_impulse_params_t *params,
-    generation_impulse_state_t  *state
+    generation_impulse_state_t  *state,
+    const apg_process_info_t    *info
 ) {
     if (out->signal == NULL || state == NULL)
         return;
 
-    int interval_samples = (int)(params->interval * params->sample_rate);
+    const uint32_t frames           = apg_process_frames_or_default(info);
+    int            interval_samples = (int)(params->interval * params->sample_rate);
     if (interval_samples < 1)
         interval_samples = 1;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    for (uint32_t i = 0; i < frames; ++i) {
         if (state->counter <= 0) {
             out->signal[i] = 1.0f;
             state->counter = interval_samples - 1;
@@ -26,4 +26,14 @@ void generation_impulse(
             state->counter--;
         }
     }
+}
+
+void generation_impulse(
+    generation_impulse_out_t    *out,
+    generation_impulse_in_t     *in,
+    generation_impulse_params_t *params,
+    generation_impulse_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    generation_impulse_process(out, in, params, state, &info);
 }

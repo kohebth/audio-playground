@@ -2,18 +2,19 @@
 #include <math.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-
-void modulation_scrub(
+void modulation_scrub_process(
     modulation_scrub_out_t    *out,
     modulation_scrub_in_t     *in,
     modulation_scrub_params_t *params,
-    modulation_scrub_state_t  *state
+    modulation_scrub_state_t  *state,
+    const apg_process_info_t  *info
 ) {
     if (out->signal == NULL || in->buffer == NULL || in->position == NULL)
         return;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    const uint32_t frames = apg_process_frames_or_default(info);
+
+    for (uint32_t i = 0; i < frames; ++i) {
         float pos = in->position[i];
         if (pos < 0.0f)
             pos = 0.0f;
@@ -26,4 +27,14 @@ void modulation_scrub(
 
         out->signal[i] = in->buffer[idx_a] * (1.0f - frac) + in->buffer[idx_b] * frac;
     }
+}
+
+void modulation_scrub(
+    modulation_scrub_out_t    *out,
+    modulation_scrub_in_t     *in,
+    modulation_scrub_params_t *params,
+    modulation_scrub_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    modulation_scrub_process(out, in, params, state, &info);
 }

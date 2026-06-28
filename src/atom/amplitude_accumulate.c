@@ -1,7 +1,24 @@
 #include <atom/dsp_atoms.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
+void amplitude_accumulate_process(
+    amplitude_accumulate_out_t    *out,
+    amplitude_accumulate_in_t     *in,
+    amplitude_accumulate_params_t *params,
+    amplitude_accumulate_state_t  *state,
+    const apg_process_info_t      *info
+) {
+    if (out->signal == NULL || in->signal == NULL || state == NULL)
+        return;
+
+    const uint32_t frames = apg_process_frames_or_default(info);
+    float          sum    = state->accumulator;
+    for (uint32_t i = 0; i < frames; ++i) {
+        sum += in->signal[i];
+        out->signal[i] = sum;
+    }
+    state->accumulator = sum;
+}
 
 void amplitude_accumulate(
     amplitude_accumulate_out_t    *out,
@@ -9,13 +26,6 @@ void amplitude_accumulate(
     amplitude_accumulate_params_t *params,
     amplitude_accumulate_state_t  *state
 ) {
-    if (out->signal == NULL || in->signal == NULL || state == NULL)
-        return;
-
-    float sum = state->accumulator;
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        sum += in->signal[i];
-        out->signal[i] = sum;
-    }
-    state->accumulator = sum;
+    const apg_process_info_t info = apg_process_info_default();
+    amplitude_accumulate_process(out, in, params, state, &info);
 }

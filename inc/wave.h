@@ -7,8 +7,9 @@
 
 
 typedef struct {
-    float data[100000];
-    size_t size;
+    float  *data;
+    size_t  size;
+    int     channels;
 } Samples;
 
 typedef struct {

@@ -1,22 +1,21 @@
 #include <atom/dsp_atoms.h>
 #include <stdlib.h>
 
-#define CHUNK_LENGTH 512
-
-void generation_noise(
+void generation_noise_process(
     generation_noise_out_t    *out,
     generation_noise_in_t     *in,
     generation_noise_params_t *params,
-    generation_noise_state_t  *state
+    generation_noise_state_t  *state,
+    const apg_process_info_t  *info
 ) {
     if (out->signal == NULL || state == NULL)
         return;
 
-    uint32_t seed       = state->seed;
-    float    prev_value = state->prev_value;
+    const uint32_t frames     = apg_process_frames_or_default(info);
+    uint32_t       seed       = state->seed;
+    float          prev_value = state->prev_value;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
-        // Linear Congruential Generator
+    for (uint32_t i = 0; i < frames; ++i) {
         seed        = seed * 1664525u + 1013904223u;
         float white = ((float)seed / 4294967296.0f) * 2.0f - 1.0f;
 
@@ -26,11 +25,9 @@ void generation_noise(
             value = white;
             break;
         case WAVEFORM_NOISE_PINK:
-            // Crude pink noise approximation
             value = (prev_value + white) * 0.5f;
             break;
         case WAVEFORM_NOISE_BROWN:
-            // Brownian noise
             value = prev_value + white * 0.1f;
             if (value > 1.0f)
                 value = 1.0f;
@@ -48,4 +45,14 @@ void generation_noise(
 
     state->seed       = seed;
     state->prev_value = prev_value;
+}
+
+void generation_noise(
+    generation_noise_out_t    *out,
+    generation_noise_in_t     *in,
+    generation_noise_params_t *params,
+    generation_noise_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    generation_noise_process(out, in, params, state, &info);
 }

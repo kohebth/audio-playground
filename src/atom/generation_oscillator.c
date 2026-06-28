@@ -4,25 +4,27 @@
 
 #include "atom_registry.h"
 
-#define CHUNK_LENGTH 512
-
-void generation_oscillator(
+void generation_oscillator_process(
     generation_oscillator_out_t    *out,
     generation_oscillator_in_t     *in,
     generation_oscillator_params_t *params,
-    generation_oscillator_state_t  *state
+    generation_oscillator_state_t  *state,
+    const apg_process_info_t       *info
 ) {
     if (out->signal == NULL || state == NULL)
         return;
 
-    float phase = state->phase;
+    const uint32_t frames = apg_process_frames_or_default(info);
+    float          phase  = state->phase;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    for (uint32_t i = 0; i < frames; ++i) {
         float freq = (in->frequency != NULL) ? in->frequency[i] : params->frequency;
-        float sr = params->sample_rate;
-        if (sr <= 0.0f) sr = 48000.0f;
+        float sr   = params->sample_rate;
+        if (sr <= 0.0f)
+            sr = 48000.0f;
         float phase_inc = freq / sr;
-        if (!isfinite(phase_inc)) phase_inc = 0.0f;
+        if (!isfinite(phase_inc))
+            phase_inc = 0.0f;
 
         float p = phase + params->phase_offset;
         p -= floorf(p);
@@ -50,4 +52,14 @@ void generation_oscillator(
     }
 
     state->phase = phase;
+}
+
+void generation_oscillator(
+    generation_oscillator_out_t    *out,
+    generation_oscillator_in_t     *in,
+    generation_oscillator_params_t *params,
+    generation_oscillator_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    generation_oscillator_process(out, in, params, state, &info);
 }

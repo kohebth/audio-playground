@@ -1,9 +1,48 @@
 #include <atom/dsp_atoms.h>
-#include <stdlib.h>
 #include <string.h>
 
 #define MAX_OVERLAP_WINDOW 8192
-#define CHUNK_LENGTH       512
+
+void freq_overlap_add_process(
+    freq_overlap_add_out_t    *out,
+    freq_overlap_add_in_t     *in,
+    freq_overlap_add_params_t *params,
+    freq_overlap_add_state_t  *state,
+    const apg_process_info_t  *info
+) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
+    if (out->signal == NULL || in->frame == NULL || state->buffer == NULL)
+        return;
+
+    const uint32_t frames = apg_process_frames_or_default(info);
+
+    int block_size = params->block_size;
+    if (block_size < 0)
+        block_size = 0;
+    if (block_size > MAX_OVERLAP_WINDOW)
+        block_size = MAX_OVERLAP_WINDOW;
+
+    int hop_size = params->hop_size;
+    if (hop_size < 0)
+        hop_size = 0;
+    if (hop_size > MAX_OVERLAP_WINDOW)
+        hop_size = MAX_OVERLAP_WINDOW;
+    if ((uint32_t)hop_size > frames)
+        hop_size = (int)frames;
+
+    const uint32_t input_frames = frames < (uint32_t)block_size ? frames : (uint32_t)block_size;
+    for (uint32_t i = 0; i < input_frames; ++i)
+        state->buffer[i] += in->frame[i];
+
+    for (int i = 0; i < hop_size; ++i)
+        out->signal[i] = state->buffer[i];
+
+    if (hop_size > 0) {
+        memmove(state->buffer, state->buffer + hop_size, (MAX_OVERLAP_WINDOW - (size_t)hop_size) * sizeof(float));
+        memset(state->buffer + (MAX_OVERLAP_WINDOW - hop_size), 0, (size_t)hop_size * sizeof(float));
+    }
+}
 
 void freq_overlap_add(
     freq_overlap_add_out_t    *out,
@@ -11,24 +50,6 @@ void freq_overlap_add(
     freq_overlap_add_params_t *params,
     freq_overlap_add_state_t  *state
 ) {
-    if (out->signal == NULL || in->frame == NULL || state == NULL || state->buffer == NULL)
-        return;
-
-    int N = params->block_size;
-    int H = params->hop_size;
-    if (N > MAX_OVERLAP_WINDOW)
-        N = MAX_OVERLAP_WINDOW;
-    if (H > CHUNK_LENGTH)
-        H = CHUNK_LENGTH;
-
-    for (int i = 0; i < N; i++) {
-        state->buffer[i] += in->frame[i];
-    }
-
-    for (int i = 0; i < H; i++) {
-        out->signal[i] = state->buffer[i];
-    }
-
-    memmove(state->buffer, state->buffer + H, (MAX_OVERLAP_WINDOW - H) * sizeof(float));
-    memset(state->buffer + (MAX_OVERLAP_WINDOW - H), 0, H * sizeof(float));
+    const apg_process_info_t info = apg_process_info_default();
+    freq_overlap_add_process(out, in, params, state, &info);
 }

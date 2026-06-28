@@ -1,13 +1,10 @@
 #include <atom/dsp_atoms.h>
 #include <math.h>
-#include <stdlib.h>
 #include <stddef.h>
-
-#define CHUNK_LENGTH 512
 
 // Lookup table for the frequencies of all 128 MIDI notes
 static float midi_freqs[128];
-static int table_initialized = 0;
+static int   table_initialized = 0;
 
 static void init_midi_table() {
     for (int i = 0; i < 128; i++) {
@@ -16,11 +13,12 @@ static void init_midi_table() {
     table_initialized = 1;
 }
 
-void freq_quantize(
-    freq_quantize_out_t    *out,
-    freq_quantize_in_t     *in,
-    freq_quantize_params_t *params,
-    freq_quantize_state_t  *state
+void freq_quantize_process(
+    freq_quantize_out_t      *out,
+    freq_quantize_in_t       *in,
+    freq_quantize_params_t   *params,
+    freq_quantize_state_t    *state,
+    const apg_process_info_t *info
 ) {
     if (out->signal == NULL || in->signal == NULL)
         return;
@@ -29,20 +27,18 @@ void freq_quantize(
         init_midi_table();
     }
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    const uint32_t frames = apg_process_frames_or_default(info);
+    for (uint32_t i = 0; i < frames; ++i) {
         float freq = in->signal[i];
-        
-        // Skip silence or extremely low frequencies
+
         if (freq < 20.0f) {
             out->signal[i] = 0.0f;
             continue;
         }
 
-        // Fast Binary Search to find the nearest frequency in the LUT
-        // This avoids expensive log2f() and powf() calls per sample
-        int low = 0;
+        int low  = 0;
         int high = 127;
-        
+
         while (low <= high) {
             int mid = (low + high) / 2;
             if (freq < midi_freqs[mid]) {
@@ -50,7 +46,7 @@ void freq_quantize(
             } else if (freq > midi_freqs[mid]) {
                 low = mid + 1;
             } else {
-                low = mid;
+                low  = mid;
                 high = mid;
                 break;
             }
@@ -61,10 +57,16 @@ void freq_quantize(
         } else if (low > 127) {
             out->signal[i] = midi_freqs[127];
         } else {
-            // high is the lower bound note, low is the upper bound note
             float diff_down = freq - midi_freqs[high];
             float diff_up   = midi_freqs[low] - freq;
             out->signal[i]  = (diff_down < diff_up) ? midi_freqs[high] : midi_freqs[low];
         }
     }
+}
+
+void freq_quantize(
+    freq_quantize_out_t *out, freq_quantize_in_t *in, freq_quantize_params_t *params, freq_quantize_state_t *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    freq_quantize_process(out, in, params, state, &info);
 }

@@ -17,7 +17,7 @@ AlignConsecutiveDeclarations:
   Enabled: true
 AlignConsecutiveMacros:
   Enabled: true
-AlignEscapedNewlines: LeftWithLastLine
+AlignEscapedNewlines: Left
 AllowShortBlocksOnASingleLine: Always
-BinPackParameters: OnePerLine
+BinPackParameters: false
 

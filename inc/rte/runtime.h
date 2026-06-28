@@ -20,8 +20,8 @@
 // ─────────────────────────────────────────────
 
 typedef struct {
-    float    sample_rate;
-    int      chunk_length;
+    float sample_rate;
+    int   chunk_length;
 } runtime_context_t;
 
 // ─────────────────────────────────────────────
@@ -30,7 +30,7 @@ typedef struct {
 
 typedef struct {
     const char *name;
-    float      *buffer;        // points into signal_pool
+    float      *buffer; // points into signal_pool
 } rt_signal_t;
 
 // ─────────────────────────────────────────────
@@ -47,12 +47,12 @@ typedef struct {
 // ─────────────────────────────────────────────
 
 typedef struct {
-    const char                *id;        // step id from YAML
+    const char                  *id;     // step id from YAML
     const atom_registry_entry_t *atom;   // resolved atom entry
-    void *out;                            // allocated out struct
-    void *in;                             // allocated in struct
-    void *config;                         // allocated config struct
-    void *state;                          // allocated state struct
+    void                        *out;    // allocated out struct
+    void                        *in;     // allocated in struct
+    void                        *config; // allocated config struct
+    void                        *state;  // allocated state struct
 } rt_step_t;
 
 // ─────────────────────────────────────────────
@@ -60,7 +60,7 @@ typedef struct {
 // ─────────────────────────────────────────────
 
 typedef struct {
-    char            name[64];
+    char              name[64];
     runtime_context_t ctx;
 
     // User-facing params
@@ -72,24 +72,24 @@ typedef struct {
     int              n_internals;
 
     // Signal table
-    rt_signal_t      signals[RT_MAX_SIGNALS];
-    int              n_signals;
+    rt_signal_t signals[RT_MAX_SIGNALS];
+    int         n_signals;
 
     // Pipeline
-    rt_step_t        steps[RT_MAX_STEPS];
-    int              n_steps;
+    rt_step_t steps[RT_MAX_STEPS];
+    int       n_steps;
 
     // Memory pool for signal buffers
-    float           *signal_pool;
-    int              signal_pool_count;
+    float *signal_pool;
+    int    signal_pool_count;
 
     // Memory pool for state buffers (delay lines)
-    float           *state_pool;
-    size_t           state_pool_used;
-    size_t           state_pool_size;
+    float *state_pool;
+    size_t state_pool_used;
+    size_t state_pool_size;
 
     // Dirty flag — reconfigure on param change
-    volatile bool    is_changed;
+    volatile bool is_changed;
 } runtime_unit_t;
 
 // ─────────────────────────────────────────────
@@ -99,8 +99,11 @@ typedef struct {
 // Load a unit from a YAML file and instantiate it
 runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx);
 
-// Process one chunk of audio through the unit
+// Process one chunk of audio through the unit using ctx.chunk_length frames
 void runtime_unit_process(runtime_unit_t *unit, float *in, float *out);
+
+// Process an explicit frame count up to the unit's allocated chunk capacity
+bool runtime_unit_process_frames(runtime_unit_t *unit, float *in, float *out, uint32_t frames);
 
 // Update a user-facing parameter by name
 bool runtime_unit_set_param(runtime_unit_t *unit, const char *name, float value);

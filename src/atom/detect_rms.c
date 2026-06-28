@@ -2,10 +2,15 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define CHUNK_LENGTH   512
 #define MAX_RMS_WINDOW 4096
 
-void detect_rms(detect_rms_out_t *out, detect_rms_in_t *in, detect_rms_params_t *params, detect_rms_state_t *state) {
+void detect_rms_process(
+    detect_rms_out_t         *out,
+    detect_rms_in_t          *in,
+    detect_rms_params_t      *params,
+    detect_rms_state_t       *state,
+    const apg_process_info_t *info
+) {
     if (out->level == NULL || in->signal == NULL || state == NULL || state->buffer == NULL)
         return;
 
@@ -15,10 +20,11 @@ void detect_rms(detect_rms_out_t *out, detect_rms_in_t *in, detect_rms_params_t 
     if (w_size < 1)
         w_size = 1;
 
-    int   write_pos = state->write_pos;
-    float sum_sq    = state->sum;
+    const uint32_t frames    = apg_process_frames_or_default(info);
+    int            write_pos = state->write_pos;
+    float          sum_sq    = state->sum;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    for (uint32_t i = 0; i < frames; ++i) {
         float x    = in->signal[i];
         float x_sq = x * x;
 
@@ -32,4 +38,9 @@ void detect_rms(detect_rms_out_t *out, detect_rms_in_t *in, detect_rms_params_t 
 
     state->write_pos = write_pos;
     state->sum       = sum_sq;
+}
+
+void detect_rms(detect_rms_out_t *out, detect_rms_in_t *in, detect_rms_params_t *params, detect_rms_state_t *state) {
+    const apg_process_info_t info = apg_process_info_default();
+    detect_rms_process(out, in, params, state, &info);
 }

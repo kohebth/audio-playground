@@ -1,12 +1,15 @@
 #include <atom/dsp_atoms.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-
-void mix_wet_dry(
-    mix_wet_dry_out_t *out, mix_wet_dry_in_t *in, mix_wet_dry_params_t *params, mix_wet_dry_state_t *state
+void mix_wet_dry_process(
+    mix_wet_dry_out_t        *out,
+    mix_wet_dry_in_t         *in,
+    mix_wet_dry_params_t     *params,
+    mix_wet_dry_state_t      *state,
+    const apg_process_info_t *info
 ) {
-    if (out->signal == NULL || in->dry == NULL || in->wet == NULL)
+    (void)state;
+    if (out->signal == NULL || in->dry == NULL || in->wet == NULL || params == NULL)
         return;
 
     float mix = params->mix;
@@ -15,7 +18,15 @@ void mix_wet_dry(
     if (mix > 1.0f)
         mix = 1.0f;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    const uint32_t frames = apg_process_frames_or_default(info);
+    for (uint32_t i = 0; i < frames; ++i) {
         out->signal[i] = (1.0f - mix) * in->dry[i] + mix * in->wet[i];
     }
+}
+
+void mix_wet_dry(
+    mix_wet_dry_out_t *out, mix_wet_dry_in_t *in, mix_wet_dry_params_t *params, mix_wet_dry_state_t *state
+) {
+    apg_process_info_t info = apg_process_info_default();
+    mix_wet_dry_process(out, in, params, state, &info);
 }

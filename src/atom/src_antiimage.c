@@ -2,10 +2,12 @@
 #include <math.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-
-void src_antiimage(
-    src_antiimage_out_t *out, src_antiimage_in_t *in, src_antiimage_params_t *params, src_antiimage_state_t *state
+void src_antiimage_process(
+    src_antiimage_out_t      *out,
+    src_antiimage_in_t       *in,
+    src_antiimage_params_t   *params,
+    src_antiimage_state_t    *state,
+    const apg_process_info_t *info
 ) {
     if (out->signal == NULL || in->signal == NULL || state == NULL)
         return;
@@ -22,7 +24,8 @@ void src_antiimage(
     float z1 = state->z1;
     float z2 = state->z2;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    const uint32_t frames = apg_process_frames_or_default(info);
+    for (uint32_t i = 0; i < frames; ++i) {
         float x0       = in->signal[i];
         float y0       = b0 * x0 + z1;
         z1             = b1 * x0 - a1 * y0 + z2;
@@ -32,4 +35,11 @@ void src_antiimage(
 
     state->z1 = z1;
     state->z2 = z2;
+}
+
+void src_antiimage(
+    src_antiimage_out_t *out, src_antiimage_in_t *in, src_antiimage_params_t *params, src_antiimage_state_t *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    src_antiimage_process(out, in, params, state, &info);
 }

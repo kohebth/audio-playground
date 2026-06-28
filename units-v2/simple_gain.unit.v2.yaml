@@ -1,0 +1,59 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: simple_gain
+version: 2.0.0
+
+meta:
+  title: Simple Gain
+  category: utility
+  description: Multiplies mono input by a smoothed gain control.
+
+params:
+  gain:
+    type: float
+    default: 1.0
+    min: 0.0
+    max: 4.0
+    smoothing_ms: 10
+    ui:
+      label: Gain
+      control: knob
+      unit: x
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - output
+    - gain_value
+
+  nodes:
+    - id: gain_value
+      atom: generation_dc
+      out:
+        signal: gain_value
+      config:
+        value: ${params.gain}
+
+    - id: apply_gain
+      atom: amplitude_multiply
+      in:
+        signal_a: input
+        signal_b: gain_value
+      out:
+        signal: output
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

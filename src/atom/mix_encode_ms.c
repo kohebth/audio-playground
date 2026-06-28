@@ -2,18 +2,28 @@
 #include <math.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-
-void mix_encode_ms(
-    mix_encode_ms_out_t *out, mix_encode_ms_in_t *in, mix_encode_ms_params_t *params, mix_encode_ms_state_t *state
+void mix_encode_ms_process(
+    mix_encode_ms_out_t      *out,
+    mix_encode_ms_in_t       *in,
+    mix_encode_ms_params_t   *params,
+    mix_encode_ms_state_t    *state,
+    const apg_process_info_t *info
 ) {
     if (out->mid == NULL || out->side == NULL || in->left == NULL || in->right == NULL)
         return;
 
-    float inv_sqrt2 = (float)M_SQRT1_2;
+    const uint32_t frames    = apg_process_frames_or_default(info);
+    float          inv_sqrt2 = (float)M_SQRT1_2;
 
-    for (int i = 0; i < CHUNK_LENGTH; i++) {
+    for (uint32_t i = 0; i < frames; ++i) {
         out->mid[i]  = (in->left[i] + in->right[i]) * inv_sqrt2;
         out->side[i] = (in->left[i] - in->right[i]) * inv_sqrt2;
     }
+}
+
+void mix_encode_ms(
+    mix_encode_ms_out_t *out, mix_encode_ms_in_t *in, mix_encode_ms_params_t *params, mix_encode_ms_state_t *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    mix_encode_ms_process(out, in, params, state, &info);
 }

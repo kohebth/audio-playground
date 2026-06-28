@@ -2,6 +2,7 @@
 #define SUSTAINER_H
 
 #include <atom/dsp_atoms.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
@@ -20,6 +21,14 @@ typedef struct {
 
 typedef struct { float *signal; } sustainer_out_t;
 typedef struct { float *signal; } sustainer_in_t;
+
+bool sustainer_process_frames(
+    sustainer_out_t out,
+    sustainer_in_t in,
+    SustainerParams params,
+    SustainerState *state,
+    uint32_t frames
+);
 
 void sustainer_process(
     sustainer_out_t out,

@@ -1,22 +1,22 @@
 #include <atom/dsp_atoms.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-
-void filter_dc_block(
+void filter_dc_block_process(
     filter_dc_block_out_t    *out,
     filter_dc_block_in_t     *in,
     filter_dc_block_params_t *params,
-    filter_dc_block_state_t  *state
+    filter_dc_block_state_t  *state,
+    const apg_process_info_t *info
 ) {
     if (out->signal == NULL || in->signal == NULL || state == NULL)
         return;
 
-    float x1 = state->prev_input;
-    float y1 = state->prev_output;
-    float R  = params->coefficient;
+    const uint32_t frames = apg_process_frames_or_default(info);
+    float          x1     = state->prev_input;
+    float          y1     = state->prev_output;
+    float          R      = params->coefficient;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    for (uint32_t i = 0; i < frames; ++i) {
         float x0       = in->signal[i];
         float y0       = x0 - x1 + R * y1;
         out->signal[i] = y0;
@@ -26,4 +26,14 @@ void filter_dc_block(
 
     state->prev_input  = x1;
     state->prev_output = y1;
+}
+
+void filter_dc_block(
+    filter_dc_block_out_t    *out,
+    filter_dc_block_in_t     *in,
+    filter_dc_block_params_t *params,
+    filter_dc_block_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    filter_dc_block_process(out, in, params, state, &info);
 }

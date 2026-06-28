@@ -2,6 +2,7 @@
 #define CHORUS_H
 
 #include <atom/dsp_atoms.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
@@ -19,6 +20,14 @@ typedef struct {
 
 typedef struct { float *signal; } chorus_out_t;
 typedef struct { float *signal; } chorus_in_t;
+
+bool chorus_process_frames(
+    chorus_out_t out,
+    chorus_in_t in,
+    ChorusParams params,
+    ChorusState *state,
+    uint32_t frames
+);
 
 void chorus_process(
     chorus_out_t out,

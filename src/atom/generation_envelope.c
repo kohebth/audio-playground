@@ -1,26 +1,25 @@
 #include <atom/dsp_atoms.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-
-void generation_envelope(
+void generation_envelope_process(
     generation_envelope_out_t    *out,
     generation_envelope_in_t     *in,
     generation_envelope_params_t *params,
-    generation_envelope_state_t  *state
+    generation_envelope_state_t  *state,
+    const apg_process_info_t     *info
 ) {
     if (out->signal == NULL || in->gate == NULL || state == NULL)
         return;
 
-    float current_level = state->current_level;
-    int   stage         = state->stage;
+    const uint32_t frames        = apg_process_frames_or_default(info);
+    float          current_level = state->current_level;
+    int            stage         = state->stage;
 
-    // Stages: 0: IDLE, 1: ATTACK, 2: DECAY, 3: SUSTAIN, 4: RELEASE
     float attack_step  = 1.0f / (params->attack * params->sample_rate + 1.0f);
     float decay_step   = (1.0f - params->sustain) / (params->decay * params->sample_rate + 1.0f);
     float release_step = params->sustain / (params->release * params->sample_rate + 1.0f);
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    for (uint32_t i = 0; i < frames; ++i) {
         if (in->gate[i] > 0.5f) {
             if (stage == 0 || stage == 4)
                 stage = 1;
@@ -57,4 +56,14 @@ void generation_envelope(
 
     state->current_level = current_level;
     state->stage         = stage;
+}
+
+void generation_envelope(
+    generation_envelope_out_t    *out,
+    generation_envelope_in_t     *in,
+    generation_envelope_params_t *params,
+    generation_envelope_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    generation_envelope_process(out, in, params, state, &info);
 }

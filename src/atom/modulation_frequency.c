@@ -2,22 +2,23 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define CHUNK_LENGTH 512
 #define MAX_FM_DELAY 4096
 
-void modulation_frequency(
+void modulation_frequency_process(
     modulation_frequency_out_t    *out,
     modulation_frequency_in_t     *in,
     modulation_frequency_params_t *params,
-    modulation_frequency_state_t  *state
+    modulation_frequency_state_t  *state,
+    const apg_process_info_t      *info
 ) {
     if (out->signal == NULL || in->signal == NULL || in->modulator == NULL || state == NULL || state->buffer == NULL)
         return;
 
-    int   write_pos     = state->write_pos;
-    float current_delay = state->current_delay;
+    const uint32_t frames        = apg_process_frames_or_default(info);
+    int            write_pos     = state->write_pos;
+    float          current_delay = state->current_delay;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    for (uint32_t i = 0; i < frames; ++i) {
         current_delay += in->modulator[i] * params->depth;
         if (current_delay < 0)
             current_delay = 0;
@@ -39,4 +40,14 @@ void modulation_frequency(
 
     state->write_pos     = write_pos;
     state->current_delay = current_delay;
+}
+
+void modulation_frequency(
+    modulation_frequency_out_t    *out,
+    modulation_frequency_in_t     *in,
+    modulation_frequency_params_t *params,
+    modulation_frequency_state_t  *state
+) {
+    const apg_process_info_t info = apg_process_info_default();
+    modulation_frequency_process(out, in, params, state, &info);
 }

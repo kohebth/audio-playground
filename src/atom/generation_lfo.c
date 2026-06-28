@@ -2,18 +2,24 @@
 #include <math.h>
 #include <stddef.h>
 
-#define CHUNK_LENGTH 512
-
-void generation_lfo(
-    generation_lfo_out_t *out, generation_lfo_in_t *in, generation_lfo_params_t *params, generation_lfo_state_t *state
+void generation_lfo_process(
+    generation_lfo_out_t     *out,
+    generation_lfo_in_t      *in,
+    generation_lfo_params_t  *params,
+    generation_lfo_state_t   *state,
+    const apg_process_info_t *info
 ) {
-    if (out->signal == NULL || state == NULL)
+    (void)in;
+    if (out->signal == NULL || params == NULL || state == NULL)
         return;
 
-    float phase     = state->phase;
-    float phase_inc = params->frequency / params->sample_rate;
+    float sample_rate = params->sample_rate > 0.0f ? params->sample_rate
+                                                   : (info && info->sample_rate > 0.0f ? info->sample_rate : 48000.0f);
+    float phase       = state->phase;
+    float phase_inc   = params->frequency / sample_rate;
 
-    for (int i = 0; i < CHUNK_LENGTH; ++i) {
+    const uint32_t frames = apg_process_frames_or_default(info);
+    for (uint32_t i = 0; i < frames; ++i) {
         float p = phase + params->phase_offset;
         p -= floorf(p);
 
@@ -40,4 +46,11 @@ void generation_lfo(
     }
 
     state->phase = phase;
+}
+
+void generation_lfo(
+    generation_lfo_out_t *out, generation_lfo_in_t *in, generation_lfo_params_t *params, generation_lfo_state_t *state
+) {
+    apg_process_info_t info = apg_process_info_default();
+    generation_lfo_process(out, in, params, state, &info);
 }

@@ -1,5 +1,5 @@
-#include <runtime.h>
 #include <math.h>
+#include <runtime.h>
 #include <stdio.h>
 
 #include "atom/dsp_atoms.h"
@@ -13,6 +13,12 @@
 // Internal helpers
 // ─────────────────────────────────────────────
 
+static uint32_t rt_frame_capacity(const runtime_unit_t *u) {
+    if (!u || u->ctx.chunk_length <= 0)
+        return RT_CHUNK_LENGTH;
+    return (uint32_t)u->ctx.chunk_length;
+}
+
 static float *rt_find_signal(runtime_unit_t *u, const char *name) {
     for (int i = 0; i < u->n_signals; i++) {
         if (strcmp(u->signals[i].name, name) == 0)
@@ -23,31 +29,35 @@ static float *rt_find_signal(runtime_unit_t *u, const char *name) {
 
 static float *rt_alloc_signal(runtime_unit_t *u, const char *name) {
     float *existing = rt_find_signal(u, name);
-    if (existing) return existing;
+    if (existing)
+        return existing;
 
     if (u->n_signals >= RT_MAX_SIGNALS) {
         fprintf(stderr, "runtime: too many signals (max %d)\n", RT_MAX_SIGNALS);
         return NULL;
     }
 
-    int idx = u->n_signals++;
-    u->signals[idx].name = strdup(name);
-    u->signals[idx].buffer = &u->signal_pool[idx * u->ctx.chunk_length];
-    memset(u->signals[idx].buffer, 0, u->ctx.chunk_length * sizeof(float));
+    int            idx      = u->n_signals++;
+    const uint32_t capacity = rt_frame_capacity(u);
+    u->signals[idx].name    = strdup(name);
+    u->signals[idx].buffer  = &u->signal_pool[idx * capacity];
+    memset(u->signals[idx].buffer, 0, capacity * sizeof(float));
     return u->signals[idx].buffer;
 }
 
 static float rt_resolve_value(runtime_unit_t *u, const char *expr) {
-    if (!expr) return 0.0f;
+    if (!expr)
+        return 0.0f;
 
     // Clean up the expression: remove quotes and ${ } wrapper
-    char clean[256];
+    char        clean[256];
     const char *start = expr;
-    while (*start && (*start == ' ' || *start == '"' || *start == '\'' || *start == '$' || *start == '{')) start++;
-    
+    while (*start && (*start == ' ' || *start == '"' || *start == '\'' || *start == '$' || *start == '{'))
+        start++;
+
     strncpy(clean, start, 255);
     clean[255] = '\0';
-    
+
     char *end = clean + strlen(clean) - 1;
     while (end > clean && (*end == ' ' || *end == '"' || *end == '\'' || *end == '}')) {
         *end = '\0';
@@ -84,65 +94,73 @@ static float *rt_resolve_signal(runtime_unit_t *u, const char *expr) {
 // Pipeline execution
 // ─────────────────────────────────────────────
 
-static void rt_sanitize_signals(runtime_unit_t *unit) {
-    int total_samples = unit->n_signals * unit->ctx.chunk_length;
+static int rt_sanitize_signals(runtime_unit_t *unit, uint32_t frames) {
     int nan_count = 0;
-    for (int i = 0; i < total_samples; i++) {
-        if (isnan(unit->signal_pool[i]) || !isfinite(unit->signal_pool[i])) {
-            unit->signal_pool[i] = 0.0f;
-            nan_count++;
-        }
-    }
-    if (nan_count > 0) {
-        static int warn_limiter = 0;
-        if (warn_limiter++ % 100 == 0) {
-            fprintf(stderr, "runtime: sanitized %d invalid samples (NaN/Inf)\n", nan_count);
-        }
-    }
-}
-
-void runtime_unit_process(runtime_unit_t *unit, float *in, float *out) {
-    if (!unit || !in || !out) return;
-
-    // Copy input audio into the "input" signal
-    float *input_sig = rt_find_signal(unit, "input");
-    if (input_sig)
-        memcpy(input_sig, in, unit->ctx.chunk_length * sizeof(float));
-
-    // Execute each pipeline step
-    atom_call_t call;
-    for (int i = 0; i < unit->n_steps; i++) {
-        rt_step_t *step = &unit->steps[i];
-        call.out    = step->out;
-        call.in     = step->in;
-        call.config = step->config;
-        call.state  = step->state;
-        step->atom->thunk(&call);
-
-        // 🛡️ NaN Protection: Sanitize all signals after each step to prevent propagation
-        // and report the culprit step.
-        int total_samples = unit->n_signals * unit->ctx.chunk_length;
-        int nan_count = 0;
-        for (int k = 0; k < total_samples; k++) {
-            if (isnan(unit->signal_pool[k]) || !isfinite(unit->signal_pool[k])) {
-                unit->signal_pool[k] = 0.0f;
+    for (int i = 0; i < unit->n_signals; i++) {
+        float *signal = unit->signals[i].buffer;
+        if (!signal)
+            continue;
+        for (uint32_t k = 0; k < frames; k++) {
+            if (isnan(signal[k]) || !isfinite(signal[k])) {
+                signal[k] = 0.0f;
                 nan_count++;
             }
         }
+    }
+    return nan_count;
+}
+
+bool runtime_unit_process_frames(runtime_unit_t *unit, float *in, float *out, uint32_t frames) {
+    if (!unit || !in || !out || frames == 0u)
+        return false;
+
+    const uint32_t capacity = rt_frame_capacity(unit);
+    if (frames > capacity)
+        return false;
+
+    float *input_sig = rt_find_signal(unit, "input");
+    if (input_sig)
+        memcpy(input_sig, in, frames * sizeof(float));
+
+    const apg_process_info_t info = {
+        .sample_rate   = unit->ctx.sample_rate > 0.0f ? unit->ctx.sample_rate : 48000.0f,
+        .frames        = frames,
+        .output_frames = frames,
+        .channels      = 1u,
+    };
+    atom_call_t call;
+    for (int i = 0; i < unit->n_steps; i++) {
+        rt_step_t *step = &unit->steps[i];
+        call.out        = step->out;
+        call.in         = step->in;
+        call.config     = step->config;
+        call.state      = step->state;
+        call.info       = &info;
+        step->atom->thunk(&call);
+
+        const int nan_count = rt_sanitize_signals(unit, frames);
         if (nan_count > 0) {
             static int warn_limiter = 0;
             if (warn_limiter++ % 100 == 0) {
-                fprintf(stderr, "runtime: step '%s' (%s) produced %d invalid samples\n", 
-                        step->id ? step->id : "?", step->atom->name, nan_count);
+                fprintf(
+                    stderr, "runtime: step '%s' (%s) produced %d invalid samples\n", step->id ? step->id : "?",
+                    step->atom->name, nan_count
+                );
             }
         }
     }
 
-    // Copy "output" signal to output buffer
     float *output_sig = rt_find_signal(unit, "output");
-    if (output_sig) {
-        memcpy(out, output_sig, unit->ctx.chunk_length * sizeof(float));
-    }
+    if (output_sig)
+        memcpy(out, output_sig, frames * sizeof(float));
+
+    return true;
+}
+
+void runtime_unit_process(runtime_unit_t *unit, float *in, float *out) {
+    if (!unit)
+        return;
+    (void)runtime_unit_process_frames(unit, in, out, rt_frame_capacity(unit));
 }
 
 // ─────────────────────────────────────────────
@@ -153,7 +171,7 @@ bool runtime_unit_set_param(runtime_unit_t *unit, const char *name, float value)
     for (int i = 0; i < unit->n_params; i++) {
         if (strcmp(unit->params[i].name, name) == 0) {
             unit->params[i].value = value;
-            unit->is_changed = true;
+            unit->is_changed      = true;
             return true;
         }
     }
@@ -171,9 +189,9 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
         return NULL;
     }
 
-    uc_unit uc;
-    uc_error err = {0};
-    uc_status s = uc_load_file(yaml_path, &arena, &uc, &err);
+    uc_unit   uc;
+    uc_error  err = {0};
+    uc_status s   = uc_load_file(yaml_path, &arena, &uc, &err);
     if (s != UC_OK) {
         fprintf(stderr, "runtime: [%d:%d] %s\n", err.loc.line, err.loc.col, err.msg);
         uc_arena_free(&arena);
@@ -186,17 +204,18 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
         return NULL;
     }
 
-
     u->ctx = ctx;
-    if (u->ctx.chunk_length == 0) u->ctx.chunk_length = RT_CHUNK_LENGTH;
+    if (u->ctx.chunk_length <= 0)
+        u->ctx.chunk_length = RT_CHUNK_LENGTH;
 
-    if (uc.name) strncpy(u->name, uc.name, 63);
+    if (uc.name)
+        strncpy(u->name, uc.name, 63);
     if (uc.version) {} // version ignored for now
 
     u->signal_pool_count = RT_MAX_SIGNALS;
-    u->signal_pool = calloc(u->signal_pool_count * u->ctx.chunk_length, sizeof(float));
-    u->state_pool_size = 4000000; // 16MB state pool
-    u->state_pool = calloc(u->state_pool_size, sizeof(float));
+    u->signal_pool       = calloc(u->signal_pool_count * rt_frame_capacity(u), sizeof(float));
+    u->state_pool_size   = 4000000; // 16MB state pool
+    u->state_pool        = calloc(u->state_pool_size, sizeof(float));
     if (!u->signal_pool || !u->state_pool) {
         fprintf(stderr, "runtime: pool allocation failed\n");
         return NULL;
@@ -207,14 +226,14 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
     atom_registry_init();
 
     for (size_t i = 0; i < uc.params_len && u->n_params < RT_MAX_PARAMS; i++) {
-        u->params[u->n_params].name = strdup(uc.params[i].name);
+        u->params[u->n_params].name  = strdup(uc.params[i].name);
         u->params[u->n_params].value = (float)uc.params[i].def;
         printf("runtime: param '%s' = %f\n", u->params[u->n_params].name, u->params[u->n_params].value);
         u->n_params++;
     }
 
     for (size_t i = 0; i < uc.internal_len && u->n_internals < RT_MAX_INTERNALS; i++) {
-        u->internals[u->n_internals].name = strdup(uc.internal[i].key);
+        u->internals[u->n_internals].name  = strdup(uc.internal[i].key);
         u->internals[u->n_internals].value = (float)uc.internal[i].value;
         u->n_internals++;
     }
@@ -224,7 +243,7 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
     }
 
     for (size_t i = 0; i < uc.pipeline_len && u->n_steps < RT_MAX_STEPS; i++) {
-        uc_stage *st = &uc.pipeline[i];
+        uc_stage  *st   = &uc.pipeline[i];
         rt_step_t *step = &u->steps[u->n_steps];
         memset(step, 0, sizeof(*step));
 
@@ -234,12 +253,12 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
             continue;
         }
 
-        step->id = strdup(st->id);
-        step->atom = atom;
-        step->out = calloc(1, atom->out_size > 0 ? atom->out_size : 1);
-        step->in = calloc(1, atom->in_size > 0 ? atom->in_size : 1);
+        step->id     = strdup(st->id);
+        step->atom   = atom;
+        step->out    = calloc(1, atom->out_size > 0 ? atom->out_size : 1);
+        step->in     = calloc(1, atom->in_size > 0 ? atom->in_size : 1);
         step->config = calloc(1, atom->config_size > 0 ? atom->config_size : 1);
-        step->state = calloc(1, atom->state_size > 0 ? atom->state_size : 1);
+        step->state  = calloc(1, atom->state_size > 0 ? atom->state_size : 1);
 
         // Auto-allocate buffers in state
         for (int j = 0; j < atom->n_state_fields; j++) {
@@ -249,47 +268,53 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
                     continue;
                 }
                 float **ptr = (float **)((char *)step->state + atom->state_fields[j].offset);
-                *ptr = &u->state_pool[u->state_pool_used];
+                *ptr        = &u->state_pool[u->state_pool_used];
                 u->state_pool_used += 65536; // Default buffer size: 64k samples
             }
         }
 
         for (size_t j = 0; j < st->out_len; j++) {
             const char *expr = st->out[j].value.text;
-            float *sig = rt_resolve_signal(u, expr);
-            if (!sig) sig = rt_find_signal(u, expr);
-            if (!sig) sig = rt_alloc_signal(u, expr);
+            float      *sig  = rt_resolve_signal(u, expr);
+            if (!sig)
+                sig = rt_find_signal(u, expr);
+            if (!sig)
+                sig = rt_alloc_signal(u, expr);
             if (sig) {
                 float **field = (float **)((char *)step->out + j * sizeof(float *));
-                *field = sig;
+                *field        = sig;
             }
         }
 
         for (size_t j = 0; j < st->in_len; j++) {
             const char *expr = st->in[j].value.text;
-            float *sig = rt_resolve_signal(u, expr);
+            float      *sig  = rt_resolve_signal(u, expr);
             if (!sig && st->in[j].value.kind == UC_VAL_LITERAL) {
                 sig = rt_alloc_signal(u, st->in[j].key);
                 if (sig) {
-                    float val = rt_resolve_value(u, expr);
-                    for (int k = 0; k < u->ctx.chunk_length; k++) sig[k] = val;
+                    float          val      = rt_resolve_value(u, expr);
+                    const uint32_t capacity = rt_frame_capacity(u);
+                    for (uint32_t k = 0; k < capacity; k++)
+                        sig[k] = val;
                 }
             }
             if (sig) {
                 float **field = (float **)((char *)step->in + j * sizeof(float *));
-                *field = sig;
+                *field        = sig;
             }
         }
 
         if (atom->config_fields) {
             for (size_t j = 0; j < st->config_len; j++) {
-                float val = rt_resolve_value(u, st->config[j].value.text);
+                float       val = rt_resolve_value(u, st->config[j].value.text);
                 const char *key = st->config[j].key;
                 for (int k = 0; k < atom->n_config_fields; k++) {
                     if (strcmp(atom->config_fields[k].name, key) == 0) {
                         void *addr = (char *)step->config + atom->config_fields[k].offset;
-                        if (atom->config_fields[k].type == FIELD_INT) *(int *)addr = (int)val;
-                        else *(float *)addr = val;
+                        if (atom->config_fields[k].type == FIELD_INT)
+                            *(int *)addr = (int)val;
+                        else
+                            *(float *)addr = val;
                         break;
                     }
                 }
@@ -298,20 +323,19 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
             size_t offset = 0;
             for (size_t j = 0; j < st->config_len; j++) {
                 float val = rt_resolve_value(u, st->config[j].value.text);
-                if (strstr(st->config[j].key, "waveform") ||
-                    strstr(st->config[j].key, "interpolation") ||
-                    strstr(st->config[j].key, "mode") ||
-                    strstr(st->config[j].key, "num_") ||
-                    strstr(st->config[j].key, "order") ||
-                    strstr(st->config[j].key, "length") ||
+                if (strstr(st->config[j].key, "waveform") || strstr(st->config[j].key, "interpolation") ||
+                    strstr(st->config[j].key, "mode") || strstr(st->config[j].key, "num_") ||
+                    strstr(st->config[j].key, "order") || strstr(st->config[j].key, "length") ||
                     strstr(st->config[j].key, "size")) {
                     size_t align = offset % sizeof(int);
-                    if (align) offset += sizeof(int) - align;
+                    if (align)
+                        offset += sizeof(int) - align;
                     *(int *)((char *)step->config + offset) = (int)val;
                     offset += sizeof(int);
                 } else {
                     size_t align = offset % sizeof(float);
-                    if (align) offset += sizeof(float) - align;
+                    if (align)
+                        offset += sizeof(float) - align;
                     *(float *)((char *)step->config + offset) = val;
                     offset += sizeof(float);
                 }
@@ -320,20 +344,22 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
 
         if (atom->state_fields) {
             for (size_t j = 0; j < st->state_len; j++) {
-                float val = (float)st->state[j].value;
+                float       val = (float)st->state[j].value;
                 const char *key = st->state[j].key;
                 for (int k = 0; k < atom->n_state_fields; k++) {
                     if (strcmp(atom->state_fields[k].name, key) == 0) {
                         void *addr = (char *)step->state + atom->state_fields[k].offset;
-                        if (atom->state_fields[k].type == FIELD_INT) *(int *)addr = (int)val;
-                        else if (atom->state_fields[k].type == FIELD_FLOAT) *(float *)addr = val;
+                        if (atom->state_fields[k].type == FIELD_INT)
+                            *(int *)addr = (int)val;
+                        else if (atom->state_fields[k].type == FIELD_FLOAT)
+                            *(float *)addr = val;
                         break;
                     }
                 }
             }
         } else {
             for (size_t j = 0; j < st->state_len; j++) {
-                float val = (float)st->state[j].value;
+                float val                                           = (float)st->state[j].value;
                 *(float *)((char *)step->state + j * sizeof(float)) = val;
             }
         }
@@ -343,14 +369,16 @@ runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx) 
 
     uc_arena_free(&arena);
 
-    printf("runtime: loaded '%s' with %d steps, %d signals, %d params\n",
-           u->name, u->n_steps, u->n_signals, u->n_params);
+    printf(
+        "runtime: loaded '%s' with %d steps, %d signals, %d params\n", u->name, u->n_steps, u->n_signals, u->n_params
+    );
 
     return u;
 }
 
 void runtime_unit_destroy(runtime_unit_t *unit) {
-    if (!unit) return;
+    if (!unit)
+        return;
 
     for (int i = 0; i < unit->n_signals; i++)
         free((void *)unit->signals[i].name);
