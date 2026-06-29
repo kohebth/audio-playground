@@ -11,8 +11,6 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     return status;
 }
 
-#define APG_V2_STATE_BUFFER_SAMPLES 192000u
-
 static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
 
 static void runtime_set_error(apg_v2_runtime_t *runtime, const char *msg) {
@@ -201,8 +199,9 @@ static uc_status init_state_buffers(const atom_registry_entry_t *atom, apg_v2_ru
     if (buffer_count == 0u)
         return UC_OK;
 
-    node->state_buffers = calloc(buffer_count, sizeof(*node->state_buffers));
-    if (!node->state_buffers)
+    node->state_buffers        = calloc(buffer_count, sizeof(*node->state_buffers));
+    node->state_buffer_samples = calloc(buffer_count, sizeof(*node->state_buffer_samples));
+    if (!node->state_buffers || !node->state_buffer_samples)
         return set_error(err, UC_E_OOM, "v2 runtime state buffer allocation failed");
     node->state_buffers_len = buffer_count;
 
@@ -211,12 +210,16 @@ static uc_status init_state_buffers(const atom_registry_entry_t *atom, apg_v2_ru
         const atom_field_desc_t *field = &atom->state_fields[i];
         if (field->type != FIELD_BUFFER)
             continue;
-        float *buffer = calloc(APG_V2_STATE_BUFFER_SAMPLES, sizeof(*buffer));
+        if (field->buffer_samples == 0u)
+            return set_error(err, UC_E_MISSING, "v2 runtime state buffer metadata is missing capacity");
+        float *buffer = calloc(field->buffer_samples, sizeof(*buffer));
         if (!buffer)
             return set_error(err, UC_E_OOM, "v2 runtime state buffer allocation failed");
-        node->state_buffers[buffer_index++] = buffer;
-        float **field_ptr                   = (float **)((char *)node->state_storage + field->offset);
-        *field_ptr                          = buffer;
+        node->state_buffers[buffer_index]        = buffer;
+        node->state_buffer_samples[buffer_index] = field->buffer_samples;
+        buffer_index++;
+        float **field_ptr = (float **)((char *)node->state_storage + field->offset);
+        *field_ptr        = buffer;
     }
     return UC_OK;
 }
@@ -573,6 +576,7 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
         for (size_t j = 0; j < runtime->nodes[i].state_buffers_len; j++)
             free(runtime->nodes[i].state_buffers[j]);
         free(runtime->nodes[i].state_buffers);
+        free(runtime->nodes[i].state_buffer_samples);
         free(runtime->nodes[i].out_storage);
         free(runtime->nodes[i].in_storage);
         free(runtime->nodes[i].config_storage);

@@ -831,6 +831,70 @@ static int test_delay_line_state_buffer_process(void) {
     return 0;
 }
 
+static int test_filter_state_buffer_uses_descriptor_capacity(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: filter_state_buffer_capacity\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  bypass:\n"
+                       "    type: bool\n"
+                       "    default: false\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - input\n"
+                       "    - output\n"
+                       "  nodes:\n"
+                       "    - id: comb\n"
+                       "      atom: filter_comb_ff\n"
+                       "      in:\n"
+                       "        signal: input\n"
+                       "      out:\n"
+                       "        signal: output\n"
+                       "      config:\n"
+                       "        delay_samples: 2\n"
+                       "        coefficient: 0.5\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_string(yaml, &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize filter state runtime");
+    }
+    if (runtime.nodes_len != 1u || runtime.nodes[0].state_buffers_len != 1u || !runtime.nodes[0].state_buffers[0])
+        return fail("filter_comb_ff state buffer was not allocated");
+    if (!runtime.nodes[0].state_buffer_samples || runtime.nodes[0].state_buffer_samples[0] != 48000u)
+        return fail("filter_comb_ff state buffer did not use descriptor capacity");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_init_failure_cleans_partial_allocations(void) {
     const char   *signal_names[] = {"input"};
     apg_unit_v2_t unit           = {
@@ -906,6 +970,8 @@ int main(void) {
     if (test_simple_mix_process_generic())
         return 1;
     if (test_delay_line_state_buffer_process())
+        return 1;
+    if (test_filter_state_buffer_uses_descriptor_capacity())
         return 1;
     if (test_runtime_init_failure_cleans_partial_allocations())
         return 1;

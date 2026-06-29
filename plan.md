@@ -72,7 +72,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase J: Runtime State and Config Maturity
 
-- [ ] J1: Size state buffers from atom descriptor metadata instead of a single conservative capacity.
+- [x] J1: Size state buffers from atom descriptor metadata instead of a single conservative capacity.
 - [ ] J2: Support additional descriptor field types such as `FIELD_FLOAT_PTR` and `FIELD_FLOAT_PP` where needed.
 - [ ] J3: Add runtime reset support for stateful nodes.
 - [ ] J4: Add deterministic runtime fixtures for delay, filter, and modulation state behavior.

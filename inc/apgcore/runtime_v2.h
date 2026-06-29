@@ -17,6 +17,7 @@ typedef struct {
     void       *config_storage;
     void       *state_storage;
     float     **state_buffers;
+    size_t     *state_buffer_samples;
     size_t      state_buffers_len;
 } apg_v2_runtime_node_t;
 

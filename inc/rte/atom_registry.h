@@ -30,9 +30,10 @@ typedef enum {
 } atom_field_type_t;
 
 typedef struct {
-    const char       *name;   // field name (matches YAML key)
-    atom_field_type_t type;   // field type
-    size_t            offset; // offsetof within the struct
+    const char       *name;           // field name (matches YAML key)
+    atom_field_type_t type;           // field type
+    size_t            offset;         // offsetof within the struct
+    size_t            buffer_samples; // FIELD_BUFFER capacity in float samples
 } atom_field_desc_t;
 
 // ─────────────────────────────────────────────

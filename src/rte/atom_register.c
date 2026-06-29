@@ -529,8 +529,8 @@ static const atom_field_desc_t delay_fractional_config_fields[] = {
 };
 
 static const atom_field_desc_t delay_fractional_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(delay_fractional_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(delay_fractional_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(delay_fractional_state_t, buffer), 192000u},
+    {"write_pos", FIELD_INT, offsetof(delay_fractional_state_t, write_pos)},
 };
 
 static const atom_field_desc_t delay_line_config_fields[] = {
@@ -538,8 +538,8 @@ static const atom_field_desc_t delay_line_config_fields[] = {
 };
 
 static const atom_field_desc_t delay_line_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(delay_line_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(delay_line_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(delay_line_state_t, buffer), 192000u},
+    {"write_pos", FIELD_INT, offsetof(delay_line_state_t, write_pos)},
 };
 
 static const atom_field_desc_t delay_tap_feedback_config_fields[] = {
@@ -559,8 +559,8 @@ static const atom_field_desc_t detect_autocorrelate_config_fields[] = {
 };
 
 static const atom_field_desc_t detect_autocorrelate_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(detect_autocorrelate_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(detect_autocorrelate_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(detect_autocorrelate_state_t, buffer), 1024u},
+    {"write_pos", FIELD_INT, offsetof(detect_autocorrelate_state_t, write_pos)},
 };
 
 static const atom_field_desc_t detect_pitch_config_fields[] = {
@@ -568,19 +568,19 @@ static const atom_field_desc_t detect_pitch_config_fields[] = {
     {"sample_rate", FIELD_FLOAT, offsetof(detect_pitch_params_t, sample_rate)},
 };
 static const atom_field_desc_t detect_pitch_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(detect_pitch_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(detect_pitch_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(detect_pitch_state_t, buffer), 1024u},
+    {"write_pos", FIELD_INT, offsetof(detect_pitch_state_t, write_pos)},
 };
 
 static const atom_field_desc_t freq_shift_config_fields[] = {
     {"block_size", FIELD_INT, offsetof(freq_shift_params_t, block_size)},
 };
 static const atom_field_desc_t freq_shift_state_fields[] = {
-    {   "window", FIELD_BUFFER, offsetof(freq_shift_state_t,    window)},
-    {     "real", FIELD_BUFFER, offsetof(freq_shift_state_t,      real)},
-    {     "imag", FIELD_BUFFER, offsetof(freq_shift_state_t,      imag)},
-    {"write_pos",    FIELD_INT, offsetof(freq_shift_state_t, write_pos)},
-    { "read_ptr",  FIELD_FLOAT, offsetof(freq_shift_state_t,  read_ptr)},
+    {"window", FIELD_BUFFER, offsetof(freq_shift_state_t, window), 8192u},
+    {"real", FIELD_BUFFER, offsetof(freq_shift_state_t, real), 8192u},
+    {"imag", FIELD_BUFFER, offsetof(freq_shift_state_t, imag), 8192u},
+    {"write_pos", FIELD_INT, offsetof(freq_shift_state_t, write_pos)},
+    {"read_ptr", FIELD_FLOAT, offsetof(freq_shift_state_t, read_ptr)},
 };
 
 static const atom_field_desc_t detect_envelope_config_fields[] = {
@@ -608,9 +608,9 @@ static const atom_field_desc_t detect_rms_config_fields[] = {
 };
 
 static const atom_field_desc_t detect_rms_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(detect_rms_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(detect_rms_state_t, write_pos)},
-    {      "sum",  FIELD_FLOAT, offsetof(detect_rms_state_t,       sum)},
+    {"buffer", FIELD_BUFFER, offsetof(detect_rms_state_t, buffer), 4096u},
+    {"write_pos", FIELD_INT, offsetof(detect_rms_state_t, write_pos)},
+    {"sum", FIELD_FLOAT, offsetof(detect_rms_state_t, sum)},
 };
 
 static const atom_field_desc_t detect_slope_state_fields[] = {
@@ -631,8 +631,8 @@ static const atom_field_desc_t filter_allpass_config_fields[] = {
 };
 
 static const atom_field_desc_t filter_allpass_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(filter_allpass_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(filter_allpass_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(filter_allpass_state_t, buffer), 48000u},
+    {"write_pos", FIELD_INT, offsetof(filter_allpass_state_t, write_pos)},
 };
 
 static const atom_field_desc_t filter_biquad_config_fields[] = {
@@ -654,8 +654,8 @@ static const atom_field_desc_t filter_comb_fb_config_fields[] = {
 };
 
 static const atom_field_desc_t filter_comb_fb_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(filter_comb_fb_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(filter_comb_fb_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(filter_comb_fb_state_t, buffer), 48000u},
+    {"write_pos", FIELD_INT, offsetof(filter_comb_fb_state_t, write_pos)},
 };
 
 static const atom_field_desc_t filter_comb_ff_config_fields[] = {
@@ -664,8 +664,8 @@ static const atom_field_desc_t filter_comb_ff_config_fields[] = {
 };
 
 static const atom_field_desc_t filter_comb_ff_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(filter_comb_ff_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(filter_comb_ff_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(filter_comb_ff_state_t, buffer), 48000u},
+    {"write_pos", FIELD_INT, offsetof(filter_comb_ff_state_t, write_pos)},
 };
 
 static const atom_field_desc_t filter_dc_block_config_fields[] = {
@@ -687,8 +687,8 @@ static const atom_field_desc_t filter_fir_config_fields[] = {
 };
 
 static const atom_field_desc_t filter_fir_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(filter_fir_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(filter_fir_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(filter_fir_state_t, buffer), 1024u},
+    {"write_pos", FIELD_INT, offsetof(filter_fir_state_t, write_pos)},
 };
 
 static const atom_field_desc_t filter_integrate_state_fields[] = {
@@ -713,7 +713,7 @@ static const atom_field_desc_t freq_overlap_add_config_fields[] = {
 };
 
 static const atom_field_desc_t freq_overlap_add_state_fields[] = {
-    {"buffer", FIELD_BUFFER, offsetof(freq_overlap_add_state_t, buffer)},
+    {"buffer", FIELD_BUFFER, offsetof(freq_overlap_add_state_t, buffer), 8192u},
 };
 
 static const atom_field_desc_t freq_overlap_save_config_fields[] = {
@@ -722,8 +722,8 @@ static const atom_field_desc_t freq_overlap_save_config_fields[] = {
 };
 
 static const atom_field_desc_t freq_overlap_save_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(freq_overlap_save_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(freq_overlap_save_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(freq_overlap_save_state_t, buffer), 1024u},
+    {"write_pos", FIELD_INT, offsetof(freq_overlap_save_state_t, write_pos)},
 };
 
 static const atom_field_desc_t freq_window_config_fields[] = {
@@ -794,8 +794,8 @@ static const atom_field_desc_t interpolation_lagrange_config_fields[] = {
 };
 
 static const atom_field_desc_t interpolation_lagrange_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(interpolation_lagrange_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(interpolation_lagrange_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(interpolation_lagrange_state_t, buffer), 16u},
+    {"write_pos", FIELD_INT, offsetof(interpolation_lagrange_state_t, write_pos)},
 };
 
 static const atom_field_desc_t interpolation_sinc_config_fields[] = {
@@ -803,7 +803,7 @@ static const atom_field_desc_t interpolation_sinc_config_fields[] = {
 };
 
 static const atom_field_desc_t interpolation_sinc_state_fields[] = {
-    {"taps", FIELD_BUFFER, offsetof(interpolation_sinc_state_t, taps)},
+    {"taps", FIELD_BUFFER, offsetof(interpolation_sinc_state_t, taps), 64u},
 };
 
 static const atom_field_desc_t mix_crossfade_config_fields[] = {
@@ -832,9 +832,9 @@ static const atom_field_desc_t modulation_frequency_config_fields[] = {
 };
 
 static const atom_field_desc_t modulation_frequency_state_fields[] = {
-    {       "buffer", FIELD_BUFFER, offsetof(modulation_frequency_state_t,        buffer)},
-    {    "write_pos",    FIELD_INT, offsetof(modulation_frequency_state_t,     write_pos)},
-    {"current_delay",  FIELD_FLOAT, offsetof(modulation_frequency_state_t, current_delay)},
+    {"buffer", FIELD_BUFFER, offsetof(modulation_frequency_state_t, buffer), 4096u},
+    {"write_pos", FIELD_INT, offsetof(modulation_frequency_state_t, write_pos)},
+    {"current_delay", FIELD_FLOAT, offsetof(modulation_frequency_state_t, current_delay)},
 };
 
 static const atom_field_desc_t modulation_phase_config_fields[] = {
@@ -842,8 +842,8 @@ static const atom_field_desc_t modulation_phase_config_fields[] = {
 };
 
 static const atom_field_desc_t modulation_phase_state_fields[] = {
-    {   "buffer", FIELD_BUFFER, offsetof(modulation_phase_state_t,    buffer)},
-    {"write_pos",    FIELD_INT, offsetof(modulation_phase_state_t, write_pos)},
+    {"buffer", FIELD_BUFFER, offsetof(modulation_phase_state_t, buffer), 4096u},
+    {"write_pos", FIELD_INT, offsetof(modulation_phase_state_t, write_pos)},
 };
 
 static const atom_field_desc_t modulation_scrub_config_fields[] = {
