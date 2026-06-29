@@ -144,12 +144,25 @@ static uc_status init_params(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_
 }
 
 static uc_status bind_signal_fields(
-    const apg_v2_compiled_binding_t *bindings, size_t bindings_len, apg_v2_runtime_t *out, void *storage, uc_error *err
+    const apg_v2_compiled_node_t    *compiled,
+    const char                      *section,
+    const apg_v2_compiled_binding_t *bindings,
+    size_t                           bindings_len,
+    apg_v2_runtime_t                *out,
+    void                            *storage,
+    uc_error                        *err
 ) {
     float **fields = (float **)storage;
     for (size_t i = 0; i < bindings_len; i++) {
-        if (bindings[i].kind != APG_BIND_SIGNAL || bindings[i].index >= out->signals_len)
-            return set_error(err, UC_E_MISSING, "v2 runtime signal binding is invalid");
+        if (bindings[i].kind != APG_BIND_SIGNAL || bindings[i].index >= out->signals_len) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' references invalid signal index",
+                compiled && compiled->id ? compiled->id : "", compiled && compiled->atom ? compiled->atom->name : "",
+                section ? section : "binding", bindings[i].key ? bindings[i].key : ""
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
         fields[i] = out->signals[bindings[i].index];
     }
     return UC_OK;
@@ -175,8 +188,15 @@ static uc_status refresh_node_config(const apg_v2_compiled_node_t *compiled, apg
     apg_v2_runtime_node_t *node = &runtime->nodes[compiled - runtime->plan->nodes];
     for (size_t i = 0; i < compiled->config_len; i++) {
         const atom_field_desc_t *field = find_config_field(compiled->atom, compiled->config[i].key);
-        if (!field)
-            return set_error(err, UC_E_MISSING, "v2 runtime config field metadata is missing");
+        if (!field) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' config binding key '%s' metadata is missing",
+                compiled->id ? compiled->id : "", compiled->atom ? compiled->atom->name : "",
+                compiled->config[i].key ? compiled->config[i].key : ""
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
 
         void *addr  = (char *)node->config_storage + field->offset;
         float value = compiled_config_value(&compiled->config[i], runtime);
@@ -184,14 +204,23 @@ static uc_status refresh_node_config(const apg_v2_compiled_node_t *compiled, apg
             *(int *)addr = (int)value;
         else if (field->type == FIELD_FLOAT)
             *(float *)addr = value;
-        else
-            return set_error(err, UC_E_TYPE, "v2 runtime config field type is not scalar");
+        else {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' config binding key '%s' field type is not scalar",
+                compiled->id ? compiled->id : "", compiled->atom ? compiled->atom->name : "",
+                compiled->config[i].key ? compiled->config[i].key : ""
+            );
+            return set_error(err, UC_E_TYPE, msg);
+        }
     }
     return UC_OK;
 }
 
-static uc_status init_state_buffers(const atom_registry_entry_t *atom, apg_v2_runtime_node_t *node, uc_error *err) {
-    size_t buffer_count = 0;
+static uc_status
+init_state_buffers(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_node_t *node, uc_error *err) {
+    const atom_registry_entry_t *atom         = compiled->atom;
+    size_t                       buffer_count = 0;
     for (int i = 0; i < atom->n_state_fields; i++) {
         if (atom->state_fields[i].type == FIELD_BUFFER)
             buffer_count++;
@@ -201,8 +230,14 @@ static uc_status init_state_buffers(const atom_registry_entry_t *atom, apg_v2_ru
 
     node->state_buffers        = calloc(buffer_count, sizeof(*node->state_buffers));
     node->state_buffer_samples = calloc(buffer_count, sizeof(*node->state_buffer_samples));
-    if (!node->state_buffers || !node->state_buffer_samples)
-        return set_error(err, UC_E_OOM, "v2 runtime state buffer allocation failed");
+    if (!node->state_buffers || !node->state_buffer_samples) {
+        char msg[192];
+        snprintf(
+            msg, sizeof(msg), "node '%s' atom '%s' state buffer allocation failed", compiled->id ? compiled->id : "",
+            atom->name ? atom->name : ""
+        );
+        return set_error(err, UC_E_OOM, msg);
+    }
     node->state_buffers_len = buffer_count;
 
     size_t buffer_index = 0;
@@ -210,11 +245,23 @@ static uc_status init_state_buffers(const atom_registry_entry_t *atom, apg_v2_ru
         const atom_field_desc_t *field = &atom->state_fields[i];
         if (field->type != FIELD_BUFFER)
             continue;
-        if (field->buffer_samples == 0u)
-            return set_error(err, UC_E_MISSING, "v2 runtime state buffer metadata is missing capacity");
+        if (field->buffer_samples == 0u) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' state binding key '%s' is missing buffer capacity",
+                compiled->id ? compiled->id : "", atom->name ? atom->name : "", field->name ? field->name : ""
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
         float *buffer = calloc(field->buffer_samples, sizeof(*buffer));
-        if (!buffer)
-            return set_error(err, UC_E_OOM, "v2 runtime state buffer allocation failed");
+        if (!buffer) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' state binding key '%s' buffer allocation failed",
+                compiled->id ? compiled->id : "", atom->name ? atom->name : "", field->name ? field->name : ""
+            );
+            return set_error(err, UC_E_OOM, msg);
+        }
         node->state_buffers[buffer_index]        = buffer;
         node->state_buffer_samples[buffer_index] = field->buffer_samples;
         buffer_index++;
@@ -252,13 +299,17 @@ static uc_status init_node_calls(const apg_v2_compiled_unit_t *plan, apg_v2_runt
         node->call.state  = node->state_storage;
         node->call.info   = &out->process_info;
 
-        uc_status status = init_state_buffers(atom, node, err);
+        uc_status status = init_state_buffers(&plan->nodes[i], node, err);
         if (status != UC_OK)
             return status;
-        status = bind_signal_fields(plan->nodes[i].out, plan->nodes[i].out_len, out, node->out_storage, err);
+        status = bind_signal_fields(
+            &plan->nodes[i], "out", plan->nodes[i].out, plan->nodes[i].out_len, out, node->out_storage, err
+        );
         if (status != UC_OK)
             return status;
-        status = bind_signal_fields(plan->nodes[i].in, plan->nodes[i].in_len, out, node->in_storage, err);
+        status = bind_signal_fields(
+            &plan->nodes[i], "in", plan->nodes[i].in, plan->nodes[i].in_len, out, node->in_storage, err
+        );
         if (status != UC_OK)
             return status;
         status = refresh_node_config(&plan->nodes[i], out, err);
