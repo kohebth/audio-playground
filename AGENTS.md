@@ -2,70 +2,63 @@
 
 ## Project Structure & Module Organization
 
-This repository contains independent projects with separate dependencies:
+This repository contains several independent project areas:
 
-- `src/`, `inc/`, `test/`, `units/`, `configs/`, `CMakeLists.txt`: C11 DSP engine, YAML unit loader, PipeWire live app, and CTest targets.
-- `web-tools/unit-editor/`: React + TypeScript + Vite editor for `units/*.unit.yaml`.
-- `audio-mcp/`: Python MCP server for audio analysis, generation, chunking, resampling, and rescaling helpers.
-- `search-mcp/`: TypeScript MCP server exposing `search_web`.
-- `samples/` and `analysis/`: audio inputs and rendered inspection outputs. Commit large generated audio only as intentional fixtures.
+- `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, atom registry, YAML loaders, APGCore v2 compiler/runtime, and CTest targets.
+- `units/`: v1 DSP unit YAML loaded by the legacy runtime.
+- `units-v2/`: v2 compiler/runtime fixtures such as `simple_gain`, `simple_mix`, and `simple_clip`.
+- `docs/schemas/unit-v2.md` and `docs/UNIT_V2_ARCHITECTURE.md`: current v2 schema and compiler/runtime design notes.
+- `configs/`: PipeWire/runtime tuning config.
+- `web-tools/unit-editor/`, `audio-mcp/`, `search-mcp/`: separate frontend and MCP packages with their own dependencies.
+- `samples/` and `analysis/`: audio inputs and generated inspection outputs. Commit large generated audio only as intentional fixtures.
 
-Headers in `inc/` mirror the C source layout. DSP unit YAML is hand-written and loaded at runtime.
+Keep C headers under `inc/` paired with implementation files under `src/` where practical.
 
 ## Build, Test, and Development Commands
 
-Run C/CMake commands from the repo root:
+For C/APGCore work, use the repo-root wrapper:
 
 ```sh
-cmake -S . -B build && cmake --build build
-ctest --test-dir build
-build/test_hall_reverb
+./build-and-test.sh
 ```
 
-`libpipewire-0.3` is required for `live` and PipeWire-linked targets. PipeWire tuning config is in `configs/10-quantum.conf`.
+It configures CMake under `/tmp/audio-playground-apgcore-build`, suppresses CMake/build stdout, and runs CTest. Use it once per completed implementation slice.
 
-Run web editor commands from `web-tools/unit-editor/`:
+Useful direct commands:
 
 ```sh
-npm run dev
-npm run build
-npm run lint
+ctest --test-dir /tmp/audio-playground-apgcore-build
+/tmp/audio-playground-apgcore-build/test_unit_v2_runtime
 ```
 
-Run MCP package commands in their own directories:
+For web and MCP packages, run commands inside their package directories:
 
 ```sh
-# audio-mcp/
-pip install -e .
-python -m audio_mcp
-python -m pytest tests/ -v
-
-# search-mcp/
-npm install
-npm run build
-npm run dev
+cd web-tools/unit-editor && npm run build && npm run lint
+cd audio-mcp && python -m pytest tests/ -v
+cd search-mcp && npm run build
 ```
 
 ## Coding Style & Naming Conventions
 
-C uses LLVM `clang-format` with 4-space indentation and a 120-column limit:
+C uses LLVM `clang-format` with 4-space indentation and a 120-column limit. The user has approved running `clang-format`; format touched C/H files before committing:
 
 ```sh
-clang-format -i src/**/*.c inc/**/*.h
+clang-format -i src/**/*.c inc/**/*.h test/**/*.c
 ```
 
-Keep C headers and sources paired by directory and name where practical. Name C tests `test_<feature>.c` and DSP units `<effect>.unit.yaml`. TypeScript uses ES modules and local ESLint. Python targets 3.10+ under `audio-mcp/src/audio_mcp/`.
+Name C tests `test_<feature>.c`. Name v1 units `<effect>.unit.yaml` and v2 fixtures `<name>.unit.v2.yaml`. Keep v2 atom binding keys aligned with `src/apgcore/compiler_v2.c` metadata.
 
 ## Testing Guidelines
 
-C tests are CTest targets. Run through CTest or from the repo root so `units/` and `configs/` resolve correctly. Add focused tests under `test/` for runtime, YAML, DSP atom, or offline chain behavior. `audio-mcp` uses `pytest` with `tmp_path` fixtures and no external audio files. The unit editor currently has lint/build checks but no test framework.
+C tests are CTest targets. Add focused tests under `test/` for atom behavior, loaders, compiler contracts, runtime execution, and adapter frame limits. V2 fixture coverage should load/compile all `units-v2/*.unit.v2.yaml`, and runtime tests should exercise named signal buffers, params, schedule execution, state buffers, and failure messages.
 
 ## Commit & Pull Request Guidelines
 
-Recent history favors short imperative subjects, often Conventional Commit style: `feat: add simple test for each part`, `feat(editor): Implement automatic layout`. Prefer `feat:`, `fix:`, `test:`, `refactor:`, or a concise imperative sentence.
+Use short imperative subjects, preferably Conventional Commit style: `feat:`, `fix:`, `test:`, `docs:`, or `refactor:`. The user has approved `git commit`; commit each completed, verified slice with a message describing the task done.
 
 Pull requests should name the changed project area, list commands run, call out PipeWire or audio-file requirements, and include screenshots for unit-editor UI changes.
 
 ## Agent-Specific Instructions
 
-Do not mix dependencies between the C engine, web editor, and MCP packages. Preserve user changes, and keep edits scoped to the requested project area.
+Use `fsmcp` for repository search and file edits. Do not use `apply_patch`; if an `fsmcp` edit fails, stop and report it. Preserve unrelated user changes. Keep dependencies separate across the C engine, web editor, and MCP packages. Do not stage unrelated modified `units/`, generated audio, or local tool directories unless explicitly requested.
