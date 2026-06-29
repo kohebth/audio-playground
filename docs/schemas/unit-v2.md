@@ -60,7 +60,9 @@ The compiler currently validates required keys for these MVP atoms:
 - `amplitude_multiply`, `amplitude_add`, `amplitude_subtract`: `in.signal_a`, `in.signal_b`, `out.signal`
 - `amplitude_clip_hard`: `in.signal`, `out.signal`, `config.threshold`
 - `amplitude_clip_soft`: `in.signal`, `out.signal`, `config.threshold`, `config.curve`
+- `delay_unit`: `in.signal`, `out.signal`
 - `delay_line`: `in.signal`, `out.signal`, `config.length`
+- `delay_fractional`: `in.signal`, `out.signal`, `config.delay_samples`, `config.interpolation`
 - `mix_wet_dry`: `in.dry`, `in.wet`, `out.signal`, `config.mix`
 
 Atoms without explicit metadata may still compile without key-level validation until their contracts are added.

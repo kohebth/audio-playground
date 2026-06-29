@@ -545,6 +545,153 @@ static int test_delay_line_binding_metadata_compile(void) {
     return expect_compile_invalid_contains(bad_input_key, "unknown delay_line input key", "delay", "in", "siggnal");
 }
 
+static int test_delay_family_binding_metadata_compile(void) {
+    const char *delay_unit = "kind: apg.unit\n"
+                             "schema: apg.unit.v2\n"
+                             "name: unit_delay\n"
+                             "version: 2.0.0\n"
+                             "params:\n"
+                             "  bypass:\n"
+                             "    type: bool\n"
+                             "    default: false\n"
+                             "ports:\n"
+                             "  inputs:\n"
+                             "    - name: input\n"
+                             "      type: audio\n"
+                             "      channels: 1\n"
+                             "  outputs:\n"
+                             "    - name: output\n"
+                             "      type: audio\n"
+                             "      channels: 1\n"
+                             "graph:\n"
+                             "  signals:\n"
+                             "    - input\n"
+                             "    - output\n"
+                             "  nodes:\n"
+                             "    - id: unit_delay\n"
+                             "      atom: delay_unit\n"
+                             "      in:\n"
+                             "        signal: input\n"
+                             "      out:\n"
+                             "        signal: output\n"
+                             "compatibility:\n"
+                             "  desktop_full: true\n";
+    if (expect_compile_valid(delay_unit, "delay_unit metadata"))
+        return 1;
+
+    const char *bad_delay_unit_key = "kind: apg.unit\n"
+                                     "schema: apg.unit.v2\n"
+                                     "name: unit_delay_bad_key\n"
+                                     "version: 2.0.0\n"
+                                     "params:\n"
+                                     "  bypass:\n"
+                                     "    type: bool\n"
+                                     "    default: false\n"
+                                     "ports:\n"
+                                     "  inputs:\n"
+                                     "    - name: input\n"
+                                     "      type: audio\n"
+                                     "      channels: 1\n"
+                                     "  outputs:\n"
+                                     "    - name: output\n"
+                                     "      type: audio\n"
+                                     "      channels: 1\n"
+                                     "graph:\n"
+                                     "  signals:\n"
+                                     "    - input\n"
+                                     "    - output\n"
+                                     "  nodes:\n"
+                                     "    - id: unit_delay\n"
+                                     "      atom: delay_unit\n"
+                                     "      in:\n"
+                                     "        signal: input\n"
+                                     "        sample: input\n"
+                                     "      out:\n"
+                                     "        signal: output\n"
+                                     "compatibility:\n"
+                                     "  desktop_full: true\n";
+    if (expect_compile_invalid_contains(
+            bad_delay_unit_key, "unknown delay_unit input key", "unit_delay", "in", "sample"
+        ))
+        return 1;
+
+    const char *delay_fractional = "kind: apg.unit\n"
+                                   "schema: apg.unit.v2\n"
+                                   "name: fractional_delay\n"
+                                   "version: 2.0.0\n"
+                                   "params:\n"
+                                   "  delay_samples:\n"
+                                   "    type: float\n"
+                                   "    default: 1.5\n"
+                                   "    min: 0.0\n"
+                                   "    max: 64.0\n"
+                                   "ports:\n"
+                                   "  inputs:\n"
+                                   "    - name: input\n"
+                                   "      type: audio\n"
+                                   "      channels: 1\n"
+                                   "  outputs:\n"
+                                   "    - name: output\n"
+                                   "      type: audio\n"
+                                   "      channels: 1\n"
+                                   "graph:\n"
+                                   "  signals:\n"
+                                   "    - input\n"
+                                   "    - output\n"
+                                   "  nodes:\n"
+                                   "    - id: fractional\n"
+                                   "      atom: delay_fractional\n"
+                                   "      in:\n"
+                                   "        signal: input\n"
+                                   "      out:\n"
+                                   "        signal: output\n"
+                                   "      config:\n"
+                                   "        delay_samples: ${params.delay_samples}\n"
+                                   "        interpolation: 0\n"
+                                   "compatibility:\n"
+                                   "  desktop_full: true\n";
+    if (expect_compile_valid(delay_fractional, "delay_fractional metadata"))
+        return 1;
+
+    const char *missing_interpolation = "kind: apg.unit\n"
+                                        "schema: apg.unit.v2\n"
+                                        "name: fractional_delay_missing_config\n"
+                                        "version: 2.0.0\n"
+                                        "params:\n"
+                                        "  delay_samples:\n"
+                                        "    type: float\n"
+                                        "    default: 1.5\n"
+                                        "    min: 0.0\n"
+                                        "    max: 64.0\n"
+                                        "ports:\n"
+                                        "  inputs:\n"
+                                        "    - name: input\n"
+                                        "      type: audio\n"
+                                        "      channels: 1\n"
+                                        "  outputs:\n"
+                                        "    - name: output\n"
+                                        "      type: audio\n"
+                                        "      channels: 1\n"
+                                        "graph:\n"
+                                        "  signals:\n"
+                                        "    - input\n"
+                                        "    - output\n"
+                                        "  nodes:\n"
+                                        "    - id: fractional\n"
+                                        "      atom: delay_fractional\n"
+                                        "      in:\n"
+                                        "        signal: input\n"
+                                        "      out:\n"
+                                        "        signal: output\n"
+                                        "      config:\n"
+                                        "        delay_samples: ${params.delay_samples}\n"
+                                        "compatibility:\n"
+                                        "  desktop_full: true\n";
+    return expect_compile_invalid_contains(
+        missing_interpolation, "missing delay_fractional interpolation", "fractional", "config", "interpolation"
+    );
+}
+
 static int test_control_ports_compile(void) {
     const char *yaml = "kind: apg.unit\n"
                        "schema: apg.unit.v2\n"
@@ -803,6 +950,8 @@ int main(void) {
     if (test_extended_atom_binding_metadata_compile())
         return 1;
     if (test_delay_line_binding_metadata_compile())
+        return 1;
+    if (test_delay_family_binding_metadata_compile())
         return 1;
     if (test_control_ports_compile())
         return 1;
