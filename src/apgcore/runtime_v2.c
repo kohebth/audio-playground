@@ -10,6 +10,8 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     return status;
 }
 
+#define APG_V2_STATE_BUFFER_SAMPLES 192000u
+
 static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
 
 static int signal_index_by_name(const apg_unit_v2_t *unit, const char *name) {
@@ -117,6 +119,35 @@ static uc_status refresh_node_config(const apg_v2_compiled_node_t *compiled, apg
     return UC_OK;
 }
 
+static uc_status init_state_buffers(const atom_registry_entry_t *atom, apg_v2_runtime_node_t *node, uc_error *err) {
+    size_t buffer_count = 0;
+    for (int i = 0; i < atom->n_state_fields; i++) {
+        if (atom->state_fields[i].type == FIELD_BUFFER)
+            buffer_count++;
+    }
+    if (buffer_count == 0u)
+        return UC_OK;
+
+    node->state_buffers = calloc(buffer_count, sizeof(*node->state_buffers));
+    if (!node->state_buffers)
+        return set_error(err, UC_E_OOM, "v2 runtime state buffer allocation failed");
+    node->state_buffers_len = buffer_count;
+
+    size_t buffer_index = 0;
+    for (int i = 0; i < atom->n_state_fields; i++) {
+        const atom_field_desc_t *field = &atom->state_fields[i];
+        if (field->type != FIELD_BUFFER)
+            continue;
+        float *buffer = calloc(APG_V2_STATE_BUFFER_SAMPLES, sizeof(*buffer));
+        if (!buffer)
+            return set_error(err, UC_E_OOM, "v2 runtime state buffer allocation failed");
+        node->state_buffers[buffer_index++] = buffer;
+        float **field_ptr                   = (float **)((char *)node->state_storage + field->offset);
+        *field_ptr                          = buffer;
+    }
+    return UC_OK;
+}
+
 static uc_status init_node_calls(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_t *out, uc_error *err) {
     out->nodes_len = plan->nodes_len;
     if (out->nodes_len == 0u)
@@ -145,7 +176,10 @@ static uc_status init_node_calls(const apg_v2_compiled_unit_t *plan, apg_v2_runt
         node->call.state  = node->state_storage;
         node->call.info   = &out->process_info;
 
-        uc_status status = bind_signal_fields(plan->nodes[i].out, plan->nodes[i].out_len, out, node->out_storage, err);
+        uc_status status = init_state_buffers(atom, node, err);
+        if (status != UC_OK)
+            return status;
+        status = bind_signal_fields(plan->nodes[i].out, plan->nodes[i].out_len, out, node->out_storage, err);
         if (status != UC_OK)
             return status;
         status = bind_signal_fields(plan->nodes[i].in, plan->nodes[i].in_len, out, node->in_storage, err);
@@ -260,6 +294,9 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
         return;
 
     for (size_t i = 0; i < runtime->nodes_len; i++) {
+        for (size_t j = 0; j < runtime->nodes[i].state_buffers_len; j++)
+            free(runtime->nodes[i].state_buffers[j]);
+        free(runtime->nodes[i].state_buffers);
         free(runtime->nodes[i].out_storage);
         free(runtime->nodes[i].in_storage);
         free(runtime->nodes[i].config_storage);

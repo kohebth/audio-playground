@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 static int fail(const char *msg) {
     fprintf(stderr, "FAIL: %s\n", msg);
@@ -229,6 +230,94 @@ static int test_simple_mix_process_generic(void) {
     return 0;
 }
 
+static int test_delay_line_state_buffer_process(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: delay_state_buffer\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  bypass:\n"
+                       "    type: bool\n"
+                       "    default: false\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - input\n"
+                       "    - output\n"
+                       "  nodes:\n"
+                       "    - id: delay\n"
+                       "      atom: delay_line\n"
+                       "      in:\n"
+                       "        signal: input\n"
+                       "      out:\n"
+                       "        signal: output\n"
+                       "      config:\n"
+                       "        length: 2\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err    = {0};
+    uc_status     status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "load error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to load delay state fixture");
+    }
+
+    apg_v2_compiled_unit_t plan;
+    status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "compile error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to compile delay state fixture");
+    }
+
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize delay state runtime");
+    }
+    if (runtime.nodes_len != 1u || runtime.nodes[0].state_buffers_len != 1u || !runtime.nodes[0].state_buffers[0])
+        return fail("delay_line state buffer was not allocated");
+
+    float *input  = apg_v2_runtime_find_signal(&runtime, "input");
+    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    if (!input || !output)
+        return fail("failed to find delay state signals");
+
+    input[0] = 1.0f;
+    input[1] = 2.0f;
+    input[2] = 3.0f;
+    input[3] = 4.0f;
+    if (!apg_v2_runtime_process(&runtime, 4u))
+        return fail("delay_line state processing failed");
+
+    const float expected[4] = {0.0f, 0.0f, 1.0f, 2.0f};
+    for (size_t i = 0; i < 4u; i++) {
+        if (output[i] != expected[i])
+            return fail("unexpected delay_line output sample");
+    }
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_init_rejects_zero_capacity(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -258,6 +347,8 @@ int main(void) {
     if (test_simple_clip_process_generic())
         return 1;
     if (test_simple_mix_process_generic())
+        return 1;
+    if (test_delay_line_state_buffer_process())
         return 1;
     if (test_runtime_init_rejects_zero_capacity())
         return 1;
