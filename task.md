@@ -114,8 +114,8 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 ### Batch G: Runtime Robustness
 
 - [x] Allocate atom state `FIELD_BUFFER` descriptors for v2 runtime nodes that need scratch/history buffers.
-- [ ] Add runtime cleanup tests for partially failed initialization paths.
-- [ ] Add error reporting hooks so v2 runtime process failures expose a useful message instead of only `false`.
+- [x] Add runtime cleanup tests for partially failed initialization paths.
+- [x] Add error reporting hooks so v2 runtime process failures expose a useful message instead of only `false`.
 
 ## Per-Slice Workflow
 

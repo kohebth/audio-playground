@@ -125,6 +125,9 @@ static int test_simple_gain_process_mono(void) {
         return fail("runtime process metadata did not track requested frames");
     if (apg_v2_runtime_process_mono(&runtime, input, output, 9u))
         return fail("simple_gain accepted over-capacity frame count");
+    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    if (!last_error || !strstr(last_error, "capacity"))
+        return fail("simple_gain over-capacity failure did not expose a useful error");
 
     apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);
@@ -318,6 +321,36 @@ static int test_delay_line_state_buffer_process(void) {
     return 0;
 }
 
+static int test_runtime_init_failure_cleans_partial_allocations(void) {
+    const char   *signal_names[] = {"input"};
+    apg_unit_v2_t unit           = {
+                  .name        = "bad_runtime",
+                  .version     = "2.0.0",
+                  .signals     = signal_names,
+                  .signals_len = 1u,
+    };
+    apg_v2_compiled_node_t nodes[1] = {{0}};
+    nodes[0].id                     = "bad_node";
+    nodes[0].atom                   = NULL;
+    apg_v2_compiled_unit_t plan     = {
+            .unit      = &unit,
+            .nodes     = nodes,
+            .nodes_len = 1u,
+    };
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status == UC_OK)
+        return fail("runtime init accepted node without atom metadata");
+    if (runtime.signal_pool || runtime.signals || runtime.params || runtime.nodes || runtime.signals_len != 0u ||
+        runtime.nodes_len != 0u)
+        return fail("runtime init failure did not clean partial allocations");
+    if (!strstr(err.msg, "atom metadata"))
+        return fail("runtime init failure did not report useful error");
+    return 0;
+}
+
 static int test_runtime_init_rejects_zero_capacity(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -349,6 +382,8 @@ int main(void) {
     if (test_simple_mix_process_generic())
         return 1;
     if (test_delay_line_state_buffer_process())
+        return 1;
+    if (test_runtime_init_failure_cleans_partial_allocations())
         return 1;
     if (test_runtime_init_rejects_zero_capacity())
         return 1;

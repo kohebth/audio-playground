@@ -1,6 +1,7 @@
 #include <apgcore/runtime_v2.h>
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,6 +14,12 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
 #define APG_V2_STATE_BUFFER_SAMPLES 192000u
 
 static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
+
+static void runtime_set_error(apg_v2_runtime_t *runtime, const char *msg) {
+    if (!runtime || !msg)
+        return;
+    snprintf(runtime->last_error, sizeof(runtime->last_error), "%s", msg);
+}
 
 static int signal_index_by_name(const apg_unit_v2_t *unit, const char *name) {
     if (!unit || !name)
@@ -248,10 +255,21 @@ bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float
 }
 
 bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || frames == 0u)
+    if (!runtime)
         return false;
-    if (frames > runtime->frame_capacity)
+    runtime->last_error[0] = '\0';
+    if (!runtime->plan || !runtime->plan->unit) {
+        runtime_set_error(runtime, "v2 runtime has no compiled plan");
         return false;
+    }
+    if (frames == 0u) {
+        runtime_set_error(runtime, "v2 runtime frame count must be greater than zero");
+        return false;
+    }
+    if (frames > runtime->frame_capacity) {
+        runtime_set_error(runtime, "v2 runtime frame count exceeds capacity");
+        return false;
+    }
 
     runtime->process_info.frames        = frames;
     runtime->process_info.output_frames = frames;
@@ -259,34 +277,53 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     uc_error err = {0};
     for (size_t i = 0; i < runtime->plan->schedule_len; i++) {
         uint32_t scheduled_index = runtime->plan->schedule[i];
-        if (scheduled_index >= runtime->nodes_len)
+        if (scheduled_index >= runtime->nodes_len) {
+            runtime_set_error(runtime, "v2 runtime schedule index is out of range");
             return false;
+        }
         const apg_v2_compiled_node_t *compiled = &runtime->plan->nodes[scheduled_index];
-        if (refresh_node_config(compiled, runtime, &err) != UC_OK)
+        if (refresh_node_config(compiled, runtime, &err) != UC_OK) {
+            runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime config refresh failed");
             return false;
+        }
         compiled->atom->thunk(&runtime->nodes[scheduled_index].call);
     }
     return true;
 }
 
 bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !input || !output)
+    if (!runtime)
         return false;
+    runtime->last_error[0] = '\0';
+    if (!runtime->plan || !runtime->plan->unit) {
+        runtime_set_error(runtime, "v2 runtime has no compiled plan");
+        return false;
+    }
+    if (!input || !output) {
+        runtime_set_error(runtime, "v2 runtime mono input/output buffers are required");
+        return false;
+    }
 
     const apg_unit_v2_t *unit         = runtime->plan->unit;
     int                  input_index  = first_audio_port_signal_index(unit, unit->input_ports, unit->input_ports_len);
     int                  output_index = first_audio_port_signal_index(unit, unit->output_ports, unit->output_ports_len);
     if (input_index < 0 || output_index < 0 || (size_t)input_index >= runtime->signals_len ||
-        (size_t)output_index >= runtime->signals_len)
+        (size_t)output_index >= runtime->signals_len) {
+        runtime_set_error(runtime, "v2 runtime mono audio port signal lookup failed");
         return false;
+    }
 
     if (frames > runtime->frame_capacity || frames == 0u)
-        return false;
+        return apg_v2_runtime_process(runtime, frames);
     memcpy(runtime->signals[input_index], input, frames * sizeof(float));
     if (!apg_v2_runtime_process(runtime, frames))
         return false;
     memcpy(output, runtime->signals[output_index], frames * sizeof(float));
     return true;
+}
+
+const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime) {
+    return runtime && runtime->last_error[0] ? runtime->last_error : NULL;
 }
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
