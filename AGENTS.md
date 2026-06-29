@@ -29,6 +29,8 @@ Useful direct commands:
 ```sh
 ctest --test-dir /tmp/audio-playground-apgcore-build
 cmake --build /tmp/audio-playground-apgcore-build --target check_v2
+cmake -S . -B /tmp/audio-playground-apgcore-asan -DCMAKE_BUILD_TYPE=Debug -DAPG_ENABLE_SANITIZERS=ON
+cmake --build /tmp/audio-playground-apgcore-asan && ctest --test-dir /tmp/audio-playground-apgcore-asan
 /tmp/audio-playground-apgcore-build/test_unit_v2_runtime
 ```
 

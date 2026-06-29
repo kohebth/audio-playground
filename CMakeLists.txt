@@ -6,6 +6,16 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -D_REENTRANT")
 
+option(APG_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer for debug verification" OFF)
+if(APG_ENABLE_SANITIZERS)
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+        add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
+        add_link_options(-fsanitize=address,undefined)
+    else()
+        message(WARNING "APG_ENABLE_SANITIZERS is only configured for Clang/GNU C compilers")
+    endif()
+endif()
+
 find_package(PkgConfig QUIET)
 pkg_check_modules(PIPEWIRE QUIET libpipewire-0.3)
 
