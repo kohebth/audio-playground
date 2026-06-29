@@ -33,3 +33,11 @@ This file tracks known issues that should not block the current phase but need e
 - **Problem:** True multi-channel ports need either per-channel graph signal mapping or a channel-array binding representation. Treating a multi-channel port as a mono buffer would be ambiguous and unsafe.
 - **Later Fix:** Add an explicit channel mapping model for public ports before exposing multi-channel process APIs.
 - **Related Plan Item:** `plan.md` Phase I2b.
+
+## Control Routing Beyond Params
+
+- **Status:** Open
+- **Context:** `apg_v2_runtime_set_control_port(...)` maps control input ports to same-named params.
+- **Problem:** The schema does not yet define whether control ports can drive graph signals directly, multiple params, smoothing lanes, or typed control buffers.
+- **Later Fix:** Define explicit control routing semantics before adding graph-control propagation beyond same-named params.
+- **Related Plan Item:** `plan.md` Phase I3b.

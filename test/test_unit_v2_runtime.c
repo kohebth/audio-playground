@@ -223,6 +223,97 @@ static int test_named_mono_port_process(void) {
     return 0;
 }
 
+static int test_control_port_sets_matching_param(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: gain_control_port\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  gain:\n"
+                       "    type: float\n"
+                       "    default: 1.0\n"
+                       "    min: 0.0\n"
+                       "    max: 4.0\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "    - name: gain\n"
+                       "      type: control\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - input\n"
+                       "    - output\n"
+                       "    - gain_value\n"
+                       "  nodes:\n"
+                       "    - id: gain_value\n"
+                       "      atom: generation_dc\n"
+                       "      out:\n"
+                       "        signal: gain_value\n"
+                       "      config:\n"
+                       "        value: ${params.gain}\n"
+                       "    - id: apply_gain\n"
+                       "      atom: amplitude_multiply\n"
+                       "      in:\n"
+                       "        signal_a: input\n"
+                       "        signal_b: gain_value\n"
+                       "      out:\n"
+                       "        signal: output\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err    = {0};
+    uc_status     status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "load error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to load control port fixture");
+    }
+
+    apg_v2_compiled_unit_t plan;
+    status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "compile error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to compile control port fixture");
+    }
+
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize control port runtime");
+    }
+
+    if (!apg_v2_runtime_set_control_port(&runtime, "gain", 4.0f))
+        return fail("failed to set matching control port");
+    if (apg_v2_runtime_set_control_port(&runtime, "input", 2.0f) ||
+        apg_v2_runtime_set_control_port(&runtime, "missing", 2.0f))
+        return fail("accepted invalid control port update");
+
+    const float input[2]  = {0.25f, -0.5f};
+    float       output[2] = {0.0f, 0.0f};
+    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+        return fail("control port fixture processing failed");
+    if (output[0] != 1.0f || output[1] != -2.0f)
+        return fail("control port did not update matching param");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_named_mono_port_rejects_multichannel_port(void) {
     const char *yaml = "kind: apg.unit\n"
                        "schema: apg.unit.v2\n"
@@ -555,6 +646,8 @@ int main(void) {
     if (test_named_mono_port_process())
         return 1;
     if (test_named_mono_port_rejects_multichannel_port())
+        return 1;
+    if (test_control_port_sets_matching_param())
         return 1;
     if (test_simple_clip_process_generic())
         return 1;
