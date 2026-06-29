@@ -187,6 +187,7 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
     static const char *const               delay_fractional_config[] = {"delay_samples", "interpolation"};
     static const char *const               filter_biquad_config[]    = {"b0", "b1", "b2", "a1", "a2"};
     static const char *const               filter_delay_config[]     = {"delay_samples", "coefficient"};
+    static const char *const               filter_comb_fb_in[]       = {"signal", "delay"};
     static const char *const               filter_dc_block_config[]  = {"coefficient"};
     static const char *const               signal_modulator_in[]     = {"signal", "modulator"};
     static const char *const               scrub_in[]                = {"buffer", "position"};
@@ -240,6 +241,11 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
         {      "filter_comb_ff",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
         {      "filter_comb_ff",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
         {      "filter_comb_ff", APG_BIND_SECTION_CONFIG,     filter_delay_config,
+         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                },
+        {      "filter_comb_fb",     APG_BIND_SECTION_IN,       filter_comb_fb_in,
+         sizeof(filter_comb_fb_in) / sizeof(filter_comb_fb_in[0])                                                                    },
+        {      "filter_comb_fb",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {      "filter_comb_fb", APG_BIND_SECTION_CONFIG,     filter_delay_config,
          sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                },
         {     "filter_dc_block",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
         {     "filter_dc_block",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
@@ -301,6 +307,11 @@ static int atom_binding_key_allowed(const char *atom, apg_bind_section_t section
     return !atom_has_schema(atom);
 }
 
+static int atom_binding_key_optional(const char *atom, apg_bind_section_t section, const char *key) {
+    return atom && key && section == APG_BIND_SECTION_IN && strcmp(atom, "filter_comb_fb") == 0 &&
+           strcmp(key, "delay") == 0;
+}
+
 static uc_status validate_binding_key(
     const char *node_id, const char *atom, apg_bind_section_t section, const char *key, uc_error *err
 ) {
@@ -336,6 +347,8 @@ static uc_status validate_required_binding_keys(
         return UC_OK;
 
     for (size_t i = 0; i < schema->keys_len; i++) {
+        if (atom_binding_key_optional(atom, section, schema->keys[i]))
+            continue;
         if (!binding_key_present(bindings, bindings_len, schema->keys[i])) {
             char msg[192];
             snprintf(
