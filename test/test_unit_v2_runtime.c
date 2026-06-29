@@ -1,4 +1,5 @@
 #include <apgcore/compiler_v2.h>
+#include <apgcore/host_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
 #include <atom/dsp_types.h>
@@ -113,6 +114,30 @@ static int test_runtime_init_simple_gain(void) {
         return fail("runtime destroy did not clear owned storage");
 
     uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_v2_host_file_bridge_processes_simple_gain(void) {
+    apg_v2_host_unit_t host;
+    uc_error           err    = {0};
+    uc_status          status = apg_v2_host_load_file("units-v2/simple_gain.unit.v2.yaml", 8u, 48000.0f, &host, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "host load error: %s\n", err.msg);
+        return fail("failed to load v2 host fixture");
+    }
+
+    if (!apg_v2_host_set_param(&host, "gain", 2.5f))
+        return fail("failed to set v2 host param");
+
+    const float input[3]  = {0.25f, -0.5f, 1.0f};
+    float       output[3] = {0.0f, 0.0f, 0.0f};
+    if (!apg_v2_host_process_mono_ports(&host, "input", input, "output", output, 3u))
+        return fail("v2 host mono processing failed");
+    const float expected[3] = {0.625f, -1.25f, 2.5f};
+    if (expect_samples(output, expected, 3u, "v2 host simple_gain"))
+        return 1;
+
+    apg_v2_host_destroy(&host);
     return 0;
 }
 
@@ -1355,6 +1380,8 @@ static int test_runtime_init_rejects_zero_capacity(void) {
 
 int main(void) {
     if (test_runtime_init_simple_gain())
+        return 1;
+    if (test_v2_host_file_bridge_processes_simple_gain())
         return 1;
     if (test_runtime_config_error_names_node_atom_and_binding())
         return 1;
