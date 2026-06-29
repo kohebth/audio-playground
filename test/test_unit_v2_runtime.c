@@ -953,6 +953,95 @@ static int test_filter_state_buffer_uses_descriptor_capacity(void) {
     return 0;
 }
 
+static int test_delay_tap_scalar_input_refresh(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: delay_tap_runtime\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  tap:\n"
+                       "    type: int\n"
+                       "    default: 2\n"
+                       "    min: 0\n"
+                       "    max: 8\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - input\n"
+                       "    - output\n"
+                       "  nodes:\n"
+                       "    - id: tap\n"
+                       "      atom: delay_tap_feedback\n"
+                       "      in:\n"
+                       "        buffer: input\n"
+                       "        tap_position: ${params.tap}\n"
+                       "      out:\n"
+                       "        signal: output\n"
+                       "      config:\n"
+                       "        coefficient: 0.5\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_string(yaml, &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize delay tap runtime");
+    }
+
+    float *input  = apg_v2_runtime_find_signal(&runtime, "input");
+    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    if (!input || !output)
+        return fail("failed to find delay tap signals");
+
+    input[0] = 1.0f;
+    input[1] = 2.0f;
+    input[2] = 3.0f;
+    input[3] = 4.0f;
+    if (!apg_v2_runtime_process(&runtime, 4u))
+        return fail("delay tap processing failed");
+    const float expected_tap_2[4] = {1.5f, 1.5f, 1.5f, 1.5f};
+    if (expect_samples(output, expected_tap_2, 4u, "delay tap default"))
+        return 1;
+
+    if (!apg_v2_runtime_set_param(&runtime, "tap", 1.0f))
+        return fail("failed to update delay tap param");
+    input[0] = 1.0f;
+    input[1] = 2.0f;
+    input[2] = 3.0f;
+    input[3] = 4.0f;
+    if (!apg_v2_runtime_process(&runtime, 4u))
+        return fail("delay tap processing after param update failed");
+    const float expected_tap_1[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    if (expect_samples(output, expected_tap_1, 4u, "delay tap updated"))
+        return 1;
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_capable_fixture_library(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -1198,6 +1287,8 @@ int main(void) {
     if (test_simple_mix_process_generic())
         return 1;
     if (test_delay_line_state_buffer_process())
+        return 1;
+    if (test_delay_tap_scalar_input_refresh())
         return 1;
     if (test_filter_state_buffer_uses_descriptor_capacity())
         return 1;

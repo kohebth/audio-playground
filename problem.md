@@ -4,10 +4,9 @@ This file tracks known issues that should not block the current phase but need e
 
 ## Delay Tap Binding Model
 
-- **Status:** Open
+- **Status:** Resolved
 - **Context:** `delay_tap_feedback` and `delay_tap_feedforward` have atom inputs such as `buffer` and `tap_position`, not just ordinary audio signal pointers.
-- **Problem:** The current v2 compiler/runtime treats all `in` bindings as graph signal buffers and binds them by storage order. Adding compiler contracts for tap atoms now would either reject useful graphs or incorrectly model scalar/buffer inputs as normal signals.
-- **Later Fix:** Add explicit binding kinds or descriptor-aware binding validation for signal buffers, state buffers, scalar inputs, and config fields before validating delay tap atoms.
+- **Resolution:** The v2 compiler now treats `in.tap_position` for delay tap atoms as a scalar literal or `${params.name}` binding while keeping `in.buffer` as a graph signal. The runtime binds delay tap input fields by descriptor offset and refreshes scalar input params before each process call.
 - **Related Plan Item:** `plan.md` Phase H2b.
 
 ## Optional Atom Bindings

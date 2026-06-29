@@ -185,6 +185,8 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
     static const char *const               clip_soft_config[]        = {"threshold", "curve"};
     static const char *const               delay_line_config[]       = {"length"};
     static const char *const               delay_fractional_config[] = {"delay_samples", "interpolation"};
+    static const char *const               delay_tap_in[]            = {"buffer", "tap_position"};
+    static const char *const               delay_tap_config[]        = {"coefficient"};
     static const char *const               filter_biquad_config[]    = {"b0", "b1", "b2", "a1", "a2"};
     static const char *const               filter_delay_config[]     = {"delay_samples", "coefficient"};
     static const char *const               filter_comb_fb_in[]       = {"signal", "delay"};
@@ -202,88 +204,96 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
     static const char *const               ms_out[]                  = {"mid", "side"};
     static const char *const               pan_config[]              = {"position"};
     static const apg_atom_binding_schema_t schemas[]                 = {
-        {       "generation_dc",    APG_BIND_SECTION_OUT,       generation_dc_out,
-         sizeof(generation_dc_out) / sizeof(generation_dc_out[0])                                                                    },
-        {       "generation_dc", APG_BIND_SECTION_CONFIG,    generation_dc_config,
-         sizeof(generation_dc_config) / sizeof(generation_dc_config[0])                                                              },
-        {  "amplitude_multiply",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
-        {  "amplitude_multiply",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {       "amplitude_add",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
-        {       "amplitude_add",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {  "amplitude_subtract",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
-        {  "amplitude_subtract",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        { "amplitude_clip_hard",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        { "amplitude_clip_hard",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        { "amplitude_clip_hard", APG_BIND_SECTION_CONFIG,        clip_hard_config,
-         sizeof(clip_hard_config) / sizeof(clip_hard_config[0])                                                                      },
-        { "amplitude_clip_soft",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        { "amplitude_clip_soft",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        { "amplitude_clip_soft", APG_BIND_SECTION_CONFIG,        clip_soft_config,
-         sizeof(clip_soft_config) / sizeof(clip_soft_config[0])                                                                      },
-        {          "delay_unit",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {          "delay_unit",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {          "delay_line",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {          "delay_line",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {          "delay_line", APG_BIND_SECTION_CONFIG,       delay_line_config,
-         sizeof(delay_line_config) / sizeof(delay_line_config[0])                                                                    },
-        {    "delay_fractional",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {    "delay_fractional",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {    "delay_fractional", APG_BIND_SECTION_CONFIG, delay_fractional_config,
-         sizeof(delay_fractional_config) / sizeof(delay_fractional_config[0])                                                        },
-        {       "filter_biquad",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {       "filter_biquad",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {       "filter_biquad", APG_BIND_SECTION_CONFIG,    filter_biquad_config,
-         sizeof(filter_biquad_config) / sizeof(filter_biquad_config[0])                                                              },
-        {      "filter_allpass",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {      "filter_allpass",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {      "filter_allpass", APG_BIND_SECTION_CONFIG,     filter_delay_config,
-         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                },
-        {      "filter_comb_ff",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {      "filter_comb_ff",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {      "filter_comb_ff", APG_BIND_SECTION_CONFIG,     filter_delay_config,
-         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                },
-        {      "filter_comb_fb",     APG_BIND_SECTION_IN,       filter_comb_fb_in,
-         sizeof(filter_comb_fb_in) / sizeof(filter_comb_fb_in[0])                                                                    },
-        {      "filter_comb_fb",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {      "filter_comb_fb", APG_BIND_SECTION_CONFIG,     filter_delay_config,
-         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                },
-        {     "filter_dc_block",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {     "filter_dc_block",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {     "filter_dc_block", APG_BIND_SECTION_CONFIG,  filter_dc_block_config,
-         sizeof(filter_dc_block_config) / sizeof(filter_dc_block_config[0])                                                          },
-        {"modulation_amplitude",     APG_BIND_SECTION_IN,     signal_modulator_in,
-         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                },
-        {"modulation_amplitude",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {"modulation_amplitude", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
-        {     "modulation_ring",     APG_BIND_SECTION_IN,     signal_modulator_in,
-         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                },
-        {     "modulation_ring",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {"modulation_frequency",     APG_BIND_SECTION_IN,     signal_modulator_in,
-         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                },
-        {"modulation_frequency",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {"modulation_frequency", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
-        {    "modulation_phase",     APG_BIND_SECTION_IN,     signal_modulator_in,
-         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                },
-        {    "modulation_phase",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {    "modulation_phase", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
-        {    "modulation_scrub",     APG_BIND_SECTION_IN,                scrub_in,             sizeof(scrub_in) / sizeof(scrub_in[0])},
-        {    "modulation_scrub",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {    "modulation_scrub", APG_BIND_SECTION_CONFIG,            scrub_config,     sizeof(scrub_config) / sizeof(scrub_config[0])},
-        {       "mix_crossfade",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
-        {       "mix_crossfade",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {       "mix_crossfade", APG_BIND_SECTION_CONFIG,        crossfade_config,
-         sizeof(crossfade_config) / sizeof(crossfade_config[0])                                                                      },
-        {      "mix_pan_stereo",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {      "mix_pan_stereo",    APG_BIND_SECTION_OUT,              stereo_out,         sizeof(stereo_out) / sizeof(stereo_out[0])},
-        {      "mix_pan_stereo", APG_BIND_SECTION_CONFIG,              pan_config,         sizeof(pan_config) / sizeof(pan_config[0])},
-        {       "mix_encode_ms",     APG_BIND_SECTION_IN,               stereo_in,           sizeof(stereo_in) / sizeof(stereo_in[0])},
-        {       "mix_encode_ms",    APG_BIND_SECTION_OUT,                  ms_out,                 sizeof(ms_out) / sizeof(ms_out[0])},
-        {       "mix_decode_ms",     APG_BIND_SECTION_IN,                   ms_in,                   sizeof(ms_in) / sizeof(ms_in[0])},
-        {       "mix_decode_ms",    APG_BIND_SECTION_OUT,              stereo_out,         sizeof(stereo_out) / sizeof(stereo_out[0])},
-        {         "mix_wet_dry",     APG_BIND_SECTION_IN,          mix_wet_dry_in, sizeof(mix_wet_dry_in) / sizeof(mix_wet_dry_in[0])},
-        {         "mix_wet_dry",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {         "mix_wet_dry", APG_BIND_SECTION_CONFIG,      mix_wet_dry_config,
-         sizeof(mix_wet_dry_config) / sizeof(mix_wet_dry_config[0])                                                                  },
+        {        "generation_dc",    APG_BIND_SECTION_OUT,       generation_dc_out,
+         sizeof(generation_dc_out) / sizeof(generation_dc_out[0])                                                                     },
+        {        "generation_dc", APG_BIND_SECTION_CONFIG,    generation_dc_config,
+         sizeof(generation_dc_config) / sizeof(generation_dc_config[0])                                                               },
+        {   "amplitude_multiply",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
+        {   "amplitude_multiply",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {        "amplitude_add",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
+        {        "amplitude_add",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {   "amplitude_subtract",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
+        {   "amplitude_subtract",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {  "amplitude_clip_hard",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {  "amplitude_clip_hard",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {  "amplitude_clip_hard", APG_BIND_SECTION_CONFIG,        clip_hard_config,
+         sizeof(clip_hard_config) / sizeof(clip_hard_config[0])                                                                       },
+        {  "amplitude_clip_soft",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {  "amplitude_clip_soft",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {  "amplitude_clip_soft", APG_BIND_SECTION_CONFIG,        clip_soft_config,
+         sizeof(clip_soft_config) / sizeof(clip_soft_config[0])                                                                       },
+        {           "delay_unit",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {           "delay_unit",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {           "delay_line",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {           "delay_line",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {           "delay_line", APG_BIND_SECTION_CONFIG,       delay_line_config,
+         sizeof(delay_line_config) / sizeof(delay_line_config[0])                                                                     },
+        {     "delay_fractional",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {     "delay_fractional",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {     "delay_fractional", APG_BIND_SECTION_CONFIG, delay_fractional_config,
+         sizeof(delay_fractional_config) / sizeof(delay_fractional_config[0])                                                         },
+        {   "delay_tap_feedback",     APG_BIND_SECTION_IN,            delay_tap_in,     sizeof(delay_tap_in) / sizeof(delay_tap_in[0])},
+        {   "delay_tap_feedback",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {   "delay_tap_feedback", APG_BIND_SECTION_CONFIG,        delay_tap_config,
+         sizeof(delay_tap_config) / sizeof(delay_tap_config[0])                                                                       },
+        {"delay_tap_feedforward",     APG_BIND_SECTION_IN,            delay_tap_in,     sizeof(delay_tap_in) / sizeof(delay_tap_in[0])},
+        {"delay_tap_feedforward",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {"delay_tap_feedforward", APG_BIND_SECTION_CONFIG,        delay_tap_config,
+         sizeof(delay_tap_config) / sizeof(delay_tap_config[0])                                                                       },
+        {        "filter_biquad",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {        "filter_biquad",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {        "filter_biquad", APG_BIND_SECTION_CONFIG,    filter_biquad_config,
+         sizeof(filter_biquad_config) / sizeof(filter_biquad_config[0])                                                               },
+        {       "filter_allpass",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {       "filter_allpass",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {       "filter_allpass", APG_BIND_SECTION_CONFIG,     filter_delay_config,
+         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                 },
+        {       "filter_comb_ff",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {       "filter_comb_ff",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {       "filter_comb_ff", APG_BIND_SECTION_CONFIG,     filter_delay_config,
+         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                 },
+        {       "filter_comb_fb",     APG_BIND_SECTION_IN,       filter_comb_fb_in,
+         sizeof(filter_comb_fb_in) / sizeof(filter_comb_fb_in[0])                                                                     },
+        {       "filter_comb_fb",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {       "filter_comb_fb", APG_BIND_SECTION_CONFIG,     filter_delay_config,
+         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                 },
+        {      "filter_dc_block",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {      "filter_dc_block",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {      "filter_dc_block", APG_BIND_SECTION_CONFIG,  filter_dc_block_config,
+         sizeof(filter_dc_block_config) / sizeof(filter_dc_block_config[0])                                                           },
+        { "modulation_amplitude",     APG_BIND_SECTION_IN,     signal_modulator_in,
+         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
+        { "modulation_amplitude",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        { "modulation_amplitude", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
+        {      "modulation_ring",     APG_BIND_SECTION_IN,     signal_modulator_in,
+         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
+        {      "modulation_ring",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        { "modulation_frequency",     APG_BIND_SECTION_IN,     signal_modulator_in,
+         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
+        { "modulation_frequency",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        { "modulation_frequency", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
+        {     "modulation_phase",     APG_BIND_SECTION_IN,     signal_modulator_in,
+         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
+        {     "modulation_phase",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {     "modulation_phase", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
+        {     "modulation_scrub",     APG_BIND_SECTION_IN,                scrub_in,             sizeof(scrub_in) / sizeof(scrub_in[0])},
+        {     "modulation_scrub",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {     "modulation_scrub", APG_BIND_SECTION_CONFIG,            scrub_config,     sizeof(scrub_config) / sizeof(scrub_config[0])},
+        {        "mix_crossfade",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
+        {        "mix_crossfade",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {        "mix_crossfade", APG_BIND_SECTION_CONFIG,        crossfade_config,
+         sizeof(crossfade_config) / sizeof(crossfade_config[0])                                                                       },
+        {       "mix_pan_stereo",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {       "mix_pan_stereo",    APG_BIND_SECTION_OUT,              stereo_out,         sizeof(stereo_out) / sizeof(stereo_out[0])},
+        {       "mix_pan_stereo", APG_BIND_SECTION_CONFIG,              pan_config,         sizeof(pan_config) / sizeof(pan_config[0])},
+        {        "mix_encode_ms",     APG_BIND_SECTION_IN,               stereo_in,           sizeof(stereo_in) / sizeof(stereo_in[0])},
+        {        "mix_encode_ms",    APG_BIND_SECTION_OUT,                  ms_out,                 sizeof(ms_out) / sizeof(ms_out[0])},
+        {        "mix_decode_ms",     APG_BIND_SECTION_IN,                   ms_in,                   sizeof(ms_in) / sizeof(ms_in[0])},
+        {        "mix_decode_ms",    APG_BIND_SECTION_OUT,              stereo_out,         sizeof(stereo_out) / sizeof(stereo_out[0])},
+        {          "mix_wet_dry",     APG_BIND_SECTION_IN,          mix_wet_dry_in, sizeof(mix_wet_dry_in) / sizeof(mix_wet_dry_in[0])},
+        {          "mix_wet_dry",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {          "mix_wet_dry", APG_BIND_SECTION_CONFIG,      mix_wet_dry_config,
+         sizeof(mix_wet_dry_config) / sizeof(mix_wet_dry_config[0])                                                                   },
     };
 
     if (!atom)
@@ -310,6 +320,13 @@ static int atom_binding_key_allowed(const char *atom, apg_bind_section_t section
 static int atom_binding_key_optional(const char *atom, apg_bind_section_t section, const char *key) {
     return atom && key && section == APG_BIND_SECTION_IN && strcmp(atom, "filter_comb_fb") == 0 &&
            strcmp(key, "delay") == 0;
+}
+
+static int atom_input_key_is_scalar(const char *atom, const char *key) {
+    if (!atom || !key)
+        return 0;
+    return (strcmp(atom, "delay_tap_feedback") == 0 || strcmp(atom, "delay_tap_feedforward") == 0) &&
+           strcmp(key, "tap_position") == 0;
 }
 
 static uc_status validate_binding_key(
@@ -389,6 +406,32 @@ static uc_status compile_signal_bindings(
         status = validate_binding_key(node_id, atom, section, bindings[i].key, err);
         if (status != UC_OK)
             return status;
+        compiled[i].key     = bindings[i].key;
+        compiled[i].literal = NULL;
+        compiled[i].index   = 0;
+
+        if (section == APG_BIND_SECTION_IN && atom_input_key_is_scalar(atom, bindings[i].key)) {
+            if (bindings[i].value.kind == UC_VAL_VARREF) {
+                const char *param_name  = param_ref_name(bindings[i].value.text);
+                int         param_index = find_param_index(unit, param_name);
+                if (param_index < 0) {
+                    char msg[192];
+                    snprintf(
+                        msg, sizeof(msg), "node '%s' in binding key '%s' references unknown parameter '%s'",
+                        node_id ? node_id : "", bindings[i].key ? bindings[i].key : "",
+                        bindings[i].value.text ? bindings[i].value.text : ""
+                    );
+                    return set_error(err, UC_E_MISSING, msg);
+                }
+                compiled[i].kind  = APG_BIND_PARAM;
+                compiled[i].index = (size_t)param_index;
+            } else {
+                compiled[i].kind    = APG_BIND_LITERAL;
+                compiled[i].literal = bindings[i].value.text;
+            }
+            continue;
+        }
+
         if (bindings[i].value.kind != UC_VAL_LITERAL) {
             char msg[192];
             snprintf(
@@ -408,10 +451,8 @@ static uc_status compile_signal_bindings(
             return set_error(err, UC_E_MISSING, msg);
         }
 
-        compiled[i].key     = bindings[i].key;
-        compiled[i].kind    = APG_BIND_SIGNAL;
-        compiled[i].index   = (size_t)signal_index;
-        compiled[i].literal = NULL;
+        compiled[i].kind  = APG_BIND_SIGNAL;
+        compiled[i].index = (size_t)signal_index;
     }
 
     *out_bindings = compiled;

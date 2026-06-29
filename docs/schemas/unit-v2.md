@@ -66,6 +66,7 @@ The compiler currently validates required keys for these MVP atoms:
 - `delay_unit`: `in.signal`, `out.signal`
 - `delay_line`: `in.signal`, `out.signal`, `config.length`
 - `delay_fractional`: `in.signal`, `out.signal`, `config.delay_samples`, `config.interpolation`
+- `delay_tap_feedback`, `delay_tap_feedforward`: `in.buffer`, scalar `in.tap_position`, `out.signal`, `config.coefficient`
 - `filter_biquad`: `in.signal`, `out.signal`, `config.b0`, `config.b1`, `config.b2`, `config.a1`, `config.a2`
 - `filter_allpass`, `filter_comb_ff`: `in.signal`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_comb_fb`: `in.signal`, optional `in.delay`, `out.signal`, `config.delay_samples`, `config.coefficient`

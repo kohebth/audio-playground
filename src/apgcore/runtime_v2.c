@@ -1,6 +1,8 @@
 #include <apgcore/runtime_v2.h>
+#include <atom/dsp_types.h>
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -143,6 +145,88 @@ static uc_status init_params(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_
     return UC_OK;
 }
 
+static const atom_field_desc_t delay_tap_feedback_in_fields[] = {
+    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedback_in_t,       buffer)},
+    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedback_in_t, tap_position)},
+};
+
+static const atom_field_desc_t delay_tap_feedforward_in_fields[] = {
+    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedforward_in_t,       buffer)},
+    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedforward_in_t, tap_position)},
+};
+
+static const atom_field_desc_t *
+find_field_in_list(const atom_field_desc_t *fields, size_t fields_len, const char *key) {
+    if (!fields || !key)
+        return NULL;
+    for (size_t i = 0; i < fields_len; i++) {
+        if (fields[i].name && strcmp(fields[i].name, key) == 0)
+            return &fields[i];
+    }
+    return NULL;
+}
+
+static const atom_field_desc_t *find_input_field(const atom_registry_entry_t *atom, const char *key) {
+    if (!atom || !atom->name)
+        return NULL;
+    if (strcmp(atom->name, "delay_tap_feedback") == 0)
+        return find_field_in_list(
+            delay_tap_feedback_in_fields,
+            sizeof(delay_tap_feedback_in_fields) / sizeof(delay_tap_feedback_in_fields[0]), key
+        );
+    if (strcmp(atom->name, "delay_tap_feedforward") == 0)
+        return find_field_in_list(
+            delay_tap_feedforward_in_fields,
+            sizeof(delay_tap_feedforward_in_fields) / sizeof(delay_tap_feedforward_in_fields[0]), key
+        );
+    return NULL;
+}
+
+static float compiled_scalar_value(const apg_v2_compiled_binding_t *binding, const apg_v2_runtime_t *runtime) {
+    if (binding->kind == APG_BIND_PARAM)
+        return binding->index < runtime->params_len ? runtime->params[binding->index] : 0.0f;
+    if (binding->kind == APG_BIND_LITERAL)
+        return binding->literal ? strtof(binding->literal, NULL) : 0.0f;
+    return 0.0f;
+}
+
+static uc_status bind_input_field(
+    const apg_v2_compiled_node_t    *compiled,
+    const apg_v2_compiled_binding_t *binding,
+    const atom_field_desc_t         *field,
+    apg_v2_runtime_t                *out,
+    void                            *storage,
+    uc_error                        *err
+) {
+    void *addr = (char *)storage + field->offset;
+    if (field->type == FIELD_SIGNAL) {
+        if (binding->kind != APG_BIND_SIGNAL || binding->index >= out->signals_len) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' in binding key '%s' references invalid signal index",
+                compiled && compiled->id ? compiled->id : "", compiled && compiled->atom ? compiled->atom->name : "",
+                binding->key ? binding->key : ""
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
+        *(float **)addr = out->signals[binding->index];
+        return UC_OK;
+    }
+    if (field->type == FIELD_INT) {
+        if (binding->kind == APG_BIND_SIGNAL)
+            return set_error(err, UC_E_TYPE, "v2 runtime scalar input cannot be bound to a signal");
+        *(int *)addr = (int)compiled_scalar_value(binding, out);
+        return UC_OK;
+    }
+    if (field->type == FIELD_FLOAT) {
+        if (binding->kind == APG_BIND_SIGNAL)
+            return set_error(err, UC_E_TYPE, "v2 runtime scalar input cannot be bound to a signal");
+        *(float *)addr = compiled_scalar_value(binding, out);
+        return UC_OK;
+    }
+    return set_error(err, UC_E_TYPE, "v2 runtime input field type is unsupported");
+}
+
 static uc_status bind_signal_fields(
     const apg_v2_compiled_node_t    *compiled,
     const char                      *section,
@@ -154,6 +238,15 @@ static uc_status bind_signal_fields(
 ) {
     float **fields = (float **)storage;
     for (size_t i = 0; i < bindings_len; i++) {
+        const atom_field_desc_t *input_field = section && strcmp(section, "in") == 0
+                                                   ? find_input_field(compiled ? compiled->atom : NULL, bindings[i].key)
+                                                   : NULL;
+        if (input_field) {
+            uc_status status = bind_input_field(compiled, &bindings[i], input_field, out, storage, err);
+            if (status != UC_OK)
+                return status;
+            continue;
+        }
         if (bindings[i].kind != APG_BIND_SIGNAL || bindings[i].index >= out->signals_len) {
             char msg[192];
             snprintf(
@@ -177,11 +270,7 @@ static const atom_field_desc_t *find_config_field(const atom_registry_entry_t *a
 }
 
 static float compiled_config_value(const apg_v2_compiled_binding_t *binding, const apg_v2_runtime_t *runtime) {
-    if (binding->kind == APG_BIND_PARAM)
-        return binding->index < runtime->params_len ? runtime->params[binding->index] : 0.0f;
-    if (binding->kind == APG_BIND_LITERAL)
-        return binding->literal ? strtof(binding->literal, NULL) : 0.0f;
-    return 0.0f;
+    return compiled_scalar_value(binding, runtime);
 }
 
 static uc_status refresh_node_config(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_t *runtime, uc_error *err) {
@@ -213,6 +302,20 @@ static uc_status refresh_node_config(const apg_v2_compiled_node_t *compiled, apg
             );
             return set_error(err, UC_E_TYPE, msg);
         }
+    }
+    return UC_OK;
+}
+
+static uc_status
+refresh_node_input_scalars(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_t *runtime, uc_error *err) {
+    apg_v2_runtime_node_t *node = &runtime->nodes[compiled - runtime->plan->nodes];
+    for (size_t i = 0; i < compiled->in_len; i++) {
+        const atom_field_desc_t *field = find_input_field(compiled->atom, compiled->in[i].key);
+        if (!field || field->type == FIELD_SIGNAL)
+            continue;
+        uc_status status = bind_input_field(compiled, &compiled->in[i], field, runtime, node->in_storage, err);
+        if (status != UC_OK)
+            return status;
     }
     return UC_OK;
 }
@@ -500,6 +603,10 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
         const apg_v2_compiled_node_t *compiled = &runtime->plan->nodes[scheduled_index];
         if (refresh_node_config(compiled, runtime, &err) != UC_OK) {
             runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime config refresh failed");
+            return false;
+        }
+        if (refresh_node_input_scalars(compiled, runtime, &err) != UC_OK) {
+            runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime input refresh failed");
             return false;
         }
         compiled->atom->thunk(&runtime->nodes[scheduled_index].call);

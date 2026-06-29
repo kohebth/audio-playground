@@ -54,7 +54,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - [x] H1: Add compiler binding metadata and tests for `delay_line`.
 - [x] H2a: Add compiler binding metadata and tests for runtime-compatible delay atoms: `delay_unit` and `delay_fractional`.
-- [ ] H2b: Add a binding model for non-signal atom inputs before validating delay tap atoms.
+- [x] H2b: Add a binding model for non-signal atom inputs before validating delay tap atoms.
 - [x] H3a: Add compiler binding metadata and tests for runtime-compatible filters: `filter_biquad`, `filter_allpass`, `filter_comb_ff`, and `filter_dc_block`.
 - [x] H3b: Add optional binding support before validating `filter_comb_fb`.
 - [x] H4a: Add compiler binding metadata and tests for modulation atoms and scalar/stereo mix atoms.
