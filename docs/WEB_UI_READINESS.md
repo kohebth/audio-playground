@@ -4,21 +4,21 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 ## Current Backend Status
 
-- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, and mono project compilation are implemented through Phase U.
+- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, and validate/inspect JSON contracts are implemented.
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`.
 - Project/session schema, deterministic fixtures, referenced-unit resolution, and mono project compilation exist.
-- Atom catalog JSON is available through the APGCore catalog writer; unit inspection, project inspection, and structured validation output are still missing.
+- The `apg-v2` CLI emits structured validation JSON and inspect JSON for atoms, units, and projects. Render/benchmark command surfaces remain pending until product fixtures are defined.
 
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.
 - [x] Atom catalog metadata can render an atom palette without frontend hardcoding.
 - [x] Project files can reference units, define routes between unit instances, and compile mono routes into one runtime plan.
-- [ ] Validation returns structured errors and warnings with stable file/path fields.
+- [x] Validation returns structured errors and warnings with stable file/path fields.
 - [ ] A guitar pedalboard fixture validates, compiles, runs, and renders deterministically.
 - [ ] Runtime supports the first live UI controls: parameter changes, bypass, and meters.
-- [ ] Sample JSON outputs are committed for frontend tests and UI mock data.
+- [x] Sample JSON outputs are committed for frontend tests and UI mock data.
 
 ## Backend Contracts Needed
 
@@ -85,7 +85,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase S:** Project schema and fixtures exist.
 - **Phase T:** Project loader resolves multi-file units safely. Complete.
 - **Phase U:** Project compiler creates a single runtime plan. Complete for mono project routes.
-- **Phase V:** CLI or equivalent tooling emits JSON inspect/validate output.
+- **Phase V:** CLI tooling emits JSON inspect/validate output. Validate/inspect are complete; render/benchmark remains pending.
 - **Phase W:** Runtime supports product controls and meters.
 - **Phase X:** Guitar pedalboard fixture proves the workflow.
 - **Phase Y:** Web handoff package freezes sample contracts.

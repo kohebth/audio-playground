@@ -11,7 +11,7 @@
 
 - APGCore v2 is complete through Phase U in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, and verification workflow are in place.
 - `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md` define the desired product as a visual pedalboard and graph composer, not just a YAML editor.
-- The web app still needs stable data contracts beyond the completed project schema, project resolver, project compiler, and atom catalog export: unit inspection, project inspection, structured validation output, runtime controls, meters, and a representative product fixture.
+- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, and project inspection. Runtime controls, meters, render/benchmark tooling, and a representative product fixture remain open.
 - `web-tools/unit-editor/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
 ---
@@ -84,7 +84,7 @@
 |---|------|-----------------|------------|
 | V1 | Add JSON validation output | UI-readable errors/warnings | Phase U |
 | V2 | Add inspect commands for atoms, units, and projects | Stable frontend data sources | V1 |
-| V3 | Add render/benchmark command surface if missing | Product fixture can be verified outside UI | V2 |
+| V3 | Add render/benchmark command surface after product fixture scope is defined | Product fixture can be verified outside UI | Phase X |
 
 ### Phase W: Runtime Product Controls
 
@@ -129,7 +129,7 @@
 - [x] `unit.v2.yaml` includes validated UI metadata that can render a parameter panel.
 - [x] Atom catalog metadata is exportable as stable JSON.
 - [x] `project.v2.yaml` can load, validate, and compile multiple unit instances.
-- [ ] CLI or equivalent tools emit structured JSON validation and inspection output.
+- [x] CLI or equivalent tools emit structured JSON validation and inspection output.
 - [ ] Runtime supports basic live product controls: params, bypass, and meters.
 - [ ] A representative guitar pedalboard fixture validates, compiles, runs, and renders deterministically.
 - [ ] Web handoff docs and sample outputs are committed.

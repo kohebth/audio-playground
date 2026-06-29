@@ -37,3 +37,11 @@ This file tracks known issues that should not block the current phase but need e
 - **Resolution:** Phase O implemented param-only explicit routing, loader validation for unknown param targets, and rejection for unsupported `target.kind` values.
 - **Remaining Design:** Graph-signal, multi-param, smoothing-lane, and typed-buffer routing remain out of scope until a future phase defines their semantics and runtime representation.
 - **Related Plan Item:** `plan.md` Phase O.
+
+## Render and Benchmark CLI Surface
+
+- **Status:** Deferred
+- **Context:** Phase V added `apg-v2` validation and inspect JSON contracts plus golden outputs for frontend tests.
+- **Reason:** A render/benchmark command surface is not meaningful until Phase X defines the product fixture and deterministic render target.
+- **Follow-up:** Revisit after the guitar pedalboard fixture exists, then add CLI output suitable for frontend preview and regression checks.
+- **Related Plan Item:** `plan.md` Phase V3 / Phase X.

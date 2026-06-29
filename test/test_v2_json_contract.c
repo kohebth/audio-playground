@@ -1,0 +1,160 @@
+#include <apgcore/atom_catalog.h>
+#include <apgcore/json_contract_v2.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef void (*json_writer_fn)(FILE *out, const char *path);
+
+static int fail(const char *msg) {
+    fprintf(stderr, "FAIL: %s\n", msg);
+    return 1;
+}
+
+static char *read_stream(FILE *file) {
+    long size = ftell(file);
+    if (size < 0)
+        return NULL;
+    rewind(file);
+    char *buffer = malloc((size_t)size + 1u);
+    if (!buffer)
+        return NULL;
+    size_t read_len  = fread(buffer, 1u, (size_t)size, file);
+    buffer[read_len] = '\0';
+    return buffer;
+}
+
+static char *capture_json(json_writer_fn writer, const char *path) {
+    FILE *file = tmpfile();
+    if (!file)
+        return NULL;
+    writer(file, path);
+    char *json = read_stream(file);
+    fclose(file);
+    return json;
+}
+
+static char *capture_atom_catalog(void) {
+    FILE *file = tmpfile();
+    if (!file)
+        return NULL;
+    apg_atom_catalog_write_json(file);
+    char *json = read_stream(file);
+    fclose(file);
+    return json;
+}
+
+static char *read_file(const char *path) {
+    FILE *file = fopen(path, "rb");
+    if (!file)
+        return NULL;
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    if (size < 0) {
+        fclose(file);
+        return NULL;
+    }
+    char *buffer = malloc((size_t)size + 1u);
+    if (!buffer) {
+        fclose(file);
+        return NULL;
+    }
+    size_t read_len = fread(buffer, 1u, (size_t)size, file);
+    fclose(file);
+    buffer[read_len] = '\0';
+    return buffer;
+}
+
+static int expect_golden(json_writer_fn writer, const char *input_path, const char *golden_path, const char *label) {
+    char *actual   = capture_json(writer, input_path);
+    char *expected = read_file(golden_path);
+    if (!actual || !expected) {
+        free(actual);
+        free(expected);
+        return fail("failed to read json or golden fixture");
+    }
+    int ok = strcmp(actual, expected) == 0;
+    if (!ok)
+        fprintf(stderr, "json mismatch for %s\nactual:   %s\nexpected: %s\n", label, actual, expected);
+    free(actual);
+    free(expected);
+    return ok ? 0 : 1;
+}
+
+static int test_validate_json_golden_outputs(void) {
+    if (expect_golden(
+            apg_v2_json_write_validate_unit, "units-v2/simple_gain.unit.v2.yaml",
+            "test/golden/v2-validate-unit-simple_gain.json", "unit validation"
+        ))
+        return 1;
+    if (expect_golden(
+            apg_v2_json_write_validate_project, "projects-v2/two-gain-chain.project.v2.yaml",
+            "test/golden/v2-validate-project-two-gain-chain.json", "project validation"
+        ))
+        return 1;
+    return 0;
+}
+
+static int test_project_inspect_json_golden_output(void) {
+    return expect_golden(
+        apg_v2_json_write_inspect_project, "projects-v2/two-gain-chain.project.v2.yaml",
+        "test/golden/v2-inspect-project-two-gain-chain.json", "project inspect"
+    );
+}
+
+static int test_unit_inspect_json_contains_ui_contract(void) {
+    char *json = capture_json(apg_v2_json_write_inspect_unit, "units-v2/simple_gain.unit.v2.yaml");
+    if (!json)
+        return fail("failed to write unit inspect json");
+    if (!strstr(json, "\"schema\":\"apg.unit.inspect.v1\"") || !strstr(json, "\"name\":\"simple_gain\"") ||
+        !strstr(json, "\"ui\":{\"label\":\"Gain\",\"control\":\"knob\",\"unit\":\"x\"}") ||
+        !strstr(json, "\"nodes\":[{\"id\":\"gain_value\",\"atom\":\"generation_dc\"")) {
+        free(json);
+        return fail("unit inspect json lacked stable UI or graph fields");
+    }
+    free(json);
+    return 0;
+}
+
+static int test_invalid_validation_json_contains_diagnostic_fields(void) {
+    char *json = capture_json(apg_v2_json_write_validate_project, "projects-v2/invalid-missing-unit.project.v2.yaml");
+    if (!json)
+        return fail("failed to write invalid validation json");
+    if (!strstr(json, "\"ok\":false") || !strstr(json, "\"errors\":[{") || !strstr(json, "\"code\":\"APG_IO_ERROR\"") ||
+        !strstr(json, "\"file\":\"projects-v2/invalid-missing-unit.project.v2.yaml\"") ||
+        !strstr(json, "\"path\":\"$.project\"") || !strstr(json, "cannot resolve unit file")) {
+        free(json);
+        return fail("invalid validation json lacked stable diagnostic fields");
+    }
+    free(json);
+    return 0;
+}
+
+static int test_atom_inspect_json_is_available(void) {
+    char *json = capture_atom_catalog();
+    if (!json)
+        return fail("failed to write atom catalog json");
+    if (!strstr(json, "\"schema\":\"apg.atom_catalog.v1\"") || !strstr(json, "\"name\":\"generation_dc\"") ||
+        !strstr(json, "\"name\":\"coefficients\",\"type\":\"float_matrix\"")) {
+        free(json);
+        return fail("atom inspect json lacked expected catalog fields");
+    }
+    free(json);
+    return 0;
+}
+
+int main(void) {
+    if (test_validate_json_golden_outputs())
+        return 1;
+    if (test_project_inspect_json_golden_output())
+        return 1;
+    if (test_unit_inspect_json_contains_ui_contract())
+        return 1;
+    if (test_invalid_validation_json_contains_diagnostic_fields())
+        return 1;
+    if (test_atom_inspect_json_is_available())
+        return 1;
+    return 0;
+}

@@ -6,8 +6,8 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, and mono project compilation are implemented through Phase U.
-- The next objective is backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, and Phase V validate/inspect JSON contracts are implemented.
+- The next objective is to finish backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
 - The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
 
 ## Completed Work
@@ -153,10 +153,10 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase V: CLI and JSON Contract
 
-- [ ] V1: Add structured JSON validation output for units and projects.
-- [ ] V2: Add inspect output for atoms, units, and projects.
+- [x] V1: Add structured JSON validation output for units and projects.
+- [x] V2: Add inspect output for atoms, units, and projects.
 - [ ] V3: Add or stabilize render/benchmark command surfaces for product fixtures.
-- [ ] V4: Commit golden JSON outputs for frontend tests.
+- [x] V4: Commit golden JSON outputs for frontend tests.
 
 ### Phase W: Runtime Product Controls
 
