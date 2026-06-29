@@ -28,6 +28,23 @@ load_and_compile_fixture(const char *path, uc_arena *arena, apg_unit_v2_t *unit,
     return 0;
 }
 
+static int
+load_and_compile_string(const char *yaml, uc_arena *arena, apg_unit_v2_t *unit, apg_v2_compiled_unit_t *plan) {
+    uc_error  err    = {0};
+    uc_status status = apg_unit_v2_load_string(yaml, strlen(yaml), arena, unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "load error: %s\n", err.msg);
+        return fail("failed to load inline v2 fixture");
+    }
+
+    status = apg_v2_compile_unit(unit, arena, plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "compile error: %s\n", err.msg);
+        return fail("failed to compile inline v2 fixture");
+    }
+    return 0;
+}
+
 static int test_runtime_init_simple_gain(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -176,6 +193,125 @@ static int test_named_public_port_signal_lookup(void) {
         return fail("named public port generic processing failed");
     if (output[0] != 1.0f || output[1] != -0.25f)
         return fail("unexpected named public port output sample");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_multi_output_public_port_process(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: pan_public_outputs\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  pan:\n"
+                       "    type: float\n"
+                       "    default: 0.25\n"
+                       "    min: 0.0\n"
+                       "    max: 1.0\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: left\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "    - name: right\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - input\n"
+                       "    - left\n"
+                       "    - right\n"
+                       "  nodes:\n"
+                       "    - id: pan\n"
+                       "      atom: mix_pan_stereo\n"
+                       "      in:\n"
+                       "        signal: input\n"
+                       "      out:\n"
+                       "        left: left\n"
+                       "        right: right\n"
+                       "      config:\n"
+                       "        position: ${params.pan}\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_string(yaml, &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize multi-output runtime");
+    }
+
+    float *input = apg_v2_runtime_find_input_port_signal(&runtime, "input");
+    float *left  = apg_v2_runtime_find_output_port_signal(&runtime, "left");
+    float *right = apg_v2_runtime_find_output_port_signal(&runtime, "right");
+    if (!input || !left || !right)
+        return fail("failed to find multi-output public port signals");
+
+    input[0] = 2.0f;
+    input[1] = -4.0f;
+    if (!apg_v2_runtime_process(&runtime, 2u))
+        return fail("multi-output generic processing failed");
+    if (left[0] != 1.5f || left[1] != -3.0f || right[0] != 0.5f || right[1] != -1.0f)
+        return fail("unexpected multi-output samples");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_named_mono_port_rejects_bad_buffer_layouts(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize v2 runtime");
+    }
+
+    const float input[2]  = {1.0f, 2.0f};
+    float       output[2] = {0.0f, 0.0f};
+    if (apg_v2_runtime_process_mono_ports(&runtime, "input", NULL, "output", output, 2u))
+        return fail("named mono processing accepted null input buffer");
+    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    if (!last_error || !strstr(last_error, "buffers"))
+        return fail("null buffer rejection did not expose a useful error");
+
+    if (apg_v2_runtime_process_mono_ports(&runtime, "input", input, "input", output, 2u))
+        return fail("named mono processing accepted input port as output");
+    last_error = apg_v2_runtime_last_error(&runtime);
+    if (!last_error || !strstr(last_error, "output audio port"))
+        return fail("wrong output port rejection did not expose a useful error");
 
     apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);
@@ -642,6 +778,10 @@ int main(void) {
     if (test_simple_gain_process_mono())
         return 1;
     if (test_named_public_port_signal_lookup())
+        return 1;
+    if (test_multi_output_public_port_process())
+        return 1;
+    if (test_named_mono_port_rejects_bad_buffer_layouts())
         return 1;
     if (test_named_mono_port_process())
         return 1;

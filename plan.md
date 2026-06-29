@@ -68,7 +68,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - [ ] I2b: Add true multi-channel audio port buffer binding after defining channel-to-signal mapping.
 - [x] I3a: Add control input ingestion for same-named params.
 - [ ] I3b: Define graph-control routing beyond same-named param updates.
-- [ ] I4: Add tests for multi-input, multi-output, and rejected mismatched buffer layouts.
+- [x] I4: Add tests for multi-input, multi-output, and rejected mismatched buffer layouts.
 
 ### Phase J: Runtime State and Config Maturity
 
