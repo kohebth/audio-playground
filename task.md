@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase T.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase U.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through T are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through U are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -99,10 +99,10 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 
 
 ### Phase U: Project Compiler
 
-- [ ] U1: Expand unit instances into namespaced graph nodes, signals, and params.
-- [ ] U2: Compile inter-unit routes into a single runtime plan.
-- [ ] U3: Preserve stable instance param names such as `delay1.feedback` for UI/runtime control.
-- [ ] U4: Add compile/runtime tests for the first project fixture.
+- [x] U1: Expand unit instances into namespaced graph nodes, signals, and params.
+- [x] U2: Compile inter-unit routes into a single runtime plan.
+- [x] U3: Preserve stable instance param names such as `delay1.feedback` for UI/runtime control.
+- [x] U4: Add compile/runtime tests for the first project fixture.
 
 ### Phase V: CLI and JSON Contract
 

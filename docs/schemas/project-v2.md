@@ -69,6 +69,12 @@ Supported profiles:
 
 Use `apg_project_v2_load_resolved_file(...)` when the caller needs loaded unit definitions in addition to the project schema model. The returned project, canonical unit paths, and loaded units are arena-owned.
 
+## Project Compilation
+
+Use `apg_project_v2_compile(...)` to expand a resolved project into a synthetic v2 unit and compile it with the existing unit compiler. The compiler namespaces instance internals with `<node>.<name>`, preserves stable runtime params such as `gain1.gain`, applies node `params` as instance defaults, and lowers mono routes into a single runtime plan.
+
+The current compiler accepts mono audio routes from `system.input` through one or more unit instances to exactly one `system.output` route. Inter-instance routes such as `gain1.output -> gain2.input` are supported.
+
 ## Current Limits
 
-The project loader does not yet check unit port names, validate instance param names against unit schemas, or compile routes into a single runtime plan. Those behaviors are tracked in Phase U.
+Project compilation is mono-only. Stereo/multi-channel route compilation, multiple system inputs/outputs, non-audio project routes, bypass, meters, structured JSON diagnostics, and product fixture rendering are tracked in later phases.

@@ -4,17 +4,17 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 ## Current Backend Status
 
-- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, and resolved project unit loading are implemented through Phase T.
+- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, and mono project compilation are implemented through Phase U.
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`.
-- Project/session schema, deterministic fixtures, and referenced-unit resolution exist; project compilation is still missing.
+- Project/session schema, deterministic fixtures, referenced-unit resolution, and mono project compilation exist.
 - Atom catalog JSON is available through the APGCore catalog writer; unit inspection, project inspection, and structured validation output are still missing.
 
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.
 - [x] Atom catalog metadata can render an atom palette without frontend hardcoding.
-- [x] Project files can reference units and define routes between unit instances at the schema-validation level.
+- [x] Project files can reference units, define routes between unit instances, and compile mono routes into one runtime plan.
 - [ ] Validation returns structured errors and warnings with stable file/path fields.
 - [ ] A guitar pedalboard fixture validates, compiles, runs, and renders deterministically.
 - [ ] Runtime supports the first live UI controls: parameter changes, bypass, and meters.
@@ -84,7 +84,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase R:** Atom catalog is exportable.
 - **Phase S:** Project schema and fixtures exist.
 - **Phase T:** Project loader resolves multi-file units safely. Complete.
-- **Phase U:** Project compiler creates a single runtime plan.
+- **Phase U:** Project compiler creates a single runtime plan. Complete for mono project routes.
 - **Phase V:** CLI or equivalent tooling emits JSON inspect/validate output.
 - **Phase W:** Runtime supports product controls and meters.
 - **Phase X:** Guitar pedalboard fixture proves the workflow.

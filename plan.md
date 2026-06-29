@@ -6,7 +6,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, and resolved project unit loading are implemented through Phase T.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, and mono project compilation are implemented through Phase U.
 - The next objective is backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
 - The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
 
@@ -146,10 +146,10 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase U: Project Compiler
 
-- [ ] U1: Expand unit instances into namespaced graph nodes, signals, and params.
-- [ ] U2: Compile inter-unit routes into a single runtime plan.
-- [ ] U3: Preserve stable instance param names such as `delay1.feedback` for UI/runtime control.
-- [ ] U4: Add compile/runtime tests for the first project fixture.
+- [x] U1: Expand unit instances into namespaced graph nodes, signals, and params.
+- [x] U2: Compile inter-unit routes into a single runtime plan.
+- [x] U3: Preserve stable instance param names such as `delay1.feedback` for UI/runtime control.
+- [x] U4: Add compile/runtime tests for the first project fixture.
 
 ### Phase V: CLI and JSON Contract
 
