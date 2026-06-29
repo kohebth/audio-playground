@@ -28,6 +28,7 @@ Useful direct commands:
 
 ```sh
 ctest --test-dir /tmp/audio-playground-apgcore-build
+cmake --build /tmp/audio-playground-apgcore-build --target check_v2
 /tmp/audio-playground-apgcore-build/test_unit_v2_runtime
 ```
 

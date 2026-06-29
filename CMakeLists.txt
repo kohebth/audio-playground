@@ -120,4 +120,12 @@ foreach(TEST_TARGET ${TEST_TARGETS})
     set_tests_properties(${TEST_TARGET} PROPERTIES
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
+    if(TEST_TARGET MATCHES "^test_unit_v2_")
+        set_tests_properties(${TEST_TARGET} PROPERTIES LABELS v2)
+    endif()
 endforeach()
+
+add_custom_target(check_v2
+        COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} -L v2 --output-on-failure
+        DEPENDS test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime
+)
