@@ -1,29 +1,28 @@
 # Unit v2 Schema
 
-`unit.v2.yaml` describes one reusable DSP unit. It is a source format for validation and graph compilation, not the runtime execution plan. The compiler must translate it into numeric node IDs, bound buffers, state blocks, params, and a stable schedule before audio processing.
+`unit.v2.yaml` describes a reusable DSP unit. It is a validated source format; the compiler lowers it into atom entries, numeric signal/param indexes, producer metadata, and a topological schedule before runtime execution.
 
 ## Required Top-Level Fields
 
 - `kind`: Must be `apg.unit`.
-- `schema`: Must be `apg.unit.v2` for this format version.
+- `schema`: Must be `apg.unit.v2`.
 - `name`: Stable snake_case unit identifier, for example `simple_gain`.
-- `version`: Semantic version for the unit definition.
-- `params`: Public controls exposed by the unit.
+- `version`: Unit definition version.
+- `params`: Public controls.
 - `ports`: External audio/control inputs and outputs.
-- `graph`: Internal atom graph.
-- `compatibility`: Target backend support flags.
+- `graph`: Internal signal and atom graph.
+- `compatibility`: Non-empty map of boolean target flags.
+
+Extra metadata such as `meta` and `ui` is currently tolerated but not interpreted by the C loader.
 
 ## Params
 
-Each param is keyed by name and must define:
+Params are keyed by name. Names must be unique.
 
 - `type`: `float`, `int`, or `bool`.
-- `default`: Initial value.
-- `min` / `max`: Required for numeric params.
-- `smoothing_ms`: Optional smoothing hint; default is `0`.
-- `ui`: Optional display metadata such as `label`, `control`, and `unit`.
-
-Example:
+- `default`: Required initial value.
+- `min` / `max`: Required for `float` and `int`; omitted for `bool`.
+- `smoothing_ms`: Optional hint, currently parsed only as metadata.
 
 ```yaml
 params:
@@ -32,54 +31,39 @@ params:
     default: 1.0
     min: 0.0
     max: 4.0
-    smoothing_ms: 10
 ```
 
 ## Ports
 
-Ports define the unit boundary. MVP port types are `audio` and `control`; audio ports must declare `channels`.
+Ports are grouped under `ports.inputs` and `ports.outputs`. Names must be unique within each group.
 
-```yaml
-ports:
-  inputs:
-    - name: input
-      type: audio
-      channels: 1
-  outputs:
-    - name: output
-      type: audio
-      channels: 1
-```
+- `audio` ports require `channels` and a graph signal with the same name.
+- `control` ports do not require `channels` or graph signals in the current MVP.
 
 ## Graph
 
-`graph.signals` declares internal signal names. `graph.nodes` is an ordered source representation; the compiler validates dependencies and emits the final schedule.
+`graph.signals` is the complete signal namespace and rejects duplicates. `graph.nodes` is source ordered; the compiler reorders it when dependencies allow.
 
-Each node must define:
+Each node requires unique `id` and registered `atom`. Binding sections are maps:
 
-- `id`: Unique node ID within the unit.
-- `atom`: Atom registry name.
-- `in`: Atom input bindings, when required.
-- `out`: Atom output bindings, when required.
-- `config`: Literal or `${params.name}` config bindings, when required.
+- `in`: Atom input signals.
+- `out`: Atom output signals.
+- `config`: Literal values or `${params.name}` references.
 
-## Compatibility
+Duplicate binding keys are rejected during loading. Unknown signal references, unknown param references, missing required atom bindings, and unsupported binding keys are rejected during compile.
 
-Compatibility flags document intended targets and guide validation.
+## Implemented Atom Binding Contracts
 
-```yaml
-compatibility:
-  desktop_full: true
-  wasm_realtime: true
-  m7_static: true
-  offline_render: true
-```
+The compiler currently validates required keys for these MVP atoms:
 
-## MVP Validation Rules
+- `generation_dc`: `out.signal`, `config.value`
+- `amplitude_multiply`, `amplitude_add`, `amplitude_subtract`: `in.signal_a`, `in.signal_b`, `out.signal`
+- `amplitude_clip_hard`: `in.signal`, `out.signal`, `config.threshold`
+- `amplitude_clip_soft`: `in.signal`, `out.signal`, `config.threshold`, `config.curve`
+- `mix_wet_dry`: `in.dry`, `in.wet`, `out.signal`, `config.mix`
 
-- Unknown top-level required fields are errors only if required data is missing; extra fields should be warnings until the schema stabilizes.
-- Every public audio port must map to a graph signal with the same name.
-- Every node ID must be unique.
-- Every atom must exist in the atom registry.
-- Every `${params.name}` reference must resolve to a declared param.
-- Direct zero-delay cycles are invalid; feedback must use an explicit stateful atom.
+Atoms without explicit metadata may still compile without key-level validation until their contracts are added.
+
+## Runtime MVP Limits
+
+The v2 runtime currently supports mono processing through `apg_v2_runtime_process_mono(...)`. It owns signal buffers, param defaults, and per-node atom call storage, then executes the compiled schedule. Multi-channel ports, state buffer descriptors, and generalized runtime I/O mapping remain future work.

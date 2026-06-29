@@ -98,10 +98,10 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 
 ### Batch E: Tooling and Docs
 
-- [ ] Refresh `docs/schemas/unit-v2.md` to reflect implemented validation rules and current MVP limitations.
-- [ ] Add a short v2 compiler architecture note covering loader, compiler plan, topological scheduling, and future runtime execution.
-- [ ] Update `AGENTS.md` if build/test or v2 workflow conventions change.
-- [ ] Keep using `./build-and-test.sh` once per completed implementation slice.
+- [x] Refresh `docs/schemas/unit-v2.md` to reflect implemented validation rules and current MVP limitations.
+- [x] Add a short v2 compiler architecture note covering loader, compiler plan, topological scheduling, and future runtime execution.
+- [x] Update `AGENTS.md` if build/test or v2 workflow conventions change. No update was needed for this batch.
+- [x] Keep using `./build-and-test.sh` once per completed implementation slice.
 
 ## Per-Slice Workflow
 
