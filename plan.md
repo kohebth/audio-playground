@@ -73,13 +73,13 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 ### Phase J: Runtime State and Config Maturity
 
 - [x] J1: Size state buffers from atom descriptor metadata instead of a single conservative capacity.
-- [ ] J2: Support additional descriptor field types such as `FIELD_FLOAT_PTR` and `FIELD_FLOAT_PP` where needed.
+- [x] J2: Support additional descriptor field types such as `FIELD_FLOAT_PTR` and `FIELD_FLOAT_PP` where needed.
 - [x] J3: Add runtime reset support for stateful nodes.
 - [x] J4: Add deterministic runtime fixtures for delay, filter, and modulation state behavior.
 
 ### Phase K: Fixture Library Expansion
 
-- [x] K1: Add `units-v2/` fixtures for delay, filter, modulation, stereo, and control-port examples; `mix_matrix` remains deferred in `problem.md` until array/matrix binding exists.
+- [x] K1: Add `units-v2/` fixtures for delay, filter, modulation, stereo, control-port, and matrix-mix examples.
 - [x] K2: Compile all v2 fixtures in one test path and runtime-execute all runtime-capable fixtures.
 - [x] K3: Keep fixture audio deterministic and small; avoid committing generated audio unless it is an intentional test fixture.
 
