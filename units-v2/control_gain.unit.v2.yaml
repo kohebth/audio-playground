@@ -22,7 +22,9 @@ ports:
       channels: 1
     - name: amount
       type: control
-      target_param: gain
+      target:
+        kind: param
+        name: gain
   outputs:
     - name: output
       type: audio

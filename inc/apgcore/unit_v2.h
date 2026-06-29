@@ -23,6 +23,8 @@ typedef struct {
     const char  *type;
     const char  *channels;
     const char  *target_param;
+    const char  *target_kind;
+    const char  *target_name;
     const char **signals;
     size_t       signals_len;
 } apg_unit_v2_port_t;

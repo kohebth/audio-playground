@@ -41,8 +41,8 @@ Ports are grouped under `ports.inputs` and `ports.outputs`. Names must be unique
 - Mono audio ports may use a graph signal with the same name.
 - Multi-channel audio ports require `signals`, with one graph signal name per channel in interleaved order.
 - `control` ports do not require `channels` or graph signals.
-- `control` ports currently route only to params. If `target_param` is set, it names the destination param; otherwise the runtime uses the same name as the port.
-- Future control modes must be explicit. The next supported shape is `target: { kind: param, name: <param> }`; graph-signal, multi-param, typed-buffer, and smoothing-lane routing remain unsupported until Phase O implements and validates them.
+- `control` ports route only to params. Omit a target for same-name param routing, use legacy `target_param: <param>`, or prefer `target: { kind: param, name: <param> }`.
+- Unsupported `target.kind` values such as graph-signal, multi-param, typed-buffer, and smoothing-lane routing are rejected until those modes are designed and implemented.
 
 ## Graph
 
@@ -86,4 +86,4 @@ Atoms without explicit metadata may still compile without key-level validation u
 
 ## Runtime MVP Limits
 
-The v2 runtime supports mono processing through `apg_v2_runtime_process_mono(...)` and named mono ports through `apg_v2_runtime_process_mono_ports(...)`. Multi-channel audio ports use explicit per-channel signal mappings and can be processed with `apg_v2_runtime_process_interleaved_ports(...)`. The runtime owns signal buffers, param defaults, per-node atom call storage, and basic `FIELD_BUFFER` state allocation, then executes the compiled schedule. Control routing is currently param-only; non-param destinations are a Phase O design and validation task.
+The v2 runtime supports mono processing through `apg_v2_runtime_process_mono(...)` and named mono ports through `apg_v2_runtime_process_mono_ports(...)`. Multi-channel audio ports use explicit per-channel signal mappings and can be processed with `apg_v2_runtime_process_interleaved_ports(...)`. The runtime owns signal buffers, param defaults, per-node atom call storage, and basic `FIELD_BUFFER` state allocation, then executes the compiled schedule. Control routing is param-only; non-param destinations are rejected by loader validation.

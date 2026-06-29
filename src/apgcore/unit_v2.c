@@ -69,6 +69,8 @@ static bool port_type_is_valid(const char *type) {
 
 static bool port_type_is_audio(const char *type) { return type && strcmp(type, "audio") == 0; }
 
+static bool port_type_is_control(const char *type) { return type && strcmp(type, "control") == 0; }
+
 static uc_value to_value(const uc_node *node) {
     uc_value value = {UC_VAL_LITERAL, ""};
     if (!node)
@@ -257,6 +259,68 @@ static bool parse_channel_count(const char *text, size_t *out_count) {
     return true;
 }
 
+static uc_status fill_control_port_target(
+    const uc_node *port,
+    const uc_node *params,
+    const char    *name,
+    const char    *target_param,
+    const char   **out_kind,
+    const char   **out_name,
+    uc_error      *err
+) {
+    *out_kind = "param";
+    *out_name = name;
+
+    const uc_node *target = uc_node_find(port, "target");
+    if (target_param && target) {
+        char msg[160];
+        snprintf(msg, sizeof(msg), "control port '%s' cannot declare both target_param and target", name ? name : "");
+        return set_error(err, UC_E_TYPE, msg);
+    }
+
+    if (target_param) {
+        if (!param_exists(params, target_param)) {
+            char msg[160];
+            snprintf(msg, sizeof(msg), "control port '%s' target_param references unknown param", name ? name : "");
+            return set_error(err, UC_E_MISSING, msg);
+        }
+        *out_name = target_param;
+        return UC_OK;
+    }
+
+    if (!target)
+        return UC_OK;
+    if (target->kind != UC_NODE_MAP) {
+        char msg[160];
+        snprintf(msg, sizeof(msg), "control port '%s' target must be a map", name ? name : "");
+        return set_error(err, UC_E_TYPE, msg);
+    }
+
+    const char *kind = required_scalar(target, "kind", err);
+    if (!kind)
+        return err->status;
+    if (strcmp(kind, "param") != 0) {
+        char msg[192];
+        snprintf(
+            msg, sizeof(msg), "control port '%s' target kind '%s' is unsupported", name ? name : "", kind ? kind : ""
+        );
+        return set_error(err, UC_E_TYPE, msg);
+    }
+
+    const char *target_name = required_scalar(target, "name", err);
+    if (!target_name)
+        return err->status;
+    if (!param_exists(params, target_name)) {
+        char msg[192];
+        snprintf(msg, sizeof(msg), "control port '%s' target param '%s' is unknown", name ? name : "", target_name);
+        return set_error(err, UC_E_MISSING, msg);
+    }
+
+    *out_kind = kind;
+    *out_name = target_name;
+    return UC_OK;
+}
+
 static uc_status fill_audio_port_signals(
     const uc_node *port,
     const uc_node *graph_signals,
@@ -357,9 +421,16 @@ static uc_status fill_port_group(
 
         const char  *channels     = value_text(uc_node_find(port, "channels"));
         const char  *target_param = value_text(uc_node_find(port, "target_param"));
+        const char  *target_kind  = NULL;
+        const char  *target_name  = NULL;
         const char **port_signals = NULL;
         size_t       signals_len  = 0;
         if (port_type_is_audio(type)) {
+            if (target_param || uc_node_find(port, "target")) {
+                char msg[160];
+                snprintf(msg, sizeof(msg), "audio port '%s' cannot declare a control target", name ? name : "");
+                return set_error(err, UC_E_TYPE, msg);
+            }
             if (!channels) {
                 char msg[128];
                 snprintf(msg, sizeof(msg), "audio port '%s' missing 'channels'", name ? name : "");
@@ -375,16 +446,19 @@ static uc_status fill_port_group(
                 fill_audio_port_signals(port, signals, name, channel_count, arena, &port_signals, &signals_len, err);
             if (status != UC_OK)
                 return status;
-        } else if (target_param && !param_exists(params, target_param)) {
-            char msg[160];
-            snprintf(msg, sizeof(msg), "control port '%s' target_param references unknown param", name ? name : "");
-            return set_error(err, UC_E_MISSING, msg);
+        } else if (port_type_is_control(type)) {
+            uc_status status =
+                fill_control_port_target(port, params, name, target_param, &target_kind, &target_name, err);
+            if (status != UC_OK)
+                return status;
         }
 
         ports[i].name         = name;
         ports[i].type         = type;
         ports[i].channels     = channels;
         ports[i].target_param = target_param;
+        ports[i].target_kind  = target_kind;
+        ports[i].target_name  = target_name;
         ports[i].signals      = port_signals;
         ports[i].signals_len  = signals_len;
     }

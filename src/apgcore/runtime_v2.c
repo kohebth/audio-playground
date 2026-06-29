@@ -609,7 +609,10 @@ bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port
     const apg_unit_v2_port_t *port = control_port_by_name(unit->input_ports, unit->input_ports_len, port_name);
     if (!port)
         return false;
-    return apg_v2_runtime_set_param(runtime, port->target_param ? port->target_param : port->name, value);
+    if (port->target_kind && strcmp(port->target_kind, "param") != 0)
+        return false;
+    const char *target = port->target_name ? port->target_name : (port->target_param ? port->target_param : port->name);
+    return apg_v2_runtime_set_param(runtime, target, value);
 }
 
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
