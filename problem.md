@@ -17,3 +17,11 @@ This file tracks known issues that should not block the current phase but need e
 - **Problem:** Compiler binding metadata currently marks every listed key as required. Adding `filter_comb_fb` metadata now would force an optional delay signal for all units.
 - **Later Fix:** Extend atom binding schemas with optional keys before validating atoms that support optional inputs.
 - **Related Plan Item:** `plan.md` Phase H3b.
+
+## Array and Matrix Bindings
+
+- **Status:** Open
+- **Context:** `mix_matrix` uses `float **signals` for inputs/outputs and `float **coefficients` plus `num_in`/`num_out` config.
+- **Problem:** The current compiler/runtime binds named fields to individual graph signal buffers. It does not model arrays of signal pointers or matrix-valued config data.
+- **Later Fix:** Add array-valued binding support and structured config parsing before validating or executing `mix_matrix` in v2.
+- **Related Plan Item:** `plan.md` Phase H4b.

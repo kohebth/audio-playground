@@ -66,7 +66,14 @@ The compiler currently validates required keys for these MVP atoms:
 - `filter_biquad`: `in.signal`, `out.signal`, `config.b0`, `config.b1`, `config.b2`, `config.a1`, `config.a2`
 - `filter_allpass`, `filter_comb_ff`: `in.signal`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_dc_block`: `in.signal`, `out.signal`, `config.coefficient`
+- `modulation_amplitude`, `modulation_frequency`, `modulation_phase`: `in.signal`, `in.modulator`, `out.signal`, `config.depth`
+- `modulation_ring`: `in.signal`, `in.modulator`, `out.signal`
+- `modulation_scrub`: `in.buffer`, `in.position`, `out.signal`, `config.buffer_size`
+- `mix_crossfade`: `in.signal_a`, `in.signal_b`, `out.signal`, `config.t`
 - `mix_wet_dry`: `in.dry`, `in.wet`, `out.signal`, `config.mix`
+- `mix_pan_stereo`: `in.signal`, `out.left`, `out.right`, `config.position`
+- `mix_encode_ms`: `in.left`, `in.right`, `out.mid`, `out.side`
+- `mix_decode_ms`: `in.mid`, `in.side`, `out.left`, `out.right`
 
 Atoms without explicit metadata may still compile without key-level validation until their contracts are added.
 
