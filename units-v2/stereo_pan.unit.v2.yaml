@@ -1,0 +1,50 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: stereo_pan
+version: 2.0.0
+
+meta:
+  title: Stereo Pan
+  category: mix
+  description: Splits mono input into deterministic left and right output ports.
+
+params:
+  pan:
+    type: float
+    default: 0.25
+    min: 0.0
+    max: 1.0
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: left
+      type: audio
+      channels: 1
+    - name: right
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - left
+    - right
+
+  nodes:
+    - id: pan
+      atom: mix_pan_stereo
+      in:
+        signal: input
+      out:
+        left: left
+        right: right
+      config:
+        position: ${params.pan}
+
+compatibility:
+  desktop_full: true
+  offline_render: true

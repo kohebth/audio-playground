@@ -1,0 +1,45 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: delay_line_state
+version: 2.0.0
+
+meta:
+  title: Delay Line State
+  category: delay
+  description: Exercises deterministic delay-line state and reset behavior.
+
+params:
+  delay_length:
+    type: int
+    default: 2
+    min: 0
+    max: 32
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - output
+
+  nodes:
+    - id: delay
+      atom: delay_line
+      in:
+        signal: input
+      out:
+        signal: output
+      config:
+        length: ${params.delay_length}
+
+compatibility:
+  desktop_full: true
+  offline_render: true

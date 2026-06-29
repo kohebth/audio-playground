@@ -1,0 +1,50 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: modulation_frequency_state
+version: 2.0.0
+
+meta:
+  title: Frequency Modulation State
+  category: modulation
+  description: Exercises modulation delay-line state and reset behavior with deterministic inputs.
+
+params:
+  depth:
+    type: float
+    default: 1.0
+    min: 0.0
+    max: 8.0
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+    - name: modulator
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - modulator
+    - output
+
+  nodes:
+    - id: frequency_mod
+      atom: modulation_frequency
+      in:
+        signal: input
+        modulator: modulator
+      out:
+        signal: output
+      config:
+        depth: ${params.depth}
+
+compatibility:
+  desktop_full: true
+  offline_render: true

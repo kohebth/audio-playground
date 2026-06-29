@@ -1249,8 +1249,8 @@ static int test_compile_all_unit_v2_fixtures(void) {
     }
     closedir(dir);
 
-    if (fixture_count < 3u)
-        return fail("expected at least three unit-v2 fixtures");
+    if (fixture_count < 8u)
+        return fail("expected at least eight unit-v2 fixtures");
     return 0;
 }
 
