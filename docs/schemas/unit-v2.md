@@ -60,10 +60,11 @@ The compiler currently validates required keys for these MVP atoms:
 - `amplitude_multiply`, `amplitude_add`, `amplitude_subtract`: `in.signal_a`, `in.signal_b`, `out.signal`
 - `amplitude_clip_hard`: `in.signal`, `out.signal`, `config.threshold`
 - `amplitude_clip_soft`: `in.signal`, `out.signal`, `config.threshold`, `config.curve`
+- `delay_line`: `in.signal`, `out.signal`, `config.length`
 - `mix_wet_dry`: `in.dry`, `in.wet`, `out.signal`, `config.mix`
 
 Atoms without explicit metadata may still compile without key-level validation until their contracts are added.
 
 ## Runtime MVP Limits
 
-The v2 runtime currently supports mono processing through `apg_v2_runtime_process_mono(...)`. It owns signal buffers, param defaults, and per-node atom call storage, then executes the compiled schedule. Multi-channel ports, state buffer descriptors, and generalized runtime I/O mapping remain future work.
+The v2 runtime currently supports mono processing through `apg_v2_runtime_process_mono(...)`. It owns signal buffers, param defaults, per-node atom call storage, and basic `FIELD_BUFFER` state allocation, then executes the compiled schedule. Multi-channel ports and generalized runtime I/O mapping remain future work.

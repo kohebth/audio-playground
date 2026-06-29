@@ -434,6 +434,117 @@ static int test_extended_atom_binding_metadata_compile(void) {
     return expect_compile_valid(wet_dry, "mix_wet_dry metadata");
 }
 
+static int test_delay_line_binding_metadata_compile(void) {
+    const char *delay_line = "kind: apg.unit\n"
+                             "schema: apg.unit.v2\n"
+                             "name: simple_delay\n"
+                             "version: 2.0.0\n"
+                             "params:\n"
+                             "  delay_length:\n"
+                             "    type: int\n"
+                             "    default: 2\n"
+                             "    min: 0\n"
+                             "    max: 32\n"
+                             "ports:\n"
+                             "  inputs:\n"
+                             "    - name: input\n"
+                             "      type: audio\n"
+                             "      channels: 1\n"
+                             "  outputs:\n"
+                             "    - name: output\n"
+                             "      type: audio\n"
+                             "      channels: 1\n"
+                             "graph:\n"
+                             "  signals:\n"
+                             "    - input\n"
+                             "    - output\n"
+                             "  nodes:\n"
+                             "    - id: delay\n"
+                             "      atom: delay_line\n"
+                             "      in:\n"
+                             "        signal: input\n"
+                             "      out:\n"
+                             "        signal: output\n"
+                             "      config:\n"
+                             "        length: ${params.delay_length}\n"
+                             "compatibility:\n"
+                             "  desktop_full: true\n";
+    if (expect_compile_valid(delay_line, "delay_line metadata"))
+        return 1;
+
+    const char *missing_length = "kind: apg.unit\n"
+                                 "schema: apg.unit.v2\n"
+                                 "name: delay_missing_length\n"
+                                 "version: 2.0.0\n"
+                                 "params:\n"
+                                 "  delay_length:\n"
+                                 "    type: int\n"
+                                 "    default: 2\n"
+                                 "    min: 0\n"
+                                 "    max: 32\n"
+                                 "ports:\n"
+                                 "  inputs:\n"
+                                 "    - name: input\n"
+                                 "      type: audio\n"
+                                 "      channels: 1\n"
+                                 "  outputs:\n"
+                                 "    - name: output\n"
+                                 "      type: audio\n"
+                                 "      channels: 1\n"
+                                 "graph:\n"
+                                 "  signals:\n"
+                                 "    - input\n"
+                                 "    - output\n"
+                                 "  nodes:\n"
+                                 "    - id: delay\n"
+                                 "      atom: delay_line\n"
+                                 "      in:\n"
+                                 "        signal: input\n"
+                                 "      out:\n"
+                                 "        signal: output\n"
+                                 "compatibility:\n"
+                                 "  desktop_full: true\n";
+    if (expect_compile_invalid_contains(missing_length, "missing delay_line length", "delay", "config", "length"))
+        return 1;
+
+    const char *bad_input_key = "kind: apg.unit\n"
+                                "schema: apg.unit.v2\n"
+                                "name: delay_bad_input_key\n"
+                                "version: 2.0.0\n"
+                                "params:\n"
+                                "  delay_length:\n"
+                                "    type: int\n"
+                                "    default: 2\n"
+                                "    min: 0\n"
+                                "    max: 32\n"
+                                "ports:\n"
+                                "  inputs:\n"
+                                "    - name: input\n"
+                                "      type: audio\n"
+                                "      channels: 1\n"
+                                "  outputs:\n"
+                                "    - name: output\n"
+                                "      type: audio\n"
+                                "      channels: 1\n"
+                                "graph:\n"
+                                "  signals:\n"
+                                "    - input\n"
+                                "    - output\n"
+                                "  nodes:\n"
+                                "    - id: delay\n"
+                                "      atom: delay_line\n"
+                                "      in:\n"
+                                "        signal: input\n"
+                                "        siggnal: input\n"
+                                "      out:\n"
+                                "        signal: output\n"
+                                "      config:\n"
+                                "        length: ${params.delay_length}\n"
+                                "compatibility:\n"
+                                "  desktop_full: true\n";
+    return expect_compile_invalid_contains(bad_input_key, "unknown delay_line input key", "delay", "in", "siggnal");
+}
+
 static int test_control_ports_compile(void) {
     const char *yaml = "kind: apg.unit\n"
                        "schema: apg.unit.v2\n"
@@ -690,6 +801,8 @@ int main(void) {
     if (test_required_bindings_rejected())
         return 1;
     if (test_extended_atom_binding_metadata_compile())
+        return 1;
+    if (test_delay_line_binding_metadata_compile())
         return 1;
     if (test_control_ports_compile())
         return 1;

@@ -52,7 +52,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase H: Atom Contract Expansion
 
-- [ ] H1: Add compiler binding metadata and tests for `delay_line`.
+- [x] H1: Add compiler binding metadata and tests for `delay_line`.
 - [ ] H2: Add compiler binding metadata and tests for `delay_unit` and related delay tap atoms.
 - [ ] H3: Add compiler binding metadata and tests for core filters such as `filter_biquad`, `filter_allpass`, and comb filters.
 - [ ] H4: Add compiler binding metadata and tests for modulation atoms and remaining mix atoms.

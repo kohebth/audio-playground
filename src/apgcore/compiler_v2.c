@@ -167,6 +167,7 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
     static const char *const               mono_out[]             = {"signal"};
     static const char *const               clip_hard_config[]     = {"threshold"};
     static const char *const               clip_soft_config[]     = {"threshold", "curve"};
+    static const char *const               delay_line_config[]    = {"length"};
     static const char *const               mix_wet_dry_in[]       = {"dry", "wet"};
     static const char *const               mix_wet_dry_config[]   = {"mix"};
     static const apg_atom_binding_schema_t schemas[]              = {
@@ -188,6 +189,10 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
         {"amplitude_clip_soft",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
         {"amplitude_clip_soft", APG_BIND_SECTION_CONFIG,     clip_soft_config,
          sizeof(clip_soft_config) / sizeof(clip_soft_config[0])                                                                  },
+        {         "delay_line",     APG_BIND_SECTION_IN,              mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {         "delay_line",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
+        {         "delay_line", APG_BIND_SECTION_CONFIG,    delay_line_config,
+         sizeof(delay_line_config) / sizeof(delay_line_config[0])                                                                },
         {        "mix_wet_dry",     APG_BIND_SECTION_IN,       mix_wet_dry_in, sizeof(mix_wet_dry_in) / sizeof(mix_wet_dry_in[0])},
         {        "mix_wet_dry",    APG_BIND_SECTION_OUT,             mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
         {        "mix_wet_dry", APG_BIND_SECTION_CONFIG,   mix_wet_dry_config,

@@ -27,4 +27,4 @@ The compiler treats public audio inputs as initially available, then repeatedly 
 
 `apg_v2_runtime_init(...)` creates `apg_v2_runtime_t` from a compiled plan. It owns signal buffers, param default values, and per-node `atom_call_t` storage. `apg_v2_runtime_process_mono(...)` copies the first mono input port into its signal buffer, refreshes config scalars from params/literals, executes the compiled schedule through atom thunks, and copies the first mono output port back to the caller.
 
-Current limits: only mono public I/O is exposed, atom in/out fields are bound by compiled binding order, and generalized state buffer metadata is not implemented yet.
+Current limits: only mono public I/O is exposed, atom in/out fields are bound by compiled binding order, and state allocation currently covers basic `FIELD_BUFFER` descriptors with conservative capacity.
