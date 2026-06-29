@@ -87,7 +87,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - [x] L1: Add public API documentation comments for v2 loader, compiler, and runtime functions.
 - [x] L2: Standardize runtime error text to include node ID, atom name, and failing binding where possible.
-- [ ] L3: Review memory ownership rules for arenas, compiled plans, and runtime buffers.
+- [x] L3: Review memory ownership rules for arenas, compiled plans, and runtime buffers.
 
 ### Phase M: Integration and Migration
 
