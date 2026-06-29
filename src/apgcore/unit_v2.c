@@ -243,6 +243,77 @@ static uc_status validate_and_fill_params(const uc_node *params, uc_arena *arena
     return UC_OK;
 }
 
+static bool parse_channel_count(const char *text, size_t *out_count) {
+    if (!text || !out_count || text[0] == '\0')
+        return false;
+
+    char         *end   = NULL;
+    unsigned long value = strtoul(text, &end, 10);
+    if (!end || *end != '\0' || value == 0ul)
+        return false;
+
+    *out_count = (size_t)value;
+    return true;
+}
+
+static uc_status fill_audio_port_signals(
+    const uc_node *port,
+    const uc_node *graph_signals,
+    const char    *name,
+    size_t         channel_count,
+    uc_arena      *arena,
+    const char  ***out_signals,
+    size_t        *out_len,
+    uc_error      *err
+) {
+    *out_signals = NULL;
+    *out_len     = 0;
+
+    const uc_node *port_signals = uc_node_find(port, "signals");
+    if (!port_signals) {
+        if (channel_count == 1u) {
+            if (!seq_contains_scalar(graph_signals, name)) {
+                char msg[160];
+                snprintf(msg, sizeof(msg), "public audio port '%s' is missing matching graph signal", name ? name : "");
+                return set_error(err, UC_E_MISSING, msg);
+            }
+            return UC_OK;
+        }
+
+        char msg[160];
+        snprintf(msg, sizeof(msg), "multi-channel audio port '%s' missing 'signals'", name ? name : "");
+        return set_error(err, UC_E_MISSING, msg);
+    }
+
+    if (port_signals->kind != UC_NODE_SEQ)
+        return set_error(err, UC_E_TYPE, "audio port signals must be a sequence");
+    if (port_signals->seq_len != channel_count) {
+        char msg[160];
+        snprintf(msg, sizeof(msg), "audio port '%s' signals count must match channels", name ? name : "");
+        return set_error(err, UC_E_RANGE, msg);
+    }
+
+    const char **items = uc_arena_alloc(arena, port_signals->seq_len * sizeof(*items), sizeof(void *));
+    if (!items && port_signals->seq_len > 0)
+        return set_error(err, UC_E_OOM, "arena OOM");
+
+    for (size_t i = 0; i < port_signals->seq_len; i++) {
+        const char *signal = node_scalar(port_signals->seq[i]);
+        if (!signal)
+            return set_error(err, UC_E_TYPE, "audio port signal entry must be a scalar");
+        if (!seq_contains_scalar(graph_signals, signal)) {
+            char msg[160];
+            snprintf(msg, sizeof(msg), "audio port '%s' references unknown signal '%s'", name ? name : "", signal);
+            return set_error(err, UC_E_MISSING, msg);
+        }
+        items[i] = signal;
+    }
+
+    *out_signals = items;
+    *out_len     = port_signals->seq_len;
+    return UC_OK;
+}
+
 static uc_status fill_port_group(
     const uc_node       *seq,
     const uc_node       *signals,
@@ -281,23 +352,33 @@ static uc_status fill_port_group(
             snprintf(msg, sizeof(msg), "port '%s' type must be 'audio' or 'control'", name ? name : "");
             return set_error(err, UC_E_TYPE, msg);
         }
-        const char *channels = value_text(uc_node_find(port, "channels"));
+
+        const char  *channels     = value_text(uc_node_find(port, "channels"));
+        const char **port_signals = NULL;
+        size_t       signals_len  = 0;
         if (port_type_is_audio(type)) {
             if (!channels) {
                 char msg[128];
                 snprintf(msg, sizeof(msg), "audio port '%s' missing 'channels'", name ? name : "");
                 return set_error(err, UC_E_MISSING, msg);
             }
-            if (!seq_contains_scalar(signals, name)) {
-                char msg[160];
-                snprintf(msg, sizeof(msg), "public audio port '%s' is missing matching graph signal", name ? name : "");
-                return set_error(err, UC_E_MISSING, msg);
+            size_t channel_count = 0;
+            if (!parse_channel_count(channels, &channel_count)) {
+                char msg[128];
+                snprintf(msg, sizeof(msg), "audio port '%s' has invalid channels", name ? name : "");
+                return set_error(err, UC_E_RANGE, msg);
             }
+            uc_status status =
+                fill_audio_port_signals(port, signals, name, channel_count, arena, &port_signals, &signals_len, err);
+            if (status != UC_OK)
+                return status;
         }
 
-        ports[i].name     = name;
-        ports[i].type     = type;
-        ports[i].channels = channels;
+        ports[i].name        = name;
+        ports[i].type        = type;
+        ports[i].channels    = channels;
+        ports[i].signals     = port_signals;
+        ports[i].signals_len = signals_len;
     }
 
     *out_ports = ports;

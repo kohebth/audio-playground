@@ -37,7 +37,9 @@ params:
 
 Ports are grouped under `ports.inputs` and `ports.outputs`. Names must be unique within each group.
 
-- `audio` ports require `channels` and a graph signal with the same name.
+- `audio` ports require `channels`.
+- Mono audio ports may use a graph signal with the same name.
+- Multi-channel audio ports require `signals`, with one graph signal name per channel in interleaved order.
 - `control` ports do not require `channels` or graph signals in the current MVP.
 
 ## Graph
@@ -79,4 +81,4 @@ Atoms without explicit metadata may still compile without key-level validation u
 
 ## Runtime MVP Limits
 
-The v2 runtime currently supports mono processing through `apg_v2_runtime_process_mono(...)`. It owns signal buffers, param defaults, per-node atom call storage, and basic `FIELD_BUFFER` state allocation, then executes the compiled schedule. Multi-channel ports and generalized runtime I/O mapping remain future work.
+The v2 runtime supports mono processing through `apg_v2_runtime_process_mono(...)` and named mono ports through `apg_v2_runtime_process_mono_ports(...)`. Multi-channel audio ports use explicit per-channel signal mappings and can be processed with `apg_v2_runtime_process_interleaved_ports(...)`. The runtime owns signal buffers, param defaults, per-node atom call storage, and basic `FIELD_BUFFER` state allocation, then executes the compiled schedule. Generalized non-audio control routing remains future work.

@@ -41,18 +41,30 @@ uc_status apg_v2_runtime_init(
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name);
 float *apg_v2_runtime_find_input_port_signal(apg_v2_runtime_t *runtime, const char *port_name);
 float *apg_v2_runtime_find_output_port_signal(apg_v2_runtime_t *runtime, const char *port_name);
-bool   apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value);
-bool   apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value);
-bool   apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames);
-bool   apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames);
-bool   apg_v2_runtime_process_mono_ports(
-      apg_v2_runtime_t *runtime,
-      const char       *input_port_name,
-      const float      *input,
-      const char       *output_port_name,
-      float            *output,
-      uint32_t          frames
-  );
+float *
+apg_v2_runtime_find_input_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index);
+float *
+apg_v2_runtime_find_output_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index);
+bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value);
+bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value);
+bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames);
+bool apg_v2_runtime_process_interleaved_ports(
+    apg_v2_runtime_t *runtime,
+    const char       *input_port_name,
+    const float      *input,
+    const char       *output_port_name,
+    float            *output,
+    uint32_t          frames
+);
+bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames);
+bool apg_v2_runtime_process_mono_ports(
+    apg_v2_runtime_t *runtime,
+    const char       *input_port_name,
+    const float      *input,
+    const char       *output_port_name,
+    float            *output,
+    uint32_t          frames
+);
 const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime);
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime);

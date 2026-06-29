@@ -318,6 +318,107 @@ static int test_named_mono_port_rejects_bad_buffer_layouts(void) {
     return 0;
 }
 
+static int test_interleaved_stereo_public_port_process(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: stereo_gain_ports\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  gain:\n"
+                       "    type: float\n"
+                       "    default: 2.0\n"
+                       "    min: 0.0\n"
+                       "    max: 4.0\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 2\n"
+                       "      signals:\n"
+                       "        - input_l\n"
+                       "        - input_r\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 2\n"
+                       "      signals:\n"
+                       "        - output_l\n"
+                       "        - output_r\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - input_l\n"
+                       "    - input_r\n"
+                       "    - gain_value\n"
+                       "    - output_l\n"
+                       "    - output_r\n"
+                       "  nodes:\n"
+                       "    - id: gain_value\n"
+                       "      atom: generation_dc\n"
+                       "      out:\n"
+                       "        signal: gain_value\n"
+                       "      config:\n"
+                       "        value: ${params.gain}\n"
+                       "    - id: gain_left\n"
+                       "      atom: amplitude_multiply\n"
+                       "      in:\n"
+                       "        signal_a: input_l\n"
+                       "        signal_b: gain_value\n"
+                       "      out:\n"
+                       "        signal: output_l\n"
+                       "    - id: gain_right\n"
+                       "      atom: amplitude_multiply\n"
+                       "      in:\n"
+                       "        signal_a: input_r\n"
+                       "        signal_b: gain_value\n"
+                       "      out:\n"
+                       "        signal: output_r\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_string(yaml, &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize stereo runtime");
+    }
+
+    if (apg_v2_runtime_find_input_port_channel_signal(&runtime, "input", 1u) !=
+        apg_v2_runtime_find_signal(&runtime, "input_r"))
+        return fail("stereo input channel lookup returned unexpected signal");
+    if (apg_v2_runtime_find_output_port_channel_signal(&runtime, "output", 1u) !=
+        apg_v2_runtime_find_signal(&runtime, "output_r"))
+        return fail("stereo output channel lookup returned unexpected signal");
+    if (apg_v2_runtime_find_input_port_channel_signal(&runtime, "input", 2u))
+        return fail("stereo input channel lookup accepted out-of-range channel");
+
+    const float input[4]  = {1.0f, 10.0f, -2.0f, -20.0f};
+    float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    if (!apg_v2_runtime_process_interleaved_ports(&runtime, "input", input, "output", output, 2u))
+        return fail("stereo interleaved processing failed");
+    const float expected[4] = {2.0f, 20.0f, -4.0f, -40.0f};
+    for (size_t i = 0; i < 4u; i++) {
+        if (output[i] != expected[i])
+            return fail("unexpected stereo interleaved output sample");
+    }
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_named_mono_port_process(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -466,13 +567,17 @@ static int test_named_mono_port_rejects_multichannel_port(void) {
                        "    - name: input\n"
                        "      type: audio\n"
                        "      channels: 2\n"
+                       "      signals:\n"
+                       "        - input_l\n"
+                       "        - input_r\n"
                        "  outputs:\n"
                        "    - name: output\n"
                        "      type: audio\n"
                        "      channels: 1\n"
                        "graph:\n"
                        "  signals:\n"
-                       "    - input\n"
+                       "    - input_l\n"
+                       "    - input_r\n"
                        "    - output\n"
                        "    - gain_value\n"
                        "  nodes:\n"
@@ -485,7 +590,7 @@ static int test_named_mono_port_rejects_multichannel_port(void) {
                        "    - id: apply_gain\n"
                        "      atom: amplitude_multiply\n"
                        "      in:\n"
-                       "        signal_a: input\n"
+                       "        signal_a: input_l\n"
                        "        signal_b: gain_value\n"
                        "      out:\n"
                        "        signal: output\n"
@@ -782,6 +887,8 @@ int main(void) {
     if (test_multi_output_public_port_process())
         return 1;
     if (test_named_mono_port_rejects_bad_buffer_layouts())
+        return 1;
+    if (test_interleaved_stereo_public_port_process())
         return 1;
     if (test_named_mono_port_process())
         return 1;

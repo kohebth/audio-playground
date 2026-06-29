@@ -36,7 +36,7 @@ static int expect_valid_fixture(void) {
         strcmp(unit.params[0].max_value, "4.0") != 0 || strcmp(unit.params[0].smoothing_ms, "10") != 0)
         return fail("unexpected parsed v2 param values");
     if (!unit.input_ports || strcmp(unit.input_ports[0].name, "input") != 0 ||
-        strcmp(unit.input_ports[0].type, "audio") != 0)
+        strcmp(unit.input_ports[0].type, "audio") != 0 || unit.input_ports[0].signals_len != 0u)
         return fail("unexpected parsed v2 input port");
     if (!unit.output_ports || strcmp(unit.output_ports[0].name, "output") != 0 ||
         strcmp(unit.output_ports[0].channels, "1") != 0)
@@ -251,6 +251,108 @@ int main(void) {
                                       "compatibility:\n"
                                       "  desktop_full: true\n";
     if (expect_invalid_contains(missing_port_signal, "missing matching output signal", "output"))
+        return 1;
+
+    const char *stereo_port_signals = "kind: apg.unit\n"
+                                      "schema: apg.unit.v2\n"
+                                      "name: stereo_ports\n"
+                                      "version: 2.0.0\n"
+                                      "params:\n"
+                                      "  gain:\n"
+                                      "    type: float\n"
+                                      "    default: 1.0\n"
+                                      "    min: 0.0\n"
+                                      "    max: 2.0\n"
+                                      "ports:\n"
+                                      "  inputs:\n"
+                                      "    - name: input\n"
+                                      "      type: audio\n"
+                                      "      channels: 2\n"
+                                      "      signals:\n"
+                                      "        - left_in\n"
+                                      "        - right_in\n"
+                                      "  outputs:\n"
+                                      "    - name: output\n"
+                                      "      type: audio\n"
+                                      "      channels: 2\n"
+                                      "      signals:\n"
+                                      "        - left_out\n"
+                                      "        - right_out\n"
+                                      "graph:\n"
+                                      "  signals:\n"
+                                      "    - left_in\n"
+                                      "    - right_in\n"
+                                      "    - left_out\n"
+                                      "    - right_out\n"
+                                      "  nodes:\n"
+                                      "    - id: pass\n"
+                                      "      atom: mix_decode_ms\n"
+                                      "compatibility:\n"
+                                      "  desktop_full: true\n";
+    if (expect_valid(stereo_port_signals, "stereo port explicit signals"))
+        return 1;
+
+    const char *stereo_port_missing_signals = "kind: apg.unit\n"
+                                              "schema: apg.unit.v2\n"
+                                              "name: bad_unit\n"
+                                              "version: 2.0.0\n"
+                                              "params:\n"
+                                              "  gain:\n"
+                                              "    type: float\n"
+                                              "    default: 1.0\n"
+                                              "    min: 0.0\n"
+                                              "    max: 2.0\n"
+                                              "ports:\n"
+                                              "  inputs:\n"
+                                              "    - name: input\n"
+                                              "      type: audio\n"
+                                              "      channels: 2\n"
+                                              "  outputs:\n"
+                                              "    - name: output\n"
+                                              "      type: audio\n"
+                                              "      channels: 1\n"
+                                              "graph:\n"
+                                              "  signals:\n"
+                                              "    - output\n"
+                                              "  nodes:\n"
+                                              "    - id: pass\n"
+                                              "      atom: generation_dc\n"
+                                              "compatibility:\n"
+                                              "  desktop_full: true\n";
+    if (expect_invalid_contains(stereo_port_missing_signals, "multi-channel missing signals", "signals"))
+        return 1;
+
+    const char *stereo_port_signal_count = "kind: apg.unit\n"
+                                           "schema: apg.unit.v2\n"
+                                           "name: bad_unit\n"
+                                           "version: 2.0.0\n"
+                                           "params:\n"
+                                           "  gain:\n"
+                                           "    type: float\n"
+                                           "    default: 1.0\n"
+                                           "    min: 0.0\n"
+                                           "    max: 2.0\n"
+                                           "ports:\n"
+                                           "  inputs:\n"
+                                           "    - name: input\n"
+                                           "      type: audio\n"
+                                           "      channels: 2\n"
+                                           "      signals:\n"
+                                           "        - input_l\n"
+                                           "  outputs:\n"
+                                           "    - name: output\n"
+                                           "      type: audio\n"
+                                           "      channels: 1\n"
+                                           "graph:\n"
+                                           "  signals:\n"
+                                           "    - input_l\n"
+                                           "    - output\n"
+                                           "  nodes:\n"
+                                           "    - id: pass\n"
+                                           "      atom: generation_dc\n"
+                                           "compatibility:\n"
+                                           "  desktop_full: true\n";
+    if (expect_invalid_contains(stereo_port_signal_count, "stereo signal count", "count"))
         return 1;
 
     const char *control_port = "kind: apg.unit\n"

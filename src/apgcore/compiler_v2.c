@@ -57,14 +57,28 @@ static int port_is_audio(const apg_unit_v2_port_t *port) {
     return port && port->type && strcmp(port->type, "audio") == 0;
 }
 
+static size_t port_signal_count(const apg_unit_v2_port_t *port) {
+    return port && port->signals_len > 0u ? port->signals_len : 1u;
+}
+
+static const char *port_signal_name(const apg_unit_v2_port_t *port, size_t channel_index) {
+    if (!port)
+        return NULL;
+    if (port->signals_len > 0u)
+        return channel_index < port->signals_len ? port->signals[channel_index] : NULL;
+    return channel_index == 0u ? port->name : NULL;
+}
+
 static uc_status mark_input_port_signals(const apg_unit_v2_t *unit, int *signal_available, uc_error *err) {
     for (size_t i = 0; i < unit->input_ports_len; i++) {
         if (!port_is_audio(&unit->input_ports[i]))
             continue;
-        int signal_index = find_signal_index(unit, unit->input_ports[i].name);
-        if (signal_index < 0)
-            return set_error(err, UC_E_MISSING, "input audio port is missing matching graph signal");
-        signal_available[signal_index] = 1;
+        for (size_t ch = 0; ch < port_signal_count(&unit->input_ports[i]); ch++) {
+            int signal_index = find_signal_index(unit, port_signal_name(&unit->input_ports[i], ch));
+            if (signal_index < 0)
+                return set_error(err, UC_E_MISSING, "input audio port is missing graph signal mapping");
+            signal_available[signal_index] = 1;
+        }
     }
     return UC_OK;
 }
@@ -110,11 +124,13 @@ validate_output_port_signals_produced(const apg_unit_v2_t *unit, const int *sign
     for (size_t i = 0; i < unit->output_ports_len; i++) {
         if (!port_is_audio(&unit->output_ports[i]))
             continue;
-        int signal_index = find_signal_index(unit, unit->output_ports[i].name);
-        if (signal_index < 0)
-            return set_error(err, UC_E_MISSING, "output audio port is missing matching graph signal");
-        if (!signal_available[signal_index])
-            return set_error(err, UC_E_MISSING, "output audio port signal is not produced by the graph");
+        for (size_t ch = 0; ch < port_signal_count(&unit->output_ports[i]); ch++) {
+            int signal_index = find_signal_index(unit, port_signal_name(&unit->output_ports[i], ch));
+            if (signal_index < 0)
+                return set_error(err, UC_E_MISSING, "output audio port is missing graph signal mapping");
+            if (!signal_available[signal_index])
+                return set_error(err, UC_E_MISSING, "output audio port signal is not produced by the graph");
+        }
     }
     return UC_OK;
 }

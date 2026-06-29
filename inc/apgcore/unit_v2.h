@@ -17,9 +17,11 @@ typedef struct {
 } apg_unit_v2_param_t;
 
 typedef struct {
-    const char *name;
-    const char *type;
-    const char *channels;
+    const char  *name;
+    const char  *type;
+    const char  *channels;
+    const char **signals;
+    size_t       signals_len;
 } apg_unit_v2_port_t;
 
 typedef struct {

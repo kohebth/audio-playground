@@ -28,10 +28,9 @@ This file tracks known issues that should not block the current phase but need e
 
 ## Multi-Channel Public Ports
 
-- **Status:** Open
-- **Context:** v2 port metadata supports `channels`, but runtime currently allocates one signal buffer per graph signal and maps each public audio port to a single signal with the same name.
-- **Problem:** True multi-channel ports need either per-channel graph signal mapping or a channel-array binding representation. Treating a multi-channel port as a mono buffer would be ambiguous and unsafe.
-- **Later Fix:** Add an explicit channel mapping model for public ports before exposing multi-channel process APIs.
+- **Status:** Resolved
+- **Context:** v2 audio ports now support explicit `signals` arrays for channel-to-graph-signal mapping.
+- **Resolution:** Mono ports may still use a same-named signal. Multi-channel ports require one mapped signal per channel, and `apg_v2_runtime_process_interleaved_ports(...)` deinterleaves/interleaves buffers through those signal mappings.
 - **Related Plan Item:** `plan.md` Phase I2b.
 
 ## Control Routing Beyond Params
