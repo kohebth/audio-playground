@@ -43,6 +43,10 @@ typedef struct {
     size_t                  signal_producers_len;
 } apg_v2_compiled_unit_t;
 
+/*
+ * Compile a loaded v2 unit into arena-owned atom metadata bindings and a topological schedule.
+ * The input unit must outlive the compiled plan; both are usually allocated from the same arena.
+ */
 uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2_compiled_unit_t *out, uc_error *err);
 
 #endif // AUDIO_PLAYGROUND_APGCORE_COMPILER_V2_H

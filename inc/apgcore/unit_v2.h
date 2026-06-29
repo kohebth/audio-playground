@@ -56,7 +56,16 @@ typedef struct {
     size_t               nodes_len;
 } apg_unit_v2_t;
 
+/*
+ * Load a v2 unit from a YAML file into arena-owned storage.
+ * The returned structure and all nested strings/arrays remain valid until the arena is freed.
+ */
 uc_status apg_unit_v2_load_file(const char *path, uc_arena *arena, apg_unit_v2_t *out, uc_error *err);
+
+/*
+ * Load a v2 unit from an in-memory YAML document into arena-owned storage.
+ * src does not need to outlive the call; parsed data is copied or interned into the arena.
+ */
 uc_status apg_unit_v2_load_string(const char *src, size_t src_len, uc_arena *arena, apg_unit_v2_t *out, uc_error *err);
 
 #endif // AUDIO_PLAYGROUND_APGCORE_UNIT_V2_H
