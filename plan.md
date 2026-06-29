@@ -6,7 +6,8 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, and runtime MVP are implemented.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, and control routing are implemented through Phase O.
+- The next objective is backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
 - The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
 
 ## Completed Work
@@ -109,12 +110,82 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - [x] O4: Add focused fixtures and runtime tests for routed controls and unsupported control modes.
 - [x] O5: Resolve or narrow the remaining non-param control-routing entry in `problem.md`.
 
+### Phase P: Backend Readiness Audit
+
+- [x] P1: Audit current requirements, design notes, task queue, and v2 implementation status.
+- [x] P2: Define the web UI readiness checklist and backend handoff gates.
+- [x] P3: Add the long-range backend-to-web plan under `docs/plans/`.
+
+### Phase Q: Unit Schema Stabilization
+
+- [ ] Q1: Validate `meta` and `ui` sections instead of only tolerating them.
+- [ ] Q2: Add param UI metadata validation for label, control type, unit, scale, and display precision.
+- [ ] Q3: Add stable validation paths for UI-facing unit metadata errors.
+- [ ] Q4: Update schema docs and tests for the finalized UI metadata contract.
+
+### Phase R: Atom Catalog Export
+
+- [ ] R1: Define the atom catalog JSON shape needed by the web atom palette.
+- [ ] R2: Add a backend API, CLI command, or test binary that exports atom metadata.
+- [ ] R3: Include atom category, in/out/config fields, statefulness, and compatibility profile hints.
+- [ ] R4: Add regression tests so exported metadata stays aligned with compiler contracts.
+
+### Phase S: Project v2 Schema
+
+- [ ] S1: Define `project.v2.yaml` with unit refs, chain nodes, routes, scenes, and target profiles.
+- [ ] S2: Add small deterministic `projects-v2/` fixtures.
+- [ ] S3: Validate missing unit refs, duplicate node IDs, bad routes, invalid scene params, and target flags.
+- [ ] S4: Document project schema limits before implementing broad routing features.
+
+### Phase T: Project Loader and Resolver
+
+- [ ] T1: Resolve project-relative unit paths safely.
+- [ ] T2: Load referenced v2 units into a project model.
+- [ ] T3: Reject unsafe paths, missing files, and ambiguous references.
+- [ ] T4: Add multi-file project loader tests.
+
+### Phase U: Project Compiler
+
+- [ ] U1: Expand unit instances into namespaced graph nodes, signals, and params.
+- [ ] U2: Compile inter-unit routes into a single runtime plan.
+- [ ] U3: Preserve stable instance param names such as `delay1.feedback` for UI/runtime control.
+- [ ] U4: Add compile/runtime tests for the first project fixture.
+
+### Phase V: CLI and JSON Contract
+
+- [ ] V1: Add structured JSON validation output for units and projects.
+- [ ] V2: Add inspect output for atoms, units, and projects.
+- [ ] V3: Add or stabilize render/benchmark command surfaces for product fixtures.
+- [ ] V4: Commit golden JSON outputs for frontend tests.
+
+### Phase W: Runtime Product Controls
+
+- [ ] W1: Implement block-boundary parameter smoothing from `smoothing_ms`.
+- [ ] W2: Add unit-instance bypass and project-level mute/solo where needed for the first pedalboard workflow.
+- [ ] W3: Add peak/RMS meter snapshots suitable for UI polling.
+- [ ] W4: Add runtime tests for live parameter changes, bypass, and meters.
+
+### Phase X: Product Fixture Slice
+
+- [ ] X1: Add or migrate v2 units for overdrive, delay, tremolo, EQ/tone stack, noise gate, and wet/dry mix.
+- [ ] X2: Add a guitar pedalboard project fixture using those units.
+- [ ] X3: Validate, compile, run, and render the fixture deterministically.
+- [ ] X4: Capture compatibility and validation outputs for the fixture.
+
+### Phase Y: Web Handoff Package
+
+- [ ] Y1: Freeze sample JSON contracts for validation, atom catalog, unit inspect, and project inspect.
+- [ ] Y2: Update web-readiness docs with exact commands and sample files.
+- [ ] Y3: Refresh `AGENTS.md`, `task.md`, and this plan for the web UI implementation phase.
+- [ ] Y4: Declare the backend ready for v2 web UI work.
+
 ## Execution Order
 
-1. Complete Phase H atom contracts in small slices, starting with `delay_line`.
-2. Expand runtime I/O only after enough atom contracts exist to build realistic v2 graphs.
-3. Improve runtime state/config support before adding large fixture families.
-4. Integrate v2 into host paths only after compiler/runtime behavior is covered by focused tests.
+1. Stabilize unit UI metadata before exporting frontend-facing unit data.
+2. Export atom catalog metadata before building the project compiler UI contract.
+3. Add project schema and loader before compiling multi-unit pedalboards.
+4. Stabilize JSON/CLI contracts before starting web UI implementation.
+5. Prove the workflow with a guitar pedalboard fixture before moving to frontend screens.
 
 ## Per-Phase Workflow
 
