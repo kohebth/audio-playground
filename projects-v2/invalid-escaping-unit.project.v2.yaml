@@ -1,0 +1,22 @@
+kind: apg.project
+schema: apg.project.v2
+name: invalid-escaping-unit
+version: 2.0.0
+
+units:
+  - id: escaped_unit
+    file: ../../../../../etc/passwd
+
+chain:
+  nodes:
+    - id: escaped1
+      unit: escaped_unit
+
+  routes:
+    - from: system.input
+      to: escaped1.input
+    - from: escaped1.output
+      to: system.output
+
+targets:
+  default: desktop_full

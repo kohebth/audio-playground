@@ -50,6 +50,54 @@ static int expect_valid_fixture(void) {
     return 0;
 }
 
+static int expect_valid_resolved_fixture(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t resolved;
+    uc_error                  err = {0};
+    uc_status                 status =
+        apg_project_v2_load_resolved_file("projects-v2/simple-gain-board.project.v2.yaml", &arena, &resolved, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "resolved project error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("simple project fixture did not resolve");
+    }
+
+    if (resolved.units_len != 1u || strcmp(resolved.units[0].id, "gain_unit") != 0)
+        return fail("unexpected resolved unit ref");
+    if (!resolved.units[0].resolved_path ||
+        !strstr(resolved.units[0].resolved_path, "/units-v2/simple_gain.unit.v2.yaml"))
+        return fail("unexpected resolved unit path");
+    if (!resolved.units[0].unit.name || strcmp(resolved.units[0].unit.name, "simple_gain") != 0)
+        return fail("resolved unit was not loaded");
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int expect_invalid_resolved_file_contains(const char *path, const char *label, const char *must_contain) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t resolved;
+    uc_error                  err    = {0};
+    uc_status                 status = apg_project_v2_load_resolved_file(path, &arena, &resolved, &err);
+    uc_arena_free(&arena);
+
+    if (status == UC_OK) {
+        fprintf(stderr, "accepted invalid resolved project case: %s\n", label);
+        return 1;
+    }
+    if (must_contain && !strstr(err.msg, must_contain)) {
+        fprintf(stderr, "resolved project error for %s lacked '%s': %s\n", label, must_contain, err.msg);
+        return 1;
+    }
+    return 0;
+}
+
 static int expect_invalid_contains(const char *yaml, const char *label, const char *must_contain) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -73,6 +121,25 @@ static int expect_invalid_contains(const char *yaml, const char *label, const ch
 
 int main(void) {
     if (expect_valid_fixture())
+        return 1;
+    if (expect_valid_resolved_fixture())
+        return 1;
+    if (expect_invalid_resolved_file_contains(
+            "projects-v2/invalid-missing-unit.project.v2.yaml", "missing unit file", "cannot resolve unit file"
+        ))
+        return 1;
+    if (expect_invalid_resolved_file_contains(
+            "projects-v2/invalid-absolute-unit.project.v2.yaml", "absolute unit file", "absolute unit file paths"
+        ))
+        return 1;
+    if (expect_invalid_resolved_file_contains(
+            "projects-v2/invalid-escaping-unit.project.v2.yaml", "escaping unit file", "escapes workspace root"
+        ))
+        return 1;
+    if (expect_invalid_resolved_file_contains(
+            "projects-v2/invalid-duplicate-resolved-unit.project.v2.yaml", "duplicate resolved unit file",
+            "duplicate resolved unit file"
+        ))
         return 1;
 
     const char *duplicate_unit = "kind: apg.project\n"

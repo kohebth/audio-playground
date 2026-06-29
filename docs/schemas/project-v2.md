@@ -24,7 +24,7 @@ units:
     file: ../units-v2/simple_gain.unit.v2.yaml
 ```
 
-`id` values must be unique. `file` is stored as authored; project-relative file resolution and unsafe-path checks are handled by the later project resolver phase.
+`id` values must be unique. `file` is stored as authored by the schema loader. The resolved loader canonicalizes each file relative to the project file directory, loads the referenced `unit.v2.yaml`, rejects absolute paths, rejects missing files, rejects references that escape the current workspace root, and rejects duplicate canonical unit files.
 
 ## Chain Nodes and Routes
 
@@ -65,6 +65,10 @@ Supported profiles:
 - `m7_static`
 - `offline_render`
 
+## Resolved Loading
+
+Use `apg_project_v2_load_resolved_file(...)` when the caller needs loaded unit definitions in addition to the project schema model. The returned project, canonical unit paths, and loaded units are arena-owned.
+
 ## Current Limits
 
-The schema validator does not yet load referenced units, resolve project-relative paths, check unit port names, validate instance param names against unit schemas, or compile routes into a single runtime plan. Those behaviors are tracked in Phases T and U.
+The project loader does not yet check unit port names, validate instance param names against unit schemas, or compile routes into a single runtime plan. Those behaviors are tracked in Phase U.

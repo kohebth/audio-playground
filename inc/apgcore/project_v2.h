@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 
+#include <apgcore/unit_v2.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
 #include <yaml/unit.h>
@@ -55,8 +56,23 @@ typedef struct {
     apg_project_v2_targets_t   targets;
 } apg_project_v2_t;
 
+typedef struct {
+    const char   *id;
+    const char   *file;
+    const char   *resolved_path;
+    apg_unit_v2_t unit;
+} apg_project_v2_loaded_unit_t;
+
+typedef struct {
+    apg_project_v2_t              project;
+    apg_project_v2_loaded_unit_t *units;
+    size_t                        units_len;
+} apg_project_v2_resolved_t;
+
 uc_status apg_project_v2_load_file(const char *path, uc_arena *arena, apg_project_v2_t *out, uc_error *err);
 uc_status
 apg_project_v2_load_string(const char *src, size_t src_len, uc_arena *arena, apg_project_v2_t *out, uc_error *err);
+uc_status
+apg_project_v2_load_resolved_file(const char *path, uc_arena *arena, apg_project_v2_resolved_t *out, uc_error *err);
 
 #endif // AUDIO_PLAYGROUND_APGCORE_PROJECT_V2_H

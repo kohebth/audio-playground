@@ -1,0 +1,22 @@
+kind: apg.project
+schema: apg.project.v2
+name: invalid-absolute-unit
+version: 2.0.0
+
+units:
+  - id: abs_unit
+    file: /tmp/simple_gain.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: abs1
+      unit: abs_unit
+
+  routes:
+    - from: system.input
+      to: abs1.input
+    - from: abs1.output
+      to: system.output
+
+targets:
+  default: desktop_full

@@ -1,0 +1,22 @@
+kind: apg.project
+schema: apg.project.v2
+name: invalid-missing-unit
+version: 2.0.0
+
+units:
+  - id: missing_unit
+    file: missing.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: missing1
+      unit: missing_unit
+
+  routes:
+    - from: system.input
+      to: missing1.input
+    - from: missing1.output
+      to: system.output
+
+targets:
+  default: desktop_full

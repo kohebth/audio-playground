@@ -1,0 +1,28 @@
+kind: apg.project
+schema: apg.project.v2
+name: invalid-duplicate-resolved-unit
+version: 2.0.0
+
+units:
+  - id: gain_a
+    file: ../units-v2/simple_gain.unit.v2.yaml
+  - id: gain_b
+    file: ../units-v2/../units-v2/simple_gain.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: gain1
+      unit: gain_a
+    - id: gain2
+      unit: gain_b
+
+  routes:
+    - from: system.input
+      to: gain1.input
+    - from: gain1.output
+      to: gain2.input
+    - from: gain2.output
+      to: system.output
+
+targets:
+  default: desktop_full

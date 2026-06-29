@@ -6,7 +6,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, and project schema validation are implemented through Phase S.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, and resolved project unit loading are implemented through Phase T.
 - The next objective is backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
 - The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
 
@@ -139,10 +139,10 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase T: Project Loader and Resolver
 
-- [ ] T1: Resolve project-relative unit paths safely.
-- [ ] T2: Load referenced v2 units into a project model.
-- [ ] T3: Reject unsafe paths, missing files, and ambiguous references.
-- [ ] T4: Add multi-file project loader tests.
+- [x] T1: Resolve project-relative unit paths safely.
+- [x] T2: Load referenced v2 units into a project model.
+- [x] T3: Reject unsafe paths, missing files, and ambiguous references.
+- [x] T4: Add multi-file project loader tests.
 
 ### Phase U: Project Compiler
 
