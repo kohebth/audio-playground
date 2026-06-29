@@ -101,6 +101,14 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - [x] N2: Add sanitizer or debug verification jobs when the local workflow is stable.
 - [x] N3: Keep `AGENTS.md`, `task.md`, and this plan aligned when workflow rules change.
 
+### Phase O: Control Routing Semantics
+
+- [x] O1: Define the schema contract for v2 control routing beyond same-named params.
+- [ ] O2: Add loader validation for explicit control routing targets and rejected unsupported modes.
+- [ ] O3: Add compiler/runtime support for control-to-param routing metadata.
+- [ ] O4: Add focused fixtures and runtime tests for routed controls and unsupported control modes.
+- [ ] O5: Resolve or narrow the remaining non-param control-routing entry in `problem.md`.
+
 ## Execution Order
 
 1. Complete Phase H atom contracts in small slices, starting with `delay_line`.

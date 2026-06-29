@@ -32,8 +32,8 @@ This file tracks known issues that should not block the current phase but need e
 
 ## Non-Param Control Routing
 
-- **Status:** Open
+- **Status:** Planned
 - **Context:** `apg_v2_runtime_set_control_port(...)` maps control input ports to `target_param` when present, otherwise to same-named params.
-- **Problem:** The schema does not yet define whether control ports can drive graph signals directly, multiple params, smoothing lanes, or typed control buffers.
-- **Later Fix:** Define non-param control routing semantics before adding graph-control propagation beyond param updates.
-- **Related Plan Item:** Future runtime/control routing phase.
+- **Decision:** Phase O keeps supported runtime routing param-only and makes future control destinations explicit. The next schema shape is `target: { kind: param, name: <param> }`; graph-signal, multi-param, smoothing-lane, and typed-buffer routing must be rejected until separately implemented.
+- **Next Fix:** Add loader validation for explicit param targets, reject unsupported target kinds with useful errors, then update runtime metadata to use the normalized route.
+- **Related Plan Item:** `plan.md` Phase O.
