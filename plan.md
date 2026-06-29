@@ -59,7 +59,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - [ ] H3b: Add optional binding support before validating `filter_comb_fb`.
 - [x] H4a: Add compiler binding metadata and tests for modulation atoms and scalar/stereo mix atoms.
 - [ ] H4b: Add array/matrix binding support before validating `mix_matrix`.
-- [ ] H5: Refresh schema documentation with the newly supported atom contracts.
+- [x] H5: Refresh schema documentation with the newly supported atom contracts; deferred contract gaps are tracked in `problem.md`.
 
 ### Phase I: Runtime I/O Model
 
