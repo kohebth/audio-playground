@@ -191,19 +191,34 @@ fail:
     return status;
 }
 
-bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !input || !output || frames == 0u)
+float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit || !name)
+        return NULL;
+    int index = signal_index_by_name(runtime->plan->unit, name);
+    if (index < 0 || (size_t)index >= runtime->signals_len)
+        return NULL;
+    return runtime->signals[index];
+}
+
+bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit || !name)
+        return false;
+    const apg_unit_v2_t *unit = runtime->plan->unit;
+    for (size_t i = 0; i < unit->params_len && i < runtime->params_len; i++) {
+        if (unit->params[i].name && strcmp(unit->params[i].name, name) == 0) {
+            runtime->params[i] = value;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit || frames == 0u)
         return false;
     if (frames > runtime->frame_capacity)
         return false;
 
-    const apg_unit_v2_t *unit         = runtime->plan->unit;
-    int                  input_index  = first_audio_port_signal_index(unit, unit->input_ports, unit->input_ports_len);
-    int                  output_index = first_audio_port_signal_index(unit, unit->output_ports, unit->output_ports_len);
-    if (input_index < 0 || output_index < 0)
-        return false;
-
-    memcpy(runtime->signals[input_index], input, frames * sizeof(float));
     runtime->process_info.frames        = frames;
     runtime->process_info.output_frames = frames;
 
@@ -217,7 +232,25 @@ bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, 
             return false;
         compiled->atom->thunk(&runtime->nodes[scheduled_index].call);
     }
+    return true;
+}
 
+bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit || !input || !output)
+        return false;
+
+    const apg_unit_v2_t *unit         = runtime->plan->unit;
+    int                  input_index  = first_audio_port_signal_index(unit, unit->input_ports, unit->input_ports_len);
+    int                  output_index = first_audio_port_signal_index(unit, unit->output_ports, unit->output_ports_len);
+    if (input_index < 0 || output_index < 0 || (size_t)input_index >= runtime->signals_len ||
+        (size_t)output_index >= runtime->signals_len)
+        return false;
+
+    if (frames > runtime->frame_capacity || frames == 0u)
+        return false;
+    memcpy(runtime->signals[input_index], input, frames * sizeof(float));
+    if (!apg_v2_runtime_process(runtime, frames))
+        return false;
     memcpy(output, runtime->signals[output_index], frames * sizeof(float));
     return true;
 }

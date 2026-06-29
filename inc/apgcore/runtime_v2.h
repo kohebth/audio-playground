@@ -35,7 +35,10 @@ uc_status apg_v2_runtime_init(
     const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, float sample_rate, apg_v2_runtime_t *out, uc_error *err
 );
 
-bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames);
+float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name);
+bool   apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value);
+bool   apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames);
+bool   apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames);
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime);
 

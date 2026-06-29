@@ -10,18 +10,19 @@ static int fail(const char *msg) {
     return 1;
 }
 
-static int load_and_compile_simple_gain(uc_arena *arena, apg_unit_v2_t *unit, apg_v2_compiled_unit_t *plan) {
+static int
+load_and_compile_fixture(const char *path, uc_arena *arena, apg_unit_v2_t *unit, apg_v2_compiled_unit_t *plan) {
     uc_error  err    = {0};
-    uc_status status = apg_unit_v2_load_file("units-v2/simple_gain.unit.v2.yaml", arena, unit, &err);
+    uc_status status = apg_unit_v2_load_file(path, arena, unit, &err);
     if (status != UC_OK) {
         fprintf(stderr, "load error: %s\n", err.msg);
-        return fail("failed to load simple_gain fixture");
+        return fail("failed to load v2 fixture");
     }
 
     status = apg_v2_compile_unit(unit, arena, plan, &err);
     if (status != UC_OK) {
         fprintf(stderr, "compile error: %s\n", err.msg);
-        return fail("failed to compile simple_gain fixture");
+        return fail("failed to compile v2 fixture");
     }
     return 0;
 }
@@ -33,7 +34,7 @@ static int test_runtime_init_simple_gain(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_simple_gain(&arena, &unit, &plan)) {
+    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -93,7 +94,7 @@ static int test_simple_gain_process_mono(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_simple_gain(&arena, &unit, &plan)) {
+    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -107,7 +108,8 @@ static int test_simple_gain_process_mono(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    runtime.params[0]     = 2.0f;
+    if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
+        return fail("failed to set simple_gain param");
     const float input[4]  = {0.25f, -0.5f, 1.5f, -2.0f};
     float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
@@ -128,6 +130,56 @@ static int test_simple_gain_process_mono(void) {
     return 0;
 }
 
+static int test_simple_clip_process_generic(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("units-v2/simple_clip.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize v2 runtime");
+    }
+
+    if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
+        return fail("failed to set simple_clip param");
+    float *input  = apg_v2_runtime_find_signal(&runtime, "input");
+    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    if (!input || !output)
+        return fail("failed to find simple_clip signals");
+
+    input[0] = 0.25f;
+    input[1] = -0.5f;
+    input[2] = 1.0f;
+    input[3] = -2.0f;
+    if (!apg_v2_runtime_process(&runtime, 4u))
+        return fail("simple_clip generic processing failed");
+
+    const float expected[4] = {0.5f, -0.75f, 0.75f, -0.75f};
+    for (size_t i = 0; i < 4u; i++) {
+        if (output[i] != expected[i])
+            return fail("unexpected simple_clip output sample");
+    }
+    if (apg_v2_runtime_find_signal(&runtime, "missing"))
+        return fail("missing signal lookup unexpectedly succeeded");
+    if (apg_v2_runtime_set_param(&runtime, "missing", 1.0f))
+        return fail("missing param update unexpectedly succeeded");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_init_rejects_zero_capacity(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -135,7 +187,7 @@ static int test_runtime_init_rejects_zero_capacity(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_simple_gain(&arena, &unit, &plan)) {
+    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -153,6 +205,8 @@ int main(void) {
     if (test_runtime_init_simple_gain())
         return 1;
     if (test_simple_gain_process_mono())
+        return 1;
+    if (test_simple_clip_process_generic())
         return 1;
     if (test_runtime_init_rejects_zero_capacity())
         return 1;

@@ -103,6 +103,20 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 - [x] Update `AGENTS.md` if build/test or v2 workflow conventions change. No update was needed for this batch.
 - [x] Keep using `./build-and-test.sh` once per completed implementation slice.
 
+### Batch F: Runtime Generalization
+
+- [x] Add v2 runtime helpers to find signal buffers and set params by public name.
+- [x] Add a generic `apg_v2_runtime_process(...)` schedule executor independent of mono I/O copying.
+- [x] Refactor `apg_v2_runtime_process_mono(...)` onto the generic executor.
+- [x] Add runtime tests for `simple_clip` using literal config and chained processing.
+- [ ] Add runtime support/tests for multi-input mono fixtures such as `simple_mix`.
+
+### Batch G: Runtime Robustness
+
+- [ ] Allocate atom state `FIELD_BUFFER` descriptors for v2 runtime nodes that need scratch/history buffers.
+- [ ] Add runtime cleanup tests for partially failed initialization paths.
+- [ ] Add error reporting hooks so v2 runtime process failures expose a useful message instead of only `false`.
+
 ## Per-Slice Workflow
 
 1. Pick one batch item or a tight group of related batch items.
