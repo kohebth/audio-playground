@@ -15,9 +15,7 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     return status;
 }
 
-static const char *node_scalar(const uc_node *node) {
-    return node && node->kind == UC_NODE_SCALAR ? node->text : NULL;
-}
+static const char *node_scalar(const uc_node *node) { return node && node->kind == UC_NODE_SCALAR ? node->text : NULL; }
 
 static const char *value_text(const uc_node *node) {
     if (!node)
@@ -40,9 +38,7 @@ static const char *required_scalar(const uc_node *map, const char *key, uc_error
     return node->text;
 }
 
-static bool map_has_key(const uc_node *map, const char *key) {
-    return uc_node_find(map, key) != NULL;
-}
+static bool map_has_key(const uc_node *map, const char *key) { return uc_node_find(map, key) != NULL; }
 
 static bool seq_contains_scalar(const uc_node *seq, const char *value) {
     if (!seq || seq->kind != UC_NODE_SEQ || !value)
@@ -71,9 +67,7 @@ static bool port_type_is_valid(const char *type) {
     return type && (strcmp(type, "audio") == 0 || strcmp(type, "control") == 0);
 }
 
-static bool port_type_is_audio(const char *type) {
-    return type && strcmp(type, "audio") == 0;
-}
+static bool port_type_is_audio(const char *type) { return type && strcmp(type, "audio") == 0; }
 
 static uc_value to_value(const uc_node *node) {
     uc_value value = {UC_VAL_LITERAL, ""};
@@ -149,11 +143,7 @@ static uc_status validate_param_refs(const uc_node *node, const uc_node *params,
 }
 
 static uc_status fill_bindings(
-    const uc_node          *map,
-    uc_arena              *arena,
-    apg_unit_v2_binding_t **out_bindings,
-    size_t                *out_len,
-    uc_error              *err
+    const uc_node *map, uc_arena *arena, apg_unit_v2_binding_t **out_bindings, size_t *out_len, uc_error *err
 ) {
     *out_bindings = NULL;
     *out_len      = 0;
@@ -168,8 +158,11 @@ static uc_status fill_bindings(
 
     for (size_t i = 0; i < map->map_len; i++) {
         for (size_t j = 0; j < i; j++) {
-            if (strcmp(map->map[j].key, map->map[i].key) == 0)
-                return set_error(err, UC_E_RANGE, "duplicate node binding key");
+            if (strcmp(map->map[j].key, map->map[i].key) == 0) {
+                char msg[128];
+                snprintf(msg, sizeof(msg), "duplicate node binding key '%s'", map->map[i].key ? map->map[i].key : "");
+                return set_error(err, UC_E_RANGE, msg);
+            }
         }
         bindings[i].key   = map->map[i].key;
         bindings[i].value = to_value(map->map[i].value);
@@ -190,8 +183,11 @@ static uc_status validate_and_fill_params(const uc_node *params, uc_arena *arena
 
     for (size_t i = 0; i < params->map_len; i++) {
         for (size_t j = 0; j < i; j++) {
-            if (strcmp(params->map[j].key, params->map[i].key) == 0)
-                return set_error(err, UC_E_RANGE, "duplicate param name");
+            if (strcmp(params->map[j].key, params->map[i].key) == 0) {
+                char msg[128];
+                snprintf(msg, sizeof(msg), "duplicate param name '%s'", params->map[i].key ? params->map[i].key : "");
+                return set_error(err, UC_E_RANGE, msg);
+            }
         }
 
         const uc_node *param = params->map[i].value;
@@ -201,18 +197,37 @@ static uc_status validate_and_fill_params(const uc_node *params, uc_arena *arena
         const char *type = required_scalar(param, "type", err);
         if (!type)
             return err->status;
-        if (!param_type_is_valid(type))
-            return set_error(err, UC_E_TYPE, "param type must be 'float', 'int', or 'bool'");
+        if (!param_type_is_valid(type)) {
+            char msg[160];
+            snprintf(
+                msg, sizeof(msg), "param '%s' type must be 'float', 'int', or 'bool'",
+                params->map[i].key ? params->map[i].key : ""
+            );
+            return set_error(err, UC_E_TYPE, msg);
+        }
         const char *default_value = value_text(uc_node_find(param, "default"));
         const char *min_value     = value_text(uc_node_find(param, "min"));
         const char *max_value     = value_text(uc_node_find(param, "max"));
-        if (!default_value)
-            return set_error(err, UC_E_MISSING, "param missing 'default'");
+        if (!default_value) {
+            char msg[128];
+            snprintf(msg, sizeof(msg), "param '%s' missing 'default'", params->map[i].key ? params->map[i].key : "");
+            return set_error(err, UC_E_MISSING, msg);
+        }
         if (param_type_is_numeric(type)) {
-            if (!min_value)
-                return set_error(err, UC_E_MISSING, "numeric param missing 'min'");
-            if (!max_value)
-                return set_error(err, UC_E_MISSING, "numeric param missing 'max'");
+            if (!min_value) {
+                char msg[128];
+                snprintf(
+                    msg, sizeof(msg), "numeric param '%s' missing 'min'", params->map[i].key ? params->map[i].key : ""
+                );
+                return set_error(err, UC_E_MISSING, msg);
+            }
+            if (!max_value) {
+                char msg[128];
+                snprintf(
+                    msg, sizeof(msg), "numeric param '%s' missing 'max'", params->map[i].key ? params->map[i].key : ""
+                );
+                return set_error(err, UC_E_MISSING, msg);
+            }
         }
 
         items[i].name          = params->map[i].key;
@@ -229,8 +244,8 @@ static uc_status validate_and_fill_params(const uc_node *params, uc_arena *arena
 }
 
 static uc_status fill_port_group(
-    const uc_node        *seq,
-    const uc_node        *signals,
+    const uc_node       *seq,
+    const uc_node       *signals,
     uc_arena            *arena,
     apg_unit_v2_port_t **out_ports,
     size_t              *out_len,
@@ -252,20 +267,32 @@ static uc_status fill_port_group(
         if (!name)
             return err->status;
         for (size_t j = 0; j < i; j++) {
-            if (strcmp(ports[j].name, name) == 0)
-                return set_error(err, UC_E_RANGE, "duplicate port name");
+            if (strcmp(ports[j].name, name) == 0) {
+                char msg[128];
+                snprintf(msg, sizeof(msg), "duplicate port name '%s'", name ? name : "");
+                return set_error(err, UC_E_RANGE, msg);
+            }
         }
         const char *type = required_scalar(port, "type", err);
         if (!type)
             return err->status;
-        if (!port_type_is_valid(type))
-            return set_error(err, UC_E_TYPE, "port type must be 'audio' or 'control'");
+        if (!port_type_is_valid(type)) {
+            char msg[160];
+            snprintf(msg, sizeof(msg), "port '%s' type must be 'audio' or 'control'", name ? name : "");
+            return set_error(err, UC_E_TYPE, msg);
+        }
         const char *channels = value_text(uc_node_find(port, "channels"));
         if (port_type_is_audio(type)) {
-            if (!channels)
-                return set_error(err, UC_E_MISSING, "audio port missing 'channels'");
-            if (!seq_contains_scalar(signals, name))
-                return set_error(err, UC_E_MISSING, "public audio port is missing matching graph signal");
+            if (!channels) {
+                char msg[128];
+                snprintf(msg, sizeof(msg), "audio port '%s' missing 'channels'", name ? name : "");
+                return set_error(err, UC_E_MISSING, msg);
+            }
+            if (!seq_contains_scalar(signals, name)) {
+                char msg[160];
+                snprintf(msg, sizeof(msg), "public audio port '%s' is missing matching graph signal", name ? name : "");
+                return set_error(err, UC_E_MISSING, msg);
+            }
         }
 
         ports[i].name     = name;
@@ -278,7 +305,9 @@ static uc_status fill_port_group(
     return UC_OK;
 }
 
-static uc_status validate_and_fill_ports(const uc_node *ports, const uc_node *signals, uc_arena *arena, apg_unit_v2_t *out, uc_error *err) {
+static uc_status validate_and_fill_ports(
+    const uc_node *ports, const uc_node *signals, uc_arena *arena, apg_unit_v2_t *out, uc_error *err
+) {
     if (!ports || ports->kind != UC_NODE_MAP)
         return set_error(err, UC_E_MISSING, "missing map field 'ports'");
 
@@ -303,8 +332,11 @@ static uc_status fill_signals(const uc_node *signals, uc_arena *arena, apg_unit_
         if (!signal)
             return set_error(err, UC_E_TYPE, "graph signal must be a scalar");
         for (size_t j = 0; j < i; j++) {
-            if (strcmp(items[j], signal) == 0)
-                return set_error(err, UC_E_RANGE, "duplicate graph signal name");
+            if (strcmp(items[j], signal) == 0) {
+                char msg[128];
+                snprintf(msg, sizeof(msg), "duplicate graph signal name '%s'", signal ? signal : "");
+                return set_error(err, UC_E_RANGE, msg);
+            }
         }
         items[i] = signal;
     }
@@ -323,19 +355,18 @@ static uc_status validate_node_ids_unique(const uc_node *nodes, uc_error *err) {
         for (size_t j = i + 1; j < nodes->seq_len; j++) {
             const uc_node *b    = nodes->seq[j];
             const uc_node *b_id = uc_node_find(b, "id");
-            if (b_id && b_id->kind == UC_NODE_SCALAR && strcmp(a_id, b_id->text) == 0)
-                return set_error(err, UC_E_RANGE, "duplicate graph node id");
+            if (b_id && b_id->kind == UC_NODE_SCALAR && strcmp(a_id, b_id->text) == 0) {
+                char msg[128];
+                snprintf(msg, sizeof(msg), "duplicate graph node id '%s'", a_id ? a_id : "");
+                return set_error(err, UC_E_RANGE, msg);
+            }
         }
     }
     return UC_OK;
 }
 
 static uc_status validate_and_fill_nodes(
-    const uc_node *nodes,
-    const uc_node *params,
-    uc_arena     *arena,
-    apg_unit_v2_t *out,
-    uc_error     *err
+    const uc_node *nodes, const uc_node *params, uc_arena *arena, apg_unit_v2_t *out, uc_error *err
 ) {
     if (!nodes || nodes->kind != UC_NODE_SEQ)
         return set_error(err, UC_E_MISSING, "missing graph.nodes");
@@ -360,8 +391,11 @@ static uc_status validate_and_fill_nodes(
         const char *atom = required_scalar(node, "atom", err);
         if (!atom)
             return err->status;
-        if (!atom_registry_find(atom))
-            return set_error(err, UC_E_MISSING, "unknown graph node atom");
+        if (!atom_registry_find(atom)) {
+            char msg[160];
+            snprintf(msg, sizeof(msg), "node '%s' references unknown atom '%s'", id ? id : "", atom ? atom : "");
+            return set_error(err, UC_E_MISSING, msg);
+        }
 
         status = validate_param_refs(uc_node_find(node, "config"), params, err);
         if (status != UC_OK)
@@ -385,7 +419,9 @@ static uc_status validate_and_fill_nodes(
     return UC_OK;
 }
 
-static uc_status validate_and_fill_graph(const uc_node *graph, const uc_node *params, uc_arena *arena, apg_unit_v2_t *out, uc_error *err) {
+static uc_status validate_and_fill_graph(
+    const uc_node *graph, const uc_node *params, uc_arena *arena, apg_unit_v2_t *out, uc_error *err
+) {
     if (!graph || graph->kind != UC_NODE_MAP)
         return set_error(err, UC_E_MISSING, "missing map field 'graph'");
 

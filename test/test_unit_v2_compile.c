@@ -63,7 +63,13 @@ static int test_simple_gain_compile(void) {
     return 0;
 }
 
-static int expect_compile_invalid(const char *yaml, const char *label) {
+static int expect_compile_invalid_contains(
+    const char *yaml,
+    const char *label,
+    const char *must_contain_a,
+    const char *must_contain_b,
+    const char *must_contain_c
+) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
@@ -85,7 +91,16 @@ static int expect_compile_invalid(const char *yaml, const char *label) {
         fprintf(stderr, "accepted invalid compile case: %s\n", label);
         return 1;
     }
+    if ((must_contain_a && !strstr(err.msg, must_contain_a)) || (must_contain_b && !strstr(err.msg, must_contain_b)) ||
+        (must_contain_c && !strstr(err.msg, must_contain_c))) {
+        fprintf(stderr, "compile error for %s lacked expected detail: %s\n", label, err.msg);
+        return 1;
+    }
     return 0;
+}
+
+static int expect_compile_invalid(const char *yaml, const char *label) {
+    return expect_compile_invalid_contains(yaml, label, NULL, NULL, NULL);
 }
 
 static int expect_compile_valid(const char *yaml, const char *label) {
@@ -144,7 +159,7 @@ static int test_unknown_signal_rejected(void) {
                        "compatibility:\n"
                        "  desktop_full: true\n";
 
-    return expect_compile_invalid(yaml, "unknown signal binding");
+    return expect_compile_invalid_contains(yaml, "unknown signal binding", "apply_gain", "signal_b", "missing_signal");
 }
 
 static int test_unknown_binding_key_rejected(void) {
@@ -176,13 +191,14 @@ static int test_unknown_binding_key_rejected(void) {
                                 "    - id: apply_gain\n"
                                 "      atom: amplitude_multiply\n"
                                 "      in:\n"
-                                "        siggnal_a: input\n"
+                                "        signal_a: input\n"
                                 "        signal_b: gain_value\n"
+                                "        siggnal_a: input\n"
                                 "      out:\n"
                                 "        signal: output\n"
                                 "compatibility:\n"
                                 "  desktop_full: true\n";
-    if (expect_compile_invalid(bad_input_key, "unknown input binding key"))
+    if (expect_compile_invalid_contains(bad_input_key, "unknown input binding key", "apply_gain", "in", "siggnal_a"))
         return 1;
 
     const char *bad_config_key = "kind: apg.unit\n"
@@ -215,10 +231,13 @@ static int test_unknown_binding_key_rejected(void) {
                                  "      out:\n"
                                  "        signal: gain_value\n"
                                  "      config:\n"
+                                 "        value: ${params.gain}\n"
                                  "        valuue: ${params.gain}\n"
                                  "compatibility:\n"
                                  "  desktop_full: true\n";
-    return expect_compile_invalid(bad_config_key, "unknown config binding key");
+    return expect_compile_invalid_contains(
+        bad_config_key, "unknown config binding key", "gain_value", "config", "valuue"
+    );
 }
 
 static int test_required_bindings_rejected(void) {
@@ -254,7 +273,9 @@ static int test_required_bindings_rejected(void) {
                                    "        signal: output\n"
                                    "compatibility:\n"
                                    "  desktop_full: true\n";
-    if (expect_compile_invalid(missing_signal_b, "missing amplitude_multiply signal_b"))
+    if (expect_compile_invalid_contains(
+            missing_signal_b, "missing amplitude_multiply signal_b", "apply_gain", "in", "signal_b"
+        ))
         return 1;
 
     const char *missing_config_value = "kind: apg.unit\n"
@@ -287,7 +308,9 @@ static int test_required_bindings_rejected(void) {
                                        "        signal: output\n"
                                        "compatibility:\n"
                                        "  desktop_full: true\n";
-    return expect_compile_invalid(missing_config_value, "missing generation_dc value config");
+    return expect_compile_invalid_contains(
+        missing_config_value, "missing generation_dc value config", "gain_value", "config", "value"
+    );
 }
 
 static int test_extended_atom_binding_metadata_compile(void) {

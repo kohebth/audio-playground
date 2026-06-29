@@ -15,6 +15,18 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     return status;
 }
 
+static const char *bind_section_name(apg_bind_section_t section) {
+    switch (section) {
+    case APG_BIND_SECTION_IN:
+        return "in";
+    case APG_BIND_SECTION_OUT:
+        return "out";
+    case APG_BIND_SECTION_CONFIG:
+        return "config";
+    }
+    return "binding";
+}
+
 static const char *param_ref_name(const char *text) {
     if (!text)
         return NULL;
@@ -80,8 +92,14 @@ static uc_status record_node_output_producers(
         if (node->out[i].kind != APG_BIND_SIGNAL)
             continue;
         size_t signal_index = node->out[i].index;
-        if (signal_producers[signal_index] != UINT32_MAX)
-            return set_error(err, UC_E_MISSING, "graph signal has multiple producers");
+        if (signal_producers[signal_index] != UINT32_MAX) {
+            char msg[160];
+            snprintf(
+                msg, sizeof(msg), "node '%s' out binding '%s' writes signal with multiple producers",
+                node->id ? node->id : "", node->out[i].key ? node->out[i].key : ""
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
         signal_producers[signal_index] = node_index;
     }
     return UC_OK;
@@ -197,12 +215,17 @@ static int atom_binding_key_allowed(const char *atom, apg_bind_section_t section
     return !atom_has_schema(atom);
 }
 
-static uc_status validate_binding_key(const char *atom, apg_bind_section_t section, const char *key, uc_error *err) {
+static uc_status validate_binding_key(
+    const char *node_id, const char *atom, apg_bind_section_t section, const char *key, uc_error *err
+) {
     if (atom_binding_key_allowed(atom, section, key))
         return UC_OK;
 
-    char msg[128];
-    snprintf(msg, sizeof(msg), "atom '%s' does not accept binding key '%s'", atom ? atom : "", key ? key : "");
+    char msg[192];
+    snprintf(
+        msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' is not accepted", node_id ? node_id : "",
+        atom ? atom : "", bind_section_name(section), key ? key : ""
+    );
     return set_error(err, UC_E_MISSING, msg);
 }
 
@@ -215,6 +238,7 @@ static int binding_key_present(const apg_unit_v2_binding_t *bindings, size_t bin
 }
 
 static uc_status validate_required_binding_keys(
+    const char                  *node_id,
     const char                  *atom,
     apg_bind_section_t           section,
     const apg_unit_v2_binding_t *bindings,
@@ -227,9 +251,10 @@ static uc_status validate_required_binding_keys(
 
     for (size_t i = 0; i < schema->keys_len; i++) {
         if (!binding_key_present(bindings, bindings_len, schema->keys[i])) {
-            char msg[160];
+            char msg[192];
             snprintf(
-                msg, sizeof(msg), "atom '%s' is missing required binding key '%s'", atom ? atom : "", schema->keys[i]
+                msg, sizeof(msg), "node '%s' atom '%s' is missing required %s binding key '%s'", node_id ? node_id : "",
+                atom ? atom : "", bind_section_name(section), schema->keys[i]
             );
             return set_error(err, UC_E_MISSING, msg);
         }
@@ -239,6 +264,7 @@ static uc_status validate_required_binding_keys(
 
 static uc_status compile_signal_bindings(
     const apg_unit_v2_t         *unit,
+    const char                  *node_id,
     const char                  *atom,
     apg_bind_section_t           section,
     const apg_unit_v2_binding_t *bindings,
@@ -250,7 +276,7 @@ static uc_status compile_signal_bindings(
 ) {
     *out_bindings    = NULL;
     *out_len         = 0;
-    uc_status status = validate_required_binding_keys(atom, section, bindings, bindings_len, err);
+    uc_status status = validate_required_binding_keys(node_id, atom, section, bindings, bindings_len, err);
     if (status != UC_OK)
         return status;
     if (bindings_len == 0)
@@ -261,16 +287,24 @@ static uc_status compile_signal_bindings(
         return set_error(err, UC_E_OOM, "arena OOM");
 
     for (size_t i = 0; i < bindings_len; i++) {
-        status = validate_binding_key(atom, section, bindings[i].key, err);
+        status = validate_binding_key(node_id, atom, section, bindings[i].key, err);
         if (status != UC_OK)
             return status;
-        if (bindings[i].value.kind != UC_VAL_LITERAL)
-            return set_error(err, UC_E_TYPE, "signal binding must be a literal signal name");
+        if (bindings[i].value.kind != UC_VAL_LITERAL) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' %s binding key '%s' must be a literal signal name", node_id ? node_id : "",
+                bind_section_name(section), bindings[i].key ? bindings[i].key : ""
+            );
+            return set_error(err, UC_E_TYPE, msg);
+        }
         int signal_index = find_signal_index(unit, bindings[i].value.text);
         if (signal_index < 0) {
-            char msg[128];
+            char msg[192];
             snprintf(
-                msg, sizeof(msg), "unknown signal binding '%s'", bindings[i].value.text ? bindings[i].value.text : ""
+                msg, sizeof(msg), "node '%s' %s binding key '%s' references unknown signal '%s'",
+                node_id ? node_id : "", bind_section_name(section), bindings[i].key ? bindings[i].key : "",
+                bindings[i].value.text ? bindings[i].value.text : ""
             );
             return set_error(err, UC_E_MISSING, msg);
         }
@@ -288,6 +322,7 @@ static uc_status compile_signal_bindings(
 
 static uc_status compile_config_bindings(
     const apg_unit_v2_t         *unit,
+    const char                  *node_id,
     const char                  *atom,
     const apg_unit_v2_binding_t *bindings,
     size_t                       bindings_len,
@@ -296,9 +331,10 @@ static uc_status compile_config_bindings(
     size_t                      *out_len,
     uc_error                    *err
 ) {
-    *out_bindings    = NULL;
-    *out_len         = 0;
-    uc_status status = validate_required_binding_keys(atom, APG_BIND_SECTION_CONFIG, bindings, bindings_len, err);
+    *out_bindings = NULL;
+    *out_len      = 0;
+    uc_status status =
+        validate_required_binding_keys(node_id, atom, APG_BIND_SECTION_CONFIG, bindings, bindings_len, err);
     if (status != UC_OK)
         return status;
     if (bindings_len == 0)
@@ -309,7 +345,7 @@ static uc_status compile_config_bindings(
         return set_error(err, UC_E_OOM, "arena OOM");
 
     for (size_t i = 0; i < bindings_len; i++) {
-        status = validate_binding_key(atom, APG_BIND_SECTION_CONFIG, bindings[i].key, err);
+        status = validate_binding_key(node_id, atom, APG_BIND_SECTION_CONFIG, bindings[i].key, err);
         if (status != UC_OK)
             return status;
 
@@ -321,9 +357,10 @@ static uc_status compile_config_bindings(
             const char *param_name  = param_ref_name(bindings[i].value.text);
             int         param_index = find_param_index(unit, param_name);
             if (param_index < 0) {
-                char msg[128];
+                char msg[192];
                 snprintf(
-                    msg, sizeof(msg), "unknown config parameter '%s'",
+                    msg, sizeof(msg), "node '%s' config binding key '%s' references unknown parameter '%s'",
+                    node_id ? node_id : "", bindings[i].key ? bindings[i].key : "",
                     bindings[i].value.text ? bindings[i].value.text : ""
                 );
                 return set_error(err, UC_E_MISSING, msg);
@@ -370,19 +407,27 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
     for (size_t i = 0; i < unit->nodes_len; i++) {
         const apg_unit_v2_node_t    *src  = &unit->nodes[i];
         const atom_registry_entry_t *atom = atom_registry_find(src->atom);
-        if (!atom)
-            return set_error(err, UC_E_MISSING, "unknown atom during compile");
+        if (!atom) {
+            char msg[160];
+            snprintf(
+                msg, sizeof(msg), "node '%s' references unknown atom '%s'", src->id ? src->id : "",
+                src->atom ? src->atom : ""
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
 
         nodes[i].id   = src->id;
         nodes[i].atom = atom;
 
         status = compile_signal_bindings(
-            unit, src->atom, APG_BIND_SECTION_IN, src->in, src->in_len, arena, &nodes[i].in, &nodes[i].in_len, err
+            unit, src->id, src->atom, APG_BIND_SECTION_IN, src->in, src->in_len, arena, &nodes[i].in, &nodes[i].in_len,
+            err
         );
         if (status != UC_OK)
             return status;
         status = compile_signal_bindings(
-            unit, src->atom, APG_BIND_SECTION_OUT, src->out, src->out_len, arena, &nodes[i].out, &nodes[i].out_len, err
+            unit, src->id, src->atom, APG_BIND_SECTION_OUT, src->out, src->out_len, arena, &nodes[i].out,
+            &nodes[i].out_len, err
         );
         if (status != UC_OK)
             return status;
@@ -390,7 +435,7 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
         if (status != UC_OK)
             return status;
         status = compile_config_bindings(
-            unit, src->atom, src->config, src->config_len, arena, &nodes[i].config, &nodes[i].config_len, err
+            unit, src->id, src->atom, src->config, src->config_len, arena, &nodes[i].config, &nodes[i].config_len, err
         );
         if (status != UC_OK)
             return status;

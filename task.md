@@ -92,9 +92,9 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 
 ### Batch D: Error Quality
 
-- [ ] Include node IDs, binding section names, and binding keys in v2 compiler error messages.
-- [ ] Include param/port/signal names in loader validation errors when rejecting duplicates or invalid fields.
-- [ ] Add tests that assert representative error messages contain the useful identifier.
+- [x] Include node IDs, binding section names, and binding keys in v2 compiler error messages.
+- [x] Include param/port/signal names in loader validation errors when rejecting duplicates or invalid fields.
+- [x] Add tests that assert representative error messages contain the useful identifier.
 
 ### Batch E: Tooling and Docs
 
