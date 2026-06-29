@@ -109,7 +109,7 @@ Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame run
 - [x] Add a generic `apg_v2_runtime_process(...)` schedule executor independent of mono I/O copying.
 - [x] Refactor `apg_v2_runtime_process_mono(...)` onto the generic executor.
 - [x] Add runtime tests for `simple_clip` using literal config and chained processing.
-- [ ] Add runtime support/tests for multi-input mono fixtures such as `simple_mix`.
+- [x] Add runtime support/tests for multi-input mono fixtures such as `simple_mix`.
 
 ### Batch G: Runtime Robustness
 

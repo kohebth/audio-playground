@@ -180,6 +180,55 @@ static int test_simple_clip_process_generic(void) {
     return 0;
 }
 
+static int test_simple_mix_process_generic(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("units-v2/simple_mix.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize v2 runtime");
+    }
+
+    float *a      = apg_v2_runtime_find_signal(&runtime, "a");
+    float *b      = apg_v2_runtime_find_signal(&runtime, "b");
+    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    if (!a || !b || !output)
+        return fail("failed to find simple_mix signals");
+
+    a[0] = 0.25f;
+    a[1] = -0.5f;
+    a[2] = 1.5f;
+    a[3] = -2.0f;
+    b[0] = 0.75f;
+    b[1] = 0.25f;
+    b[2] = -0.5f;
+    b[3] = 1.0f;
+    if (!apg_v2_runtime_process(&runtime, 4u))
+        return fail("simple_mix generic processing failed");
+
+    const float expected[4] = {1.0f, -0.25f, 1.0f, -1.0f};
+    for (size_t i = 0; i < 4u; i++) {
+        if (output[i] != expected[i])
+            return fail("unexpected simple_mix output sample");
+    }
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_init_rejects_zero_capacity(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -207,6 +256,8 @@ int main(void) {
     if (test_simple_gain_process_mono())
         return 1;
     if (test_simple_clip_process_generic())
+        return 1;
+    if (test_simple_mix_process_generic())
         return 1;
     if (test_runtime_init_rejects_zero_capacity())
         return 1;
