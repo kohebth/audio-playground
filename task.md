@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-Continue **APGCore Phase 0 Foundation** from `docs/plans/2026-06-28-apgcore-phase-0-foundation-plan.md`.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase N.
 
-Goal: move the C DSP runtime and atoms away from fixed `CHUNK_LENGTH` assumptions by routing processing through `apg_process_info_t`, while preserving the existing v1 atom wrapper API and YAML runtime behavior.
+Goal: keep the v2 loader, compiler, runtime, host bridge, fixture library, and verification workflow stable while preserving the existing v1 atom wrapper API and YAML runtime behavior.
 
-Status: Phase 0 atom migration is complete. Phase 1 has added explicit-frame runtime/control/unit adapter entry points while preserving the v1 `chunk_length` capacity contract.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through N are complete. Use `./build-and-test.sh` for full verification, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification.
 
 ## Completed Foundation
 

@@ -99,7 +99,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - [x] N1: Add focused build targets or labels for v2 loader/compiler/runtime tests if useful.
 - [x] N2: Add sanitizer or debug verification jobs when the local workflow is stable.
-- [ ] N3: Keep `AGENTS.md`, `task.md`, and this plan aligned when workflow rules change.
+- [x] N3: Keep `AGENTS.md`, `task.md`, and this plan aligned when workflow rules change.
 
 ## Execution Order
 
