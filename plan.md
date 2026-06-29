@@ -118,10 +118,10 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase Q: Unit Schema Stabilization
 
-- [ ] Q1: Validate `meta` and `ui` sections instead of only tolerating them.
-- [ ] Q2: Add param UI metadata validation for label, control type, unit, scale, and display precision.
-- [ ] Q3: Add stable validation paths for UI-facing unit metadata errors.
-- [ ] Q4: Update schema docs and tests for the finalized UI metadata contract.
+- [x] Q1: Validate `meta` and `ui` sections instead of only tolerating them.
+- [x] Q2: Add param UI metadata validation for label, control type, unit, scale, and display precision.
+- [x] Q3: Add stable validation paths for UI-facing unit metadata errors.
+- [x] Q4: Update schema docs and tests for the finalized UI metadata contract.
 
 ### Phase R: Atom Catalog Export
 

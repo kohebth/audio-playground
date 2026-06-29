@@ -10,12 +10,23 @@
 typedef struct uc_node uc_node;
 
 typedef struct {
+    const char *title;
+    const char *category;
+    const char *description;
+} apg_unit_v2_meta_t;
+
+typedef struct {
     const char *name;
     const char *type;
     const char *default_value;
     const char *min_value;
     const char *max_value;
     const char *smoothing_ms;
+    const char *ui_label;
+    const char *ui_control;
+    const char *ui_unit;
+    const char *ui_scale;
+    const char *ui_display_precision;
 } apg_unit_v2_param_t;
 
 typedef struct {
@@ -49,6 +60,7 @@ typedef struct {
 typedef struct {
     const char          *name;
     const char          *version;
+    apg_unit_v2_meta_t   meta;
     apg_unit_v2_param_t *params;
     size_t               params_len;
     apg_unit_v2_port_t  *input_ports;

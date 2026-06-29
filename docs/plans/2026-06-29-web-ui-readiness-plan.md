@@ -126,7 +126,7 @@
 
 ## Success Criteria
 
-- [ ] `unit.v2.yaml` includes validated UI metadata that can render a parameter panel.
+- [x] `unit.v2.yaml` includes validated UI metadata that can render a parameter panel.
 - [ ] Atom catalog metadata is exportable as stable JSON.
 - [ ] `project.v2.yaml` can load, validate, and compile multiple unit instances.
 - [ ] CLI or equivalent tools emit structured JSON validation and inspection output.

@@ -13,7 +13,10 @@
 - `graph`: Internal signal and atom graph.
 - `compatibility`: Non-empty map of boolean target flags.
 
-Extra metadata such as `meta` and `ui` is currently tolerated but not interpreted by the C loader.
+Optional top-level metadata:
+
+- `meta`: Map with optional scalar `title`, `category`, and `description` fields.
+- `ui`: Optional map reserved for unit-level layout hints. It is validated as a map when present, but specific layout fields are not interpreted yet.
 
 ## Params
 
@@ -22,7 +25,16 @@ Params are keyed by name. Names must be unique.
 - `type`: `float`, `int`, or `bool`.
 - `default`: Required initial value.
 - `min` / `max`: Required for `float` and `int`; omitted for `bool`.
-- `smoothing_ms`: Optional hint, currently parsed only as metadata.
+- `smoothing_ms`: Optional hint for future runtime smoothing.
+- `ui`: Optional map for UI rendering hints.
+
+Supported param `ui` fields are scalar values:
+
+- `label`: Display label.
+- `control`: One of `knob`, `slider`, `toggle`, `number`, or `select`.
+- `unit`: Display unit such as `x`, `dB`, `Hz`, or `%`.
+- `scale`: One of `linear`, `log`, or `exp`.
+- `display_precision`: Non-negative integer decimal precision.
 
 ```yaml
 params:
@@ -31,6 +43,13 @@ params:
     default: 1.0
     min: 0.0
     max: 4.0
+    smoothing_ms: 10
+    ui:
+      label: Gain
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
 ```
 
 ## Ports

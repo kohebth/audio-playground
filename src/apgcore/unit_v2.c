@@ -38,6 +38,32 @@ static const char *required_scalar(const uc_node *map, const char *key, uc_error
     return node->text;
 }
 
+static const uc_node *optional_map_path(const uc_node *map, const char *key, const char *path, uc_error *err) {
+    const uc_node *node = uc_node_find(map, key);
+    if (!node)
+        return NULL;
+    if (node->kind != UC_NODE_MAP) {
+        char msg[160];
+        snprintf(msg, sizeof(msg), "%s must be a map", path ? path : key);
+        set_error(err, UC_E_TYPE, msg);
+        return NULL;
+    }
+    return node;
+}
+
+static const char *optional_scalar_path(const uc_node *map, const char *key, const char *path, uc_error *err) {
+    const uc_node *node = uc_node_find(map, key);
+    if (!node)
+        return NULL;
+    if (node->kind != UC_NODE_SCALAR) {
+        char msg[160];
+        snprintf(msg, sizeof(msg), "%s must be a scalar", path ? path : key);
+        set_error(err, UC_E_TYPE, msg);
+        return NULL;
+    }
+    return node->text;
+}
+
 static bool map_has_key(const uc_node *map, const char *key) { return uc_node_find(map, key) != NULL; }
 
 static bool seq_contains_scalar(const uc_node *seq, const char *value) {
@@ -144,6 +170,91 @@ static uc_status validate_param_refs(const uc_node *node, const uc_node *params,
     return UC_OK;
 }
 
+static bool param_ui_control_is_valid(const char *control) {
+    return !control || strcmp(control, "knob") == 0 || strcmp(control, "slider") == 0 ||
+           strcmp(control, "toggle") == 0 || strcmp(control, "number") == 0 || strcmp(control, "select") == 0;
+}
+
+static bool param_ui_scale_is_valid(const char *scale) {
+    return !scale || strcmp(scale, "linear") == 0 || strcmp(scale, "log") == 0 || strcmp(scale, "exp") == 0;
+}
+
+static bool nonnegative_uint_text_is_valid(const char *text) {
+    if (!text || text[0] == '\0')
+        return false;
+    char         *end   = NULL;
+    unsigned long value = strtoul(text, &end, 10);
+    (void)value;
+    return end && *end == '\0';
+}
+
+static uc_status validate_and_fill_meta(const uc_node *root, apg_unit_v2_t *out, uc_error *err) {
+    const uc_node *meta = optional_map_path(root, "meta", "meta", err);
+    if (!meta)
+        return err->status == UC_OK ? UC_OK : err->status;
+
+    out->meta.title       = optional_scalar_path(meta, "title", "meta.title", err);
+    out->meta.category    = optional_scalar_path(meta, "category", "meta.category", err);
+    out->meta.description = optional_scalar_path(meta, "description", "meta.description", err);
+    return err->status == UC_OK ? UC_OK : err->status;
+}
+
+static uc_status validate_unit_ui(const uc_node *root, uc_error *err) {
+    const uc_node *ui = optional_map_path(root, "ui", "ui", err);
+    (void)ui;
+    return err->status == UC_OK ? UC_OK : err->status;
+}
+
+static uc_status fill_param_ui(const uc_node *param, const char *param_name, apg_unit_v2_param_t *out, uc_error *err) {
+    char path[128];
+    snprintf(path, sizeof(path), "params.%s.ui", param_name ? param_name : "");
+    const uc_node *ui = optional_map_path(param, "ui", path, err);
+    if (!ui)
+        return err->status == UC_OK ? UC_OK : err->status;
+
+    snprintf(path, sizeof(path), "params.%s.ui.label", param_name ? param_name : "");
+    out->ui_label = optional_scalar_path(ui, "label", path, err);
+    if (err->status != UC_OK)
+        return err->status;
+
+    snprintf(path, sizeof(path), "params.%s.ui.control", param_name ? param_name : "");
+    out->ui_control = optional_scalar_path(ui, "control", path, err);
+    if (err->status != UC_OK)
+        return err->status;
+    if (!param_ui_control_is_valid(out->ui_control)) {
+        char msg[192];
+        snprintf(msg, sizeof(msg), "%s must be one of knob, slider, toggle, number, or select", path);
+        return set_error(err, UC_E_TYPE, msg);
+    }
+
+    snprintf(path, sizeof(path), "params.%s.ui.unit", param_name ? param_name : "");
+    out->ui_unit = optional_scalar_path(ui, "unit", path, err);
+    if (err->status != UC_OK)
+        return err->status;
+
+    snprintf(path, sizeof(path), "params.%s.ui.scale", param_name ? param_name : "");
+    out->ui_scale = optional_scalar_path(ui, "scale", path, err);
+    if (err->status != UC_OK)
+        return err->status;
+    if (!param_ui_scale_is_valid(out->ui_scale)) {
+        char msg[192];
+        snprintf(msg, sizeof(msg), "%s must be one of linear, log, or exp", path);
+        return set_error(err, UC_E_TYPE, msg);
+    }
+
+    snprintf(path, sizeof(path), "params.%s.ui.display_precision", param_name ? param_name : "");
+    out->ui_display_precision = optional_scalar_path(ui, "display_precision", path, err);
+    if (err->status != UC_OK)
+        return err->status;
+    if (out->ui_display_precision && !nonnegative_uint_text_is_valid(out->ui_display_precision)) {
+        char msg[192];
+        snprintf(msg, sizeof(msg), "%s must be a non-negative integer", path);
+        return set_error(err, UC_E_RANGE, msg);
+    }
+
+    return UC_OK;
+}
+
 static uc_status fill_bindings(
     const uc_node *map, uc_arena *arena, apg_unit_v2_binding_t **out_bindings, size_t *out_len, uc_error *err
 ) {
@@ -239,6 +350,9 @@ static uc_status validate_and_fill_params(const uc_node *params, uc_arena *arena
         items[i].min_value     = min_value;
         items[i].max_value     = max_value;
         items[i].smoothing_ms  = value_text(uc_node_find(param, "smoothing_ms"));
+        uc_status status       = fill_param_ui(param, params->map[i].key, &items[i], err);
+        if (status != UC_OK)
+            return status;
     }
 
     out->params     = items;
@@ -636,8 +750,15 @@ static uc_status validate_unit_root(const uc_node *root, uc_arena *arena, apg_un
     if (!out->version)
         return err->status;
 
+    uc_status status = validate_and_fill_meta(root, out, err);
+    if (status != UC_OK)
+        return status;
+    status = validate_unit_ui(root, err);
+    if (status != UC_OK)
+        return status;
+
     const uc_node *params = uc_node_find(root, "params");
-    uc_status      status = validate_and_fill_params(params, arena, out, err);
+    status                = validate_and_fill_params(params, arena, out, err);
     if (status != UC_OK)
         return status;
 

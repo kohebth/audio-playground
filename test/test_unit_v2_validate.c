@@ -26,6 +26,9 @@ static int expect_valid_fixture(void) {
         return fail("unexpected v2 unit name");
     if (strcmp(unit.version, "2.0.0") != 0)
         return fail("unexpected v2 unit version");
+    if (!unit.meta.title || strcmp(unit.meta.title, "Simple Gain") != 0 || !unit.meta.category ||
+        strcmp(unit.meta.category, "utility") != 0 || !unit.meta.description)
+        return fail("unexpected parsed v2 unit meta");
     if (unit.params_len != 1u || unit.input_ports_len != 1u || unit.output_ports_len != 1u)
         return fail("unexpected v2 unit public surface counts");
     if (unit.signals_len != 3u || unit.nodes_len != 2u)
@@ -35,6 +38,10 @@ static int expect_valid_fixture(void) {
     if (strcmp(unit.params[0].default_value, "1.0") != 0 || strcmp(unit.params[0].min_value, "0.0") != 0 ||
         strcmp(unit.params[0].max_value, "4.0") != 0 || strcmp(unit.params[0].smoothing_ms, "10") != 0)
         return fail("unexpected parsed v2 param values");
+    if (!unit.params[0].ui_label || strcmp(unit.params[0].ui_label, "Gain") != 0 || !unit.params[0].ui_control ||
+        strcmp(unit.params[0].ui_control, "knob") != 0 || !unit.params[0].ui_unit ||
+        strcmp(unit.params[0].ui_unit, "x") != 0)
+        return fail("unexpected parsed v2 param ui metadata");
     if (!unit.input_ports || strcmp(unit.input_ports[0].name, "input") != 0 ||
         strcmp(unit.input_ports[0].type, "audio") != 0 || unit.input_ports[0].signals_len != 0u)
         return fail("unexpected parsed v2 input port");
@@ -127,6 +134,169 @@ int main(void) {
                              "compatibility:\n"
                              "  desktop_full: true\n";
     if (expect_valid(bool_param, "bool param without numeric bounds"))
+        return 1;
+
+    const char *meta_not_map = "kind: apg.unit\n"
+                               "schema: apg.unit.v2\n"
+                               "name: bad_unit\n"
+                               "version: 2.0.0\n"
+                               "meta: bad\n"
+                               "params:\n"
+                               "  gain:\n"
+                               "    type: float\n"
+                               "    default: 1.0\n"
+                               "    min: 0.0\n"
+                               "    max: 2.0\n"
+                               "ports:\n"
+                               "  inputs:\n"
+                               "    - name: input\n"
+                               "      type: audio\n"
+                               "      channels: 1\n"
+                               "  outputs:\n"
+                               "    - name: output\n"
+                               "      type: audio\n"
+                               "      channels: 1\n"
+                               "graph:\n"
+                               "  signals:\n"
+                               "    - input\n"
+                               "    - output\n"
+                               "  nodes:\n"
+                               "    - id: pass\n"
+                               "      atom: amplitude_multiply\n"
+                               "compatibility:\n"
+                               "  desktop_full: true\n";
+    if (expect_invalid_contains(meta_not_map, "meta not map", "meta"))
+        return 1;
+
+    const char *unit_ui_not_map = "kind: apg.unit\n"
+                                  "schema: apg.unit.v2\n"
+                                  "name: bad_unit\n"
+                                  "version: 2.0.0\n"
+                                  "ui: compact\n"
+                                  "params:\n"
+                                  "  gain:\n"
+                                  "    type: float\n"
+                                  "    default: 1.0\n"
+                                  "    min: 0.0\n"
+                                  "    max: 2.0\n"
+                                  "ports:\n"
+                                  "  inputs:\n"
+                                  "    - name: input\n"
+                                  "      type: audio\n"
+                                  "      channels: 1\n"
+                                  "  outputs:\n"
+                                  "    - name: output\n"
+                                  "      type: audio\n"
+                                  "      channels: 1\n"
+                                  "graph:\n"
+                                  "  signals:\n"
+                                  "    - input\n"
+                                  "    - output\n"
+                                  "  nodes:\n"
+                                  "    - id: pass\n"
+                                  "      atom: amplitude_multiply\n"
+                                  "compatibility:\n"
+                                  "  desktop_full: true\n";
+    if (expect_invalid_contains(unit_ui_not_map, "unit ui not map", "ui"))
+        return 1;
+
+    const char *param_ui_invalid_control = "kind: apg.unit\n"
+                                           "schema: apg.unit.v2\n"
+                                           "name: bad_unit\n"
+                                           "version: 2.0.0\n"
+                                           "params:\n"
+                                           "  gain:\n"
+                                           "    type: float\n"
+                                           "    default: 1.0\n"
+                                           "    min: 0.0\n"
+                                           "    max: 2.0\n"
+                                           "    ui:\n"
+                                           "      control: wheel\n"
+                                           "ports:\n"
+                                           "  inputs:\n"
+                                           "    - name: input\n"
+                                           "      type: audio\n"
+                                           "      channels: 1\n"
+                                           "  outputs:\n"
+                                           "    - name: output\n"
+                                           "      type: audio\n"
+                                           "      channels: 1\n"
+                                           "graph:\n"
+                                           "  signals:\n"
+                                           "    - input\n"
+                                           "    - output\n"
+                                           "  nodes:\n"
+                                           "    - id: pass\n"
+                                           "      atom: amplitude_multiply\n"
+                                           "compatibility:\n"
+                                           "  desktop_full: true\n";
+    if (expect_invalid_contains(param_ui_invalid_control, "param ui invalid control", "params.gain.ui.control"))
+        return 1;
+
+    const char *param_ui_invalid_scale = "kind: apg.unit\n"
+                                         "schema: apg.unit.v2\n"
+                                         "name: bad_unit\n"
+                                         "version: 2.0.0\n"
+                                         "params:\n"
+                                         "  gain:\n"
+                                         "    type: float\n"
+                                         "    default: 1.0\n"
+                                         "    min: 0.0\n"
+                                         "    max: 2.0\n"
+                                         "    ui:\n"
+                                         "      scale: stepped\n"
+                                         "ports:\n"
+                                         "  inputs:\n"
+                                         "    - name: input\n"
+                                         "      type: audio\n"
+                                         "      channels: 1\n"
+                                         "  outputs:\n"
+                                         "    - name: output\n"
+                                         "      type: audio\n"
+                                         "      channels: 1\n"
+                                         "graph:\n"
+                                         "  signals:\n"
+                                         "    - input\n"
+                                         "    - output\n"
+                                         "  nodes:\n"
+                                         "    - id: pass\n"
+                                         "      atom: amplitude_multiply\n"
+                                         "compatibility:\n"
+                                         "  desktop_full: true\n";
+    if (expect_invalid_contains(param_ui_invalid_scale, "param ui invalid scale", "params.gain.ui.scale"))
+        return 1;
+
+    const char *param_ui_invalid_precision = "kind: apg.unit\n"
+                                             "schema: apg.unit.v2\n"
+                                             "name: bad_unit\n"
+                                             "version: 2.0.0\n"
+                                             "params:\n"
+                                             "  gain:\n"
+                                             "    type: float\n"
+                                             "    default: 1.0\n"
+                                             "    min: 0.0\n"
+                                             "    max: 2.0\n"
+                                             "    ui:\n"
+                                             "      display_precision: high\n"
+                                             "ports:\n"
+                                             "  inputs:\n"
+                                             "    - name: input\n"
+                                             "      type: audio\n"
+                                             "      channels: 1\n"
+                                             "  outputs:\n"
+                                             "    - name: output\n"
+                                             "      type: audio\n"
+                                             "      channels: 1\n"
+                                             "graph:\n"
+                                             "  signals:\n"
+                                             "    - input\n"
+                                             "    - output\n"
+                                             "  nodes:\n"
+                                             "    - id: pass\n"
+                                             "      atom: amplitude_multiply\n"
+                                             "compatibility:\n"
+                                             "  desktop_full: true\n";
+    if (expect_invalid_contains(param_ui_invalid_precision, "param ui invalid precision", "display_precision"))
         return 1;
 
     const char *unknown_param_type = "kind: apg.unit\n"

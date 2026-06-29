@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase P.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase Q.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through P are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through Q are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -71,10 +71,10 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 
 
 ### Phase Q: Unit Schema Stabilization
 
-- [ ] Q1: Validate `meta` and `ui` sections instead of only tolerating them.
-- [ ] Q2: Add param UI metadata validation for label, control type, unit, scale, and display precision.
-- [ ] Q3: Add stable validation paths for UI-facing unit metadata errors.
-- [ ] Q4: Update schema docs and tests for the finalized UI metadata contract.
+- [x] Q1: Validate `meta` and `ui` sections instead of only tolerating them.
+- [x] Q2: Add param UI metadata validation for label, control type, unit, scale, and display precision.
+- [x] Q3: Add stable validation paths for UI-facing unit metadata errors.
+- [x] Q4: Update schema docs and tests for the finalized UI metadata contract.
 
 ### Phase R: Atom Catalog Export
 

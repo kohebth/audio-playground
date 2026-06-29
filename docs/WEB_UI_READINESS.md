@@ -5,14 +5,14 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 ## Current Backend Status
 
 - APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, and control-to-param routing are implemented through Phase O.
-- `unit.v2.yaml` is executable and tested, but UI metadata is mostly tolerated rather than validated.
+- `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`.
 - Full project/session files are still missing.
 - UI-facing JSON contracts for atom catalog, unit inspection, project inspection, and validation output are still missing.
 
 ## Ready To Start Web UI When
 
-- [ ] Unit metadata can render a parameter panel without frontend hardcoding.
+- [x] Unit metadata can render a parameter panel without frontend hardcoding.
 - [ ] Atom catalog metadata can render an atom palette without frontend hardcoding.
 - [ ] Project files can reference multiple units and define routes between unit instances.
 - [ ] Validation returns structured errors and warnings with stable file/path fields.
