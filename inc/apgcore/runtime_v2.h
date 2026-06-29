@@ -31,7 +31,10 @@ typedef struct {
     float                       **signals;
     size_t                        signals_len;
     float                        *params;
+    float                        *param_targets;
+    uint32_t                     *param_smoothing_remaining_frames;
     size_t                        params_len;
+    bool                          has_processed;
     apg_v2_runtime_node_t        *nodes;
     size_t                        nodes_len;
     char                          last_error[160];

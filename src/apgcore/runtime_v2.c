@@ -1,6 +1,7 @@
 #include <apgcore/runtime_v2.h>
 #include <atom/dsp_types.h>
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -113,6 +114,20 @@ static float parse_param_default(const apg_unit_v2_param_t *param) {
     return strtof(param->default_value, NULL);
 }
 
+static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, const apg_v2_runtime_t *runtime) {
+    if (!param || !param->smoothing_ms || !runtime)
+        return 0u;
+    float smoothing_ms = strtof(param->smoothing_ms, NULL);
+    if (smoothing_ms <= 0.0f)
+        return 0u;
+    double sample_rate = runtime->process_info.sample_rate > 0.0f ? runtime->process_info.sample_rate : 48000.0f;
+    double frames      = ((double)smoothing_ms * sample_rate) / 1000.0;
+    if (frames >= (double)UINT32_MAX)
+        return UINT32_MAX;
+    uint32_t rounded = (uint32_t)(frames + 0.999999);
+    return rounded > 0u ? rounded : 1u;
+}
+
 static uc_status
 init_signal_buffers(const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, apg_v2_runtime_t *out, uc_error *err) {
     out->signals_len = plan->unit->signals_len;
@@ -136,13 +151,34 @@ static uc_status init_params(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_
     if (out->params_len == 0u)
         return UC_OK;
 
-    out->params = calloc(out->params_len, sizeof(*out->params));
-    if (!out->params)
+    out->params                           = calloc(out->params_len, sizeof(*out->params));
+    out->param_targets                    = calloc(out->params_len, sizeof(*out->param_targets));
+    out->param_smoothing_remaining_frames = calloc(out->params_len, sizeof(*out->param_smoothing_remaining_frames));
+    if (!out->params || !out->param_targets || !out->param_smoothing_remaining_frames)
         return set_error(err, UC_E_OOM, "v2 runtime param allocation failed");
 
-    for (size_t i = 0; i < out->params_len; i++)
-        out->params[i] = parse_param_default(&plan->unit->params[i]);
+    for (size_t i = 0; i < out->params_len; i++) {
+        out->params[i]        = parse_param_default(&plan->unit->params[i]);
+        out->param_targets[i] = out->params[i];
+    }
     return UC_OK;
+}
+
+static void advance_smoothed_params(apg_v2_runtime_t *runtime, uint32_t frames) {
+    if (!runtime || !runtime->params || !runtime->param_targets || !runtime->param_smoothing_remaining_frames ||
+        !runtime->plan || !runtime->plan->unit)
+        return;
+    for (size_t i = 0; i < runtime->params_len && i < runtime->plan->unit->params_len; i++) {
+        uint32_t remaining = runtime->param_smoothing_remaining_frames[i];
+        if (remaining == 0u)
+            continue;
+        uint32_t advance = frames < remaining ? frames : remaining;
+        runtime->params[i] += (runtime->param_targets[i] - runtime->params[i]) * ((float)advance / (float)remaining);
+        remaining -= advance;
+        runtime->param_smoothing_remaining_frames[i] = remaining;
+        if (remaining == 0u)
+            runtime->params[i] = runtime->param_targets[i];
+    }
 }
 
 static uc_status
@@ -595,7 +631,17 @@ bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float
     const apg_unit_v2_t *unit = runtime->plan->unit;
     for (size_t i = 0; i < unit->params_len && i < runtime->params_len; i++) {
         if (unit->params[i].name && strcmp(unit->params[i].name, name) == 0) {
-            runtime->params[i] = value;
+            uint32_t smoothing_frames = runtime->has_processed ? param_smoothing_frames(&unit->params[i], runtime) : 0u;
+            if (!runtime->param_targets || !runtime->param_smoothing_remaining_frames || smoothing_frames == 0u) {
+                runtime->params[i] = value;
+                if (runtime->param_targets)
+                    runtime->param_targets[i] = value;
+                if (runtime->param_smoothing_remaining_frames)
+                    runtime->param_smoothing_remaining_frames[i] = 0u;
+                return true;
+            }
+            runtime->param_targets[i]                    = value;
+            runtime->param_smoothing_remaining_frames[i] = smoothing_frames;
             return true;
         }
     }
@@ -625,8 +671,14 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
             runtime->signal_pool, 0,
             runtime->signals_len * (size_t)runtime->frame_capacity * sizeof(*runtime->signal_pool)
         );
-    for (size_t i = 0; i < runtime->params_len && i < runtime->plan->unit->params_len; i++)
+    for (size_t i = 0; i < runtime->params_len && i < runtime->plan->unit->params_len; i++) {
         runtime->params[i] = parse_param_default(&runtime->plan->unit->params[i]);
+        if (runtime->param_targets)
+            runtime->param_targets[i] = runtime->params[i];
+        if (runtime->param_smoothing_remaining_frames)
+            runtime->param_smoothing_remaining_frames[i] = 0u;
+    }
+    runtime->has_processed = false;
 
     for (size_t i = 0; i < runtime->nodes_len && i < runtime->plan->nodes_len; i++) {
         apg_v2_runtime_node_t       *node = &runtime->nodes[i];
@@ -674,6 +726,7 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
 
     runtime->process_info.frames        = frames;
     runtime->process_info.output_frames = frames;
+    advance_smoothed_params(runtime, frames);
 
     uc_error err = {0};
     for (size_t i = 0; i < runtime->plan->schedule_len; i++) {
@@ -693,6 +746,7 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
         }
         compiled->atom->thunk(&runtime->nodes[scheduled_index].call);
     }
+    runtime->has_processed = true;
     return true;
 }
 
@@ -867,6 +921,8 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     }
     free(runtime->nodes);
     free(runtime->params);
+    free(runtime->param_targets);
+    free(runtime->param_smoothing_remaining_frames);
     free(runtime->signals);
     free(runtime->signal_pool);
     memset(runtime, 0, sizeof(*runtime));

@@ -41,6 +41,18 @@ static int expect_samples(const float *actual, const float *expected, size_t fra
     return 0;
 }
 
+static int
+expect_samples_near(const float *actual, const float *expected, size_t frames, float tolerance, const char *label) {
+    for (size_t i = 0; i < frames; i++) {
+        float diff = actual[i] > expected[i] ? actual[i] - expected[i] : expected[i] - actual[i];
+        if (diff > tolerance) {
+            fprintf(stderr, "unexpected %s sample at %zu: got %f expected %f\n", label, i, actual[i], expected[i]);
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static int test_simple_project_compiles_and_runs(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -92,8 +104,8 @@ static int test_simple_project_compiles_and_runs(void) {
         return fail("project runtime accepted unqualified param");
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u))
         return fail("project runtime processing after param update failed");
-    const float expected_updated[3] = {0.75f, -1.5f, 3.0f};
-    if (expect_samples(output, expected_updated, 3u, "project updated gain"))
+    const float expected_updated[3] = {0.5015625f, -1.003125f, 2.00625f};
+    if (expect_samples_near(output, expected_updated, 3u, 0.00001f, "project updated gain"))
         return 1;
 
     apg_v2_runtime_destroy(&runtime);
@@ -145,8 +157,8 @@ static int test_two_instance_project_compiles_and_runs(void) {
         return fail("two-instance runtime did not accept second instance param");
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("two-instance project processing after update failed");
-    const float expected_updated[2] = {2.0f, -4.0f};
-    if (expect_samples(output, expected_updated, 2u, "two-instance project updated"))
+    const float expected_updated[2] = {1.5020833f, -3.0041666f};
+    if (expect_samples_near(output, expected_updated, 2u, 0.00001f, "two-instance project updated"))
         return 1;
 
     apg_v2_runtime_destroy(&runtime);

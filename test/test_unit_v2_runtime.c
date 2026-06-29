@@ -57,6 +57,15 @@ static int expect_samples(const float *actual, const float *expected, size_t fra
     return 0;
 }
 
+static int expect_near(float actual, float expected, float tolerance, const char *label) {
+    float diff = actual > expected ? actual - expected : expected - actual;
+    if (diff > tolerance) {
+        fprintf(stderr, "unexpected %s: got %f expected %f\n", label, actual, expected);
+        return 1;
+    }
+    return 0;
+}
+
 static int test_runtime_init_simple_gain(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -94,7 +103,9 @@ static int test_runtime_init_simple_gain(void) {
         }
     }
 
-    if (runtime.params_len != 1u || !runtime.params || runtime.params[0] != 1.0f)
+    if (runtime.params_len != 1u || !runtime.params || !runtime.param_targets ||
+        !runtime.param_smoothing_remaining_frames || runtime.params[0] != 1.0f || runtime.param_targets[0] != 1.0f ||
+        runtime.param_smoothing_remaining_frames[0] != 0u)
         return fail("unexpected runtime param defaults");
     if (runtime.nodes_len != plan.nodes_len || runtime.nodes_len != 2u || !runtime.nodes)
         return fail("unexpected runtime node allocation shape");
@@ -110,7 +121,8 @@ static int test_runtime_init_simple_gain(void) {
     }
 
     apg_v2_runtime_destroy(&runtime);
-    if (runtime.signal_pool || runtime.signals || runtime.params || runtime.nodes || runtime.signals_len != 0u)
+    if (runtime.signal_pool || runtime.signals || runtime.params || runtime.param_targets ||
+        runtime.param_smoothing_remaining_frames || runtime.nodes || runtime.signals_len != 0u)
         return fail("runtime destroy did not clear owned storage");
 
     uc_arena_free(&arena);
@@ -215,6 +227,81 @@ static int test_simple_gain_process_mono(void) {
     const char *last_error = apg_v2_runtime_last_error(&runtime);
     if (!last_error || !strstr(last_error, "capacity"))
         return fail("simple_gain over-capacity failure did not expose a useful error");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 512u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize smoothing runtime");
+    }
+
+    float input[512];
+    float output[512];
+    for (size_t i = 0; i < 512u; i++) {
+        input[i]  = 1.0f;
+        output[i] = 0.0f;
+    }
+
+    if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
+        return fail("failed to set initial smoothed param");
+    if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
+        return fail("initial immediate smoothing process failed");
+    for (size_t i = 0; i < 4u; i++) {
+        if (expect_near(output[i], 2.0f, 0.0001f, "initial immediate smoothing sample"))
+            return 1;
+    }
+
+    if (!apg_v2_runtime_reset(&runtime))
+        return fail("smoothing runtime reset failed");
+    if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
+        return fail("default smoothing process failed");
+    for (size_t i = 0; i < 4u; i++) {
+        if (expect_near(output[i], 1.0f, 0.0001f, "default smoothing sample"))
+            return 1;
+    }
+
+    if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
+        return fail("failed to set live smoothed param");
+    if (runtime.param_targets[0] != 2.0f || runtime.param_smoothing_remaining_frames[0] != 480u)
+        return fail("live smoothed param did not capture target and duration");
+    if (!apg_v2_runtime_process_mono(&runtime, input, output, 48u))
+        return fail("first live smoothing block failed");
+    for (size_t i = 0; i < 48u; i++) {
+        if (expect_near(output[i], 1.1f, 0.0001f, "first live smoothing sample"))
+            return 1;
+    }
+    if (expect_near(runtime.params[0], 1.1f, 0.0001f, "first live smoothing param") ||
+        runtime.param_smoothing_remaining_frames[0] != 432u)
+        return 1;
+
+    if (!apg_v2_runtime_process_mono(&runtime, input, output, 432u))
+        return fail("final live smoothing block failed");
+    for (size_t i = 0; i < 432u; i++) {
+        if (expect_near(output[i], 2.0f, 0.0001f, "final live smoothing sample"))
+            return 1;
+    }
+    if (runtime.param_smoothing_remaining_frames[0] != 0u ||
+        expect_near(runtime.params[0], 2.0f, 0.0001f, "final live smoothing param"))
+        return 1;
 
     apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);
@@ -1351,7 +1438,8 @@ static int test_runtime_init_failure_cleans_partial_allocations(void) {
     uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
     if (status == UC_OK)
         return fail("runtime init accepted node without atom metadata");
-    if (runtime.signal_pool || runtime.signals || runtime.params || runtime.nodes || runtime.signals_len != 0u ||
+    if (runtime.signal_pool || runtime.signals || runtime.params || runtime.param_targets ||
+        runtime.param_smoothing_remaining_frames || runtime.nodes || runtime.signals_len != 0u ||
         runtime.nodes_len != 0u)
         return fail("runtime init failure did not clean partial allocations");
     if (!strstr(err.msg, "atom metadata"))
@@ -1388,6 +1476,8 @@ int main(void) {
     if (test_runtime_config_error_names_node_atom_and_binding())
         return 1;
     if (test_simple_gain_process_mono())
+        return 1;
+    if (test_runtime_param_smoothing_advances_at_block_boundaries())
         return 1;
     if (test_named_public_port_signal_lookup())
         return 1;
