@@ -788,6 +788,98 @@ static int test_simple_mix_process_generic(void) {
     return 0;
 }
 
+static int test_mix_matrix_process_generic(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: matrix_mix_runtime\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  bypass:\n"
+                       "    type: bool\n"
+                       "    default: false\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: a\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "    - name: b\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: sum\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "    - name: diff\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - a\n"
+                       "    - b\n"
+                       "    - sum\n"
+                       "    - diff\n"
+                       "  nodes:\n"
+                       "    - id: matrix\n"
+                       "      atom: mix_matrix\n"
+                       "      in:\n"
+                       "        signals:\n"
+                       "          - a\n"
+                       "          - b\n"
+                       "      out:\n"
+                       "        signals:\n"
+                       "          - sum\n"
+                       "          - diff\n"
+                       "      config:\n"
+                       "        coefficients:\n"
+                       "          row0: { c0: 0.5, c1: 0.5 }\n"
+                       "          row1: { c0: 1.0, c1: -1.0 }\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_string(yaml, &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize mix_matrix runtime");
+    }
+
+    float *a    = apg_v2_runtime_find_signal(&runtime, "a");
+    float *b    = apg_v2_runtime_find_signal(&runtime, "b");
+    float *sum  = apg_v2_runtime_find_signal(&runtime, "sum");
+    float *diff = apg_v2_runtime_find_signal(&runtime, "diff");
+    if (!a || !b || !sum || !diff)
+        return fail("failed to find mix_matrix signals");
+
+    a[0] = 2.0f;
+    a[1] = -4.0f;
+    b[0] = 6.0f;
+    b[1] = 1.0f;
+    if (!apg_v2_runtime_process(&runtime, 2u))
+        return fail("mix_matrix processing failed");
+    const float expected_sum[2]  = {4.0f, -1.5f};
+    const float expected_diff[2] = {-4.0f, -5.0f};
+    if (expect_samples(sum, expected_sum, 2u, "mix_matrix sum") ||
+        expect_samples(diff, expected_diff, 2u, "mix_matrix diff"))
+        return 1;
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_delay_line_state_buffer_process(void) {
     const char *yaml = "kind: apg.unit\n"
                        "schema: apg.unit.v2\n"
@@ -1285,6 +1377,8 @@ int main(void) {
     if (test_simple_clip_process_generic())
         return 1;
     if (test_simple_mix_process_generic())
+        return 1;
+    if (test_mix_matrix_process_generic())
         return 1;
     if (test_delay_line_state_buffer_process())
         return 1;

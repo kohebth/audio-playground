@@ -7,6 +7,8 @@
 #include <yaml/error.h>
 #include <yaml/unit.h>
 
+typedef struct uc_node uc_node;
+
 typedef struct {
     const char *name;
     const char *type;
@@ -26,8 +28,9 @@ typedef struct {
 } apg_unit_v2_port_t;
 
 typedef struct {
-    const char *key;
-    uc_value    value;
+    const char    *key;
+    uc_value       value;
+    const uc_node *node;
 } apg_unit_v2_binding_t;
 
 typedef struct {

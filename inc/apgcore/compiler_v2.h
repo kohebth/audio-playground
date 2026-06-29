@@ -13,6 +13,8 @@ typedef enum {
     APG_BIND_SIGNAL,
     APG_BIND_PARAM,
     APG_BIND_LITERAL,
+    APG_BIND_SIGNAL_ARRAY,
+    APG_BIND_FLOAT_MATRIX,
 } apg_v2_binding_kind_t;
 
 typedef struct {
@@ -20,6 +22,11 @@ typedef struct {
     apg_v2_binding_kind_t kind;
     size_t                index;
     const char           *literal;
+    size_t               *indices;
+    size_t                indices_len;
+    float                *numbers;
+    size_t                rows;
+    size_t                cols;
 } apg_v2_compiled_binding_t;
 
 typedef struct {

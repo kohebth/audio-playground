@@ -18,11 +18,9 @@ This file tracks known issues that should not block the current phase but need e
 
 ## Array and Matrix Bindings
 
-- **Status:** Open
+- **Status:** Resolved
 - **Context:** `mix_matrix` uses `float **signals` for inputs/outputs and `float **coefficients` plus `num_in`/`num_out` config.
-- **Problem:** The current compiler/runtime binds named fields to individual graph signal buffers. It does not model arrays of signal pointers or matrix-valued config data.
-- **Current Fixture Policy:** Do not add a runtime-executed `mix_matrix` v2 fixture yet; compile/runtime coverage would either mis-model `float **` fields or fail before array/matrix binding support exists.
-- **Later Fix:** Add array-valued binding support and structured config parsing before validating or executing `mix_matrix` in v2.
+- **Resolution:** The v2 loader preserves raw binding nodes, the compiler supports signal-array and float-matrix compiled binding kinds, and runtime allocates owned pointer arrays for `mix_matrix` input/output signals and coefficient rows.
 - **Related Plan Item:** `plan.md` Phase H4b.
 
 ## Multi-Channel Public Ports

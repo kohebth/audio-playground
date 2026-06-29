@@ -58,7 +58,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - [x] H3a: Add compiler binding metadata and tests for runtime-compatible filters: `filter_biquad`, `filter_allpass`, `filter_comb_ff`, and `filter_dc_block`.
 - [x] H3b: Add optional binding support before validating `filter_comb_fb`.
 - [x] H4a: Add compiler binding metadata and tests for modulation atoms and scalar/stereo mix atoms.
-- [ ] H4b: Add array/matrix binding support before validating `mix_matrix`.
+- [x] H4b: Add array/matrix binding support before validating `mix_matrix`.
 - [x] H5: Refresh schema documentation with the newly supported atom contracts; deferred contract gaps are tracked in `problem.md`.
 
 ### Phase I: Runtime I/O Model

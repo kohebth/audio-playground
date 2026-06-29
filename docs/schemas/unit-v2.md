@@ -76,6 +76,7 @@ The compiler currently validates required keys for these MVP atoms:
 - `modulation_scrub`: `in.buffer`, `in.position`, `out.signal`, `config.buffer_size`
 - `mix_crossfade`: `in.signal_a`, `in.signal_b`, `out.signal`, `config.t`
 - `mix_wet_dry`: `in.dry`, `in.wet`, `out.signal`, `config.mix`
+- `mix_matrix`: `in.signals[]`, `out.signals[]`, `config.coefficients[][]`
 - `mix_pan_stereo`: `in.signal`, `out.left`, `out.right`, `config.position`
 - `mix_encode_ms`: `in.left`, `in.right`, `out.mid`, `out.side`
 - `mix_decode_ms`: `in.mid`, `in.side`, `out.left`, `out.right`

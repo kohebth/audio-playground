@@ -1,6 +1,9 @@
 #include <apgcore/compiler_v2.h>
 
+#include <yaml/node.h>
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 typedef enum {
@@ -85,9 +88,14 @@ static uc_status mark_input_port_signals(const apg_unit_v2_t *unit, int *signal_
 
 static int node_inputs_available(const apg_v2_compiled_node_t *node, const int *signal_available) {
     for (size_t i = 0; i < node->in_len; i++) {
-        size_t signal_index = node->in[i].index;
-        if (node->in[i].kind == APG_BIND_SIGNAL && !signal_available[signal_index])
+        if (node->in[i].kind == APG_BIND_SIGNAL && !signal_available[node->in[i].index])
             return 0;
+        if (node->in[i].kind == APG_BIND_SIGNAL_ARRAY) {
+            for (size_t j = 0; j < node->in[i].indices_len; j++) {
+                if (!signal_available[node->in[i].indices[j]])
+                    return 0;
+            }
+        }
     }
     return 1;
 }
@@ -96,6 +104,10 @@ static void mark_node_outputs_available(const apg_v2_compiled_node_t *node, int 
     for (size_t i = 0; i < node->out_len; i++) {
         if (node->out[i].kind == APG_BIND_SIGNAL)
             signal_available[node->out[i].index] = 1;
+        else if (node->out[i].kind == APG_BIND_SIGNAL_ARRAY) {
+            for (size_t j = 0; j < node->out[i].indices_len; j++)
+                signal_available[node->out[i].indices[j]] = 1;
+        }
     }
 }
 
@@ -103,18 +115,22 @@ static uc_status record_node_output_producers(
     const apg_v2_compiled_node_t *node, uint32_t node_index, uint32_t *signal_producers, uc_error *err
 ) {
     for (size_t i = 0; i < node->out_len; i++) {
-        if (node->out[i].kind != APG_BIND_SIGNAL)
-            continue;
-        size_t signal_index = node->out[i].index;
-        if (signal_producers[signal_index] != UINT32_MAX) {
-            char msg[160];
-            snprintf(
-                msg, sizeof(msg), "node '%s' out binding '%s' writes signal with multiple producers",
-                node->id ? node->id : "", node->out[i].key ? node->out[i].key : ""
-            );
-            return set_error(err, UC_E_MISSING, msg);
+        size_t signal_count = node->out[i].kind == APG_BIND_SIGNAL_ARRAY ? node->out[i].indices_len : 1u;
+        for (size_t j = 0; j < signal_count; j++) {
+            if (node->out[i].kind != APG_BIND_SIGNAL && node->out[i].kind != APG_BIND_SIGNAL_ARRAY)
+                continue;
+            size_t signal_index =
+                node->out[i].kind == APG_BIND_SIGNAL_ARRAY ? node->out[i].indices[j] : node->out[i].index;
+            if (signal_producers[signal_index] != UINT32_MAX) {
+                char msg[160];
+                snprintf(
+                    msg, sizeof(msg), "node '%s' out binding '%s' writes signal with multiple producers",
+                    node->id ? node->id : "", node->out[i].key ? node->out[i].key : ""
+                );
+                return set_error(err, UC_E_MISSING, msg);
+            }
+            signal_producers[signal_index] = node_index;
         }
-        signal_producers[signal_index] = node_index;
     }
     return UC_OK;
 }
@@ -197,6 +213,8 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
     static const char *const               scrub_config[]            = {"buffer_size"};
     static const char *const               mix_wet_dry_in[]          = {"dry", "wet"};
     static const char *const               mix_wet_dry_config[]      = {"mix"};
+    static const char *const               mix_matrix_io[]           = {"signals"};
+    static const char *const               mix_matrix_config[]       = {"coefficients"};
     static const char *const               crossfade_config[]        = {"t"};
     static const char *const               stereo_in[]               = {"left", "right"};
     static const char *const               stereo_out[]              = {"left", "right"};
@@ -294,6 +312,10 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
         {          "mix_wet_dry",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
         {          "mix_wet_dry", APG_BIND_SECTION_CONFIG,      mix_wet_dry_config,
          sizeof(mix_wet_dry_config) / sizeof(mix_wet_dry_config[0])                                                                   },
+        {           "mix_matrix",     APG_BIND_SECTION_IN,           mix_matrix_io,   sizeof(mix_matrix_io) / sizeof(mix_matrix_io[0])},
+        {           "mix_matrix",    APG_BIND_SECTION_OUT,           mix_matrix_io,   sizeof(mix_matrix_io) / sizeof(mix_matrix_io[0])},
+        {           "mix_matrix", APG_BIND_SECTION_CONFIG,       mix_matrix_config,
+         sizeof(mix_matrix_config) / sizeof(mix_matrix_config[0])                                                                     },
     };
 
     if (!atom)
@@ -327,6 +349,19 @@ static int atom_input_key_is_scalar(const char *atom, const char *key) {
         return 0;
     return (strcmp(atom, "delay_tap_feedback") == 0 || strcmp(atom, "delay_tap_feedforward") == 0) &&
            strcmp(key, "tap_position") == 0;
+}
+
+static int atom_signal_key_is_array(const char *atom, const char *key) {
+    return atom && key && strcmp(atom, "mix_matrix") == 0 && strcmp(key, "signals") == 0;
+}
+
+static int atom_config_key_is_float_matrix(const char *atom, const char *key) {
+    return atom && key && strcmp(atom, "mix_matrix") == 0 && strcmp(key, "coefficients") == 0;
+}
+
+static void init_compiled_binding(apg_v2_compiled_binding_t *binding, const char *key) {
+    memset(binding, 0, sizeof(*binding));
+    binding->key = key;
 }
 
 static uc_status validate_binding_key(
@@ -378,6 +413,184 @@ static uc_status validate_required_binding_keys(
     return UC_OK;
 }
 
+static const char *binding_node_scalar(const uc_node *node) {
+    return node && node->kind == UC_NODE_SCALAR ? node->text : NULL;
+}
+
+static uc_status compile_signal_array_binding(
+    const apg_unit_v2_t         *unit,
+    const char                  *node_id,
+    apg_bind_section_t           section,
+    const apg_unit_v2_binding_t *binding,
+    uc_arena                    *arena,
+    apg_v2_compiled_binding_t   *out,
+    uc_error                    *err
+) {
+    if (!binding->node || binding->node->kind != UC_NODE_SEQ || binding->node->seq_len == 0u) {
+        char msg[192];
+        snprintf(
+            msg, sizeof(msg), "node '%s' %s binding key '%s' must be a non-empty signal array", node_id ? node_id : "",
+            bind_section_name(section), binding->key ? binding->key : ""
+        );
+        return set_error(err, UC_E_TYPE, msg);
+    }
+
+    size_t *indices = uc_arena_alloc(arena, binding->node->seq_len * sizeof(*indices), sizeof(size_t));
+    if (!indices)
+        return set_error(err, UC_E_OOM, "arena OOM");
+
+    for (size_t i = 0; i < binding->node->seq_len; i++) {
+        const char *signal = binding_node_scalar(binding->node->seq[i]);
+        int         index  = find_signal_index(unit, signal);
+        if (index < 0) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' %s binding key '%s' references unknown signal '%s'",
+                node_id ? node_id : "", bind_section_name(section), binding->key ? binding->key : "",
+                signal ? signal : ""
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
+        indices[i] = (size_t)index;
+    }
+
+    out->kind        = APG_BIND_SIGNAL_ARRAY;
+    out->indices     = indices;
+    out->indices_len = binding->node->seq_len;
+    return UC_OK;
+}
+
+static int parse_float_literal(const char *text, float *out_value) {
+    if (!text || !out_value)
+        return 0;
+    char *end   = NULL;
+    float value = strtof(text, &end);
+    if (!end || *end != '\0')
+        return 0;
+    *out_value = value;
+    return 1;
+}
+
+static size_t matrix_row_count(const uc_node *node) {
+    if (!node)
+        return 0u;
+    if (node->kind == UC_NODE_SEQ)
+        return node->seq_len;
+    if (node->kind == UC_NODE_MAP)
+        return node->map_len;
+    return 0u;
+}
+
+static const uc_node *matrix_row_node(const uc_node *node, size_t row) {
+    if (!node)
+        return NULL;
+    if (node->kind == UC_NODE_SEQ)
+        return row < node->seq_len ? node->seq[row] : NULL;
+    if (node->kind == UC_NODE_MAP)
+        return row < node->map_len ? node->map[row].value : NULL;
+    return NULL;
+}
+
+static size_t matrix_col_count(const uc_node *row_node) {
+    if (!row_node)
+        return 0u;
+    if (row_node->kind == UC_NODE_SEQ)
+        return row_node->seq_len;
+    if (row_node->kind == UC_NODE_MAP)
+        return row_node->map_len;
+    return 0u;
+}
+
+static const uc_node *matrix_cell_node(const uc_node *row_node, size_t col) {
+    if (!row_node)
+        return NULL;
+    if (row_node->kind == UC_NODE_SEQ)
+        return col < row_node->seq_len ? row_node->seq[col] : NULL;
+    if (row_node->kind == UC_NODE_MAP)
+        return col < row_node->map_len ? row_node->map[col].value : NULL;
+    return NULL;
+}
+
+static uc_status compile_float_matrix_binding(
+    const char                  *node_id,
+    const apg_unit_v2_binding_t *binding,
+    uc_arena                    *arena,
+    apg_v2_compiled_binding_t   *out,
+    uc_error                    *err
+) {
+    size_t rows = matrix_row_count(binding ? binding->node : NULL);
+    if (rows == 0u)
+        return set_error(err, UC_E_TYPE, "mix_matrix coefficients must be a non-empty matrix");
+
+    size_t cols = 0;
+    for (size_t row = 0; row < rows; row++) {
+        const uc_node *row_node = matrix_row_node(binding->node, row);
+        size_t         row_cols = matrix_col_count(row_node);
+        if (row_cols == 0u)
+            return set_error(err, UC_E_TYPE, "mix_matrix coefficients rows must be non-empty sequences or maps");
+        if (row == 0u)
+            cols = row_cols;
+        else if (row_cols != cols) {
+            char msg[192];
+            snprintf(msg, sizeof(msg), "node '%s' mix_matrix coefficients must be rectangular", node_id ? node_id : "");
+            return set_error(err, UC_E_RANGE, msg);
+        }
+    }
+
+    float *numbers = uc_arena_alloc(arena, rows * cols * sizeof(*numbers), sizeof(float));
+    if (!numbers)
+        return set_error(err, UC_E_OOM, "arena OOM");
+
+    for (size_t row = 0; row < rows; row++) {
+        const uc_node *row_node = matrix_row_node(binding->node, row);
+        for (size_t col = 0; col < cols; col++) {
+            float value = 0.0f;
+            if (!parse_float_literal(binding_node_scalar(matrix_cell_node(row_node, col)), &value)) {
+                char msg[192];
+                snprintf(msg, sizeof(msg), "node '%s' mix_matrix coefficient must be numeric", node_id ? node_id : "");
+                return set_error(err, UC_E_TYPE, msg);
+            }
+            numbers[row * cols + col] = value;
+        }
+    }
+
+    out->kind    = APG_BIND_FLOAT_MATRIX;
+    out->numbers = numbers;
+    out->rows    = rows;
+    out->cols    = cols;
+    return UC_OK;
+}
+
+static const apg_v2_compiled_binding_t *
+find_compiled_binding(const apg_v2_compiled_binding_t *bindings, size_t bindings_len, const char *key) {
+    for (size_t i = 0; i < bindings_len; i++) {
+        if (bindings[i].key && key && strcmp(bindings[i].key, key) == 0)
+            return &bindings[i];
+    }
+    return NULL;
+}
+
+static uc_status validate_mix_matrix_shape(const apg_v2_compiled_node_t *node, uc_error *err) {
+    if (!node || !node->atom || !node->atom->name || strcmp(node->atom->name, "mix_matrix") != 0)
+        return UC_OK;
+
+    const apg_v2_compiled_binding_t *in     = find_compiled_binding(node->in, node->in_len, "signals");
+    const apg_v2_compiled_binding_t *out    = find_compiled_binding(node->out, node->out_len, "signals");
+    const apg_v2_compiled_binding_t *matrix = find_compiled_binding(node->config, node->config_len, "coefficients");
+    if (!in || !out || !matrix || in->kind != APG_BIND_SIGNAL_ARRAY || out->kind != APG_BIND_SIGNAL_ARRAY ||
+        matrix->kind != APG_BIND_FLOAT_MATRIX)
+        return set_error(err, UC_E_TYPE, "mix_matrix requires signal arrays and coefficient matrix bindings");
+    if (in->indices_len != matrix->cols || out->indices_len != matrix->rows) {
+        char msg[192];
+        snprintf(
+            msg, sizeof(msg), "node '%s' mix_matrix shape must match input/output signal counts",
+            node->id ? node->id : ""
+        );
+        return set_error(err, UC_E_RANGE, msg);
+    }
+    return UC_OK;
+}
+
 static uc_status compile_signal_bindings(
     const apg_unit_v2_t         *unit,
     const char                  *node_id,
@@ -406,9 +619,14 @@ static uc_status compile_signal_bindings(
         status = validate_binding_key(node_id, atom, section, bindings[i].key, err);
         if (status != UC_OK)
             return status;
-        compiled[i].key     = bindings[i].key;
-        compiled[i].literal = NULL;
-        compiled[i].index   = 0;
+        init_compiled_binding(&compiled[i], bindings[i].key);
+
+        if (atom_signal_key_is_array(atom, bindings[i].key)) {
+            status = compile_signal_array_binding(unit, node_id, section, &bindings[i], arena, &compiled[i], err);
+            if (status != UC_OK)
+                return status;
+            continue;
+        }
 
         if (section == APG_BIND_SECTION_IN && atom_input_key_is_scalar(atom, bindings[i].key)) {
             if (bindings[i].value.kind == UC_VAL_VARREF) {
@@ -489,9 +707,14 @@ static uc_status compile_config_bindings(
         if (status != UC_OK)
             return status;
 
-        compiled[i].key     = bindings[i].key;
-        compiled[i].literal = NULL;
-        compiled[i].index   = 0;
+        init_compiled_binding(&compiled[i], bindings[i].key);
+
+        if (atom_config_key_is_float_matrix(atom, bindings[i].key)) {
+            status = compile_float_matrix_binding(node_id, &bindings[i], arena, &compiled[i], err);
+            if (status != UC_OK)
+                return status;
+            continue;
+        }
 
         if (bindings[i].value.kind == UC_VAL_VARREF) {
             const char *param_name  = param_ref_name(bindings[i].value.text);
@@ -577,6 +800,9 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
         status = compile_config_bindings(
             unit, src->id, src->atom, src->config, src->config_len, arena, &nodes[i].config, &nodes[i].config_len, err
         );
+        if (status != UC_OK)
+            return status;
+        status = validate_mix_matrix_shape(&nodes[i], err);
         if (status != UC_OK)
             return status;
     }

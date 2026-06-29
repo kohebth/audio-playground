@@ -166,6 +166,7 @@ static uc_status fill_bindings(
         }
         bindings[i].key   = map->map[i].key;
         bindings[i].value = to_value(map->map[i].value);
+        bindings[i].node  = map->map[i].value;
     }
 
     *out_bindings = bindings;
