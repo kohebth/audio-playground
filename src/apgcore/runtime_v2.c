@@ -31,10 +31,25 @@ static int signal_index_by_name(const apg_unit_v2_t *unit, const char *name) {
     return -1;
 }
 
-static int first_audio_port_signal_index(const apg_unit_v2_t *unit, const apg_unit_v2_port_t *ports, size_t ports_len) {
+static const char *first_audio_port_name(const apg_unit_v2_port_t *ports, size_t ports_len) {
     for (size_t i = 0; i < ports_len; i++) {
         if (ports[i].type && strcmp(ports[i].type, "audio") == 0)
-            return signal_index_by_name(unit, ports[i].name);
+            return ports[i].name;
+    }
+    return NULL;
+}
+
+static int audio_port_signal_index_by_name(
+    const apg_unit_v2_t *unit, const apg_unit_v2_port_t *ports, size_t ports_len, const char *port_name
+) {
+    if (!unit || !ports || !port_name)
+        return -1;
+    for (size_t i = 0; i < ports_len; i++) {
+        if (!ports[i].name || strcmp(ports[i].name, port_name) != 0)
+            continue;
+        if (!ports[i].type || strcmp(ports[i].type, "audio") != 0)
+            return -1;
+        return signal_index_by_name(unit, ports[i].name);
     }
     return -1;
 }
@@ -241,6 +256,26 @@ float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
     return runtime->signals[index];
 }
 
+float *apg_v2_runtime_find_input_port_signal(apg_v2_runtime_t *runtime, const char *port_name) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit || !port_name)
+        return NULL;
+    const apg_unit_v2_t *unit = runtime->plan->unit;
+    int index = audio_port_signal_index_by_name(unit, unit->input_ports, unit->input_ports_len, port_name);
+    if (index < 0 || (size_t)index >= runtime->signals_len)
+        return NULL;
+    return runtime->signals[index];
+}
+
+float *apg_v2_runtime_find_output_port_signal(apg_v2_runtime_t *runtime, const char *port_name) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit || !port_name)
+        return NULL;
+    const apg_unit_v2_t *unit = runtime->plan->unit;
+    int index = audio_port_signal_index_by_name(unit, unit->output_ports, unit->output_ports_len, port_name);
+    if (index < 0 || (size_t)index >= runtime->signals_len)
+        return NULL;
+    return runtime->signals[index];
+}
+
 bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value) {
     if (!runtime || !runtime->plan || !runtime->plan->unit || !name)
         return false;
@@ -291,7 +326,14 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     return true;
 }
 
-bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
+bool apg_v2_runtime_process_mono_ports(
+    apg_v2_runtime_t *runtime,
+    const char       *input_port_name,
+    const float      *input,
+    const char       *output_port_name,
+    float            *output,
+    uint32_t          frames
+) {
     if (!runtime)
         return false;
     runtime->last_error[0] = '\0';
@@ -304,12 +346,16 @@ bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, 
         return false;
     }
 
-    const apg_unit_v2_t *unit         = runtime->plan->unit;
-    int                  input_index  = first_audio_port_signal_index(unit, unit->input_ports, unit->input_ports_len);
-    int                  output_index = first_audio_port_signal_index(unit, unit->output_ports, unit->output_ports_len);
-    if (input_index < 0 || output_index < 0 || (size_t)input_index >= runtime->signals_len ||
-        (size_t)output_index >= runtime->signals_len) {
-        runtime_set_error(runtime, "v2 runtime mono audio port signal lookup failed");
+    const apg_unit_v2_t *unit = runtime->plan->unit;
+    int input_index = audio_port_signal_index_by_name(unit, unit->input_ports, unit->input_ports_len, input_port_name);
+    int output_index =
+        audio_port_signal_index_by_name(unit, unit->output_ports, unit->output_ports_len, output_port_name);
+    if (input_index < 0 || (size_t)input_index >= runtime->signals_len) {
+        runtime_set_error(runtime, "v2 runtime input audio port signal lookup failed");
+        return false;
+    }
+    if (output_index < 0 || (size_t)output_index >= runtime->signals_len) {
+        runtime_set_error(runtime, "v2 runtime output audio port signal lookup failed");
         return false;
     }
 
@@ -320,6 +366,17 @@ bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, 
         return false;
     memcpy(output, runtime->signals[output_index], frames * sizeof(float));
     return true;
+}
+
+bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit)
+        return apg_v2_runtime_process_mono_ports(runtime, NULL, input, NULL, output, frames);
+
+    const apg_unit_v2_t *unit = runtime->plan->unit;
+    return apg_v2_runtime_process_mono_ports(
+        runtime, first_audio_port_name(unit->input_ports, unit->input_ports_len), input,
+        first_audio_port_name(unit->output_ports, unit->output_ports_len), output, frames
+    );
 }
 
 const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime) {

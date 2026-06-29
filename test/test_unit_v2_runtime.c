@@ -134,6 +134,95 @@ static int test_simple_gain_process_mono(void) {
     return 0;
 }
 
+static int test_named_public_port_signal_lookup(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("units-v2/simple_mix.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize v2 runtime");
+    }
+
+    float *a      = apg_v2_runtime_find_input_port_signal(&runtime, "a");
+    float *b      = apg_v2_runtime_find_input_port_signal(&runtime, "b");
+    float *output = apg_v2_runtime_find_output_port_signal(&runtime, "output");
+    if (!a || !b || !output)
+        return fail("failed to find named public port signals");
+    if (a != apg_v2_runtime_find_signal(&runtime, "a") || b != apg_v2_runtime_find_signal(&runtime, "b") ||
+        output != apg_v2_runtime_find_signal(&runtime, "output"))
+        return fail("named public port lookup returned unexpected signal buffer");
+    if (apg_v2_runtime_find_input_port_signal(&runtime, "output") ||
+        apg_v2_runtime_find_output_port_signal(&runtime, "a") ||
+        apg_v2_runtime_find_input_port_signal(&runtime, "missing"))
+        return fail("named public port lookup accepted invalid port name or direction");
+
+    a[0] = 0.25f;
+    a[1] = -0.5f;
+    b[0] = 0.75f;
+    b[1] = 0.25f;
+    if (!apg_v2_runtime_process(&runtime, 2u))
+        return fail("named public port generic processing failed");
+    if (output[0] != 1.0f || output[1] != -0.25f)
+        return fail("unexpected named public port output sample");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_named_mono_port_process(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize v2 runtime");
+    }
+
+    if (!apg_v2_runtime_set_param(&runtime, "gain", 3.0f))
+        return fail("failed to set simple_gain param");
+    const float input[3]  = {0.25f, -0.5f, 1.0f};
+    float       output[3] = {0.0f, 0.0f, 0.0f};
+    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u))
+        return fail("named simple_gain processing failed");
+    if (output[0] != 0.75f || output[1] != -1.5f || output[2] != 3.0f)
+        return fail("unexpected named simple_gain output sample");
+
+    if (apg_v2_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 3u))
+        return fail("named simple_gain accepted missing input port");
+    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    if (!last_error || !strstr(last_error, "input audio port"))
+        return fail("missing input port failure did not expose a useful error");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_simple_clip_process_generic(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -376,6 +465,10 @@ int main(void) {
     if (test_runtime_init_simple_gain())
         return 1;
     if (test_simple_gain_process_mono())
+        return 1;
+    if (test_named_public_port_signal_lookup())
+        return 1;
+    if (test_named_mono_port_process())
         return 1;
     if (test_simple_clip_process_generic())
         return 1;
