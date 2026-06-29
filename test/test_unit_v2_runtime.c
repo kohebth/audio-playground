@@ -826,6 +826,19 @@ static int test_delay_line_state_buffer_process(void) {
             return fail("unexpected delay_line output sample");
     }
 
+    if (!apg_v2_runtime_reset(&runtime))
+        return fail("failed to reset delay_line runtime");
+    input[0] = 1.0f;
+    input[1] = 2.0f;
+    input[2] = 3.0f;
+    input[3] = 4.0f;
+    if (!apg_v2_runtime_process(&runtime, 4u))
+        return fail("delay_line state processing after reset failed");
+    for (size_t i = 0; i < 4u; i++) {
+        if (output[i] != expected[i])
+            return fail("delay_line reset did not clear state");
+    }
+
     apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);
     return 0;

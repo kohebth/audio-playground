@@ -379,6 +379,46 @@ bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port
     return apg_v2_runtime_set_param(runtime, port->target_param ? port->target_param : port->name, value);
 }
 
+bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit)
+        return false;
+    runtime->last_error[0] = '\0';
+
+    if (runtime->signal_pool && runtime->signals_len > 0u)
+        memset(
+            runtime->signal_pool, 0,
+            runtime->signals_len * (size_t)runtime->frame_capacity * sizeof(*runtime->signal_pool)
+        );
+    for (size_t i = 0; i < runtime->params_len && i < runtime->plan->unit->params_len; i++)
+        runtime->params[i] = parse_param_default(&runtime->plan->unit->params[i]);
+
+    for (size_t i = 0; i < runtime->nodes_len && i < runtime->plan->nodes_len; i++) {
+        apg_v2_runtime_node_t       *node = &runtime->nodes[i];
+        const atom_registry_entry_t *atom = runtime->plan->nodes[i].atom;
+        if (!node->state_storage || !atom)
+            continue;
+        memset(node->state_storage, 0, atom_storage_size(atom->state_size));
+
+        size_t buffer_index = 0;
+        for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
+            const atom_field_desc_t *field = &atom->state_fields[field_index];
+            if (field->type != FIELD_BUFFER)
+                continue;
+            if (buffer_index >= node->state_buffers_len || !node->state_buffers[buffer_index])
+                return false;
+            memset(node->state_buffers[buffer_index], 0, node->state_buffer_samples[buffer_index] * sizeof(float));
+            float **field_ptr = (float **)((char *)node->state_storage + field->offset);
+            *field_ptr        = node->state_buffers[buffer_index];
+            buffer_index++;
+        }
+    }
+
+    runtime->process_info.frames        = runtime->frame_capacity;
+    runtime->process_info.output_frames = runtime->frame_capacity;
+    runtime->process_info.channels      = 1u;
+    return true;
+}
+
 bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     if (!runtime)
         return false;

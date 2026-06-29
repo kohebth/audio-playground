@@ -48,6 +48,7 @@ float *
 apg_v2_runtime_find_output_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index);
 bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value);
 bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value);
+bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime);
 bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames);
 bool apg_v2_runtime_process_interleaved_ports(
     apg_v2_runtime_t *runtime,
