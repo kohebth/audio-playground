@@ -1,0 +1,223 @@
+#include <apgcore/project_v2.h>
+
+#include <stdio.h>
+#include <string.h>
+
+static int fail(const char *msg) {
+    fprintf(stderr, "FAIL: %s\n", msg);
+    return 1;
+}
+
+static int expect_valid_fixture(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_t project;
+    uc_error         err = {0};
+    uc_status        status =
+        apg_project_v2_load_file("projects-v2/simple-gain-board.project.v2.yaml", &arena, &project, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "project validation error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("simple project fixture did not validate");
+    }
+
+    if (!project.name || strcmp(project.name, "simple-gain-board") != 0)
+        return fail("unexpected project name");
+    if (!project.version || strcmp(project.version, "2.0.0") != 0)
+        return fail("unexpected project version");
+    if (project.units_len != 1u || strcmp(project.units[0].id, "gain_unit") != 0 ||
+        strcmp(project.units[0].file, "../units-v2/simple_gain.unit.v2.yaml") != 0)
+        return fail("unexpected project unit refs");
+    if (project.nodes_len != 1u || strcmp(project.nodes[0].id, "gain1") != 0 ||
+        strcmp(project.nodes[0].unit, "gain_unit") != 0 || project.nodes[0].params_len != 1u ||
+        strcmp(project.nodes[0].params[0].key, "gain") != 0 ||
+        strcmp(project.nodes[0].params[0].value.text, "2.0") != 0)
+        return fail("unexpected project chain node");
+    if (project.routes_len != 2u || strcmp(project.routes[0].from, "system.input") != 0 ||
+        strcmp(project.routes[0].to, "gain1.input") != 0 || strcmp(project.routes[1].from, "gain1.output") != 0 ||
+        strcmp(project.routes[1].to, "system.output") != 0)
+        return fail("unexpected project routes");
+    if (project.scenes_len != 2u || strcmp(project.scenes[1].name, "Boost") != 0 ||
+        project.scenes[1].params_len != 1u || strcmp(project.scenes[1].params[0].key, "gain1.gain") != 0)
+        return fail("unexpected project scenes");
+    if (!project.targets.default_profile || strcmp(project.targets.default_profile, "desktop_full") != 0 ||
+        project.targets.export_profiles_len != 2u || strcmp(project.targets.export_profiles[0], "wasm_realtime") != 0)
+        return fail("unexpected project targets");
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int expect_invalid_contains(const char *yaml, const char *label, const char *must_contain) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_t project;
+    uc_error         err    = {0};
+    uc_status        status = apg_project_v2_load_string(yaml, strlen(yaml), &arena, &project, &err);
+    uc_arena_free(&arena);
+
+    if (status == UC_OK) {
+        fprintf(stderr, "accepted invalid project case: %s\n", label);
+        return 1;
+    }
+    if (must_contain && !strstr(err.msg, must_contain)) {
+        fprintf(stderr, "project validation error for %s lacked '%s': %s\n", label, must_contain, err.msg);
+        return 1;
+    }
+    return 0;
+}
+
+int main(void) {
+    if (expect_valid_fixture())
+        return 1;
+
+    const char *duplicate_unit = "kind: apg.project\n"
+                                 "schema: apg.project.v2\n"
+                                 "name: bad\n"
+                                 "version: 2.0.0\n"
+                                 "units:\n"
+                                 "  - id: gain_unit\n"
+                                 "    file: gain.yaml\n"
+                                 "  - id: gain_unit\n"
+                                 "    file: gain2.yaml\n"
+                                 "chain:\n"
+                                 "  nodes:\n"
+                                 "    - id: gain1\n"
+                                 "      unit: gain_unit\n"
+                                 "  routes:\n"
+                                 "    - from: system.input\n"
+                                 "      to: gain1.input\n"
+                                 "targets:\n"
+                                 "  default: desktop_full\n";
+    if (expect_invalid_contains(duplicate_unit, "duplicate unit", "duplicate unit"))
+        return 1;
+
+    const char *unknown_node_unit = "kind: apg.project\n"
+                                    "schema: apg.project.v2\n"
+                                    "name: bad\n"
+                                    "version: 2.0.0\n"
+                                    "units:\n"
+                                    "  - id: gain_unit\n"
+                                    "    file: gain.yaml\n"
+                                    "chain:\n"
+                                    "  nodes:\n"
+                                    "    - id: gain1\n"
+                                    "      unit: missing_unit\n"
+                                    "  routes:\n"
+                                    "    - from: system.input\n"
+                                    "      to: gain1.input\n"
+                                    "targets:\n"
+                                    "  default: desktop_full\n";
+    if (expect_invalid_contains(unknown_node_unit, "unknown node unit", "missing_unit"))
+        return 1;
+
+    const char *duplicate_node = "kind: apg.project\n"
+                                 "schema: apg.project.v2\n"
+                                 "name: bad\n"
+                                 "version: 2.0.0\n"
+                                 "units:\n"
+                                 "  - id: gain_unit\n"
+                                 "    file: gain.yaml\n"
+                                 "chain:\n"
+                                 "  nodes:\n"
+                                 "    - id: gain1\n"
+                                 "      unit: gain_unit\n"
+                                 "    - id: gain1\n"
+                                 "      unit: gain_unit\n"
+                                 "  routes:\n"
+                                 "    - from: system.input\n"
+                                 "      to: gain1.input\n"
+                                 "targets:\n"
+                                 "  default: desktop_full\n";
+    if (expect_invalid_contains(duplicate_node, "duplicate node", "duplicate chain node"))
+        return 1;
+
+    const char *bad_route = "kind: apg.project\n"
+                            "schema: apg.project.v2\n"
+                            "name: bad\n"
+                            "version: 2.0.0\n"
+                            "units:\n"
+                            "  - id: gain_unit\n"
+                            "    file: gain.yaml\n"
+                            "chain:\n"
+                            "  nodes:\n"
+                            "    - id: gain1\n"
+                            "      unit: gain_unit\n"
+                            "  routes:\n"
+                            "    - from: missing.output\n"
+                            "      to: gain1.input\n"
+                            "targets:\n"
+                            "  default: desktop_full\n";
+    if (expect_invalid_contains(bad_route, "bad route", "chain.routes[].from"))
+        return 1;
+
+    const char *bad_scene_param = "kind: apg.project\n"
+                                  "schema: apg.project.v2\n"
+                                  "name: bad\n"
+                                  "version: 2.0.0\n"
+                                  "units:\n"
+                                  "  - id: gain_unit\n"
+                                  "    file: gain.yaml\n"
+                                  "chain:\n"
+                                  "  nodes:\n"
+                                  "    - id: gain1\n"
+                                  "      unit: gain_unit\n"
+                                  "  routes:\n"
+                                  "    - from: system.input\n"
+                                  "      to: gain1.input\n"
+                                  "scenes:\n"
+                                  "  - name: Bad\n"
+                                  "    params:\n"
+                                  "      missing.gain: 2.0\n"
+                                  "targets:\n"
+                                  "  default: desktop_full\n";
+    if (expect_invalid_contains(bad_scene_param, "bad scene param", "missing.gain"))
+        return 1;
+
+    const char *bad_target = "kind: apg.project\n"
+                             "schema: apg.project.v2\n"
+                             "name: bad\n"
+                             "version: 2.0.0\n"
+                             "units:\n"
+                             "  - id: gain_unit\n"
+                             "    file: gain.yaml\n"
+                             "chain:\n"
+                             "  nodes:\n"
+                             "    - id: gain1\n"
+                             "      unit: gain_unit\n"
+                             "  routes:\n"
+                             "    - from: system.input\n"
+                             "      to: gain1.input\n"
+                             "targets:\n"
+                             "  default: browser_full\n";
+    if (expect_invalid_contains(bad_target, "bad target", "browser_full"))
+        return 1;
+
+    const char *duplicate_export_target = "kind: apg.project\n"
+                                          "schema: apg.project.v2\n"
+                                          "name: bad\n"
+                                          "version: 2.0.0\n"
+                                          "units:\n"
+                                          "  - id: gain_unit\n"
+                                          "    file: gain.yaml\n"
+                                          "chain:\n"
+                                          "  nodes:\n"
+                                          "    - id: gain1\n"
+                                          "      unit: gain_unit\n"
+                                          "  routes:\n"
+                                          "    - from: system.input\n"
+                                          "      to: gain1.input\n"
+                                          "targets:\n"
+                                          "  default: desktop_full\n"
+                                          "  export:\n"
+                                          "    - wasm_realtime\n"
+                                          "    - wasm_realtime\n";
+    if (expect_invalid_contains(duplicate_export_target, "duplicate export target", "duplicate targets.export"))
+        return 1;
+
+    return 0;
+}

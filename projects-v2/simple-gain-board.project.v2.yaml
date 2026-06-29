@@ -1,0 +1,35 @@
+kind: apg.project
+schema: apg.project.v2
+name: simple-gain-board
+version: 2.0.0
+
+units:
+  - id: gain_unit
+    file: ../units-v2/simple_gain.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: gain1
+      unit: gain_unit
+      params:
+        gain: 2.0
+
+  routes:
+    - from: system.input
+      to: gain1.input
+    - from: gain1.output
+      to: system.output
+
+scenes:
+  - name: Unity
+    params:
+      gain1.gain: 1.0
+  - name: Boost
+    params:
+      gain1.gain: 3.0
+
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render

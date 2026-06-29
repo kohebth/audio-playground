@@ -11,7 +11,7 @@
 
 - APGCore v2 is complete through Phase O in `plan.md`: loader, compiler, runtime MVP, fixtures, host bridge, control routing, and verification workflow are in place.
 - `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md` define the desired product as a visual pedalboard and graph composer, not just a YAML editor.
-- The web app needs stable data contracts that do not yet exist: project schema, atom catalog export, unit inspection, structured validation output, runtime controls, meters, and a representative product fixture.
+- The web app still needs stable data contracts beyond the completed project schema and atom catalog export: unit inspection, project inspection, structured validation output, runtime controls, meters, and a representative product fixture.
 - `web-tools/unit-editor/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
 ---

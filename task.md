@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase R.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase S.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through R are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through S are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -85,10 +85,10 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 
 
 ### Phase S: Project v2 Schema
 
-- [ ] S1: Define `project.v2.yaml` with unit refs, chain nodes, routes, scenes, and target profiles.
-- [ ] S2: Add small deterministic `projects-v2/` fixtures.
-- [ ] S3: Validate missing unit refs, duplicate node IDs, bad routes, invalid scene params, and target flags.
-- [ ] S4: Document project schema limits before implementing broad routing features.
+- [x] S1: Define `project.v2.yaml` with unit refs, chain nodes, routes, scenes, and target profiles.
+- [x] S2: Add small deterministic `projects-v2/` fixtures.
+- [x] S3: Validate missing unit refs, duplicate node IDs, bad routes, invalid scene params, and target flags.
+- [x] S4: Document project schema limits before implementing broad routing features.
 
 ### Phase T: Project Loader and Resolver
 
