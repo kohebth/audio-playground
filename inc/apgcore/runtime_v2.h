@@ -35,6 +35,10 @@ typedef struct {
     uint32_t                     *param_smoothing_remaining_frames;
     size_t                        params_len;
     bool                          has_processed;
+    char                        **bypassed_instances;
+    size_t                        bypassed_instances_len;
+    bool                          project_muted;
+    bool                          project_soloed;
     apg_v2_runtime_node_t        *nodes;
     size_t                        nodes_len;
     char                          last_error[160];
@@ -66,6 +70,14 @@ bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float
 
 /* Update the parameter targeted by a public control input port. */
 bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value);
+
+/* Bypass a compiled project unit instance by copying its first external input signal to its first public output signal.
+ */
+bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *instance_id, bool enabled);
+
+/* Store project-level UI transport states; mute silences public output ports after processing. */
+bool apg_v2_runtime_set_project_mute(apg_v2_runtime_t *runtime, bool muted);
+bool apg_v2_runtime_set_project_solo(apg_v2_runtime_t *runtime, bool soloed);
 
 /* Clear signal and state buffers and restore parameter defaults while preserving owned allocations. */
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime);

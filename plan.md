@@ -6,7 +6,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect JSON contracts, and block-boundary param smoothing are implemented.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect JSON contracts, block-boundary param smoothing, and project runtime bypass/mute/solo controls are implemented.
 - The next objective is to finish backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
 - The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
 
@@ -161,7 +161,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 ### Phase W: Runtime Product Controls
 
 - [x] W1: Implement block-boundary parameter smoothing from `smoothing_ms`.
-- [ ] W2: Add unit-instance bypass and project-level mute/solo where needed for the first pedalboard workflow.
+- [x] W2: Add unit-instance bypass and project-level mute/solo where needed for the first pedalboard workflow.
 - [ ] W3: Add peak/RMS meter snapshots suitable for UI polling.
 - [ ] W4: Add runtime tests for live parameter changes, bypass, and meters.
 

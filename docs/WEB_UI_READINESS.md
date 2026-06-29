@@ -4,7 +4,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 ## Current Backend Status
 
-- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, validate/inspect JSON contracts, and block-boundary param smoothing are implemented.
+- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, validate/inspect JSON contracts, block-boundary param smoothing, and project bypass/mute/solo controls are implemented.
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`.
 - Project/session schema, deterministic fixtures, referenced-unit resolution, and mono project compilation exist.
@@ -86,7 +86,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase T:** Project loader resolves multi-file units safely. Complete.
 - **Phase U:** Project compiler creates a single runtime plan. Complete for mono project routes.
 - **Phase V:** CLI tooling emits JSON inspect/validate output. Validate/inspect are complete; render/benchmark remains pending.
-- **Phase W:** Runtime supports product controls and meters. W1 param smoothing is complete; bypass and meters remain open.
+- **Phase W:** Runtime supports product controls and meters. W1-W2 smoothing, bypass, mute, and solo state are complete; meters remain open.
 - **Phase X:** Guitar pedalboard fixture proves the workflow.
 - **Phase Y:** Web handoff package freezes sample contracts.
 

@@ -153,6 +153,32 @@ static int test_two_instance_project_compiles_and_runs(void) {
     if (expect_samples(output, expected_default, 2u, "two-instance project default"))
         return 1;
 
+    if (!apg_v2_runtime_set_instance_bypass(&runtime, "gain1", true))
+        return fail("two-instance runtime did not accept first instance bypass");
+    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+        return fail("two-instance project processing with bypass failed");
+    const float expected_bypassed[2] = {0.75f, -1.5f};
+    if (expect_samples(output, expected_bypassed, 2u, "two-instance project bypassed"))
+        return 1;
+
+    if (!apg_v2_runtime_set_project_solo(&runtime, true) || !runtime.project_soloed)
+        return fail("two-instance runtime did not store project solo state");
+    if (!apg_v2_runtime_set_project_mute(&runtime, true))
+        return fail("two-instance runtime did not accept project mute");
+    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+        return fail("two-instance project processing with mute failed");
+    const float expected_muted[2] = {0.0f, 0.0f};
+    if (expect_samples(output, expected_muted, 2u, "two-instance project muted"))
+        return 1;
+
+    if (!apg_v2_runtime_set_project_mute(&runtime, false) ||
+        !apg_v2_runtime_set_instance_bypass(&runtime, "gain1", false))
+        return fail("two-instance runtime did not disable project controls");
+    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+        return fail("two-instance project processing after disabling controls failed");
+    if (expect_samples(output, expected_default, 2u, "two-instance project restored"))
+        return 1;
+
     if (!apg_v2_runtime_set_param(&runtime, "gain2.gain", 4.0f))
         return fail("two-instance runtime did not accept second instance param");
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))

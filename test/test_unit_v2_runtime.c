@@ -122,7 +122,8 @@ static int test_runtime_init_simple_gain(void) {
 
     apg_v2_runtime_destroy(&runtime);
     if (runtime.signal_pool || runtime.signals || runtime.params || runtime.param_targets ||
-        runtime.param_smoothing_remaining_frames || runtime.nodes || runtime.signals_len != 0u)
+        runtime.param_smoothing_remaining_frames || runtime.bypassed_instances || runtime.nodes ||
+        runtime.signals_len != 0u)
         return fail("runtime destroy did not clear owned storage");
 
     uc_arena_free(&arena);
@@ -1439,8 +1440,8 @@ static int test_runtime_init_failure_cleans_partial_allocations(void) {
     if (status == UC_OK)
         return fail("runtime init accepted node without atom metadata");
     if (runtime.signal_pool || runtime.signals || runtime.params || runtime.param_targets ||
-        runtime.param_smoothing_remaining_frames || runtime.nodes || runtime.signals_len != 0u ||
-        runtime.nodes_len != 0u)
+        runtime.param_smoothing_remaining_frames || runtime.bypassed_instances || runtime.nodes ||
+        runtime.signals_len != 0u || runtime.nodes_len != 0u)
         return fail("runtime init failure did not clean partial allocations");
     if (!strstr(err.msg, "atom metadata"))
         return fail("runtime init failure did not report useful error");
