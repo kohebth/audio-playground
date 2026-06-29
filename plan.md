@@ -64,7 +64,8 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 ### Phase I: Runtime I/O Model
 
 - [x] I1: Define a named public port binding API instead of relying only on first mono input/output helpers.
-- [ ] I2: Add multi-channel audio port buffer binding and validation.
+- [x] I2a: Reject multi-channel public ports in mono processing APIs with useful runtime errors.
+- [ ] I2b: Add true multi-channel audio port buffer binding after defining channel-to-signal mapping.
 - [ ] I3: Add control port ingestion and propagation into params or graph controls.
 - [ ] I4: Add tests for multi-input, multi-output, and rejected mismatched buffer layouts.
 

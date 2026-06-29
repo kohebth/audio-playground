@@ -223,6 +223,90 @@ static int test_named_mono_port_process(void) {
     return 0;
 }
 
+static int test_named_mono_port_rejects_multichannel_port(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: stereo_public_port\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  gain:\n"
+                       "    type: float\n"
+                       "    default: 1.0\n"
+                       "    min: 0.0\n"
+                       "    max: 2.0\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 2\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - input\n"
+                       "    - output\n"
+                       "    - gain_value\n"
+                       "  nodes:\n"
+                       "    - id: gain_value\n"
+                       "      atom: generation_dc\n"
+                       "      out:\n"
+                       "        signal: gain_value\n"
+                       "      config:\n"
+                       "        value: ${params.gain}\n"
+                       "    - id: apply_gain\n"
+                       "      atom: amplitude_multiply\n"
+                       "      in:\n"
+                       "        signal_a: input\n"
+                       "        signal_b: gain_value\n"
+                       "      out:\n"
+                       "        signal: output\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err    = {0};
+    uc_status     status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "load error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to load stereo public port fixture");
+    }
+
+    apg_v2_compiled_unit_t plan;
+    status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "compile error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to compile stereo public port fixture");
+    }
+
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize stereo public port runtime");
+    }
+
+    const float input[2]  = {1.0f, 2.0f};
+    float       output[2] = {0.0f, 0.0f};
+    if (apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+        return fail("named mono processing accepted a multi-channel input port");
+    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    if (!last_error || !strstr(last_error, "mono audio ports"))
+        return fail("multi-channel port rejection did not expose a useful error");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_simple_clip_process_generic(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -469,6 +553,8 @@ int main(void) {
     if (test_named_public_port_signal_lookup())
         return 1;
     if (test_named_mono_port_process())
+        return 1;
+    if (test_named_mono_port_rejects_multichannel_port())
         return 1;
     if (test_simple_clip_process_generic())
         return 1;

@@ -61,4 +61,4 @@ Pull requests should name the changed project area, list commands run, call out 
 
 ## Agent-Specific Instructions
 
-Use `fsmcp` for repository search and file edits. Do not use `apply_patch`; if an `fsmcp` edit fails, stop and report it. Preserve unrelated user changes. Keep dependencies separate across the C engine, web editor, and MCP packages. Do not stage unrelated modified `units/`, generated audio, or local tool directories unless explicitly requested.
+Use `fsmcp` for repository search and file edits. Do not use `apply_patch`; if an `fsmcp` edit fails, stop and report it. Before retrying a failed exact-match edit, reread the target file and base the next edit on the current text. Preserve unrelated user changes. Keep dependencies separate across the C engine, web editor, and MCP packages. Do not stage unrelated modified `units/`, generated audio, or local tool directories unless explicitly requested.

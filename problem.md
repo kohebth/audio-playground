@@ -25,3 +25,11 @@ This file tracks known issues that should not block the current phase but need e
 - **Problem:** The current compiler/runtime binds named fields to individual graph signal buffers. It does not model arrays of signal pointers or matrix-valued config data.
 - **Later Fix:** Add array-valued binding support and structured config parsing before validating or executing `mix_matrix` in v2.
 - **Related Plan Item:** `plan.md` Phase H4b.
+
+## Multi-Channel Public Ports
+
+- **Status:** Open
+- **Context:** v2 port metadata supports `channels`, but runtime currently allocates one signal buffer per graph signal and maps each public audio port to a single signal with the same name.
+- **Problem:** True multi-channel ports need either per-channel graph signal mapping or a channel-array binding representation. Treating a multi-channel port as a mono buffer would be ambiguous and unsafe.
+- **Later Fix:** Add an explicit channel mapping model for public ports before exposing multi-channel process APIs.
+- **Related Plan Item:** `plan.md` Phase I2b.
