@@ -92,7 +92,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 ### Phase M: Integration and Migration
 
 - [x] M1: Bridge v2 runtime execution into the offline or live host path behind an explicit opt-in.
-- [ ] M2: Draft a migration path from selected v1 units to v2 fixtures.
+- [x] M2: Draft a migration path from selected v1 units to v2 fixtures.
 - [ ] M3: Add benchmarks or regression checks for representative v1 and v2 chains.
 
 ### Phase N: Tooling and CI
