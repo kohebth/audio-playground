@@ -125,10 +125,10 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase R: Atom Catalog Export
 
-- [ ] R1: Define the atom catalog JSON shape needed by the web atom palette.
-- [ ] R2: Add a backend API, CLI command, or test binary that exports atom metadata.
-- [ ] R3: Include atom category, in/out/config fields, statefulness, and compatibility profile hints.
-- [ ] R4: Add regression tests so exported metadata stays aligned with compiler contracts.
+- [x] R1: Define the atom catalog JSON shape needed by the web atom palette.
+- [x] R2: Add a backend API, CLI command, or test binary that exports atom metadata.
+- [x] R3: Include atom category, in/out/config fields, statefulness, and compatibility profile hints.
+- [x] R4: Add regression tests so exported metadata stays aligned with compiler contracts.
 
 ### Phase S: Project v2 Schema
 

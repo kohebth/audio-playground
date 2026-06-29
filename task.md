@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase Q.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase R.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through Q are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 phases H through R are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -78,10 +78,10 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, and APGCore v2 
 
 ### Phase R: Atom Catalog Export
 
-- [ ] R1: Define the atom catalog JSON shape needed by the web atom palette.
-- [ ] R2: Add a backend API, CLI command, or test binary that exports atom metadata.
-- [ ] R3: Include atom category, in/out/config fields, statefulness, and compatibility profile hints.
-- [ ] R4: Add regression tests so exported metadata stays aligned with compiler contracts.
+- [x] R1: Define the atom catalog JSON shape needed by the web atom palette.
+- [x] R2: Add a backend API, CLI command, or test binary that exports atom metadata.
+- [x] R3: Include atom category, in/out/config fields, statefulness, and compatibility profile hints.
+- [x] R4: Add regression tests so exported metadata stays aligned with compiler contracts.
 
 ### Phase S: Project v2 Schema
 

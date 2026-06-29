@@ -8,12 +8,12 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`.
 - Full project/session files are still missing.
-- UI-facing JSON contracts for atom catalog, unit inspection, project inspection, and validation output are still missing.
+- Atom catalog JSON is available through the APGCore catalog writer; unit inspection, project inspection, and structured validation output are still missing.
 
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.
-- [ ] Atom catalog metadata can render an atom palette without frontend hardcoding.
+- [x] Atom catalog metadata can render an atom palette without frontend hardcoding.
 - [ ] Project files can reference multiple units and define routes between unit instances.
 - [ ] Validation returns structured errors and warnings with stable file/path fields.
 - [ ] A guitar pedalboard fixture validates, compiles, runs, and renders deterministically.

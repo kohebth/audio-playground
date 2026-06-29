@@ -79,6 +79,7 @@ target_link_libraries(fast_math_test m)
 
 set(TEST_TARGETS
         test_atom_basic
+        test_atom_catalog
         test_unit_load_all
         test_ctrl_transition
         test_runtime_process_frames
@@ -130,12 +131,12 @@ foreach(TEST_TARGET ${TEST_TARGETS})
     set_tests_properties(${TEST_TARGET} PROPERTIES
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
-    if(TEST_TARGET MATCHES "^test_unit_v2_")
+    if(TEST_TARGET MATCHES "^test_unit_v2_" OR TEST_TARGET STREQUAL "test_atom_catalog")
         set_tests_properties(${TEST_TARGET} PROPERTIES LABELS v2)
     endif()
 endforeach()
 
 add_custom_target(check_v2
         COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} -L v2 --output-on-failure
-        DEPENDS test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime
+        DEPENDS test_atom_catalog test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime
 )
