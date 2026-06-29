@@ -369,10 +369,11 @@ bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float
 bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value) {
     if (!runtime || !runtime->plan || !runtime->plan->unit || !port_name)
         return false;
-    const apg_unit_v2_t *unit = runtime->plan->unit;
-    if (!control_port_by_name(unit->input_ports, unit->input_ports_len, port_name))
+    const apg_unit_v2_t      *unit = runtime->plan->unit;
+    const apg_unit_v2_port_t *port = control_port_by_name(unit->input_ports, unit->input_ports_len, port_name);
+    if (!port)
         return false;
-    return apg_v2_runtime_set_param(runtime, port_name, value);
+    return apg_v2_runtime_set_param(runtime, port->target_param ? port->target_param : port->name, value);
 }
 
 bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {

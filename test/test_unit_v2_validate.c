@@ -372,6 +372,7 @@ int main(void) {
                                "      channels: 1\n"
                                "    - name: bypass\n"
                                "      type: control\n"
+                               "      target_param: gain\n"
                                "  outputs:\n"
                                "    - name: output\n"
                                "      type: audio\n"
@@ -398,6 +399,40 @@ int main(void) {
                                "compatibility:\n"
                                "  desktop_full: true\n";
     if (expect_valid(control_port, "control port without channels or graph signal"))
+        return 1;
+
+    const char *unknown_control_target = "kind: apg.unit\n"
+                                         "schema: apg.unit.v2\n"
+                                         "name: bad_unit\n"
+                                         "version: 2.0.0\n"
+                                         "params:\n"
+                                         "  gain:\n"
+                                         "    type: float\n"
+                                         "    default: 1.0\n"
+                                         "    min: 0.0\n"
+                                         "    max: 2.0\n"
+                                         "ports:\n"
+                                         "  inputs:\n"
+                                         "    - name: input\n"
+                                         "      type: audio\n"
+                                         "      channels: 1\n"
+                                         "    - name: amount\n"
+                                         "      type: control\n"
+                                         "      target_param: missing\n"
+                                         "  outputs:\n"
+                                         "    - name: output\n"
+                                         "      type: audio\n"
+                                         "      channels: 1\n"
+                                         "graph:\n"
+                                         "  signals:\n"
+                                         "    - input\n"
+                                         "    - output\n"
+                                         "  nodes:\n"
+                                         "    - id: pass\n"
+                                         "      atom: generation_dc\n"
+                                         "compatibility:\n"
+                                         "  desktop_full: true\n";
+    if (expect_invalid_contains(unknown_control_target, "unknown control target", "target_param"))
         return 1;
 
     const char *unknown_port_type = "kind: apg.unit\n"

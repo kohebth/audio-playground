@@ -478,6 +478,9 @@ static int test_control_port_sets_matching_param(void) {
                        "      channels: 1\n"
                        "    - name: gain\n"
                        "      type: control\n"
+                       "    - name: amount\n"
+                       "      type: control\n"
+                       "      target_param: gain\n"
                        "  outputs:\n"
                        "    - name: output\n"
                        "      type: audio\n"
@@ -533,8 +536,10 @@ static int test_control_port_sets_matching_param(void) {
         return fail("failed to initialize control port runtime");
     }
 
-    if (!apg_v2_runtime_set_control_port(&runtime, "gain", 4.0f))
+    if (!apg_v2_runtime_set_control_port(&runtime, "gain", 2.0f))
         return fail("failed to set matching control port");
+    if (!apg_v2_runtime_set_control_port(&runtime, "amount", 4.0f))
+        return fail("failed to set targeted control port");
     if (apg_v2_runtime_set_control_port(&runtime, "input", 2.0f) ||
         apg_v2_runtime_set_control_port(&runtime, "missing", 2.0f))
         return fail("accepted invalid control port update");

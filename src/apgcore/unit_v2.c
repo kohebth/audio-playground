@@ -317,6 +317,7 @@ static uc_status fill_audio_port_signals(
 static uc_status fill_port_group(
     const uc_node       *seq,
     const uc_node       *signals,
+    const uc_node       *params,
     uc_arena            *arena,
     apg_unit_v2_port_t **out_ports,
     size_t              *out_len,
@@ -354,6 +355,7 @@ static uc_status fill_port_group(
         }
 
         const char  *channels     = value_text(uc_node_find(port, "channels"));
+        const char  *target_param = value_text(uc_node_find(port, "target_param"));
         const char **port_signals = NULL;
         size_t       signals_len  = 0;
         if (port_type_is_audio(type)) {
@@ -372,13 +374,18 @@ static uc_status fill_port_group(
                 fill_audio_port_signals(port, signals, name, channel_count, arena, &port_signals, &signals_len, err);
             if (status != UC_OK)
                 return status;
+        } else if (target_param && !param_exists(params, target_param)) {
+            char msg[160];
+            snprintf(msg, sizeof(msg), "control port '%s' target_param references unknown param", name ? name : "");
+            return set_error(err, UC_E_MISSING, msg);
         }
 
-        ports[i].name        = name;
-        ports[i].type        = type;
-        ports[i].channels    = channels;
-        ports[i].signals     = port_signals;
-        ports[i].signals_len = signals_len;
+        ports[i].name         = name;
+        ports[i].type         = type;
+        ports[i].channels     = channels;
+        ports[i].target_param = target_param;
+        ports[i].signals      = port_signals;
+        ports[i].signals_len  = signals_len;
     }
 
     *out_ports = ports;
@@ -387,17 +394,22 @@ static uc_status fill_port_group(
 }
 
 static uc_status validate_and_fill_ports(
-    const uc_node *ports, const uc_node *signals, uc_arena *arena, apg_unit_v2_t *out, uc_error *err
+    const uc_node *ports,
+    const uc_node *signals,
+    const uc_node *params,
+    uc_arena      *arena,
+    apg_unit_v2_t *out,
+    uc_error      *err
 ) {
     if (!ports || ports->kind != UC_NODE_MAP)
         return set_error(err, UC_E_MISSING, "missing map field 'ports'");
 
     const uc_node *inputs  = uc_node_find(ports, "inputs");
     const uc_node *outputs = uc_node_find(ports, "outputs");
-    uc_status      status  = fill_port_group(inputs, signals, arena, &out->input_ports, &out->input_ports_len, err);
+    uc_status status = fill_port_group(inputs, signals, params, arena, &out->input_ports, &out->input_ports_len, err);
     if (status != UC_OK)
         return status;
-    return fill_port_group(outputs, signals, arena, &out->output_ports, &out->output_ports_len, err);
+    return fill_port_group(outputs, signals, params, arena, &out->output_ports, &out->output_ports_len, err);
 }
 
 static uc_status fill_signals(const uc_node *signals, uc_arena *arena, apg_unit_v2_t *out, uc_error *err) {
@@ -559,7 +571,8 @@ static uc_status validate_unit_root(const uc_node *root, uc_arena *arena, apg_un
     if (status != UC_OK)
         return status;
 
-    status = validate_and_fill_ports(uc_node_find(root, "ports"), uc_node_find(graph, "signals"), arena, out, err);
+    status =
+        validate_and_fill_ports(uc_node_find(root, "ports"), uc_node_find(graph, "signals"), params, arena, out, err);
     if (status != UC_OK)
         return status;
 

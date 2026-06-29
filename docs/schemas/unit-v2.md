@@ -41,6 +41,7 @@ Ports are grouped under `ports.inputs` and `ports.outputs`. Names must be unique
 - Mono audio ports may use a graph signal with the same name.
 - Multi-channel audio ports require `signals`, with one graph signal name per channel in interleaved order.
 - `control` ports do not require `channels` or graph signals in the current MVP.
+- `control` ports may set `target_param` to update a differently named param; otherwise runtime uses the same name as the port.
 
 ## Graph
 
