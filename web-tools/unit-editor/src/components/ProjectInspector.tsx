@@ -1,5 +1,11 @@
 import type { ProjectNodeData } from '../lib/projectGraph';
-import type { ProjectRoute, RenderResult, UnitInspect, ValidationResult } from '../lib/backendSamples';
+import type {
+  BackendCommands,
+  ProjectRoute,
+  RenderResult,
+  UnitInspect,
+  ValidationResult,
+} from '../lib/backendSamples';
 import {
   countDirtyParamsForInstance,
   paramDraftKey,
@@ -9,6 +15,7 @@ import {
 type Props = {
   validation: ValidationResult;
   render: RenderResult;
+  commands: BackendCommands;
   selectedNode: ProjectNodeData | null;
   selectedRoute: ProjectRoute | null;
   unit: UnitInspect;
@@ -33,6 +40,7 @@ function formatNumber(value: number): string {
 export function ProjectInspector({
   validation,
   render,
+  commands,
   selectedNode,
   selectedRoute,
   unit,
@@ -69,6 +77,10 @@ export function ProjectInspector({
             ))}
           </div>
         )}
+        <div className="command-panel">
+          <span>Backend command</span>
+          <code>{commands.validateProject}</code>
+        </div>
       </section>
 
       <section className="inspector-block">
@@ -95,6 +107,10 @@ export function ProjectInspector({
               style={{ height: `${Math.max(8, Math.abs(sample) * 120)}px` }}
             />
           ))}
+        </div>
+        <div className="command-panel">
+          <span>Backend command</span>
+          <code>{commands.renderProject}</code>
         </div>
       </section>
 

@@ -6,7 +6,7 @@ import { ProjectCanvas } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
-import { backendSamples, sampleSources } from './lib/backendSamples';
+import { backendCommands, backendSamples, sampleSources } from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
 import { buildParamDrafts, countDirtyParams, paramDraftKey } from './lib/projectParams';
 import './App.css';
@@ -91,6 +91,7 @@ export default function App() {
         <ProjectInspector
           validation={backendSamples.validation}
           render={backendSamples.render}
+          commands={backendCommands}
           selectedNode={selectedNode}
           selectedRoute={selectedRoute}
           unit={backendSamples.unit}

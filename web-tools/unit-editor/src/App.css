@@ -1120,6 +1120,32 @@ body {
   font-size: 11px;
 }
 
+.command-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 8px;
+  border: 1px solid #383127;
+  border-radius: 6px;
+  background: #100e0b;
+}
+
+.command-panel span {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.command-panel code {
+  overflow-wrap: anywhere;
+  color: #f8c77e;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .validation-line {
   display: flex;
   align-items: center;

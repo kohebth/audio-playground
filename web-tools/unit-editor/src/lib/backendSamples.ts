@@ -79,6 +79,11 @@ export type RenderResult = {
   };
 };
 
+export type BackendCommands = {
+  validateProject: string;
+  renderProject: string;
+};
+
 export type UnitInspect = {
   schema: string;
   file: string;
@@ -113,6 +118,13 @@ export const backendSamples = {
   render: parseJson<RenderResult>(projectRenderRaw),
   unit: parseJson<UnitInspect>(unitInspectRaw),
   atomCatalog: parseManifest(atomCatalogManifestRaw),
+};
+
+export const backendCommands: BackendCommands = {
+  validateProject:
+    '/tmp/audio-playground-apgcore-build/apg-v2 validate project projects-v2/guitar-pedalboard.project.v2.yaml',
+  renderProject:
+    '/tmp/audio-playground-apgcore-build/apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml',
 };
 
 export const sampleSources = {
