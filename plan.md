@@ -6,7 +6,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, Phase Y1 frozen sample contracts, and Phase Y2 handoff command documentation are implemented.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, Phase Y1 frozen sample contracts, Phase Y2 handoff command documentation, and Phase Y3 web UI guidance refresh are implemented.
 - The next objective is to finish backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
 - The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
 
@@ -176,8 +176,15 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - [x] Y1: Freeze sample JSON contracts for validation, atom catalog, unit inspect, and project inspect.
 - [x] Y2: Update web-readiness docs with exact commands and sample files.
-- [ ] Y3: Refresh `AGENTS.md`, `task.md`, and this plan for the web UI implementation phase.
+- [x] Y3: Refresh `AGENTS.md`, `task.md`, and this plan for the web UI implementation phase.
 - [ ] Y4: Declare the backend ready for v2 web UI work.
+
+### Phase Z: Initial Web UI Implementation After Backend Readiness
+
+- [ ] Z1: Audit `web-tools/unit-editor/` and keep the existing app structure that fits the product workflow.
+- [ ] Z2: Use frozen `test/golden/` JSON as the first frontend data contract and mock data source.
+- [ ] Z3: Build the project-level pedalboard workflow first: project browser, canvas, routes, parameter panel, and validation inspector.
+- [ ] Z4: Add atom-level/unit-internals editing only after the project workflow is usable.
 
 ## Execution Order
 
@@ -186,6 +193,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 3. Add project schema and loader before compiling multi-unit pedalboards.
 4. Stabilize JSON/CLI contracts before starting web UI implementation.
 5. Prove the workflow with a guitar pedalboard fixture before moving to frontend screens.
+6. Start web UI work from frozen backend samples before adding live backend integration.
 
 ## Per-Phase Workflow
 

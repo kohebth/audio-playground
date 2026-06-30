@@ -112,7 +112,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase V:** CLI tooling emits JSON inspect/validate output and deterministic project render output. Benchmark output remains pending.
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute/solo state, and peak/RMS meter snapshots.
 - **Phase X:** Product unit fixtures, the guitar pedalboard project fixture, deterministic render proof, and compatibility/output capture are complete.
-- **Phase Y:** Web handoff package freezes sample contracts and documents exact fixture commands. Guidance refresh and final readiness declaration remain.
+- **Phase Y:** Web handoff package freezes sample contracts, documents exact fixture commands, and refreshes repo guidance. Final readiness declaration remains.
 
 ## First Web UI Scope After Gate
 

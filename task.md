@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase Y2. Phase V validate/inspect JSON contracts, deterministic project render JSON, fixture output capture, frozen sample contracts, documented handoff commands, and runtime product controls are implemented. The benchmark surface remains tracked separately.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase Y3. Phase V validate/inspect JSON contracts, deterministic project render JSON, fixture output capture, frozen sample contracts, documented handoff commands, web UI guidance refresh, and runtime product controls are implemented. The benchmark surface remains tracked separately.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through X, Phase Y1 sample contract freeze, Phase Y2 handoff command documentation, and Phase V validate/inspect/render JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through X, Phase Y1 sample contract freeze, Phase Y2 handoff command documentation, Phase Y3 web UI guidance refresh, and Phase V validate/inspect/render JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -129,8 +129,15 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 
 - [x] Y1: Freeze sample JSON contracts for validation, atom catalog, unit inspect, and project inspect.
 - [x] Y2: Update web-readiness docs with exact commands and sample files.
-- [ ] Y3: Refresh `AGENTS.md`, `task.md`, and `plan.md` for the web UI implementation phase.
+- [x] Y3: Refresh `AGENTS.md`, `task.md`, and `plan.md` for the web UI implementation phase.
 - [ ] Y4: Declare the backend ready for v2 web UI work.
+
+## Web UI Implementation Queue After Phase Y4
+
+- [ ] Z1: Audit `web-tools/unit-editor/` and choose the existing app entry points to keep.
+- [ ] Z2: Load frozen backend samples from `test/golden/` as initial UI fixture data.
+- [ ] Z3: Build the project-level pedalboard browser, canvas, and route view around `projects-v2/guitar-pedalboard.project.v2.yaml`.
+- [ ] Z4: Add parameter and validation inspectors from unit/project inspect JSON before adding unit-internals editing.
 
 ## Completed Work Queue
 

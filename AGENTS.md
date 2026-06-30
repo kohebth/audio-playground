@@ -6,8 +6,9 @@ This repository contains several independent project areas:
 
 - `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, atom registry, YAML loaders, APGCore v2 compiler/runtime, and CTest targets.
 - `units/`: v1 DSP unit YAML loaded by the legacy runtime.
-- `units-v2/`: v2 compiler/runtime fixtures such as `simple_gain`, `simple_mix`, and `simple_clip`.
-- `docs/schemas/unit-v2.md` and `docs/UNIT_V2_ARCHITECTURE.md`: current v2 schema and compiler/runtime design notes.
+- `units-v2/` and `projects-v2/`: v2 compiler/runtime fixtures, including product units and guitar pedalboard project examples.
+- `test/golden/`: frozen JSON samples for frontend contract tests and mock data.
+- `docs/schemas/unit-v2.md`, `docs/schemas/project-v2.md`, `docs/UNIT_V2_ARCHITECTURE.md`, and `docs/WEB_UI_READINESS.md`: current v2 schemas, compiler/runtime design notes, and web handoff context.
 - `configs/`: PipeWire/runtime tuning config.
 - `web-tools/unit-editor/`, `audio-mcp/`, `search-mcp/`: separate frontend and MCP packages with their own dependencies.
 - `samples/` and `analysis/`: audio inputs and generated inspection outputs. Commit large generated audio only as intentional fixtures.
@@ -73,5 +74,7 @@ Active goal: continuously implement the remaining `task.md` and `plan.md` work p
 When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, focused tests, formatting, verification, tracker updates, and commit. Prefer one coherent slice at a time, but continue into the next slice in the same turn when the path is clear and no approval or product decision is needed.
 
 Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documents aligned as work advances. If a task is blocked by missing design context, record it in `problem.md`, update the trackers, and move to the next actionable item.
+
+For web UI work, start from `docs/WEB_UI_READINESS.md`, `projects-v2/guitar-pedalboard.project.v2.yaml`, and the frozen files in `test/golden/`. Treat those samples as the first frontend data contract. Build the project-level pedalboard workflow before unit-internals editing, and avoid changing backend JSON contracts unless a tracked UI requirement needs it.
 
 After each verified slice, stage only the files that belong to that slice and commit with `git commit -m "<which tasks are done>"`. Docs-only tracker updates do not require `./build-and-test.sh`; code/test slices do. Before ending a turn, report the phase, the committed slice, verification run, and the next planned task.
