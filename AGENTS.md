@@ -65,3 +65,9 @@ Pull requests should name the changed project area, list commands run, call out 
 ## Agent-Specific Instructions
 
 Reread `AGENTS.md` at the start of each new work slice before making repository changes. Use `fsmcp` for repository search and file edits. Do not use `apply_patch`; if an `fsmcp` edit fails, stop and report it. Before retrying a failed exact-match edit, reread the target file and base the next edit on the current text. Preserve unrelated user changes. Keep dependencies separate across the C engine, web editor, and MCP packages. Do not stage unrelated modified `units/`, generated audio, or local tool directories unless explicitly requested.
+
+## Continuous Work Protocol
+
+When the user says `continue`, `next`, `go`, or gives broad approval, pick the next unchecked task from `task.md` and `plan.md` and carry it through implementation, focused tests, formatting, verification, tracker updates, and commit. Prefer completing one coherent slice at a time, but continue into the next slice in the same turn when the path is clear and no approval or product decision is needed. If a task is blocked by missing design context, record it in `problem.md`, update the trackers, and move to the next actionable item.
+
+After each verified slice, commit only the files that belong to that slice with `git commit -m "<which tasks are done>"`. Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documents aligned as work advances. Docs-only tracker updates do not require `./build-and-test.sh`; code/test slices do.
