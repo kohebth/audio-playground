@@ -6,7 +6,7 @@ APGCore v2 implementation work tracked in `plan.md` is complete through Phase Y4
 
 Goal achieved: stable backend contracts are ready for the v2 web UI to consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through Y, and Phase V validate/inspect/render JSON contracts are complete. Phase Z1/Z2 web UI foundation work is implemented: `web-tools/unit-editor/` now starts from frozen backend samples and renders the first v2 project workbench. Use package-local web commands inside `web-tools/unit-editor/` for frontend slices.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through Y, and Phase V validate/inspect/render JSON contracts are complete. Phase Z initial web UI work is implemented: `web-tools/unit-editor/` starts from frozen backend samples and renders a project-level v2 pedalboard workbench with unit, route, validation, render, and backend-contract inspection. Use package-local web commands inside `web-tools/unit-editor/` for frontend slices.
 
 ## Completed Foundation
 
@@ -136,8 +136,15 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 
 - [x] Z1: Audit `web-tools/unit-editor/` and choose the existing app entry points to keep.
 - [x] Z2: Load frozen backend samples from `test/golden/` as initial UI fixture data.
-- [ ] Z3: Build the project-level pedalboard browser, canvas, and route view around `projects-v2/guitar-pedalboard.project.v2.yaml`.
-- [ ] Z4: Add parameter and validation inspectors from unit/project inspect JSON before adding unit-internals editing.
+- [x] Z3: Build the project-level pedalboard browser, canvas, and route view around `projects-v2/guitar-pedalboard.project.v2.yaml`.
+- [x] Z4: Add parameter and validation inspectors from unit/project inspect JSON before adding unit-internals editing.
+
+## Next Web UI Queue
+
+- [ ] AA1: Split the project workbench into focused components without changing behavior.
+- [ ] AA2: Add UI state for editable parameter controls while keeping frozen samples immutable.
+- [ ] AA3: Add validation and render command panels that show exact backend commands from `docs/WEB_UI_READINESS.md`.
+- [ ] AA4: Add a first atom palette/unit-inspection view after the project workflow remains stable.
 
 ## Completed Work Queue
 

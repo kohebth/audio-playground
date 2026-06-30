@@ -7,8 +7,8 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
 - The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, and Phase Y web handoff package are implemented.
-- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z web UI implementation is underway.
-- Final backend readiness verification passed with `./build-and-test.sh` across all 14 CTest targets. The first web UI slice passes package build/lint and Playwright desktop/mobile smoke checks.
+- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z initial web UI implementation is complete and Phase AA is next.
+- Final backend readiness verification passed with `./build-and-test.sh` across all 14 CTest targets. The first web UI slices pass package build/lint and Playwright desktop/mobile smoke checks.
 
 ## Completed Work
 
@@ -183,8 +183,15 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - [x] Z1: Audit `web-tools/unit-editor/` and keep the existing app structure that fits the product workflow.
 - [x] Z2: Use frozen `test/golden/` JSON as the first frontend data contract and mock data source.
-- [ ] Z3: Build the project-level pedalboard workflow first: project browser, canvas, routes, parameter panel, and validation inspector.
-- [ ] Z4: Add atom-level/unit-internals editing only after the project workflow is usable.
+- [x] Z3: Build the project-level pedalboard workflow first: project browser, canvas, routes, parameter panel, and validation inspector.
+- [x] Z4: Add atom-level/unit-internals editing only after the project workflow is usable.
+
+### Phase AA: Web UI Refinement and Integration
+
+- [ ] AA1: Split the project workbench into focused components without changing behavior.
+- [ ] AA2: Add UI state for editable parameter controls while keeping frozen samples immutable.
+- [ ] AA3: Add validation and render command panels that show exact backend commands from `docs/WEB_UI_READINESS.md`.
+- [ ] AA4: Add a first atom palette/unit-inspection view after the project workflow remains stable.
 
 ## Execution Order
 

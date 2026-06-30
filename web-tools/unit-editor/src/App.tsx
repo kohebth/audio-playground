@@ -7,6 +7,7 @@ import {
   ReactFlowProvider,
   useEdgesState,
   useNodesState,
+  type Edge,
   type Node,
   type NodeTypes,
 } from '@xyflow/react';
@@ -35,16 +36,42 @@ function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): Projec
   return nodes.find(node => node.id === id)?.data ?? null;
 }
 
+function routeIndexFromEdge(edge: Edge): number | null {
+  const match = edge.id.match(/^route-(\d+)-/);
+  return match ? Number(match[1]) : null;
+}
+
 export default function App() {
   const initialGraph = useMemo(() => buildProjectGraph(backendSamples.project), []);
   const [nodes, , onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [edges, , onEdgesChange] = useEdgesState(initialGraph.edges);
   const [selectedId, setSelectedId] = useState<string | null>('unit-drive1');
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
   const selectedNode = findUnitNode(nodes, selectedId);
+  const selectedRoute = selectedRouteIndex === null ? null : backendSamples.project.routes[selectedRouteIndex] ?? null;
 
   const selectProjectNode = useCallback((id: string) => {
     setSelectedId(id);
+    setSelectedRouteIndex(null);
   }, []);
+
+  const selectRoute = useCallback((index: number) => {
+    setSelectedRouteIndex(index);
+    setSelectedId(null);
+  }, []);
+
+  const displayedEdges = useMemo(() => edges.map(edge => {
+    const selected = routeIndexFromEdge(edge) === selectedRouteIndex;
+    return {
+      ...edge,
+      animated: selected,
+      style: {
+        ...edge.style,
+        stroke: selected ? '#fbbf24' : '#94a3b8',
+        strokeWidth: selected ? 2.6 : 1.6,
+      },
+    };
+  }), [edges, selectedRouteIndex]);
 
   const projectStats = backendSamples.project.compiled;
   const render = backendSamples.render.output;
@@ -83,6 +110,12 @@ export default function App() {
 
       <div className="layout">
         <aside className="project-sidebar">
+          <section className="project-card">
+            <span className="project-card__label">Loaded Project</span>
+            <strong>{backendSamples.project.file}</strong>
+            <span>{backendSamples.project.schema}</span>
+          </section>
+
           <div className="project-sidebar__header">
             <span className="project-sidebar__title">Pedalboard</span>
             <span className="project-sidebar__count">{backendSamples.project.nodes.length} units</span>
@@ -111,6 +144,24 @@ export default function App() {
             })}
           </div>
 
+          <div className="route-list">
+            <div className="route-list__header">
+              <span>Routes</span>
+              <strong>{backendSamples.project.routes.length}</strong>
+            </div>
+            {backendSamples.project.routes.map((route, index) => (
+              <button
+                key={`${index}-${route.from}-${route.to}`}
+                className={`route-list__item ${selectedRouteIndex === index ? 'route-list__item--active' : ''}`}
+                onClick={() => selectRoute(index)}
+                type="button"
+              >
+                <span>{route.from}</span>
+                <strong>{route.to}</strong>
+              </button>
+            ))}
+          </div>
+
           <div className="sample-ledger">
             <div className="sample-ledger__title">Frozen Sources</div>
             {Object.entries(sampleSources).map(([key, path]) => (
@@ -127,11 +178,15 @@ export default function App() {
             <ReactFlowProvider>
               <ReactFlow
                 nodes={nodes}
-                edges={edges}
+                edges={displayedEdges}
                 nodeTypes={nodeTypes}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={(_, node) => selectProjectNode(node.id)}
+                onEdgeClick={(_, edge) => {
+                  const routeIndex = routeIndexFromEdge(edge);
+                  if (routeIndex !== null) selectRoute(routeIndex);
+                }}
                 fitView
                 fitViewOptions={{ padding: 0.16 }}
                 minZoom={0.35}
@@ -160,6 +215,19 @@ export default function App() {
             <div className="inspector-block__meta">
               {validation.errors.length} errors / {validation.warnings.length} warnings
             </div>
+            {validation.errors.length === 0 && validation.warnings.length === 0 ? (
+              <div className="diagnostic-empty">No diagnostics in the frozen validation sample.</div>
+            ) : (
+              <div className="diagnostic-list">
+                {[...validation.errors, ...validation.warnings].map((diagnostic, index) => (
+                  <div key={`${diagnostic.code ?? 'diagnostic'}-${index}`} className="diagnostic-list__item">
+                    <strong>{diagnostic.code ?? 'diagnostic'}</strong>
+                    <span>{diagnostic.path ?? diagnostic.file ?? 'project'}</span>
+                    <p>{diagnostic.message ?? 'No message'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="inspector-block">
@@ -189,7 +257,13 @@ export default function App() {
             </div>
           </section>
 
-          {selectedNode?.kind === 'unit' ? (
+          {selectedRoute ? (
+            <section className="inspector-block inspector-block--selected">
+              <div className="inspector-block__label">Selected Route</div>
+              <h2>{selectedRoute.from}</h2>
+              <p>{selectedRoute.to}</p>
+            </section>
+          ) : selectedNode?.kind === 'unit' ? (
             <section className="inspector-block inspector-block--selected">
               <div className="inspector-block__label">Selected Unit</div>
               <h2>{selectedNode.instance.id}</h2>
@@ -208,6 +282,11 @@ export default function App() {
                 <span>Compatibility</span>
                 <strong>{compatibilityLabel(selectedNode.unit.compatibility)}</strong>
               </div>
+
+              <div className="compatibility">
+                <span>Unit Reference</span>
+                <strong>{selectedNode.unit.file}</strong>
+              </div>
             </section>
           ) : (
             <section className="inspector-block inspector-block--selected">
@@ -216,6 +295,24 @@ export default function App() {
               <p>{selectedNode?.detail ?? 'Select a pedalboard unit to inspect its parameters.'}</p>
             </section>
           )}
+
+          <section className="inspector-block">
+            <div className="inspector-block__label">Backend Contract</div>
+            <div className="contract-list">
+              <div>
+                <span>Unit sample</span>
+                <strong>{backendSamples.unit.name}</strong>
+              </div>
+              <div>
+                <span>Atom catalog bytes</span>
+                <strong>{backendSamples.atomCatalog.bytes}</strong>
+              </div>
+              <div>
+                <span>Atom catalog fnv1a64</span>
+                <strong>{backendSamples.atomCatalog.fnv1a64}</strong>
+              </div>
+            </div>
+          </section>
         </aside>
       </div>
     </div>
