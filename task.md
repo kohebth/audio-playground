@@ -6,7 +6,7 @@ APGCore v2 implementation work tracked in `plan.md` is complete through Phase Y4
 
 Goal achieved: stable backend contracts are ready for the v2 web UI to consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through Y, and Phase V validate/inspect/render JSON contracts are complete. Phase Z initial web UI work is implemented: `web-tools/unit-editor/` starts from frozen backend samples and renders a project-level v2 pedalboard workbench with unit, route, validation, render, and backend-contract inspection. Phase AA refinement now includes focused components, local editable parameter drafts over immutable backend samples, and exact validation/render command panels. Use package-local web commands inside `web-tools/unit-editor/` for frontend slices.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through Y, and Phase V validate/inspect/render JSON contracts are complete. Phase Z initial web UI work is implemented: `web-tools/unit-editor/` starts from frozen backend samples and renders a project-level v2 pedalboard workbench with unit, route, validation, render, and backend-contract inspection. Phase AA refinement is complete with focused components, local editable parameter drafts over immutable backend samples, exact validation/render command panels, and a first atom palette/unit-inspection view. Use package-local web commands inside `web-tools/unit-editor/` for frontend slices.
 
 ## Completed Foundation
 
@@ -144,7 +144,14 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] AA1: Split the project workbench into focused components without changing behavior.
 - [x] AA2: Add UI state for editable parameter controls while keeping frozen samples immutable.
 - [x] AA3: Add validation and render command panels that show exact backend commands from `docs/WEB_UI_READINESS.md`.
-- [ ] AA4: Add a first atom palette/unit-inspection view after the project workflow remains stable.
+- [x] AA4: Add a first atom palette/unit-inspection view after the project workflow remains stable.
+
+### Phase AB: Web UI Completion Pass
+
+- [ ] AB1: Fix the existing `YamlEditor` hook dependency warning so `npm run lint` is warning-free.
+- [ ] AB2: Add a project draft export/override preview for edited instance params.
+- [ ] AB3: Add validation/render readiness states for dirty drafts versus frozen command outputs.
+- [ ] AB4: Add a compact view switcher for project, atom, and contract inspector sections.
 
 ## Completed Work Queue
 

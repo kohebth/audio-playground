@@ -45,3 +45,11 @@ This file tracks known issues that should not block the current phase but need e
 - **Reason:** Render output is stable and sufficient for the web UI handoff; a benchmark command still needs a non-flaky contract before it can support regression or performance checks.
 - **Follow-up:** Add benchmark output with deterministic structural fields and clearly separated timing fields if performance data is needed before broader rollout.
 - **Related Plan Item:** `plan.md` Phase V3.
+
+## Full Atom Catalog Frontend Fixture
+
+- **Status:** Open
+- **Context:** `docs/WEB_UI_READINESS.md` lists `apg-v2 inspect atoms`, but `test/golden/` currently stores only `v2-inspect-atoms.manifest.txt` rather than the full atom catalog JSON payload.
+- **Current UI Handling:** `web-tools/unit-editor/` renders the first atom palette from its existing local `atoms/atomCatalog.ts` data and labels it as a local catalog while still showing the backend manifest schema, byte count, and hash in the contract area.
+- **Follow-up:** Commit a frozen full atom catalog JSON sample, or add a generated frontend fixture, before replacing the local fallback with contract-accurate backend atom metadata.
+- **Related Plan Item:** `plan.md` Phase AB.

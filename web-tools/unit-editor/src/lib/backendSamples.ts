@@ -89,6 +89,12 @@ export type UnitInspect = {
   file: string;
   name: string;
   version: string;
+  meta?: {
+    title?: string;
+    category?: string;
+    description?: string;
+  };
+  compatibility?: Compatibility;
   params: Array<{
     name: string;
     type: string;
@@ -102,6 +108,26 @@ export type UnitInspect = {
       unit?: string;
     };
   }>;
+  ports: {
+    inputs: Array<{
+      name: string;
+      type: string;
+      channels?: string;
+    }>;
+    outputs: Array<{
+      name: string;
+      type: string;
+      channels?: string;
+    }>;
+  };
+  graph: {
+    signals: string[];
+    nodes: Array<{
+      id: string;
+      atom: string;
+      bindings: Record<string, number>;
+    }>;
+  };
 };
 
 function parseJson<T>(raw: string): T {

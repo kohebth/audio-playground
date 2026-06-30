@@ -1,3 +1,4 @@
+import { AtomCatalogPanel } from './AtomCatalogPanel';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type {
   BackendCommands,
@@ -183,6 +184,8 @@ export function ProjectInspector({
           <p>{selectedNode?.detail ?? 'Select a pedalboard unit to inspect its parameters.'}</p>
         </section>
       )}
+
+      <AtomCatalogPanel unit={unit} manifest={atomCatalog} />
 
       <section className="inspector-block">
         <div className="inspector-block__label">Backend Contract</div>
