@@ -64,7 +64,7 @@ Pull requests should name the changed project area, list commands run, call out 
 
 ## Agent-Specific Instructions
 
-Reread `AGENTS.md` at the start of each new work slice before making repository changes. Use `fsmcp` for repository search and file edits. Do not use `apply_patch`; if an `fsmcp` edit fails, stop and report it. Before retrying a failed exact-match edit, reread the target file and base the next edit on the current text. Preserve unrelated user changes. Keep dependencies separate across the C engine, web editor, and MCP packages. Do not stage unrelated modified `units/`, generated audio, or local tool directories unless explicitly requested.
+Reread `AGENTS.md` at the start of each new work slice before making repository changes. Before deciding to write new code, choose the shortest clear implementation that preserves the exact intended behavior and remains simple to read. Use `fsmcp` for repository search and file edits. Do not use `apply_patch`; if an `fsmcp` edit fails, stop and report it. Before retrying a failed exact-match edit, reread the target file and base the next edit on the current text. Preserve unrelated user changes. Keep dependencies separate across the C engine, web editor, and MCP packages. Do not stage unrelated modified `units/`, generated audio, or local tool directories unless explicitly requested.
 
 ## Continuous Work Protocol
 
