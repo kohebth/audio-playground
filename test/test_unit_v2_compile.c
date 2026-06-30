@@ -431,7 +431,82 @@ static int test_extended_atom_binding_metadata_compile(void) {
                           "        mix: ${params.mix}\n"
                           "compatibility:\n"
                           "  desktop_full: true\n";
-    return expect_compile_valid(wet_dry, "mix_wet_dry metadata");
+    if (expect_compile_valid(wet_dry, "mix_wet_dry metadata"))
+        return 1;
+
+    const char *lfo = "kind: apg.unit\n"
+                      "schema: apg.unit.v2\n"
+                      "name: lfo_fixture\n"
+                      "version: 2.0.0\n"
+                      "params:\n"
+                      "  rate:\n"
+                      "    type: float\n"
+                      "    default: 5.0\n"
+                      "    min: 0.1\n"
+                      "    max: 12.0\n"
+                      "ports:\n"
+                      "  inputs:\n"
+                      "    - name: input\n"
+                      "      type: audio\n"
+                      "      channels: 1\n"
+                      "  outputs:\n"
+                      "    - name: output\n"
+                      "      type: audio\n"
+                      "      channels: 1\n"
+                      "graph:\n"
+                      "  signals:\n"
+                      "    - input\n"
+                      "    - output\n"
+                      "  nodes:\n"
+                      "    - id: lfo\n"
+                      "      atom: generation_lfo\n"
+                      "      out:\n"
+                      "        signal: output\n"
+                      "      config:\n"
+                      "        frequency: ${params.rate}\n"
+                      "        waveform: 0\n"
+                      "        phase_offset: 0.0\n"
+                      "        sample_rate: 0.0\n"
+                      "compatibility:\n"
+                      "  desktop_full: true\n";
+    if (expect_compile_valid(lfo, "generation_lfo metadata"))
+        return 1;
+
+    const char *detect_threshold = "kind: apg.unit\n"
+                                   "schema: apg.unit.v2\n"
+                                   "name: threshold_fixture\n"
+                                   "version: 2.0.0\n"
+                                   "params:\n"
+                                   "  threshold:\n"
+                                   "    type: float\n"
+                                   "    default: 0.2\n"
+                                   "    min: 0.0\n"
+                                   "    max: 1.0\n"
+                                   "ports:\n"
+                                   "  inputs:\n"
+                                   "    - name: input\n"
+                                   "      type: audio\n"
+                                   "      channels: 1\n"
+                                   "  outputs:\n"
+                                   "    - name: output\n"
+                                   "      type: audio\n"
+                                   "      channels: 1\n"
+                                   "graph:\n"
+                                   "  signals:\n"
+                                   "    - input\n"
+                                   "    - output\n"
+                                   "  nodes:\n"
+                                   "    - id: threshold\n"
+                                   "      atom: detect_threshold\n"
+                                   "      in:\n"
+                                   "        signal: input\n"
+                                   "      out:\n"
+                                   "        gate: output\n"
+                                   "      config:\n"
+                                   "        threshold: ${params.threshold}\n"
+                                   "compatibility:\n"
+                                   "  desktop_full: true\n";
+    return expect_compile_valid(detect_threshold, "detect_threshold metadata");
 }
 
 static int test_delay_line_binding_metadata_compile(void) {
@@ -1565,8 +1640,8 @@ static int test_compile_all_unit_v2_fixtures(void) {
     }
     closedir(dir);
 
-    if (fixture_count < 8u)
-        return fail("expected at least eight unit-v2 fixtures");
+    if (fixture_count < 14u)
+        return fail("expected at least fourteen unit-v2 fixtures");
     return 0;
 }
 

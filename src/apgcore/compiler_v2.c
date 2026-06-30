@@ -192,40 +192,47 @@ typedef struct {
 } apg_atom_binding_schema_t;
 
 static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, apg_bind_section_t section) {
-    static const char *const               generation_dc_out[]       = {"signal"};
-    static const char *const               generation_dc_config[]    = {"value"};
-    static const char *const               pair_in[]                 = {"signal_a", "signal_b"};
-    static const char *const               mono_in[]                 = {"signal"};
-    static const char *const               mono_out[]                = {"signal"};
-    static const char *const               clip_hard_config[]        = {"threshold"};
-    static const char *const               clip_soft_config[]        = {"threshold", "curve"};
-    static const char *const               delay_line_config[]       = {"length"};
-    static const char *const               delay_fractional_config[] = {"delay_samples", "interpolation"};
-    static const char *const               delay_tap_in[]            = {"buffer", "tap_position"};
-    static const char *const               delay_tap_config[]        = {"coefficient"};
-    static const char *const               filter_biquad_config[]    = {"b0", "b1", "b2", "a1", "a2"};
-    static const char *const               filter_delay_config[]     = {"delay_samples", "coefficient"};
-    static const char *const               filter_comb_fb_in[]       = {"signal", "delay"};
-    static const char *const               filter_dc_block_config[]  = {"coefficient"};
-    static const char *const               signal_modulator_in[]     = {"signal", "modulator"};
-    static const char *const               scrub_in[]                = {"buffer", "position"};
-    static const char *const               depth_config[]            = {"depth"};
-    static const char *const               scrub_config[]            = {"buffer_size"};
-    static const char *const               mix_wet_dry_in[]          = {"dry", "wet"};
-    static const char *const               mix_wet_dry_config[]      = {"mix"};
-    static const char *const               mix_matrix_io[]           = {"signals"};
-    static const char *const               mix_matrix_config[]       = {"coefficients"};
-    static const char *const               crossfade_config[]        = {"t"};
-    static const char *const               stereo_in[]               = {"left", "right"};
-    static const char *const               stereo_out[]              = {"left", "right"};
-    static const char *const               ms_in[]                   = {"mid", "side"};
-    static const char *const               ms_out[]                  = {"mid", "side"};
-    static const char *const               pan_config[]              = {"position"};
-    static const apg_atom_binding_schema_t schemas[]                 = {
+    static const char *const generation_dc_out[]       = {"signal"};
+    static const char *const generation_dc_config[]    = {"value"};
+    static const char *const generation_lfo_config[]   = {"frequency", "waveform", "phase_offset", "sample_rate"};
+    static const char *const pair_in[]                 = {"signal_a", "signal_b"};
+    static const char *const mono_in[]                 = {"signal"};
+    static const char *const mono_out[]                = {"signal"};
+    static const char *const clip_hard_config[]        = {"threshold"};
+    static const char *const clip_soft_config[]        = {"threshold", "curve"};
+    static const char *const delay_line_config[]       = {"length"};
+    static const char *const delay_fractional_config[] = {"delay_samples", "interpolation"};
+    static const char *const delay_tap_in[]            = {"buffer", "tap_position"};
+    static const char *const delay_tap_config[]        = {"coefficient"};
+    static const char *const filter_biquad_config[]    = {"b0", "b1", "b2", "a1", "a2"};
+    static const char *const filter_delay_config[]     = {"delay_samples", "coefficient"};
+    static const char *const filter_comb_fb_in[]       = {"signal", "delay"};
+    static const char *const filter_dc_block_config[]  = {"coefficient"};
+    static const char *const gate_out[]                = {"gate"};
+    static const char *const threshold_config[]        = {"threshold"};
+    static const char *const signal_modulator_in[]     = {"signal", "modulator"};
+    static const char *const scrub_in[]                = {"buffer", "position"};
+    static const char *const depth_config[]            = {"depth"};
+    static const char *const scrub_config[]            = {"buffer_size"};
+    static const char *const mix_wet_dry_in[]          = {"dry", "wet"};
+    static const char *const mix_wet_dry_config[]      = {"mix"};
+    static const char *const mix_matrix_io[]           = {"signals"};
+    static const char *const mix_matrix_config[]       = {"coefficients"};
+    static const char *const crossfade_config[]        = {"t"};
+    static const char *const stereo_in[]               = {"left", "right"};
+    static const char *const stereo_out[]              = {"left", "right"};
+    static const char *const ms_in[]                   = {"mid", "side"};
+    static const char *const ms_out[]                  = {"mid", "side"};
+    static const char *const pan_config[]              = {"position"};
+    static const apg_atom_binding_schema_t schemas[]   = {
         {        "generation_dc",    APG_BIND_SECTION_OUT,       generation_dc_out,
          sizeof(generation_dc_out) / sizeof(generation_dc_out[0])                                                                     },
         {        "generation_dc", APG_BIND_SECTION_CONFIG,    generation_dc_config,
          sizeof(generation_dc_config) / sizeof(generation_dc_config[0])                                                               },
+        {       "generation_lfo",    APG_BIND_SECTION_OUT,       generation_dc_out,
+         sizeof(generation_dc_out) / sizeof(generation_dc_out[0])                                                                     },
+        {       "generation_lfo", APG_BIND_SECTION_CONFIG,   generation_lfo_config,
+         sizeof(generation_lfo_config) / sizeof(generation_lfo_config[0])                                                             },
         {   "amplitude_multiply",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
         {   "amplitude_multiply",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
         {        "amplitude_add",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
@@ -279,6 +286,10 @@ static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, ap
         {      "filter_dc_block",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
         {      "filter_dc_block", APG_BIND_SECTION_CONFIG,  filter_dc_block_config,
          sizeof(filter_dc_block_config) / sizeof(filter_dc_block_config[0])                                                           },
+        {     "detect_threshold",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
+        {     "detect_threshold",    APG_BIND_SECTION_OUT,                gate_out,             sizeof(gate_out) / sizeof(gate_out[0])},
+        {     "detect_threshold", APG_BIND_SECTION_CONFIG,        threshold_config,
+         sizeof(threshold_config) / sizeof(threshold_config[0])                                                                       },
         { "modulation_amplitude",     APG_BIND_SECTION_IN,     signal_modulator_in,
          sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
         { "modulation_amplitude",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},

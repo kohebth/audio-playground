@@ -4,6 +4,7 @@
 #include <apgcore/unit_v2.h>
 #include <atom/dsp_types.h>
 
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -62,6 +63,16 @@ static int expect_near(float actual, float expected, float tolerance, const char
     if (diff > tolerance) {
         fprintf(stderr, "unexpected %s: got %f expected %f\n", label, actual, expected);
         return 1;
+    }
+    return 0;
+}
+
+static int expect_finite_samples(const float *actual, size_t frames, const char *label) {
+    for (size_t i = 0; i < frames; i++) {
+        if (!isfinite(actual[i])) {
+            fprintf(stderr, "non-finite %s sample at %zu: %f\n", label, i, actual[i]);
+            return 1;
+        }
     }
     return 0;
 }
@@ -1249,6 +1260,82 @@ static int test_delay_tap_scalar_input_refresh(void) {
     return 0;
 }
 
+static int test_product_fixture_library_runtime_smoke(void) {
+    const char *mono_fixtures[] = {
+        "units-v2/overdrive.unit.v2.yaml",  "units-v2/delay.unit.v2.yaml",      "units-v2/tremolo.unit.v2.yaml",
+        "units-v2/tone_stack.unit.v2.yaml", "units-v2/noise_gate.unit.v2.yaml",
+    };
+    const float input[4] = {0.1f, 0.25f, -0.5f, 0.75f};
+
+    for (size_t i = 0; i < sizeof(mono_fixtures) / sizeof(mono_fixtures[0]); i++) {
+        uc_arena arena;
+        if (uc_arena_init(&arena, 1024 * 1024) != 0)
+            return fail("arena init failed");
+
+        apg_unit_v2_t          unit;
+        apg_v2_compiled_unit_t plan;
+        if (load_and_compile_fixture(mono_fixtures[i], &arena, &unit, &plan)) {
+            uc_arena_free(&arena);
+            return 1;
+        }
+
+        apg_v2_runtime_t runtime;
+        uc_error         err = {0};
+        if (apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err) != UC_OK) {
+            fprintf(stderr, "runtime init error: %s\n", err.msg);
+            uc_arena_free(&arena);
+            return fail("failed to initialize product fixture runtime");
+        }
+
+        float output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
+            return fail("product fixture processing failed");
+        if (expect_finite_samples(output, 4u, mono_fixtures[i]))
+            return 1;
+
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+    }
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("units-v2/wet_dry_mix.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err = {0};
+    if (apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err) != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize wet/dry fixture runtime");
+    }
+
+    float *dry    = apg_v2_runtime_find_input_port_signal(&runtime, "dry");
+    float *wet    = apg_v2_runtime_find_input_port_signal(&runtime, "wet");
+    float *output = apg_v2_runtime_find_output_port_signal(&runtime, "output");
+    if (!dry || !wet || !output)
+        return fail("wet/dry fixture public ports are missing");
+    dry[0] = 0.0f;
+    dry[1] = 1.0f;
+    wet[0] = 1.0f;
+    wet[1] = 0.0f;
+    if (!apg_v2_runtime_process(&runtime, 2u))
+        return fail("wet/dry fixture processing failed");
+    const float expected[2] = {0.5f, 0.5f};
+    if (expect_samples(output, expected, 2u, "wet/dry fixture"))
+        return 1;
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_capable_fixture_library(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -1505,6 +1592,8 @@ int main(void) {
     if (test_delay_tap_scalar_input_refresh())
         return 1;
     if (test_filter_state_buffer_uses_descriptor_capacity())
+        return 1;
+    if (test_product_fixture_library_runtime_smoke())
         return 1;
     if (test_runtime_capable_fixture_library())
         return 1;

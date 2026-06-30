@@ -42,6 +42,6 @@ This file tracks known issues that should not block the current phase but need e
 
 - **Status:** Deferred
 - **Context:** Phase V added `apg-v2` validation and inspect JSON contracts plus golden outputs for frontend tests.
-- **Reason:** A render/benchmark command surface is not meaningful until Phase X defines the product fixture and deterministic render target.
+- **Reason:** A render/benchmark command surface is not meaningful until Phase X defines the guitar pedalboard fixture and deterministic render target.
 - **Follow-up:** Revisit after the guitar pedalboard fixture exists, then add CLI output suitable for frontend preview and regression checks.
 - **Related Plan Item:** `plan.md` Phase V3 / Phase X.

@@ -47,6 +47,14 @@ int main(void) {
         return fail("generation_dc output contract is missing");
     if (!strstr(json, "\"config\":[{\"name\":\"value\",\"type\":\"scalar\"}]"))
         return fail("generation_dc config contract is missing");
+    if (!strstr(json, "\"name\":\"generation_lfo\""))
+        return fail("generation_lfo atom is missing");
+    if (!strstr(json, "\"name\":\"frequency\",\"type\":\"float\""))
+        return fail("generation_lfo frequency contract is missing");
+    if (!strstr(json, "\"name\":\"detect_threshold\""))
+        return fail("detect_threshold atom is missing");
+    if (!strstr(json, "\"outputs\":[{\"name\":\"gate\",\"type\":\"signal\"}]"))
+        return fail("detect_threshold gate output contract is missing");
     if (!strstr(json, "\"name\":\"mix_matrix\""))
         return fail("mix_matrix atom is missing");
     if (!strstr(json, "\"name\":\"signals\",\"type\":\"signal_array\""))

@@ -1,0 +1,109 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: tone_stack
+version: 2.0.0
+
+meta:
+  title: Tone Stack
+  category: eq
+  description: Applies deterministic bass, mid, and treble gain stages through biquad atoms.
+
+params:
+  bass:
+    type: float
+    default: 1.0
+    min: 0.2
+    max: 2.0
+    smoothing_ms: 10
+    ui:
+      label: Bass
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
+  mid:
+    type: float
+    default: 0.9
+    min: 0.2
+    max: 2.0
+    smoothing_ms: 10
+    ui:
+      label: Mid
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
+  treble:
+    type: float
+    default: 1.1
+    min: 0.2
+    max: 2.0
+    smoothing_ms: 10
+    ui:
+      label: Treble
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - bass_stage
+    - mid_stage
+    - output
+
+  nodes:
+    - id: bass_stage
+      atom: filter_biquad
+      in:
+        signal: input
+      out:
+        signal: bass_stage
+      config:
+        b0: ${params.bass}
+        b1: 0.0
+        b2: 0.0
+        a1: 0.0
+        a2: 0.0
+
+    - id: mid_stage
+      atom: filter_biquad
+      in:
+        signal: bass_stage
+      out:
+        signal: mid_stage
+      config:
+        b0: ${params.mid}
+        b1: 0.0
+        b2: 0.0
+        a1: 0.0
+        a2: 0.0
+
+    - id: treble_stage
+      atom: filter_biquad
+      in:
+        signal: mid_stage
+      out:
+        signal: output
+      config:
+        b0: ${params.treble}
+        b1: 0.0
+        b2: 0.0
+        a1: 0.0
+        a2: 0.0
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  offline_render: true

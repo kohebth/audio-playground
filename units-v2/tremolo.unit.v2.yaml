@@ -1,0 +1,77 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: tremolo
+version: 2.0.0
+
+meta:
+  title: Tremolo
+  category: modulation
+  description: Uses an LFO to modulate mono signal amplitude.
+
+params:
+  rate:
+    type: float
+    default: 5.0
+    min: 0.1
+    max: 12.0
+    smoothing_ms: 10
+    ui:
+      label: Rate
+      control: knob
+      unit: Hz
+      scale: linear
+      display_precision: 2
+  depth:
+    type: float
+    default: 0.4
+    min: 0.0
+    max: 0.9
+    smoothing_ms: 10
+    ui:
+      label: Depth
+      control: knob
+      unit: "%"
+      scale: linear
+      display_precision: 2
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - lfo
+    - output
+
+  nodes:
+    - id: lfo
+      atom: generation_lfo
+      out:
+        signal: lfo
+      config:
+        frequency: ${params.rate}
+        waveform: 0
+        phase_offset: 0.0
+        sample_rate: 0.0
+
+    - id: apply_tremolo
+      atom: modulation_amplitude
+      in:
+        signal: input
+        modulator: lfo
+      out:
+        signal: output
+      config:
+        depth: ${params.depth}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  offline_render: true

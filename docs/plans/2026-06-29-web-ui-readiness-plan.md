@@ -9,9 +9,9 @@
 
 ## Context Discovered
 
-- APGCore v2 is complete through Phase U in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, and verification workflow are in place.
+- APGCore v2 is complete through Phase W plus Phase X1 in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, and verification workflow are in place.
 - `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md` define the desired product as a visual pedalboard and graph composer, not just a YAML editor.
-- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, and project inspection. Runtime product controls and meters are implemented; render/benchmark tooling and a representative product fixture remain open.
+- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, and project inspection. Runtime product controls, meters, and product unit fixtures are implemented; render/benchmark tooling and the representative pedalboard fixture remain open.
 - `web-tools/unit-editor/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
 ---
@@ -98,7 +98,7 @@
 
 | # | Step | Expected Output | Depends On |
 |---|------|-----------------|------------|
-| X1 | Add or migrate guitar units | Overdrive, delay, tremolo, EQ, noise gate, wet/dry mix | Phase W |
+| X1 | Add or migrate guitar units | Done: overdrive, delay, tremolo, EQ/tone stack, noise gate, wet/dry mix | Phase W |
 | X2 | Add guitar pedalboard project fixture | End-to-end project file | X1 |
 | X3 | Validate, compile, run, and render fixture | Deterministic product proof | X2 |
 

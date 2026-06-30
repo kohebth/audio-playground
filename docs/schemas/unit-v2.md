@@ -80,6 +80,7 @@ Duplicate binding keys are rejected during loading. Unknown signal references, u
 The compiler currently validates required keys for these MVP atoms:
 
 - `generation_dc`: `out.signal`, `config.value`
+- `generation_lfo`: `out.signal`, `config.frequency`, `config.waveform`, `config.phase_offset`, `config.sample_rate`
 - `amplitude_multiply`, `amplitude_add`, `amplitude_subtract`: `in.signal_a`, `in.signal_b`, `out.signal`
 - `amplitude_clip_hard`: `in.signal`, `out.signal`, `config.threshold`
 - `amplitude_clip_soft`: `in.signal`, `out.signal`, `config.threshold`, `config.curve`
@@ -91,6 +92,7 @@ The compiler currently validates required keys for these MVP atoms:
 - `filter_allpass`, `filter_comb_ff`: `in.signal`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_comb_fb`: `in.signal`, optional `in.delay`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_dc_block`: `in.signal`, `out.signal`, `config.coefficient`
+- `detect_threshold`: `in.signal`, `out.gate`, `config.threshold`
 - `modulation_amplitude`, `modulation_frequency`, `modulation_phase`: `in.signal`, `in.modulator`, `out.signal`, `config.depth`
 - `modulation_ring`: `in.signal`, `in.modulator`, `out.signal`
 - `modulation_scrub`: `in.buffer`, `in.position`, `out.signal`, `config.buffer_size`
