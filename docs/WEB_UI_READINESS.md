@@ -20,6 +20,30 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - [x] Runtime supports the first live UI controls: parameter changes, bypass, and meters.
 - [x] Sample JSON outputs are committed for frontend tests and UI mock data, including unit inspect, project inspect, atom catalog, and guitar pedalboard fixture contracts.
 
+## Frozen Backend Samples
+
+Build the CLI once through the normal C workflow, then use these exact commands as frontend fixture sources:
+
+```sh
+/tmp/audio-playground-apgcore-build/apg-v2 validate unit units-v2/simple_gain.unit.v2.yaml
+/tmp/audio-playground-apgcore-build/apg-v2 validate project projects-v2/guitar-pedalboard.project.v2.yaml
+/tmp/audio-playground-apgcore-build/apg-v2 inspect atoms
+/tmp/audio-playground-apgcore-build/apg-v2 inspect unit units-v2/simple_gain.unit.v2.yaml
+/tmp/audio-playground-apgcore-build/apg-v2 inspect project projects-v2/guitar-pedalboard.project.v2.yaml
+/tmp/audio-playground-apgcore-build/apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml
+```
+
+Committed sample files:
+
+- `test/golden/v2-validate-unit-simple_gain.json`
+- `test/golden/v2-validate-project-two-gain-chain.json`
+- `test/golden/v2-validate-project-guitar-pedalboard.json`
+- `test/golden/v2-inspect-unit-simple_gain.json`
+- `test/golden/v2-inspect-project-two-gain-chain.json`
+- `test/golden/v2-inspect-project-guitar-pedalboard.json`
+- `test/golden/v2-render-project-guitar-pedalboard.json`
+- `test/golden/v2-inspect-atoms.manifest.txt`
+
 ## Backend Contracts Needed
 
 ### Unit Inspect Contract
@@ -88,7 +112,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase V:** CLI tooling emits JSON inspect/validate output and deterministic project render output. Benchmark output remains pending.
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute/solo state, and peak/RMS meter snapshots.
 - **Phase X:** Product unit fixtures, the guitar pedalboard project fixture, deterministic render proof, and compatibility/output capture are complete.
-- **Phase Y:** Web handoff package freezes sample contracts.
+- **Phase Y:** Web handoff package freezes sample contracts and documents exact fixture commands. Guidance refresh and final readiness declaration remain.
 
 ## First Web UI Scope After Gate
 

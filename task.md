@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase Y1. Phase V validate/inspect JSON contracts, deterministic project render JSON, fixture output capture, frozen sample contracts, and runtime product controls are implemented. The benchmark surface remains tracked separately.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase Y2. Phase V validate/inspect JSON contracts, deterministic project render JSON, fixture output capture, frozen sample contracts, documented handoff commands, and runtime product controls are implemented. The benchmark surface remains tracked separately.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through X, Phase Y1 sample contract freeze, and Phase V validate/inspect/render JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through X, Phase Y1 sample contract freeze, Phase Y2 handoff command documentation, and Phase V validate/inspect/render JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -128,7 +128,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 ### Phase Y: Web Handoff Package
 
 - [x] Y1: Freeze sample JSON contracts for validation, atom catalog, unit inspect, and project inspect.
-- [ ] Y2: Update web-readiness docs with exact commands and sample files.
+- [x] Y2: Update web-readiness docs with exact commands and sample files.
 - [ ] Y3: Refresh `AGENTS.md`, `task.md`, and `plan.md` for the web UI implementation phase.
 - [ ] Y4: Declare the backend ready for v2 web UI work.
 
