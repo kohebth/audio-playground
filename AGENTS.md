@@ -69,7 +69,7 @@ Reread `AGENTS.md` at the start of each new work slice before making repository 
 
 ## Continuous Work Protocol
 
-Active goal: continuously implement the remaining `task.md` and `plan.md` work phase by phase until the backend is ready to move to the web UI. Preserve repository workflow rules and commit each completed, verified slice.
+Current milestone: APGCore v2 backend handoff is complete and the next queue starts with Phase Z web UI implementation in `task.md` and `plan.md`. Preserve repository workflow rules and commit each completed, verified slice.
 
 When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, focused tests, formatting, verification, tracker updates, and commit. Prefer one coherent slice at a time, but continue into the next slice in the same turn when the path is clear and no approval or product decision is needed.
 

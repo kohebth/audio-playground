@@ -6,9 +6,9 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, Phase Y1 frozen sample contracts, Phase Y2 handoff command documentation, and Phase Y3 web UI guidance refresh are implemented.
-- The next objective is to finish backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
-- The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, and Phase Y web handoff package are implemented.
+- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; the next objective is Phase Z web UI implementation.
+- Final backend readiness verification passed with `./build-and-test.sh` across all 14 CTest targets.
 
 ## Completed Work
 
@@ -155,7 +155,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - [x] V1: Add structured JSON validation output for units and projects.
 - [x] V2: Add inspect output for atoms, units, and projects.
-- [ ] V3: Add or stabilize benchmark command surfaces for product fixtures; deterministic project render JSON is implemented.
+- [x] V3: Stabilize the product fixture preview command surface with deterministic project render JSON; benchmark CLI output remains deferred in `problem.md`.
 - [x] V4: Commit golden JSON outputs for frontend tests.
 
 ### Phase W: Runtime Product Controls
@@ -177,9 +177,9 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - [x] Y1: Freeze sample JSON contracts for validation, atom catalog, unit inspect, and project inspect.
 - [x] Y2: Update web-readiness docs with exact commands and sample files.
 - [x] Y3: Refresh `AGENTS.md`, `task.md`, and this plan for the web UI implementation phase.
-- [ ] Y4: Declare the backend ready for v2 web UI work.
+- [x] Y4: Declare the backend ready for v2 web UI work.
 
-### Phase Z: Initial Web UI Implementation After Backend Readiness
+### Phase Z: Initial Web UI Implementation
 
 - [ ] Z1: Audit `web-tools/unit-editor/` and keep the existing app structure that fits the product workflow.
 - [ ] Z2: Use frozen `test/golden/` JSON as the first frontend data contract and mock data source.

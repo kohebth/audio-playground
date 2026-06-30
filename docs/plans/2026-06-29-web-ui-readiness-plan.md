@@ -9,9 +9,9 @@
 
 ## Context Discovered
 
-- APGCore v2 is complete through Phase Y3 in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, the guitar pedalboard project fixture, deterministic project rendering, captured fixture outputs, frozen sample contracts, exact handoff commands, sample file references, web UI implementation guidance, and verification workflow are in place.
+- APGCore v2 is complete through Phase Y4 in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, the guitar pedalboard project fixture, deterministic project rendering, captured fixture outputs, frozen sample contracts, exact handoff commands, sample file references, web UI implementation guidance, readiness declaration, and verification workflow are in place.
 - `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md` define the desired product as a visual pedalboard and graph composer, not just a YAML editor.
-- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, project inspection, and deterministic project rendering. Runtime product controls, meters, product unit fixtures, representative pedalboard fixture, pedalboard sample outputs, unit inspect golden, and atom catalog manifest are implemented; benchmark tooling remains open.
+- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, project inspection, and deterministic project rendering. Runtime product controls, meters, product unit fixtures, representative pedalboard fixture, pedalboard sample outputs, unit inspect golden, and atom catalog manifest are implemented; benchmark tooling is deferred in `problem.md`.
 - `web-tools/unit-editor/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
 ---
@@ -84,7 +84,7 @@
 |---|------|-----------------|------------|
 | V1 | Add JSON validation output | UI-readable errors/warnings | Phase U |
 | V2 | Add inspect commands for atoms, units, and projects | Stable frontend data sources | V1 |
-| V3 | Add render/benchmark command surface after product fixture scope is defined | Render JSON is implemented; benchmark output remains | Phase X |
+| V3 | Add render/benchmark command surface after product fixture scope is defined | Done: render JSON is implemented; benchmark output is deferred in `problem.md` | Phase X |
 
 ### Phase W: Runtime Product Controls
 
@@ -110,6 +110,7 @@
 | Y1 | Freeze JSON contracts and sample outputs | Done: validation, unit inspect, project inspect, render, and atom catalog contracts | Phase X |
 | Y2 | Document exact backend commands and sample files | Done: UI can develop against frozen fixtures listed in `docs/WEB_UI_READINESS.md` | Y1 |
 | Y3 | Update repo guidance and trackers | Done: `AGENTS.md`, `task.md`, and `plan.md` point to the web UI implementation phase | Y2 |
+| Y4 | Declare backend ready for v2 web UI work | Done: readiness declaration and final `./build-and-test.sh` pass are recorded | Y3 |
 
 ---
 
@@ -136,9 +137,10 @@
 - [x] Web handoff sample outputs are committed.
 - [x] Web handoff docs are finalized.
 - [x] Repo guidance and trackers identify the first web UI workstream.
+- [x] Backend readiness for v2 web UI work is declared and verified.
 
 ---
 
-## First Action
+## Next Action
 
-Complete Phase P by creating the web-readiness checklist and updating repo task tracking with Phases Q-Y.
+Start Phase Z by auditing `web-tools/unit-editor/`, then wire the frozen backend samples into the first project-level pedalboard UI workflow.
