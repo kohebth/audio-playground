@@ -8,7 +8,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`, including product units for overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix.
 - Project/session schema, deterministic fixtures, referenced-unit resolution, mono project compilation, and `projects-v2/guitar-pedalboard.project.v2.yaml` exist.
-- The `apg-v2` CLI emits structured validation JSON and inspect JSON for atoms, units, and projects. Render/benchmark command surfaces remain pending until deterministic pedalboard rendering is defined.
+- The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, and deterministic project render JSON through `apg-v2 render project <path>`. Benchmark output remains pending.
 
 ## Ready To Start Web UI When
 
@@ -16,7 +16,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - [x] Atom catalog metadata can render an atom palette without frontend hardcoding.
 - [x] Project files can reference units, define routes between unit instances, and compile mono routes into one runtime plan.
 - [x] Validation returns structured errors and warnings with stable file/path fields.
-- [ ] A guitar pedalboard fixture validates, compiles, runs, and renders deterministically.
+- [x] A guitar pedalboard fixture validates, compiles, runs, and renders deterministically.
 - [x] Runtime supports the first live UI controls: parameter changes, bypass, and meters.
 - [x] Sample JSON outputs are committed for frontend tests and UI mock data.
 
@@ -85,9 +85,9 @@ The UI needs a way to drive live or offline preview:
 - **Phase S:** Project schema and fixtures exist.
 - **Phase T:** Project loader resolves multi-file units safely. Complete.
 - **Phase U:** Project compiler creates a single runtime plan. Complete for mono project routes.
-- **Phase V:** CLI tooling emits JSON inspect/validate output. Validate/inspect are complete; render/benchmark remains pending.
+- **Phase V:** CLI tooling emits JSON inspect/validate output and deterministic project render output. Benchmark output remains pending.
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute/solo state, and peak/RMS meter snapshots.
-- **Phase X:** Product unit fixtures and the guitar pedalboard project fixture exist; deterministic render proof is still pending.
+- **Phase X:** Product unit fixtures, the guitar pedalboard project fixture, and deterministic render proof are complete; compatibility/output capture is still pending.
 - **Phase Y:** Web handoff package freezes sample contracts.
 
 ## First Web UI Scope After Gate

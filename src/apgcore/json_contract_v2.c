@@ -4,8 +4,12 @@
 #include <apgcore/compiler_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/project_v2.h>
+#include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
 
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 static void write_json_string(FILE *out, const char *text) {
@@ -357,5 +361,95 @@ void apg_v2_json_write_inspect_project(FILE *out, const char *path) {
         write_project_inspect(out, path, &project, &compiled);
     else
         write_validation_error(out, "apg.project.inspect.v1", path, "$.project", &err);
+    uc_arena_free(&arena);
+}
+
+#define APG_RENDER_FRAMES      16u
+#define APG_RENDER_SAMPLE_RATE 48000.0f
+
+static void fill_deterministic_render_input(float *input, uint32_t frames) {
+    static const float pattern[APG_RENDER_FRAMES] = {
+        0.0f, 0.25f, 0.5f, -0.25f, 0.75f, -0.5f, 0.125f, 0.375f, 0.0f, -0.75f, 0.6f, -0.1f, 0.3f, -0.4f, 0.2f, 0.0f,
+    };
+    for (uint32_t i = 0; i < frames; i++)
+        input[i] = pattern[i % APG_RENDER_FRAMES];
+}
+
+static void write_project_render(FILE *out, const char *path, const float *output, uint32_t frames) {
+    float  peak       = 0.0f;
+    double sum        = 0.0;
+    double sum_square = 0.0;
+    for (uint32_t i = 0; i < frames; i++) {
+        float sample     = output[i];
+        float abs_sample = fabsf(sample);
+        if (abs_sample > peak)
+            peak = abs_sample;
+        sum += sample;
+        sum_square += (double)sample * (double)sample;
+    }
+    double rms = frames > 0u ? sqrt(sum_square / (double)frames) : 0.0;
+
+    fputs("{\"schema\":\"apg.project.render.v1\",\"ok\":true,\"file\":", out);
+    write_json_string(out, path);
+    fputs(",\"input\":\"deterministic_mono_v1\",\"sample_rate\":", out);
+    fprintf(out, "%.0f", (double)APG_RENDER_SAMPLE_RATE);
+    fputs(",\"frames\":", out);
+    fprintf(out, "%u", (unsigned)frames);
+    fputs(",\"output\":{\"peak\":", out);
+    fprintf(out, "%.6f", (double)peak);
+    fputs(",\"rms\":", out);
+    fprintf(out, "%.6f", rms);
+    fputs(",\"sum\":", out);
+    fprintf(out, "%.6f", sum);
+    fputs(",\"samples\":[", out);
+    for (uint32_t i = 0; i < frames; i++) {
+        if (i > 0u)
+            fputc(',', out);
+        fprintf(out, "%.6f", (double)output[i]);
+    }
+    fputs("]}}", out);
+}
+
+void apg_v2_json_write_render_project(FILE *out, const char *path) {
+    if (!out)
+        return;
+    uc_arena arena;
+    if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
+        uc_error err = {.status = UC_E_OOM};
+        write_validation_error(out, "apg.project.render.v1", path, "$.project", &err);
+        return;
+    }
+
+    apg_project_v2_resolved_t project;
+    apg_project_v2_compiled_t compiled;
+    apg_v2_runtime_t          runtime       = {0};
+    bool                      runtime_ready = false;
+    uc_error                  err           = {0};
+    uc_status                 status        = apg_project_v2_load_resolved_file(path, &arena, &project, &err);
+    if (status == UC_OK)
+        status = apg_project_v2_compile(&project, &arena, &compiled, &err);
+    if (status == UC_OK) {
+        status        = apg_v2_runtime_init(&compiled.plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, &runtime, &err);
+        runtime_ready = status == UC_OK;
+    }
+
+    float input[APG_RENDER_FRAMES];
+    float output[APG_RENDER_FRAMES] = {0};
+    if (status == UC_OK) {
+        fill_deterministic_render_input(input, APG_RENDER_FRAMES);
+        if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, APG_RENDER_FRAMES)) {
+            const char *msg = apg_v2_runtime_last_error(&runtime);
+            uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "%s", msg ? msg : "project render failed");
+            status = UC_E_TYPE;
+        }
+    }
+
+    if (status == UC_OK)
+        write_project_render(out, path, output, APG_RENDER_FRAMES);
+    else
+        write_validation_error(out, "apg.project.render.v1", path, "$.project", &err);
+
+    if (runtime_ready)
+        apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);
 }

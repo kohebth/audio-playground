@@ -38,10 +38,10 @@ This file tracks known issues that should not block the current phase but need e
 - **Remaining Design:** Graph-signal, multi-param, smoothing-lane, and typed-buffer routing remain out of scope until a future phase defines their semantics and runtime representation.
 - **Related Plan Item:** `plan.md` Phase O.
 
-## Render and Benchmark CLI Surface
+## Benchmark CLI Surface
 
-- **Status:** Deferred
-- **Context:** Phase V added `apg-v2` validation and inspect JSON contracts plus golden outputs for frontend tests.
-- **Reason:** The guitar pedalboard fixture exists, but Phase X3 still needs a deterministic render target and CLI contract before render/benchmark output is meaningful.
-- **Follow-up:** Add CLI output suitable for frontend preview and regression checks after the deterministic render target is defined.
-- **Related Plan Item:** `plan.md` Phase V3 / Phase X.
+- **Status:** Narrowed
+- **Context:** Phase V added `apg-v2` validation and inspect JSON contracts plus golden outputs for frontend tests. Phase X3 added deterministic project render JSON through `apg-v2 render project <path>`.
+- **Reason:** Render output is stable, but a benchmark command still needs a non-flaky contract before it can support regression or performance checks.
+- **Follow-up:** Add benchmark output with deterministic structural fields and clearly separated timing fields if performance data is needed before broader rollout.
+- **Related Plan Item:** `plan.md` Phase V3.

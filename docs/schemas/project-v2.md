@@ -77,4 +77,4 @@ The current compiler accepts mono audio routes from `system.input` through one o
 
 ## Current Limits
 
-Project compilation is mono-only. Stereo/multi-channel route compilation, multiple system inputs/outputs, non-audio project routes, bypass, meters, structured JSON diagnostics, and product fixture rendering are tracked in later phases.
+Project compilation is mono-route only. Stereo/multi-channel project route compilation, multiple system inputs/outputs, non-audio project routes, and benchmark output are tracked in later phases. Structured diagnostics, project inspect JSON, runtime product controls, meters, and deterministic project render JSON are implemented.

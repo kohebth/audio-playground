@@ -104,6 +104,32 @@ static int test_project_inspect_json_golden_output(void) {
     );
 }
 
+static int test_project_render_json_is_deterministic(void) {
+    char *first  = capture_json(apg_v2_json_write_render_project, "projects-v2/guitar-pedalboard.project.v2.yaml");
+    char *second = capture_json(apg_v2_json_write_render_project, "projects-v2/guitar-pedalboard.project.v2.yaml");
+    if (!first || !second) {
+        free(first);
+        free(second);
+        return fail("failed to write project render json");
+    }
+    if (strcmp(first, second) != 0) {
+        fprintf(stderr, "project render json was not deterministic\nfirst:  %s\nsecond: %s\n", first, second);
+        free(first);
+        free(second);
+        return 1;
+    }
+    if (!strstr(first, "\"schema\":\"apg.project.render.v1\"") || !strstr(first, "\"ok\":true") ||
+        !strstr(first, "\"input\":\"deterministic_mono_v1\"") || !strstr(first, "\"frames\":16") ||
+        !strstr(first, "\"samples\":[") || strstr(first, "\"peak\":0.000000")) {
+        free(first);
+        free(second);
+        return fail("project render json lacked stable non-empty output fields");
+    }
+    free(first);
+    free(second);
+    return 0;
+}
+
 static int test_unit_inspect_json_contains_ui_contract(void) {
     char *json = capture_json(apg_v2_json_write_inspect_unit, "units-v2/simple_gain.unit.v2.yaml");
     if (!json)
@@ -149,6 +175,8 @@ int main(void) {
     if (test_validate_json_golden_outputs())
         return 1;
     if (test_project_inspect_json_golden_output())
+        return 1;
+    if (test_project_render_json_is_deterministic())
         return 1;
     if (test_unit_inspect_json_contains_ui_contract())
         return 1;

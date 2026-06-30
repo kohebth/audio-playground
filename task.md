@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase W plus Phase X2 guitar pedalboard project fixture. Phase V validate/inspect JSON contracts and runtime product controls are implemented. The render/benchmark surface remains pending until Phase X3 adds deterministic fixture rendering.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase W plus Phase X3 deterministic guitar pedalboard rendering. Phase V validate/inspect JSON contracts, deterministic project render JSON, and runtime product controls are implemented. The benchmark surface and fixture output capture remain pending.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through W, Phase X1 product unit fixtures, Phase X2 guitar pedalboard project fixture, and Phase V validate/inspect JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through W, Phase X1 product unit fixtures, Phase X2 guitar pedalboard project fixture, Phase X3 deterministic project rendering, and Phase V validate/inspect JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -108,7 +108,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 
 - [x] V1: Add structured JSON validation output for units and projects.
 - [x] V2: Add inspect output for atoms, units, and projects.
-- [ ] V3: Add or stabilize render/benchmark command surfaces for product fixtures.
+- [ ] V3: Add or stabilize benchmark command surfaces for product fixtures; deterministic project render JSON is implemented.
 - [x] V4: Commit golden JSON outputs for frontend tests.
 
 ### Phase W: Runtime Product Controls
@@ -122,7 +122,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 
 - [x] X1: Add or migrate v2 units for overdrive, delay, tremolo, EQ/tone stack, noise gate, and wet/dry mix.
 - [x] X2: Add a guitar pedalboard project fixture using those units.
-- [ ] X3: Validate, compile, run, and render the fixture deterministically.
+- [x] X3: Validate, compile, run, and render the fixture deterministically.
 - [ ] X4: Capture compatibility and validation outputs for the fixture.
 
 ### Phase Y: Web Handoff Package
