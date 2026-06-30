@@ -6,7 +6,7 @@ APGCore v2 implementation work tracked in `plan.md` is complete through Phase Y4
 
 Goal achieved: stable backend contracts are ready for the v2 web UI to consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through Y, and Phase V validate/inspect/render JSON contracts are complete. Phase Z initial web UI work is implemented: `web-tools/unit-editor/` starts from frozen backend samples and renders a project-level v2 pedalboard workbench with unit, route, validation, render, and backend-contract inspection. Use package-local web commands inside `web-tools/unit-editor/` for frontend slices.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through Y, and Phase V validate/inspect/render JSON contracts are complete. Phase Z initial web UI work is implemented: `web-tools/unit-editor/` starts from frozen backend samples and renders a project-level v2 pedalboard workbench with unit, route, validation, render, and backend-contract inspection. Phase AA refinement has started with the workbench split into focused components. Use package-local web commands inside `web-tools/unit-editor/` for frontend slices.
 
 ## Completed Foundation
 
@@ -141,7 +141,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 
 ## Next Web UI Queue
 
-- [ ] AA1: Split the project workbench into focused components without changing behavior.
+- [x] AA1: Split the project workbench into focused components without changing behavior.
 - [ ] AA2: Add UI state for editable parameter controls while keeping frozen samples immutable.
 - [ ] AA3: Add validation and render command panels that show exact backend commands from `docs/WEB_UI_READINESS.md`.
 - [ ] AA4: Add a first atom palette/unit-inspection view after the project workflow remains stable.

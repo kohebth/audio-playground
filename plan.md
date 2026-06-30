@@ -7,7 +7,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
 - The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, and Phase Y web handoff package are implemented.
-- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z initial web UI implementation is complete and Phase AA is next.
+- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z initial web UI implementation is complete and Phase AA refinement is underway.
 - Final backend readiness verification passed with `./build-and-test.sh` across all 14 CTest targets. The first web UI slices pass package build/lint and Playwright desktop/mobile smoke checks.
 
 ## Completed Work
@@ -47,7 +47,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - [x] Added `./build-and-test.sh` as the standard configure/build/test wrapper.
 - [x] Added `docs/UNIT_V2_ARCHITECTURE.md` for loader, compiler, scheduling, and runtime notes.
-- [x] Refreshed `AGENTS.md` with current repository context, `fsmcp` editing rules, `clang-format` approval, and `git commit` approval.
+- [x] Refreshed `AGENTS.md` with current repository context, `apply_patch` workflow, `clang-format` approval, and `git commit` approval.
 
 ## Remaining Phases
 
@@ -188,7 +188,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase AA: Web UI Refinement and Integration
 
-- [ ] AA1: Split the project workbench into focused components without changing behavior.
+- [x] AA1: Split the project workbench into focused components without changing behavior.
 - [ ] AA2: Add UI state for editable parameter controls while keeping frozen samples immutable.
 - [ ] AA3: Add validation and render command panels that show exact backend commands from `docs/WEB_UI_READINESS.md`.
 - [ ] AA4: Add a first atom palette/unit-inspection view after the project workflow remains stable.
