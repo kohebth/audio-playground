@@ -1,253 +1,223 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  ReactFlow,
   Background,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
-  useReactFlow,
+  ReactFlow,
   ReactFlowProvider,
-  addEdge,
-  type Connection,
+  useEdgesState,
+  useNodesState,
   type Node,
-  type Edge,
   type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { UnitConfig } from './types';
-import { parseYaml } from './lib/yamlParser';
-import { serializeYaml } from './lib/yamlSerializer';
-import { buildGraph } from './lib/graphBuilder';
-import { AtomNode } from './components/AtomNode';
-import { Inspector } from './components/Inspector';
-import { PipelineSidebar } from './components/PipelineSidebar';
-import { UnitHeader } from './components/UnitHeader';
-import { YamlEditor } from './components/YamlEditor.tsx';
+import { ProjectNode } from './components/ProjectNode';
+import { backendSamples, sampleSources } from './lib/backendSamples';
+import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
 import './App.css';
 
-const nodeTypes: NodeTypes = { atomNode: AtomNode as any };
+const nodeTypes = { projectNode: ProjectNode } satisfies NodeTypes;
 
-const EMPTY_UNIT: UnitConfig = {
-  name: 'new_unit',
-  version: '1.0.0',
-  params: [],
-  signals: ['input', 'output'],
-  pipeline: [],
-};
-
-function FlowCanvas({ focusNodeId }: { focusNodeId: string | null }) {
-  const { setCenter, getNodes } = useReactFlow();
-
-  useEffect(() => {
-    if (focusNodeId) {
-      const nodeId = `stage-${focusNodeId}`;
-      const nodes = getNodes();
-      const node = nodes.find(n => n.id === nodeId);
-      if (node) {
-        setCenter(node.position.x + 120, node.position.y + 80, { zoom: 1, duration: 300 });
-      }
-    }
-  }, [focusNodeId, setCenter, getNodes]);
-
-  return null;
+function compatibilityLabel(flags: Record<string, boolean>): string {
+  const enabled = Object.entries(flags)
+    .filter(([, value]) => value)
+    .map(([key]) => key);
+  return enabled.length > 0 ? enabled.join(', ') : 'none';
 }
 
-function NodeFlow({
-  nodes,
-  edges,
-  focusNodeId,
-  onNodesChange,
-  onEdgesChange,
-  onConnect,
-  onNodeClick,
-}: {
-  nodes: Node[];
-  edges: Edge[];
-  focusNodeId: string | null;
-  onNodesChange: any;
-  onEdgesChange: any;
-  onConnect: (params: Connection) => void;
-  onNodeClick: (_: React.MouseEvent, node: Node) => void;
-}) {
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onNodeClick={onNodeClick}
-      fitView
-      fitViewOptions={{ padding: 0.1 }}
-      minZoom={0.1}
-      maxZoom={2}
-    >
-      <FlowCanvas focusNodeId={focusNodeId} />
-      <Background color="#1e293b" gap={20} />
-      <Controls />
-      <MiniMap
-        nodeColor={(n: any) => n.data?.color ?? '#374151'}
-        style={{ background: '#0f172a' }}
-      />
-    </ReactFlow>
-  );
+function formatNumber(value: number): string {
+  return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): ProjectNodeData | null {
+  if (!id) return null;
+  return nodes.find(node => node.id === id)?.data ?? null;
 }
 
 export default function App() {
-  const [unit, setUnit] = useState<UnitConfig>(EMPTY_UNIT);
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showYaml, setShowYaml] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const initialGraph = useMemo(() => buildProjectGraph(backendSamples.project), []);
+  const [nodes, , onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
+  const [edges, , onEdgesChange] = useEdgesState(initialGraph.edges);
+  const [selectedId, setSelectedId] = useState<string | null>('unit-drive1');
+  const selectedNode = findUnitNode(nodes, selectedId);
 
-  // Rebuild graph whenever unit changes
-  useEffect(() => {
-    const { nodes: n, edges: e } = buildGraph(unit);
-    setNodes(n);
-    setEdges(e);
-  }, [unit]);
-
-  const onConnect = useCallback((params: Connection) => setEdges(eds => addEdge(params, eds)), []);
-
-  const onNodeClick = useCallback((_: React.MouseEvent, node: any) => {
-    setSelectedId(node.data.stage.id);
+  const selectProjectNode = useCallback((id: string) => {
+    setSelectedId(id);
   }, []);
 
-  const loadFile = (text: string) => {
-    try {
-      setUnit(parseYaml(text));
-      setSelectedId(null);
-    } catch (e) {
-      alert('Failed to parse YAML: ' + (e as Error).message);
-    }
-  };
-
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-      e.preventDefault();
-      setUnit(u => ({
-        ...u,
-        pipeline: u.pipeline.filter(s => s.id !== selectedId),
-      }));
-      setSelectedId(null);
-    }
-  }, [selectedId]);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => loadFile(ev.target?.result as string);
-    reader.readAsText(file);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => loadFile(ev.target?.result as string);
-    reader.readAsText(file);
-  };
-
-  const exportYaml = () => {
-    const blob = new Blob([serializeYaml(unit)], { type: 'text/yaml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${unit.name}.unit.yaml`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleYamlChange = (newYaml: string) => {
-    setUnit(parseYaml(newYaml));
-  };
-
-  const yamlText = useMemo(() => serializeYaml(unit), [unit]);
+  const projectStats = backendSamples.project.compiled;
+  const render = backendSamples.render.output;
+  const validation = backendSamples.validation;
 
   return (
-    <div
-      className={`app ${isDragOver ? 'app--drag-over' : ''}`}
-      onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={handleDrop}
-    >
-      {/* ── Top Bar ── */}
-      <div className="topbar">
+    <div className="app app--project">
+      <header className="topbar topbar--project">
         <div className="topbar__brand">
-          <span className="topbar__logo">◈</span>
-          <span className="topbar__title">DSP Unit Editor</span>
+          <span className="topbar__logo">APG</span>
+          <div>
+            <div className="topbar__title">Audio Playground</div>
+            <div className="topbar__subtitle">v2 project workbench</div>
+          </div>
         </div>
-        <UnitHeader unit={unit} onChange={setUnit} />
-        <div className="topbar__actions">
-          <button className="btn btn--ghost" onClick={() => fileRef.current?.click()}>
-            Open YAML
-          </button>
-          <input ref={fileRef} type="file" accept=".yaml,.yml" hidden onChange={handleFileInput} />
-          <button className="btn btn--ghost" onClick={() => setShowYaml(v => !v)}>
-            {showYaml ? 'Hide' : 'YAML'} Editor
-          </button>
-          <button className="btn btn--primary" onClick={exportYaml}>
-            Export YAML
-          </button>
-        </div>
-      </div>
 
-      {/* ── Main Layout ── */}
+        <div className="project-summary" aria-label="Project summary">
+          <div>
+            <span className="project-summary__label">Project</span>
+            <strong>{backendSamples.project.name}</strong>
+          </div>
+          <div>
+            <span className="project-summary__label">Target</span>
+            <strong>{backendSamples.project.targets.default}</strong>
+          </div>
+          <div>
+            <span className="project-summary__label">Compiled</span>
+            <strong>{projectStats.nodes} nodes / {projectStats.signals} signals</strong>
+          </div>
+        </div>
+
+        <div className={`status-pill ${validation.ok ? 'status-pill--ok' : 'status-pill--bad'}`}>
+          {validation.ok ? 'Valid' : 'Invalid'}
+        </div>
+      </header>
+
       <div className="layout">
-        {/* Left: Pipeline sidebar */}
-        <PipelineSidebar
-          unit={unit}
-          selectedId={selectedId}
-          onSelectId={setSelectedId}
-          onChange={setUnit}
-        />
+        <aside className="project-sidebar">
+          <div className="project-sidebar__header">
+            <span className="project-sidebar__title">Pedalboard</span>
+            <span className="project-sidebar__count">{backendSamples.project.nodes.length} units</span>
+          </div>
 
-        {/* Center: Node graph */}
-        <main className="canvas">
-          {unit.pipeline.length === 0 ? (
-            <div className="canvas__empty">
-              <div className="canvas__empty-icon">⊕</div>
-              <p>Drop a <code>.unit.yaml</code> file here to get started</p>
-              <p>or use the <strong>Open YAML</strong> button above</p>
-            </div>
-          ) : (
+          <div className="project-list">
+            {backendSamples.project.nodes.map((instance, index) => {
+              const unit = backendSamples.project.units.find(item => item.id === instance.unit);
+              const nodeId = `unit-${instance.id}`;
+
+              return (
+                <button
+                  key={instance.id}
+                  className={`project-list__item ${selectedId === nodeId ? 'project-list__item--active' : ''}`}
+                  onClick={() => selectProjectNode(nodeId)}
+                  type="button"
+                >
+                  <span className="project-list__index">{index + 1}</span>
+                  <span className="project-list__main">
+                    <span className="project-list__name">{instance.id}</span>
+                    <span className="project-list__unit">{unit?.name ?? instance.unit}</span>
+                  </span>
+                  <span className="project-list__params">{instance.params.length}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="sample-ledger">
+            <div className="sample-ledger__title">Frozen Sources</div>
+            {Object.entries(sampleSources).map(([key, path]) => (
+              <div key={key} className="sample-ledger__row">
+                <span>{key}</span>
+                <code>{path}</code>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <main className="canvas canvas--project">
+          <div className="flow-shell">
             <ReactFlowProvider>
-              <NodeFlow
+              <ReactFlow
                 nodes={nodes}
                 edges={edges}
-                focusNodeId={selectedId}
+                nodeTypes={nodeTypes}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeClick={onNodeClick}
-              />
+                onNodeClick={(_, node) => selectProjectNode(node.id)}
+                fitView
+                fitViewOptions={{ padding: 0.16 }}
+                minZoom={0.35}
+                maxZoom={1.5}
+              >
+                <Background color="#35312b" gap={24} />
+                <Controls />
+                <MiniMap
+                  nodeColor={node => (node.data as ProjectNodeData).color}
+                  pannable
+                  zoomable
+                  style={{ background: '#171512' }}
+                />
+              </ReactFlow>
             </ReactFlowProvider>
-          )}
+          </div>
         </main>
 
-        {/* Right: Inspector */}
-        <Inspector unit={unit} selectedId={selectedId} onChange={setUnit} />
-      </div>
+        <aside className="project-inspector">
+          <section className="inspector-block">
+            <div className="inspector-block__label">Validation</div>
+            <div className="validation-line">
+              <span className={`validation-dot ${validation.ok ? 'validation-dot--ok' : 'validation-dot--bad'}`} />
+              <strong>{validation.ok ? 'Project is valid' : 'Project has errors'}</strong>
+            </div>
+            <div className="inspector-block__meta">
+              {validation.errors.length} errors / {validation.warnings.length} warnings
+            </div>
+          </section>
 
-      {/* YAML Preview drawer */}
-      {showYaml && (
-        <div className="yaml-drawer">
-          <YamlEditor yaml={yamlText} onChange={handleYamlChange} />
-        </div>
-      )}
+          <section className="inspector-block">
+            <div className="inspector-block__label">Render Preview</div>
+            <div className="meter-grid">
+              <div>
+                <span>Peak</span>
+                <strong>{formatNumber(render.peak)}</strong>
+              </div>
+              <div>
+                <span>RMS</span>
+                <strong>{formatNumber(render.rms)}</strong>
+              </div>
+              <div>
+                <span>Frames</span>
+                <strong>{backendSamples.render.frames}</strong>
+              </div>
+            </div>
+            <div className="waveform" aria-label="Deterministic render samples">
+              {render.samples.map((sample, index) => (
+                <span
+                  key={`${sample}-${index}`}
+                  className="waveform__bar"
+                  style={{ height: `${Math.max(8, Math.abs(sample) * 120)}px` }}
+                />
+              ))}
+            </div>
+          </section>
+
+          {selectedNode?.kind === 'unit' ? (
+            <section className="inspector-block inspector-block--selected">
+              <div className="inspector-block__label">Selected Unit</div>
+              <h2>{selectedNode.instance.id}</h2>
+              <p>{selectedNode.unit.name}</p>
+
+              <div className="param-list">
+                {selectedNode.instance.params.map(param => (
+                  <div key={param.key} className="param-list__row">
+                    <span>{param.key}</span>
+                    <strong>{param.value}</strong>
+                  </div>
+                ))}
+              </div>
+
+              <div className="compatibility">
+                <span>Compatibility</span>
+                <strong>{compatibilityLabel(selectedNode.unit.compatibility)}</strong>
+              </div>
+            </section>
+          ) : (
+            <section className="inspector-block inspector-block--selected">
+              <div className="inspector-block__label">Selected Node</div>
+              <h2>{selectedNode?.label ?? 'Nothing selected'}</h2>
+              <p>{selectedNode?.detail ?? 'Select a pedalboard unit to inspect its parameters.'}</p>
+            </section>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
