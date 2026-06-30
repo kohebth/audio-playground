@@ -68,6 +68,10 @@ Reread `AGENTS.md` at the start of each new work slice before making repository 
 
 ## Continuous Work Protocol
 
-When the user says `continue`, `next`, `go`, or gives broad approval, pick the next unchecked task from `task.md` and `plan.md` and carry it through implementation, focused tests, formatting, verification, tracker updates, and commit. Prefer completing one coherent slice at a time, but continue into the next slice in the same turn when the path is clear and no approval or product decision is needed. If a task is blocked by missing design context, record it in `problem.md`, update the trackers, and move to the next actionable item.
+Active goal: continuously implement the remaining `task.md` and `plan.md` work phase by phase until the backend is ready to move to the web UI. Preserve repository workflow rules and commit each completed, verified slice.
 
-After each verified slice, commit only the files that belong to that slice with `git commit -m "<which tasks are done>"`. Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documents aligned as work advances. Docs-only tracker updates do not require `./build-and-test.sh`; code/test slices do.
+When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, focused tests, formatting, verification, tracker updates, and commit. Prefer one coherent slice at a time, but continue into the next slice in the same turn when the path is clear and no approval or product decision is needed.
+
+Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documents aligned as work advances. If a task is blocked by missing design context, record it in `problem.md`, update the trackers, and move to the next actionable item.
+
+After each verified slice, stage only the files that belong to that slice and commit with `git commit -m "<which tasks are done>"`. Docs-only tracker updates do not require `./build-and-test.sh`; code/test slices do. Before ending a turn, report the phase, the committed slice, verification run, and the next planned task.
