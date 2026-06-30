@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase U, with Phase V validate/inspect JSON contracts and Phase W1-W2 runtime product controls implemented. The render/benchmark surface remains pending.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase W, with Phase V validate/inspect JSON contracts and runtime product controls implemented. The render/benchmark surface remains pending until Phase X defines product fixtures.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through U, Phase V validate/inspect JSON contracts, and Phase W1-W2 product controls are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through W, and Phase V validate/inspect JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -115,8 +115,8 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 
 - [x] W1: Implement block-boundary parameter smoothing from `smoothing_ms`.
 - [x] W2: Add unit-instance bypass and project-level mute/solo where needed for the first pedalboard workflow.
-- [ ] W3: Add peak/RMS meter snapshots suitable for UI polling.
-- [ ] W4: Add runtime tests for live parameter changes, bypass, and meters.
+- [x] W3: Add peak/RMS meter snapshots suitable for UI polling.
+- [x] W4: Add runtime tests for live parameter changes, bypass, and meters.
 
 ### Phase X: Product Fixture Slice
 

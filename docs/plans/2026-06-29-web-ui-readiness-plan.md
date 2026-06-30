@@ -11,7 +11,7 @@
 
 - APGCore v2 is complete through Phase U in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, and verification workflow are in place.
 - `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md` define the desired product as a visual pedalboard and graph composer, not just a YAML editor.
-- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, and project inspection. Runtime controls, meters, render/benchmark tooling, and a representative product fixture remain open.
+- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, and project inspection. Runtime product controls and meters are implemented; render/benchmark tooling and a representative product fixture remain open.
 - `web-tools/unit-editor/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
 ---
@@ -130,7 +130,7 @@
 - [x] Atom catalog metadata is exportable as stable JSON.
 - [x] `project.v2.yaml` can load, validate, and compile multiple unit instances.
 - [x] CLI or equivalent tools emit structured JSON validation and inspection output.
-- [ ] Runtime supports basic live product controls: params, bypass, and meters.
+- [x] Runtime supports basic live product controls: params, bypass, and meters.
 - [ ] A representative guitar pedalboard fixture validates, compiles, runs, and renders deterministically.
 - [ ] Web handoff docs and sample outputs are committed.
 

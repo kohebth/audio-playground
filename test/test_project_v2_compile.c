@@ -53,6 +53,26 @@ expect_samples_near(const float *actual, const float *expected, size_t frames, f
     return 0;
 }
 
+static int expect_meter_near(
+    const apg_v2_meter_snapshot_t *meter,
+    float                          expected_peak,
+    float                          expected_rms,
+    uint32_t                       expected_frames,
+    const char                    *label
+) {
+    if (!meter || !meter->valid || meter->frames != expected_frames) {
+        fprintf(stderr, "unexpected %s meter validity or frame count\n", label);
+        return 1;
+    }
+    float peak_diff = meter->peak > expected_peak ? meter->peak - expected_peak : expected_peak - meter->peak;
+    float rms_diff  = meter->rms > expected_rms ? meter->rms - expected_rms : expected_rms - meter->rms;
+    if (peak_diff > 0.00001f || rms_diff > 0.00001f) {
+        fprintf(stderr, "unexpected %s meter: peak %f rms %f\n", label, meter->peak, meter->rms);
+        return 1;
+    }
+    return 0;
+}
+
 static int test_simple_project_compiles_and_runs(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -145,12 +165,24 @@ static int test_two_instance_project_compiles_and_runs(void) {
         return fail("failed to initialize two-instance project runtime");
     }
 
+    apg_v2_meter_snapshot_t meter;
+    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) || meter.valid)
+        return fail("two-instance project output meter was not initially empty");
+    if (apg_v2_runtime_get_output_meter(&runtime, "missing", 0u, &meter))
+        return fail("two-instance project accepted missing output meter");
+
     const float input[2]  = {0.25f, -0.5f};
     float       output[2] = {0.0f, 0.0f};
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("two-instance project processing failed");
     const float expected_default[2] = {1.5f, -3.0f};
     if (expect_samples(output, expected_default, 2u, "two-instance project default"))
+        return 1;
+    if (!apg_v2_runtime_get_input_meter(&runtime, "input", 0u, &meter) ||
+        expect_meter_near(&meter, 0.5f, 0.3952847f, 2u, "two-instance project input"))
+        return 1;
+    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) ||
+        expect_meter_near(&meter, 3.0f, 2.3717082f, 2u, "two-instance project output"))
         return 1;
 
     if (!apg_v2_runtime_set_instance_bypass(&runtime, "gain1", true))
@@ -159,6 +191,9 @@ static int test_two_instance_project_compiles_and_runs(void) {
         return fail("two-instance project processing with bypass failed");
     const float expected_bypassed[2] = {0.75f, -1.5f};
     if (expect_samples(output, expected_bypassed, 2u, "two-instance project bypassed"))
+        return 1;
+    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) ||
+        expect_meter_near(&meter, 1.5f, 1.1858541f, 2u, "two-instance project bypassed output"))
         return 1;
 
     if (!apg_v2_runtime_set_project_solo(&runtime, true) || !runtime.project_soloed)
@@ -169,6 +204,9 @@ static int test_two_instance_project_compiles_and_runs(void) {
         return fail("two-instance project processing with mute failed");
     const float expected_muted[2] = {0.0f, 0.0f};
     if (expect_samples(output, expected_muted, 2u, "two-instance project muted"))
+        return 1;
+    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) ||
+        expect_meter_near(&meter, 0.0f, 0.0f, 2u, "two-instance project muted output"))
         return 1;
 
     if (!apg_v2_runtime_set_project_mute(&runtime, false) ||

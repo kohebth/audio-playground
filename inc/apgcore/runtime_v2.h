@@ -24,6 +24,13 @@ typedef struct {
 } apg_v2_runtime_node_t;
 
 typedef struct {
+    float    peak;
+    float    rms;
+    uint32_t frames;
+    bool     valid;
+} apg_v2_meter_snapshot_t;
+
+typedef struct {
     const apg_v2_compiled_unit_t *plan;
     apg_process_info_t            process_info;
     uint32_t                      frame_capacity;
@@ -39,6 +46,10 @@ typedef struct {
     size_t                        bypassed_instances_len;
     bool                          project_muted;
     bool                          project_soloed;
+    apg_v2_meter_snapshot_t      *input_meters;
+    size_t                        input_meters_len;
+    apg_v2_meter_snapshot_t      *output_meters;
+    size_t                        output_meters_len;
     apg_v2_runtime_node_t        *nodes;
     size_t                        nodes_len;
     char                          last_error[160];
@@ -78,6 +89,14 @@ bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *i
 /* Store project-level UI transport states; mute silences public output ports after processing. */
 bool apg_v2_runtime_set_project_mute(apg_v2_runtime_t *runtime, bool muted);
 bool apg_v2_runtime_set_project_solo(apg_v2_runtime_t *runtime, bool soloed);
+
+/* Return the most recent peak/RMS snapshot for a public audio port channel. */
+bool apg_v2_runtime_get_input_meter(
+    const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
+);
+bool apg_v2_runtime_get_output_meter(
+    const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
+);
 
 /* Clear signal and state buffers and restore parameter defaults while preserving owned allocations. */
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime);
