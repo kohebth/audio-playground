@@ -104,6 +104,23 @@ static int test_project_inspect_json_golden_output(void) {
     );
 }
 
+static int test_pedalboard_fixture_golden_outputs(void) {
+    if (expect_golden(
+            apg_v2_json_write_validate_project, "projects-v2/guitar-pedalboard.project.v2.yaml",
+            "test/golden/v2-validate-project-guitar-pedalboard.json", "pedalboard project validation"
+        ))
+        return 1;
+    if (expect_golden(
+            apg_v2_json_write_inspect_project, "projects-v2/guitar-pedalboard.project.v2.yaml",
+            "test/golden/v2-inspect-project-guitar-pedalboard.json", "pedalboard project inspect"
+        ))
+        return 1;
+    return expect_golden(
+        apg_v2_json_write_render_project, "projects-v2/guitar-pedalboard.project.v2.yaml",
+        "test/golden/v2-render-project-guitar-pedalboard.json", "pedalboard project render"
+    );
+}
+
 static int test_project_render_json_is_deterministic(void) {
     char *first  = capture_json(apg_v2_json_write_render_project, "projects-v2/guitar-pedalboard.project.v2.yaml");
     char *second = capture_json(apg_v2_json_write_render_project, "projects-v2/guitar-pedalboard.project.v2.yaml");
@@ -135,6 +152,7 @@ static int test_unit_inspect_json_contains_ui_contract(void) {
     if (!json)
         return fail("failed to write unit inspect json");
     if (!strstr(json, "\"schema\":\"apg.unit.inspect.v1\"") || !strstr(json, "\"name\":\"simple_gain\"") ||
+        !strstr(json, "\"compatibility\":{\"desktop_full\":true,\"wasm_realtime\":true") ||
         !strstr(json, "\"ui\":{\"label\":\"Gain\",\"control\":\"knob\",\"unit\":\"x\"}") ||
         !strstr(json, "\"nodes\":[{\"id\":\"gain_value\",\"atom\":\"generation_dc\"")) {
         free(json);
@@ -177,6 +195,8 @@ int main(void) {
     if (test_project_inspect_json_golden_output())
         return 1;
     if (test_project_render_json_is_deterministic())
+        return 1;
+    if (test_pedalboard_fixture_golden_outputs())
         return 1;
     if (test_unit_inspect_json_contains_ui_contract())
         return 1;

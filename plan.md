@@ -6,7 +6,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect JSON contracts, deterministic project render JSON, Phase W runtime product controls, Phase X1 product unit fixtures, Phase X2 guitar pedalboard project fixture, and Phase X3 deterministic render proof are implemented.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, and Phase X product fixture proof/captured outputs are implemented.
 - The next objective is to finish backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
 - The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
 
@@ -170,7 +170,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - [x] X1: Add or migrate v2 units for overdrive, delay, tremolo, EQ/tone stack, noise gate, and wet/dry mix.
 - [x] X2: Add a guitar pedalboard project fixture using those units.
 - [x] X3: Validate, compile, run, and render the fixture deterministically.
-- [ ] X4: Capture compatibility and validation outputs for the fixture.
+- [x] X4: Capture compatibility and validation outputs for the fixture.
 
 ### Phase Y: Web Handoff Package
 

@@ -141,6 +141,18 @@ static void write_string_array(FILE *out, const char *const *items, size_t items
     fputc(']', out);
 }
 
+static void write_compatibility(FILE *out, const apg_unit_v2_t *unit) {
+    fputc('{', out);
+    for (size_t i = 0; unit && i < unit->compatibility_len; i++) {
+        if (i > 0u)
+            fputc(',', out);
+        write_json_string(out, unit->compatibility[i].target);
+        fputc(':', out);
+        fputs(strcmp(unit->compatibility[i].supported, "true") == 0 ? "true" : "false", out);
+    }
+    fputc('}', out);
+}
+
 static void write_unit_params(FILE *out, const apg_unit_v2_t *unit) {
     fputc('[', out);
     for (size_t i = 0; i < unit->params_len; i++) {
@@ -233,7 +245,9 @@ static void write_unit_inspect(FILE *out, const char *path, const apg_unit_v2_t 
     write_json_string(out, unit->meta.category);
     fputs(",\"description\":", out);
     write_json_string(out, unit->meta.description);
-    fputs("},\"params\":", out);
+    fputs("},\"compatibility\":", out);
+    write_compatibility(out, unit);
+    fputs(",\"params\":", out);
     write_unit_params(out, unit);
     fputs(",\"ports\":{\"inputs\":", out);
     write_ports(out, unit->input_ports, unit->input_ports_len);
@@ -274,6 +288,8 @@ static void write_project_units(FILE *out, const apg_project_v2_resolved_t *proj
         write_json_string(out, project->units[i].file);
         fputs(",\"name\":", out);
         write_json_string(out, project->units[i].unit.name);
+        fputs(",\"compatibility\":", out);
+        write_compatibility(out, &project->units[i].unit);
         fputc('}', out);
     }
     fputc(']', out);

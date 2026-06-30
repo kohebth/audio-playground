@@ -9,9 +9,9 @@
 
 ## Context Discovered
 
-- APGCore v2 is complete through Phase W plus Phase X3 in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, the guitar pedalboard project fixture, deterministic project rendering, and verification workflow are in place.
+- APGCore v2 is complete through Phase X in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, the guitar pedalboard project fixture, deterministic project rendering, captured fixture outputs, and verification workflow are in place.
 - `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md` define the desired product as a visual pedalboard and graph composer, not just a YAML editor.
-- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, project inspection, and deterministic project rendering. Runtime product controls, meters, product unit fixtures, and the representative pedalboard fixture are implemented; benchmark tooling remains open.
+- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, project inspection, and deterministic project rendering. Runtime product controls, meters, product unit fixtures, representative pedalboard fixture, and pedalboard sample outputs are implemented; benchmark tooling remains open.
 - `web-tools/unit-editor/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
 ---
@@ -101,6 +101,7 @@
 | X1 | Add or migrate guitar units | Done: overdrive, delay, tremolo, EQ/tone stack, noise gate, wet/dry mix | Phase W |
 | X2 | Add guitar pedalboard project fixture | Done: `projects-v2/guitar-pedalboard.project.v2.yaml` | X1 |
 | X3 | Validate, compile, run, and render fixture | Done: deterministic JSON via `apg-v2 render project <path>` | X2 |
+| X4 | Capture compatibility and validation outputs | Done: pedalboard validate, inspect, and render goldens | X3 |
 
 ### Phase Y: Web Handoff Package
 
@@ -132,7 +133,8 @@
 - [x] CLI or equivalent tools emit structured JSON validation and inspection output.
 - [x] Runtime supports basic live product controls: params, bypass, and meters.
 - [x] A representative guitar pedalboard fixture validates, compiles, runs, and renders deterministically.
-- [ ] Web handoff docs and sample outputs are committed.
+- [x] Web handoff sample outputs are committed.
+- [ ] Web handoff docs are finalized.
 
 ---
 

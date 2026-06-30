@@ -1,0 +1,1 @@
+{"schema":"apg.project.render.v1","ok":true,"file":"projects-v2/guitar-pedalboard.project.v2.yaml","input":"deterministic_mono_v1","sample_rate":48000,"frames":16,"output":{"peak":0.404122,"rms":0.237090,"sum":2.591344,"samples":[0.000000,0.307850,0.368674,0.029520,0.404122,0.000000,0.035362,0.368441,0.000000,0.035330,0.369060,0.000000,0.378939,0.000000,0.294047,0.000000]}}

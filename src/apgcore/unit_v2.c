@@ -719,7 +719,8 @@ static bool bool_scalar_is_valid(const uc_node *node) {
     return value && (strcmp(value, "true") == 0 || strcmp(value, "false") == 0);
 }
 
-static uc_status validate_compatibility(const uc_node *compatibility, uc_error *err) {
+static uc_status
+validate_and_fill_compatibility(const uc_node *compatibility, uc_arena *arena, apg_unit_v2_t *out, uc_error *err) {
     if (!compatibility)
         return set_error(err, UC_E_MISSING, "missing map field 'compatibility'");
     if (compatibility->kind != UC_NODE_MAP)
@@ -727,10 +728,20 @@ static uc_status validate_compatibility(const uc_node *compatibility, uc_error *
     if (compatibility->map_len == 0)
         return set_error(err, UC_E_MISSING, "compatibility must declare at least one target");
 
+    apg_unit_v2_compatibility_t *items = uc_arena_alloc(arena, compatibility->map_len * sizeof(*items), sizeof(void *));
+    if (!items && compatibility->map_len > 0)
+        return set_error(err, UC_E_OOM, "arena OOM");
+
     for (size_t i = 0; i < compatibility->map_len; i++) {
+        const char *supported = node_scalar(compatibility->map[i].value);
         if (!bool_scalar_is_valid(compatibility->map[i].value))
             return set_error(err, UC_E_TYPE, "compatibility flag must be true or false");
+        items[i].target    = compatibility->map[i].key;
+        items[i].supported = supported;
     }
+
+    out->compatibility     = items;
+    out->compatibility_len = compatibility->map_len;
     return UC_OK;
 }
 
@@ -772,7 +783,7 @@ static uc_status validate_unit_root(const uc_node *root, uc_arena *arena, apg_un
     if (status != UC_OK)
         return status;
 
-    status = validate_compatibility(uc_node_find(root, "compatibility"), err);
+    status = validate_and_fill_compatibility(uc_node_find(root, "compatibility"), arena, out, err);
     if (status != UC_OK)
         return status;
 

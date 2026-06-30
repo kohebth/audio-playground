@@ -33,6 +33,9 @@ static int expect_valid_fixture(void) {
         return fail("unexpected v2 unit public surface counts");
     if (unit.signals_len != 3u || unit.nodes_len != 2u)
         return fail("unexpected v2 unit graph counts");
+    if (unit.compatibility_len != 4u || strcmp(unit.compatibility[0].target, "desktop_full") != 0 ||
+        strcmp(unit.compatibility[0].supported, "true") != 0)
+        return fail("unexpected v2 unit compatibility flags");
     if (!unit.params || strcmp(unit.params[0].name, "gain") != 0 || strcmp(unit.params[0].type, "float") != 0)
         return fail("unexpected parsed v2 param metadata");
     if (strcmp(unit.params[0].default_value, "1.0") != 0 || strcmp(unit.params[0].min_value, "0.0") != 0 ||

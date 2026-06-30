@@ -11,7 +11,7 @@
 - `params`: Public controls.
 - `ports`: External audio/control inputs and outputs.
 - `graph`: Internal signal and atom graph.
-- `compatibility`: Non-empty map of boolean target flags.
+- `compatibility`: Non-empty map of boolean target flags. These flags are preserved in unit and project inspect JSON for frontend compatibility checks.
 
 Optional top-level metadata:
 

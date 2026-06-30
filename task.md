@@ -2,11 +2,11 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase W plus Phase X3 deterministic guitar pedalboard rendering. Phase V validate/inspect JSON contracts, deterministic project render JSON, and runtime product controls are implemented. The benchmark surface and fixture output capture remain pending.
+APGCore v2 implementation work tracked in `plan.md` is complete through Phase X. Phase V validate/inspect JSON contracts, deterministic project render JSON, fixture output capture, and runtime product controls are implemented. The benchmark surface remains tracked separately.
 
 Goal: prepare stable backend contracts so the v2 web UI can consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through W, Phase X1 product unit fixtures, Phase X2 guitar pedalboard project fixture, Phase X3 deterministic project rendering, and Phase V validate/inspect JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through X, and Phase V validate/inspect/render JSON contracts are complete. Use `./build-and-test.sh` for full verification on code/test slices, `cmake --build /tmp/audio-playground-apgcore-build --target check_v2` for focused v2 checks, and the sanitizer CMake option documented in `AGENTS.md` for debug verification. Docs-only slices do not require the build wrapper.
 
 ## Completed Foundation
 
@@ -123,7 +123,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] X1: Add or migrate v2 units for overdrive, delay, tremolo, EQ/tone stack, noise gate, and wet/dry mix.
 - [x] X2: Add a guitar pedalboard project fixture using those units.
 - [x] X3: Validate, compile, run, and render the fixture deterministically.
-- [ ] X4: Capture compatibility and validation outputs for the fixture.
+- [x] X4: Capture compatibility and validation outputs for the fixture.
 
 ### Phase Y: Web Handoff Package
 

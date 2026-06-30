@@ -58,19 +58,26 @@ typedef struct {
 } apg_unit_v2_node_t;
 
 typedef struct {
-    const char          *name;
-    const char          *version;
-    apg_unit_v2_meta_t   meta;
-    apg_unit_v2_param_t *params;
-    size_t               params_len;
-    apg_unit_v2_port_t  *input_ports;
-    size_t               input_ports_len;
-    apg_unit_v2_port_t  *output_ports;
-    size_t               output_ports_len;
-    const char         **signals;
-    size_t               signals_len;
-    apg_unit_v2_node_t  *nodes;
-    size_t               nodes_len;
+    const char *target;
+    const char *supported;
+} apg_unit_v2_compatibility_t;
+
+typedef struct {
+    const char                  *name;
+    const char                  *version;
+    apg_unit_v2_meta_t           meta;
+    apg_unit_v2_param_t         *params;
+    size_t                       params_len;
+    apg_unit_v2_port_t          *input_ports;
+    size_t                       input_ports_len;
+    apg_unit_v2_port_t          *output_ports;
+    size_t                       output_ports_len;
+    const char                 **signals;
+    size_t                       signals_len;
+    apg_unit_v2_node_t          *nodes;
+    size_t                       nodes_len;
+    apg_unit_v2_compatibility_t *compatibility;
+    size_t                       compatibility_len;
 } apg_unit_v2_t;
 
 /*
