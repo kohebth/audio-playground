@@ -9,9 +9,9 @@
 
 ## Context Discovered
 
-- APGCore v2 is complete through Phase W plus Phase X1 in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, and verification workflow are in place.
+- APGCore v2 is complete through Phase W plus Phase X2 in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, the guitar pedalboard project fixture, and verification workflow are in place.
 - `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md` define the desired product as a visual pedalboard and graph composer, not just a YAML editor.
-- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, and project inspection. Runtime product controls, meters, and product unit fixtures are implemented; render/benchmark tooling and the representative pedalboard fixture remain open.
+- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, and project inspection. Runtime product controls, meters, product unit fixtures, and the representative pedalboard fixture are implemented; render/benchmark tooling remains open.
 - `web-tools/unit-editor/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
 ---
@@ -99,7 +99,7 @@
 | # | Step | Expected Output | Depends On |
 |---|------|-----------------|------------|
 | X1 | Add or migrate guitar units | Done: overdrive, delay, tremolo, EQ/tone stack, noise gate, wet/dry mix | Phase W |
-| X2 | Add guitar pedalboard project fixture | End-to-end project file | X1 |
+| X2 | Add guitar pedalboard project fixture | Done: `projects-v2/guitar-pedalboard.project.v2.yaml` | X1 |
 | X3 | Validate, compile, run, and render fixture | Deterministic product proof | X2 |
 
 ### Phase Y: Web Handoff Package

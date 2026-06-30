@@ -77,6 +77,31 @@ static int expect_valid_resolved_fixture(void) {
     return 0;
 }
 
+static int expect_valid_pedalboard_fixture(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t resolved;
+    uc_error                  err = {0};
+    uc_status                 status =
+        apg_project_v2_load_resolved_file("projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &resolved, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "pedalboard project error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("guitar pedalboard fixture did not resolve");
+    }
+
+    if (resolved.units_len != 6u || resolved.project.nodes_len != 6u || resolved.project.routes_len != 8u)
+        return fail("unexpected pedalboard project shape");
+    if (strcmp(resolved.units[0].unit.name, "noise_gate") != 0 ||
+        strcmp(resolved.units[5].unit.name, "wet_dry_mix") != 0)
+        return fail("unexpected pedalboard unit order");
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int expect_invalid_resolved_file_contains(const char *path, const char *label, const char *must_contain) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -123,6 +148,8 @@ int main(void) {
     if (expect_valid_fixture())
         return 1;
     if (expect_valid_resolved_fixture())
+        return 1;
+    if (expect_valid_pedalboard_fixture())
         return 1;
     if (expect_invalid_resolved_file_contains(
             "projects-v2/invalid-missing-unit.project.v2.yaml", "missing unit file", "cannot resolve unit file"

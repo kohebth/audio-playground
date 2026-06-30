@@ -7,8 +7,8 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, validate/inspect JSON contracts, and runtime product controls for params, bypass, mute/solo state, and meters are implemented.
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`, including product units for overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix.
-- Project/session schema, deterministic fixtures, referenced-unit resolution, and mono project compilation exist.
-- The `apg-v2` CLI emits structured validation JSON and inspect JSON for atoms, units, and projects. Render/benchmark command surfaces remain pending until a deterministic pedalboard fixture exists.
+- Project/session schema, deterministic fixtures, referenced-unit resolution, mono project compilation, and `projects-v2/guitar-pedalboard.project.v2.yaml` exist.
+- The `apg-v2` CLI emits structured validation JSON and inspect JSON for atoms, units, and projects. Render/benchmark command surfaces remain pending until deterministic pedalboard rendering is defined.
 
 ## Ready To Start Web UI When
 
@@ -87,7 +87,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase U:** Project compiler creates a single runtime plan. Complete for mono project routes.
 - **Phase V:** CLI tooling emits JSON inspect/validate output. Validate/inspect are complete; render/benchmark remains pending.
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute/solo state, and peak/RMS meter snapshots.
-- **Phase X:** Product unit fixtures exist; the guitar pedalboard fixture still needs to prove the end-to-end workflow.
+- **Phase X:** Product unit fixtures and the guitar pedalboard project fixture exist; deterministic render proof is still pending.
 - **Phase Y:** Web handoff package freezes sample contracts.
 
 ## First Web UI Scope After Gate

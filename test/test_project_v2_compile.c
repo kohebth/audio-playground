@@ -1,6 +1,7 @@
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/runtime_v2.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -47,6 +48,16 @@ expect_samples_near(const float *actual, const float *expected, size_t frames, f
         float diff = actual[i] > expected[i] ? actual[i] - expected[i] : expected[i] - actual[i];
         if (diff > tolerance) {
             fprintf(stderr, "unexpected %s sample at %zu: got %f expected %f\n", label, i, actual[i], expected[i]);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int expect_finite_samples(const float *samples, size_t frames, const char *label) {
+    for (size_t i = 0; i < frames; i++) {
+        if (!isfinite(samples[i])) {
+            fprintf(stderr, "unexpected non-finite %s sample at %zu: %f\n", label, i, samples[i]);
             return 1;
         }
     }
@@ -230,6 +241,55 @@ static int test_two_instance_project_compiles_and_runs(void) {
     return 0;
 }
 
+static int test_guitar_pedalboard_project_compiles_and_runs(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t project;
+    if (load_resolved_project("projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &project)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_project_v2_compiled_t compiled;
+    if (compile_resolved_project(&project, &arena, &compiled)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    if (compiled.expanded_unit.params_len != 12u ||
+        strcmp(compiled.expanded_unit.params[0].name, "gate1.threshold") != 0)
+        return fail("pedalboard project params were not namespaced");
+    if (compiled.expanded_unit.nodes_len != 16u || compiled.plan.nodes_len != 16u)
+        return fail("pedalboard project did not expand the product unit graphs");
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = apg_v2_runtime_init(&compiled.plan, 8u, 48000.0f, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize pedalboard runtime");
+    }
+
+    if (!apg_v2_runtime_set_param(&runtime, "blend1.mix", 0.5f))
+        return fail("pedalboard runtime did not accept namespaced mix param");
+
+    const float input[4]  = {0.3f, 0.6f, -0.2f, 0.1f};
+    float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
+        fprintf(stderr, "runtime error: %s\n", apg_v2_runtime_last_error(&runtime));
+        return fail("pedalboard project processing failed");
+    }
+    if (expect_finite_samples(output, 4u, "pedalboard project"))
+        return 1;
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int expect_compile_error_contains(const char *yaml, const char *label, const char *must_contain) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -323,6 +383,8 @@ int main(void) {
     if (test_simple_project_compiles_and_runs())
         return 1;
     if (test_two_instance_project_compiles_and_runs())
+        return 1;
+    if (test_guitar_pedalboard_project_compiles_and_runs())
         return 1;
     if (test_compile_rejects_unknown_instance_param())
         return 1;
