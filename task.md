@@ -150,7 +150,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 
 - [x] AB1: Fix the existing `YamlEditor` hook dependency warning so `npm run lint` is warning-free.
 - [x] AB2: Add a project draft export/override preview for edited instance params.
-- [ ] AB3: Add validation/render readiness states for dirty drafts versus frozen command outputs.
+- [x] AB3: Add validation/render readiness states for dirty drafts versus frozen command outputs.
 - [ ] AB4: Add a compact view switcher for project, atom, and contract inspector sections.
 
 ## Completed Work Queue

@@ -26,6 +26,7 @@ export default function App() {
   const selectedNode = findUnitNode(nodes, selectedId);
   const selectedRoute = selectedRouteIndex === null ? null : backendSamples.project.routes[selectedRouteIndex] ?? null;
   const dirtyParamCount = useMemo(() => countDirtyParams(backendSamples.project, paramDrafts), [paramDrafts]);
+  const hasDirtyParamDrafts = dirtyParamCount > 0;
   const paramOverrides = useMemo(() => buildParamOverrides(backendSamples.project, paramDrafts), [paramDrafts]);
 
   const selectProjectNode = useCallback((id: string) => {
@@ -63,11 +64,12 @@ export default function App() {
 
   return (
     <div className="app app--project">
-      <ProjectTopbar
-        project={backendSamples.project}
-        validation={backendSamples.validation}
-        dirtyParamCount={dirtyParamCount}
-      />
+        <ProjectTopbar
+          project={backendSamples.project}
+          validation={backendSamples.validation}
+          dirtyParamCount={dirtyParamCount}
+          hasDirtyParamDrafts={hasDirtyParamDrafts}
+        />
 
       <div className="layout">
         <ProjectSidebar
@@ -98,6 +100,7 @@ export default function App() {
           unit={backendSamples.unit}
           atomCatalog={backendSamples.atomCatalog}
           projectFile={backendSamples.project.file}
+          hasDirtyParamDrafts={hasDirtyParamDrafts}
           paramDrafts={paramDrafts}
           paramOverrides={paramOverrides}
           onParamChange={updateParamDraft}

@@ -726,6 +726,12 @@ body {
   color: #86efac;
 }
 
+.status-pill--warn {
+  border: 1px solid #a16207;
+  background: #322006;
+  color: #fcd34d;
+}
+
 .status-pill--bad {
   border: 1px solid #991b1b;
   background: #2a0b0b;

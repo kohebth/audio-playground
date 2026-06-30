@@ -24,6 +24,7 @@ type Props = {
   unit: UnitInspect;
   atomCatalog: Record<string, string>;
   projectFile: string;
+  hasDirtyParamDrafts: boolean;
   paramDrafts: ParamDrafts;
   paramOverrides: ParamOverride[];
   onParamChange: (instanceId: string, paramKey: string, value: string) => void;
@@ -51,6 +52,7 @@ export function ProjectInspector({
   unit,
   atomCatalog,
   projectFile,
+  hasDirtyParamDrafts,
   paramDrafts,
   paramOverrides,
   onParamChange,
@@ -59,11 +61,14 @@ export function ProjectInspector({
 }: Props) {
   const selectedDirtyCount =
     selectedNode?.kind === 'unit' ? countDirtyParamsForInstance(selectedNode.instance, paramDrafts) : 0;
+  const readinessMessage = hasDirtyParamDrafts ? 'Out of sync with local edits' : 'Synchronized with local draft state';
+  const commandState = hasDirtyParamDrafts ? 'frozen' : 'current';
 
   return (
     <aside className="project-inspector">
       <section className="inspector-block">
         <div className="inspector-block__label">Validation</div>
+        <div className="inspector-block__meta">Readiness: {readinessMessage}</div>
         <div className="validation-line">
           <span className={`validation-dot ${validation.ok ? 'validation-dot--ok' : 'validation-dot--bad'}`} />
           <strong>{validation.ok ? 'Project is valid' : 'Project has errors'}</strong>
@@ -85,13 +90,14 @@ export function ProjectInspector({
           </div>
         )}
         <div className="command-panel">
-          <span>Backend command</span>
+          <span>Backend command ({commandState})</span>
           <code>{commands.validateProject}</code>
         </div>
       </section>
 
       <section className="inspector-block">
         <div className="inspector-block__label">Render Preview</div>
+        <div className="inspector-block__meta">Readiness: {readinessMessage}</div>
         <div className="meter-grid">
           <div>
             <span>Peak</span>
@@ -116,7 +122,7 @@ export function ProjectInspector({
           ))}
         </div>
         <div className="command-panel">
-          <span>Backend command</span>
+          <span>Backend command ({commandState})</span>
           <code>{commands.renderProject}</code>
         </div>
       </section>
