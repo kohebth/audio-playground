@@ -3,9 +3,10 @@ import type { ProjectInspect, ValidationResult } from '../lib/backendSamples';
 type Props = {
   project: ProjectInspect;
   validation: ValidationResult;
+  dirtyParamCount: number;
 };
 
-export function ProjectTopbar({ project, validation }: Props) {
+export function ProjectTopbar({ project, validation, dirtyParamCount }: Props) {
   return (
     <header className="topbar topbar--project">
       <div className="topbar__brand">
@@ -28,6 +29,10 @@ export function ProjectTopbar({ project, validation }: Props) {
         <div>
           <span className="project-summary__label">Compiled</span>
           <strong>{project.compiled.nodes} nodes / {project.compiled.signals} signals</strong>
+        </div>
+        <div>
+          <span className="project-summary__label">Draft Edits</span>
+          <strong>{dirtyParamCount}</strong>
         </div>
       </div>
 

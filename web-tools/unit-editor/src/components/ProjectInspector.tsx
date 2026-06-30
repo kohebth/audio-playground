@@ -1,5 +1,10 @@
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type { ProjectRoute, RenderResult, UnitInspect, ValidationResult } from '../lib/backendSamples';
+import {
+  countDirtyParamsForInstance,
+  paramDraftKey,
+  type ParamDrafts,
+} from '../lib/projectParams';
 
 type Props = {
   validation: ValidationResult;
@@ -8,6 +13,10 @@ type Props = {
   selectedRoute: ProjectRoute | null;
   unit: UnitInspect;
   atomCatalog: Record<string, string>;
+  paramDrafts: ParamDrafts;
+  onParamChange: (instanceId: string, paramKey: string, value: string) => void;
+  onParamReset: (instanceId: string, paramKey: string, value: string) => void;
+  onResetUnitParams: (instanceId: string) => void;
 };
 
 function compatibilityLabel(flags: Record<string, boolean>): string {
@@ -21,7 +30,21 @@ function formatNumber(value: number): string {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
 
-export function ProjectInspector({ validation, render, selectedNode, selectedRoute, unit, atomCatalog }: Props) {
+export function ProjectInspector({
+  validation,
+  render,
+  selectedNode,
+  selectedRoute,
+  unit,
+  atomCatalog,
+  paramDrafts,
+  onParamChange,
+  onParamReset,
+  onResetUnitParams,
+}: Props) {
+  const selectedDirtyCount =
+    selectedNode?.kind === 'unit' ? countDirtyParamsForInstance(selectedNode.instance, paramDrafts) : 0;
+
   return (
     <aside className="project-inspector">
       <section className="inspector-block">
@@ -87,13 +110,44 @@ export function ProjectInspector({ validation, render, selectedNode, selectedRou
           <h2>{selectedNode.instance.id}</h2>
           <p>{selectedNode.unit.name}</p>
 
+          <div className="param-list__toolbar">
+            <span>{selectedDirtyCount} local edits</span>
+            <button
+              disabled={selectedDirtyCount === 0}
+              onClick={() => onResetUnitParams(selectedNode.instance.id)}
+              type="button"
+            >
+              Reset unit
+            </button>
+          </div>
+
           <div className="param-list">
-            {selectedNode.instance.params.map(param => (
-              <div key={param.key} className="param-list__row">
-                <span>{param.key}</span>
-                <strong>{param.value}</strong>
-              </div>
-            ))}
+            {selectedNode.instance.params.map(param => {
+              const draftKey = paramDraftKey(selectedNode.instance.id, param.key);
+              const value = paramDrafts[draftKey] ?? param.value;
+              const dirty = value !== param.value;
+
+              return (
+                <div key={param.key} className={`param-list__row ${dirty ? 'param-list__row--dirty' : ''}`}>
+                  <label className="param-list__field">
+                    <span>{param.key}</span>
+                    <input
+                      aria-label={`${selectedNode.instance.id} ${param.key}`}
+                      inputMode="decimal"
+                      onChange={event => onParamChange(selectedNode.instance.id, param.key, event.target.value)}
+                      value={value}
+                    />
+                  </label>
+                  <button
+                    disabled={!dirty}
+                    onClick={() => onParamReset(selectedNode.instance.id, param.key, param.value)}
+                    type="button"
+                  >
+                    Reset
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
           <div className="compatibility">
