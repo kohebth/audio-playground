@@ -2,6 +2,14 @@ import type { ProjectInspect, ProjectInstance } from './backendSamples';
 
 export type ParamDrafts = Record<string, string>;
 
+export type ParamOverride = {
+  path: string;
+  instanceId: string;
+  key: string;
+  value: string;
+  originalValue: string;
+};
+
 export function paramDraftKey(instanceId: string, paramKey: string): string {
   return `${instanceId}.${paramKey}`;
 }
@@ -25,4 +33,21 @@ export function countDirtyParams(project: ProjectInspect, drafts: ParamDrafts): 
 export function countDirtyParamsForInstance(instance: ProjectInstance, drafts: ParamDrafts): number {
   return instance.params.filter(param => (drafts[paramDraftKey(instance.id, param.key)] ?? param.value) !== param.value)
     .length;
+}
+
+export function buildParamOverrides(project: ProjectInspect, drafts: ParamDrafts): ParamOverride[] {
+  return project.nodes.flatMap(instance =>
+    instance.params.flatMap(param => {
+      const value = drafts[paramDraftKey(instance.id, param.key)] ?? param.value;
+      if (value === param.value) return [];
+
+      return [{
+        path: `${instance.id}.${param.key}`,
+        instanceId: instance.id,
+        key: param.key,
+        value,
+        originalValue: param.value,
+      }];
+    }),
+  );
 }

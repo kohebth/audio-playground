@@ -1,4 +1,5 @@
 import { AtomCatalogPanel } from './AtomCatalogPanel';
+import { DraftExportPanel } from './DraftExportPanel';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type {
   BackendCommands,
@@ -10,6 +11,7 @@ import type {
 import {
   countDirtyParamsForInstance,
   paramDraftKey,
+  type ParamOverride,
   type ParamDrafts,
 } from '../lib/projectParams';
 
@@ -21,7 +23,9 @@ type Props = {
   selectedRoute: ProjectRoute | null;
   unit: UnitInspect;
   atomCatalog: Record<string, string>;
+  projectFile: string;
   paramDrafts: ParamDrafts;
+  paramOverrides: ParamOverride[];
   onParamChange: (instanceId: string, paramKey: string, value: string) => void;
   onParamReset: (instanceId: string, paramKey: string, value: string) => void;
   onResetUnitParams: (instanceId: string) => void;
@@ -46,7 +50,9 @@ export function ProjectInspector({
   selectedRoute,
   unit,
   atomCatalog,
+  projectFile,
   paramDrafts,
+  paramOverrides,
   onParamChange,
   onParamReset,
   onResetUnitParams,
@@ -184,6 +190,8 @@ export function ProjectInspector({
           <p>{selectedNode?.detail ?? 'Select a pedalboard unit to inspect its parameters.'}</p>
         </section>
       )}
+
+      <DraftExportPanel projectFile={projectFile} overrides={paramOverrides} />
 
       <AtomCatalogPanel unit={unit} manifest={atomCatalog} />
 

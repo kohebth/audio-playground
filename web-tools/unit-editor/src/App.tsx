@@ -8,7 +8,7 @@ import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
 import { backendCommands, backendSamples, sampleSources } from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
-import { buildParamDrafts, countDirtyParams, paramDraftKey } from './lib/projectParams';
+import { buildParamDrafts, buildParamOverrides, countDirtyParams, paramDraftKey } from './lib/projectParams';
 import './App.css';
 
 function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): ProjectNodeData | null {
@@ -26,6 +26,7 @@ export default function App() {
   const selectedNode = findUnitNode(nodes, selectedId);
   const selectedRoute = selectedRouteIndex === null ? null : backendSamples.project.routes[selectedRouteIndex] ?? null;
   const dirtyParamCount = useMemo(() => countDirtyParams(backendSamples.project, paramDrafts), [paramDrafts]);
+  const paramOverrides = useMemo(() => buildParamOverrides(backendSamples.project, paramDrafts), [paramDrafts]);
 
   const selectProjectNode = useCallback((id: string) => {
     setSelectedId(id);
@@ -96,7 +97,9 @@ export default function App() {
           selectedRoute={selectedRoute}
           unit={backendSamples.unit}
           atomCatalog={backendSamples.atomCatalog}
+          projectFile={backendSamples.project.file}
           paramDrafts={paramDrafts}
+          paramOverrides={paramOverrides}
           onParamChange={updateParamDraft}
           onParamReset={resetParamDraft}
           onResetUnitParams={resetUnitParamDrafts}

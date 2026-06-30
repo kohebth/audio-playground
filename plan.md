@@ -196,7 +196,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 ### Phase AB: Web UI Completion Pass
 
 - [x] AB1: Fix the existing `YamlEditor` hook dependency warning so `npm run lint` is warning-free.
-- [ ] AB2: Add a project draft export/override preview for edited instance params.
+- [x] AB2: Add a project draft export/override preview for edited instance params.
 - [ ] AB3: Add validation/render readiness states for dirty drafts versus frozen command outputs.
 - [ ] AB4: Add a compact view switcher for project, atom, and contract inspector sections.
 
