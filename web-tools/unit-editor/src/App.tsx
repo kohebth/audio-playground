@@ -16,12 +16,15 @@ function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): Projec
   return nodes.find(node => node.id === id)?.data ?? null;
 }
 
+type InspectorView = 'project' | 'atom' | 'contract';
+
 export default function App() {
   const initialGraph = useMemo(() => buildProjectGraph(backendSamples.project), []);
   const [nodes, , onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [edges, , onEdgesChange] = useEdgesState(initialGraph.edges);
   const [selectedId, setSelectedId] = useState<string | null>('unit-drive1');
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
+  const [inspectorView, setInspectorView] = useState<InspectorView>('project');
   const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(backendSamples.project));
   const selectedNode = findUnitNode(nodes, selectedId);
   const selectedRoute = selectedRouteIndex === null ? null : backendSamples.project.routes[selectedRouteIndex] ?? null;
@@ -95,6 +98,8 @@ export default function App() {
           validation={backendSamples.validation}
           render={backendSamples.render}
           commands={backendCommands}
+          inspectorView={inspectorView}
+          onInspectorViewChange={setInspectorView}
           selectedNode={selectedNode}
           selectedRoute={selectedRoute}
           unit={backendSamples.unit}
