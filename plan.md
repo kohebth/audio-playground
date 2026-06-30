@@ -6,7 +6,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, and Phase X product fixture proof/captured outputs are implemented.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, and Phase Y1 frozen sample contracts are implemented.
 - The next objective is to finish backend readiness for the v2 web UI, tracked in `docs/WEB_UI_READINESS.md` and `docs/plans/2026-06-29-web-ui-readiness-plan.md`.
 - The current verification workflow is `./build-and-test.sh`, run once per completed implementation slice before committing.
 
@@ -174,7 +174,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase Y: Web Handoff Package
 
-- [ ] Y1: Freeze sample JSON contracts for validation, atom catalog, unit inspect, and project inspect.
+- [x] Y1: Freeze sample JSON contracts for validation, atom catalog, unit inspect, and project inspect.
 - [ ] Y2: Update web-readiness docs with exact commands and sample files.
 - [ ] Y3: Refresh `AGENTS.md`, `task.md`, and this plan for the web UI implementation phase.
 - [ ] Y4: Declare the backend ready for v2 web UI work.

@@ -8,7 +8,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`, including product units for overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix.
 - Project/session schema, deterministic fixtures, referenced-unit resolution, mono project compilation, and `projects-v2/guitar-pedalboard.project.v2.yaml` exist.
-- The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, and deterministic project render JSON through `apg-v2 render project <path>`. Pedalboard validation, inspect, and render goldens are committed under `test/golden/`. Benchmark output remains pending.
+- The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, and deterministic project render JSON through `apg-v2 render project <path>`. Validation, unit inspect, project inspect, render, and atom catalog sample contracts are frozen under `test/golden/`. Benchmark output remains pending.
 
 ## Ready To Start Web UI When
 
@@ -18,7 +18,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - [x] Validation returns structured errors and warnings with stable file/path fields.
 - [x] A guitar pedalboard fixture validates, compiles, runs, and renders deterministically.
 - [x] Runtime supports the first live UI controls: parameter changes, bypass, and meters.
-- [x] Sample JSON outputs are committed for frontend tests and UI mock data, including the guitar pedalboard fixture.
+- [x] Sample JSON outputs are committed for frontend tests and UI mock data, including unit inspect, project inspect, atom catalog, and guitar pedalboard fixture contracts.
 
 ## Backend Contracts Needed
 

@@ -1,6 +1,7 @@
 #include <apgcore/atom_catalog.h>
 #include <apgcore/json_contract_v2.h>
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,6 +44,15 @@ static char *capture_atom_catalog(void) {
     char *json = read_stream(file);
     fclose(file);
     return json;
+}
+
+static uint64_t fnv1a64(const char *text) {
+    uint64_t hash = UINT64_C(1469598103934665603);
+    for (const unsigned char *p = (const unsigned char *)text; p && *p; p++) {
+        hash ^= (uint64_t)*p;
+        hash *= UINT64_C(1099511628211);
+    }
+    return hash;
 }
 
 static char *read_file(const char *path) {
@@ -147,6 +157,13 @@ static int test_project_render_json_is_deterministic(void) {
     return 0;
 }
 
+static int test_unit_inspect_json_golden_output(void) {
+    return expect_golden(
+        apg_v2_json_write_inspect_unit, "units-v2/simple_gain.unit.v2.yaml",
+        "test/golden/v2-inspect-unit-simple_gain.json", "unit inspect"
+    );
+}
+
 static int test_unit_inspect_json_contains_ui_contract(void) {
     char *json = capture_json(apg_v2_json_write_inspect_unit, "units-v2/simple_gain.unit.v2.yaml");
     if (!json)
@@ -185,6 +202,10 @@ static int test_atom_inspect_json_is_available(void) {
         free(json);
         return fail("atom inspect json lacked expected catalog fields");
     }
+    if (strlen(json) != 26184u || fnv1a64(json) != UINT64_C(0xe559414d821ef839)) {
+        free(json);
+        return fail("atom inspect json changed from the frozen sample contract");
+    }
     free(json);
     return 0;
 }
@@ -197,6 +218,8 @@ int main(void) {
     if (test_project_render_json_is_deterministic())
         return 1;
     if (test_pedalboard_fixture_golden_outputs())
+        return 1;
+    if (test_unit_inspect_json_golden_output())
         return 1;
     if (test_unit_inspect_json_contains_ui_contract())
         return 1;

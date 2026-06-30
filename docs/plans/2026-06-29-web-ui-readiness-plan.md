@@ -9,9 +9,9 @@
 
 ## Context Discovered
 
-- APGCore v2 is complete through Phase X in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, the guitar pedalboard project fixture, deterministic project rendering, captured fixture outputs, and verification workflow are in place.
+- APGCore v2 is complete through Phase Y1 in `plan.md`: unit loader/compiler/runtime, fixtures, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, runtime product controls, product unit fixtures, the guitar pedalboard project fixture, deterministic project rendering, captured fixture outputs, frozen sample contracts, and verification workflow are in place.
 - `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md` define the desired product as a visual pedalboard and graph composer, not just a YAML editor.
-- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, project inspection, and deterministic project rendering. Runtime product controls, meters, product unit fixtures, representative pedalboard fixture, and pedalboard sample outputs are implemented; benchmark tooling remains open.
+- The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, project inspection, and deterministic project rendering. Runtime product controls, meters, product unit fixtures, representative pedalboard fixture, pedalboard sample outputs, unit inspect golden, and atom catalog manifest are implemented; benchmark tooling remains open.
 - `web-tools/unit-editor/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
 ---
@@ -107,8 +107,8 @@
 
 | # | Step | Expected Output | Depends On |
 |---|------|-----------------|------------|
-| Y1 | Freeze JSON contracts and sample outputs | Frontend-ready documentation | Phase X |
-| Y2 | Add golden CLI outputs for frontend tests | UI can develop against fixtures | Y1 |
+| Y1 | Freeze JSON contracts and sample outputs | Done: validation, unit inspect, project inspect, render, and atom catalog contracts | Phase X |
+| Y2 | Document exact backend commands and sample files | UI can develop against frozen fixtures | Y1 |
 | Y3 | Update repo guidance and trackers | Ready-to-start-web milestone | Y2 |
 
 ---
