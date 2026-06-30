@@ -7,7 +7,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
 - The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, and Phase Y web handoff package are implemented.
-- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z initial web UI implementation and Phase AA refinement are complete. The web UI now has focused workbench components, local parameter draft editing, validation/render command panels, and a first atom palette/unit-inspection view.
+- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z initial web UI implementation and Phase AA refinement are complete. Phase AB has started, and `web-tools/unit-editor` now builds and lints without warnings.
 - Final backend readiness verification passed with `./build-and-test.sh` across all 14 CTest targets. The first web UI slices pass package build/lint and Playwright desktop/mobile smoke checks.
 
 ## Completed Work
@@ -195,7 +195,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 ### Phase AB: Web UI Completion Pass
 
-- [ ] AB1: Fix the existing `YamlEditor` hook dependency warning so `npm run lint` is warning-free.
+- [x] AB1: Fix the existing `YamlEditor` hook dependency warning so `npm run lint` is warning-free.
 - [ ] AB2: Add a project draft export/override preview for edited instance params.
 - [ ] AB3: Add validation/render readiness states for dirty drafts versus frozen command outputs.
 - [ ] AB4: Add a compact view switcher for project, atom, and contract inspector sections.

@@ -32,12 +32,18 @@ export function YamlEditor({ yaml, onChange }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const isInternalChange = useRef(false);
+  const initialYaml = useRef(yaml);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const startState = EditorState.create({
-      doc: yaml,
+      doc: initialYaml.current,
       extensions: [
         lineNumbers(),
         highlightActiveLine(),
@@ -56,7 +62,7 @@ export function YamlEditor({ yaml, onChange }: Props) {
               setError((err as Error).message);
             }
             if (!isInternalChange.current) {
-              onChange(doc);
+              onChangeRef.current(doc);
             }
             isInternalChange.current = false;
           }
