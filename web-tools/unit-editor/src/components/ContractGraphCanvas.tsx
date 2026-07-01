@@ -13,9 +13,9 @@ import {
   type NodeTypes,
 } from '@xyflow/react';
 import dagre from 'dagre';
-import yaml from 'js-yaml';
 
 import type { AtomCatalog, WorkspaceFile } from '../lib/backendSamples';
+import { parseUnitGraphDraft, type UnitGraphDraft } from '../lib/unitV2Graph';
 
 type ContractNodeData = {
   id: string;
@@ -29,29 +29,18 @@ type ContractNodeData = {
 
 type ContractFlowNode = Node<ContractNodeData, 'contractNode'>;
 
-type UnitGraphNode = {
-  id: string;
-  atom: string;
-  in: Record<string, string>;
-  out: Record<string, string>;
-  config: Record<string, string>;
-};
-
-type UnitGraph = {
-  name: string;
-  signals: string[];
-  nodes: UnitGraphNode[];
-};
-
 type Props = {
   workspaceFile: WorkspaceFile;
   catalog: AtomCatalog;
   selectedUnitLabel: string;
+  selectedAtomId: string | null;
   onBackToProject: () => void;
+  onSelectAtom: (id: string) => void;
+  onOpenAtomInspector: (id: string) => void;
 };
 
 type ParsedContractGraph = {
-  unit: UnitGraph | null;
+  unit: UnitGraphDraft | null;
   error: string | null;
   flow: {
     nodes: ContractFlowNode[];
@@ -73,39 +62,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   nonlinear: '#ef4444',
 };
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function stringMap(value: unknown): Record<string, string> {
-  if (!isObject(value)) return {};
-  return Object.fromEntries(Object.entries(value).map(([key, raw]) => [key, String(raw)]));
-}
-
-function parseUnitGraph(content: string): UnitGraph {
-  const doc = yaml.load(content);
-  if (!isObject(doc)) throw new Error('Unit YAML must be a mapping.');
-
-  const graph = isObject(doc.graph) ? doc.graph : {};
-  const signals = Array.isArray(graph.signals) ? graph.signals.filter((item): item is string => typeof item === 'string') : [];
-  const nodes = Array.isArray(graph.nodes)
-    ? graph.nodes.filter(isObject).map((node, index) => ({
-        id: String(node.id ?? `node-${index + 1}`),
-        atom: String(node.atom ?? 'unknown'),
-        in: stringMap(node.in),
-        out: stringMap(node.out),
-        config: stringMap(node.config),
-      }))
-    : [];
-
-  return {
-    name: String(doc.name ?? 'unnamed_unit'),
-    signals,
-    nodes,
-  };
-}
-
-function buildContractFlow(unit: UnitGraph, catalog: AtomCatalog): { nodes: ContractFlowNode[]; edges: Edge[] } {
+function buildContractFlow(
+  unit: UnitGraphDraft,
+  catalog: AtomCatalog,
+  selectedAtomId: string | null,
+): { nodes: ContractFlowNode[]; edges: Edge[] } {
   const graph = new dagre.graphlib.Graph();
   const nodes: ContractFlowNode[] = [];
   const edges: Edge[] = [];
@@ -125,6 +86,7 @@ function buildContractFlow(unit: UnitGraph, catalog: AtomCatalog): { nodes: Cont
       id: nodeId,
       type: 'contractNode',
       position: { x: 0, y: 0 },
+      selected: graphNode.id === selectedAtomId,
       data: { ...graphNode, category, color },
     });
 
@@ -213,11 +175,19 @@ ContractNode.displayName = 'ContractNode';
 
 const nodeTypes = { contractNode: ContractNode } satisfies NodeTypes;
 
-export function ContractGraphCanvas({ workspaceFile, catalog, selectedUnitLabel, onBackToProject }: Props) {
+export function ContractGraphCanvas({
+  workspaceFile,
+  catalog,
+  selectedUnitLabel,
+  selectedAtomId,
+  onBackToProject,
+  onSelectAtom,
+  onOpenAtomInspector,
+}: Props) {
   const parsed = useMemo<ParsedContractGraph>(() => {
     try {
-      const unit = parseUnitGraph(workspaceFile.content);
-      return { unit, error: null, flow: buildContractFlow(unit, catalog) };
+      const unit = parseUnitGraphDraft(workspaceFile.content);
+      return { unit, error: null, flow: buildContractFlow(unit, catalog, selectedAtomId) };
     } catch (error) {
       return {
         unit: null,
@@ -225,7 +195,7 @@ export function ContractGraphCanvas({ workspaceFile, catalog, selectedUnitLabel,
         flow: { nodes: [], edges: [] },
       };
     }
-  }, [catalog, workspaceFile.content]);
+  }, [catalog, selectedAtomId, workspaceFile.content]);
 
   return (
     <main className="canvas canvas--contract">
@@ -252,6 +222,8 @@ export function ContractGraphCanvas({ workspaceFile, catalog, selectedUnitLabel,
               nodes={parsed.flow.nodes}
               edges={parsed.flow.edges}
               nodeTypes={nodeTypes}
+              onNodeClick={(_, node) => onSelectAtom((node.data as ContractNodeData).id)}
+              onNodeDoubleClick={(_, node) => onOpenAtomInspector((node.data as ContractNodeData).id)}
               fitView
               fitViewOptions={{ padding: 0.18 }}
               minZoom={0.35}

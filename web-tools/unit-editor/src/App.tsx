@@ -10,6 +10,15 @@ import { ProjectTopbar } from './components/ProjectTopbar';
 import { backendCommands, backendSamples, initialWorkspaceFiles, sampleSources, type WorkspaceFile } from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
 import { buildParamDrafts, buildParamOverrides, countDirtyParams, paramDraftKey } from './lib/projectParams';
+import {
+  addAtomNodeToUnit,
+  pasteAtomNodeIntoUnit,
+  parseUnitGraphDraft,
+  removeAtomNodeFromUnit,
+  serializeUnitGraphNodeUpdate,
+  updateProjectInstanceParam,
+  type UnitGraphNode,
+} from './lib/unitV2Graph';
 import './App.css';
 
 function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): ProjectNodeData | null {
@@ -51,6 +60,9 @@ export default function App() {
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
   const [inspectorView, setInspectorView] = useState<InspectorView>('project');
   const [canvasMode, setCanvasMode] = useState<CanvasMode>('project');
+  const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
+  const [atomClipboard, setAtomClipboard] = useState<UnitGraphNode | null>(null);
+  const [graphEditError, setGraphEditError] = useState<string | null>(null);
   const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(backendSamples.project));
   const [workspaceFiles, setWorkspaceFiles] = useState(loadWorkspaceFiles);
   const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspaceFiles[0].path);
@@ -68,6 +80,16 @@ export default function App() {
     const path = normalizeWorkspacePath(selectedNode.unit.file);
     return workspaceFiles.find(file => file.path === path) ?? selectedWorkspaceFile;
   }, [selectedNode, selectedWorkspaceFile, workspaceFiles]);
+  const selectedUnitGraph = useMemo(() => {
+    try {
+      if (selectedUnitWorkspaceFile.role !== 'unit') return null;
+      return parseUnitGraphDraft(selectedUnitWorkspaceFile.content);
+    } catch {
+      return null;
+    }
+  }, [selectedUnitWorkspaceFile]);
+  const selectedAtom =
+    selectedUnitGraph?.nodes.find(node => node.id === selectedAtomId) ?? selectedUnitGraph?.nodes[0] ?? null;
 
   useEffect(() => {
     const drafts = workspaceFiles.map(({ path, role, content }) => ({ path, role, content }));
@@ -77,6 +99,7 @@ export default function App() {
   const selectProjectNode = useCallback((id: string) => {
     setSelectedId(id);
     setSelectedRouteIndex(null);
+    setSelectedAtomId(null);
     if (id.startsWith('unit-')) {
       setInspectorView('atom');
     }
@@ -91,20 +114,37 @@ export default function App() {
     setSelectedRouteIndex(null);
     setSelectedWorkspacePath(path);
     setCanvasMode('contract');
+    setInspectorView('contract');
+    setSelectedAtomId(null);
   }, [nodes]);
 
   const selectRoute = useCallback((index: number) => {
     setSelectedRouteIndex(index);
     setSelectedId(null);
     setCanvasMode('project');
+    setSelectedAtomId(null);
   }, []);
 
   const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
     setParamDrafts(drafts => ({ ...drafts, [paramDraftKey(instanceId, paramKey)]: value }));
+    setWorkspaceFiles(files =>
+      files.map(file =>
+        file.role === 'project'
+          ? { ...file, content: updateProjectInstanceParam(file.content, instanceId, paramKey, value) }
+          : file,
+      ),
+    );
   }, []);
 
   const resetParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
     setParamDrafts(drafts => ({ ...drafts, [paramDraftKey(instanceId, paramKey)]: value }));
+    setWorkspaceFiles(files =>
+      files.map(file =>
+        file.role === 'project'
+          ? { ...file, content: updateProjectInstanceParam(file.content, instanceId, paramKey, value) }
+          : file,
+      ),
+    );
   }, []);
 
   const resetUnitParamDrafts = useCallback((instanceId: string) => {
@@ -120,10 +160,81 @@ export default function App() {
 
       return next;
     });
+    setWorkspaceFiles(files =>
+      files.map(file => {
+        if (file.role !== 'project') return file;
+        const content = instance.params.reduce(
+          (draft, param) => updateProjectInstanceParam(draft, instance.id, param.key, param.value),
+          file.content,
+        );
+        return { ...file, content };
+      }),
+    );
   }, []);
 
   const updateWorkspaceFile = useCallback((path: string, content: string) => {
     setWorkspaceFiles(files => files.map(file => (file.path === path ? { ...file, content } : file)));
+  }, []);
+
+  const updateSelectedUnitFile = useCallback((update: (content: string) => string, nextAtomId?: string | null) => {
+    setGraphEditError(null);
+    try {
+      const content = update(selectedUnitWorkspaceFile.content);
+      setWorkspaceFiles(files =>
+        files.map(file => (file.path === selectedUnitWorkspaceFile.path ? { ...file, content } : file)),
+      );
+      if (nextAtomId !== undefined) setSelectedAtomId(nextAtomId);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to update unit graph.');
+    }
+  }, [selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path]);
+
+  const updateSelectedAtom = useCallback((node: UnitGraphNode, originalId = node.id) => {
+    updateSelectedUnitFile(content => serializeUnitGraphNodeUpdate(content, node, originalId), node.id);
+  }, [updateSelectedUnitFile]);
+
+  const addAtom = useCallback((atomName: string) => {
+    try {
+      const result = addAtomNodeToUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, atomName);
+      updateSelectedUnitFile(() => result.content, result.id);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to add atom.');
+    }
+  }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+
+  const removeSelectedAtom = useCallback(() => {
+    if (!selectedAtom) return;
+    updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
+  }, [selectedAtom, updateSelectedUnitFile]);
+
+  const copySelectedAtom = useCallback(() => {
+    if (selectedAtom) setAtomClipboard(selectedAtom);
+  }, [selectedAtom]);
+
+  const cutSelectedAtom = useCallback(() => {
+    if (!selectedAtom) return;
+    setAtomClipboard(selectedAtom);
+    updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
+  }, [selectedAtom, updateSelectedUnitFile]);
+
+  const pasteAtom = useCallback(() => {
+    if (!atomClipboard) return;
+
+    try {
+      const result = pasteAtomNodeIntoUnit(selectedUnitWorkspaceFile.content, atomClipboard);
+      updateSelectedUnitFile(() => result.content, result.id);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to paste atom.');
+    }
+  }, [atomClipboard, selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+
+  const selectAtom = useCallback((id: string) => {
+    setSelectedAtomId(id);
+  }, []);
+
+  const openAtomInspector = useCallback((id: string) => {
+    setSelectedAtomId(id);
+    setInspectorView('contract');
   }, []);
 
   const resetWorkspace = useCallback(() => {
@@ -194,9 +305,12 @@ export default function App() {
         {canvasMode === 'contract' && selectedNode?.kind === 'unit' ? (
           <ContractGraphCanvas
             catalog={backendSamples.atomCatalog}
+            selectedAtomId={selectedAtomId}
             selectedUnitLabel={selectedNode.unit.name}
             workspaceFile={selectedUnitWorkspaceFile}
             onBackToProject={() => setCanvasMode('project')}
+            onOpenAtomInspector={openAtomInspector}
+            onSelectAtom={selectAtom}
           />
         ) : (
           <ProjectCanvas
@@ -225,12 +339,23 @@ export default function App() {
           atomCatalogManifest={backendSamples.atomCatalogManifest}
           projectFile={backendSamples.project.file}
           hasDirtyParamDrafts={hasDirtyDrafts}
-          selectedWorkspaceFile={selectedWorkspaceFile}
+          selectedUnitFile={selectedUnitWorkspaceFile}
+          selectedUnitGraph={selectedUnitGraph}
+          selectedAtom={selectedAtom}
+          atomClipboard={atomClipboard}
+          graphEditError={graphEditError}
           paramDrafts={paramDrafts}
           paramOverrides={paramOverrides}
+          onAddAtom={addAtom}
+          onCopyAtom={copySelectedAtom}
+          onCutAtom={cutSelectedAtom}
+          onPasteAtom={pasteAtom}
           onParamChange={updateParamDraft}
           onParamReset={resetParamDraft}
+          onRemoveAtom={removeSelectedAtom}
           onResetUnitParams={resetUnitParamDrafts}
+          onSelectAtom={setSelectedAtomId}
+          onSelectedAtomChange={updateSelectedAtom}
           onWorkspaceFileChange={updateWorkspaceFile}
         />
       </div>
