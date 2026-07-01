@@ -7,8 +7,20 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
 - The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, and Phase Y web handoff package are implemented.
-- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z initial web UI implementation and Phase AA refinement are complete. Phase AB has started, and `web-tools/unit-editor` now builds and lints without warnings.
+- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z initial web UI implementation, Phase AA refinement, and Phase AB completion pass are complete.
+- The active target is the full Audio Playground v2 MVP from `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md`: users can visually build, edit, save, validate, preview, and export a guitar-pedalboard DSP project across intended backend targets while `apgcore` remains portable C11 and ARM/M7-compatible.
 - Final backend readiness verification passed with `./build-and-test.sh` across all 14 CTest targets. The first web UI slices pass package build/lint and Playwright desktop/mobile smoke checks.
+
+## Full MVP Implementation Lifecycle
+
+1. Implement as much as possible module-by-module.
+2. After each completed implementation module, record pending test cases in this plan and `task.md`; do not implement those tests until Phase AI.
+3. After each completed implementation module, add a module note of 40 words or fewer.
+4. After all implementation modules are complete, implement and run tests.
+5. After all tests pass, finish docs and close the goal.
+6. Prefer the shortest clear code that preserves behavior; if shorter code works equally, choose it.
+
+During implementation phases, use build-only verification before commits. For web changes, run `npm run build` inside `web-tools/unit-editor`. For backend changes, run `./build-and-test.sh` only when backend implementation changes require compile confidence. Do not add new test cases before Phase AI.
 
 ## Completed Work
 
@@ -200,6 +212,112 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - [x] AB3: Add validation/render readiness states for dirty drafts versus frozen command outputs.
 - [x] AB4: Add a compact view switcher for project, atom, and contract inspector sections.
 
+### Phase AC: Contract-Accurate Web Data
+
+- [ ] AC1: Freeze a full atom catalog JSON sample from `apg-v2 inspect atoms` and retire the local atom catalog fallback from the web palette.
+- [ ] AC2: Add a frontend fixture loader shape that treats validation, unit inspect, project inspect, atom catalog, and render JSON as one backend contract bundle.
+- [ ] AC3: Show compatibility profile fields from backend atom/unit/project metadata instead of local labels.
+- [ ] AC4: Update `problem.md` when the full atom catalog frontend fixture gap is resolved.
+
+Pending tests to record during AC implementation:
+
+- Atom palette renders from backend JSON.
+- Local fallback is unused.
+- Backend catalog schema mismatch shows a visible failure.
+
+Module note target: Web atom data now comes from frozen backend catalog JSON.
+
+### Phase AD: Multi-File Workspace and Autosave
+
+- [ ] AD1: Add a web project workspace model for project YAML plus referenced unit files.
+- [ ] AD2: Add local autosave and restore for draft project/unit files.
+- [ ] AD3: Add import/export controls for the draft workspace without requiring manual YAML copy/paste.
+- [ ] AD4: Keep validation/readiness state tied to dirty drafts versus frozen or regenerated backend outputs.
+
+Pending tests to record during AD implementation:
+
+- Autosave restores project and unit drafts.
+- Export includes all workspace files.
+- Dirty drafts mark validation/render as stale.
+
+Module note target: Project drafts now preserve multi-file workspace state locally.
+
+### Phase AE: Unit Graph Editing
+
+- [ ] AE1: Add a unit-internals view that renders atom nodes, signals, bindings, and params.
+- [ ] AE2: Add atom insertion/config editing against backend atom metadata.
+- [ ] AE3: Add route/binding validation feedback before applying structural graph edits.
+- [ ] AE4: Export updated unit draft YAML through the same workspace model.
+
+Pending tests to record during AE implementation:
+
+- Unit graph renders from unit inspect data.
+- Atom config edits update draft YAML.
+- Invalid binding shows inspector feedback.
+
+Module note target: Unit graph edits now flow through draft workspace YAML.
+
+### Phase AF: Live Preview Path
+
+- [ ] AF1: Define the browser preview adapter boundary for compile, start, stop, set param, bypass, and meter polling.
+- [ ] AF2: Add a preview panel state machine using deterministic render JSON until WASM/AudioWorklet is available.
+- [ ] AF3: Wire meter and param controls to the runtime-control contract names.
+- [ ] AF4: Track missing WASM/AudioWorklet implementation gaps in `problem.md` if backend support is not ready.
+
+Pending tests to record during AF implementation:
+
+- Preview panel transitions through idle/ready/running/error.
+- Param and bypass controls call stable runtime names.
+- Meter display handles missing preview backend.
+
+Module note target: Preview controls now target the runtime adapter contract.
+
+### Phase AG: Compatibility and Export Workflow
+
+- [ ] AG1: Add a compatibility matrix UI for `desktop_full`, `wasm_realtime`, `m7_static`, and `offline_render`.
+- [ ] AG2: Add export readiness panels for desktop/web/embedded targets.
+- [ ] AG3: Surface benchmark/export command gaps from `problem.md` as blocked export actions.
+- [ ] AG4: Add backend CLI/export tasks when the UI needs real generated bundles.
+
+Pending tests to record during AG implementation:
+
+- Matrix shows supported/unsupported target profiles.
+- Export panel blocks unavailable targets with reason.
+- M7 export path rejects unsupported atoms/features.
+
+Module note target: Export UI now exposes target readiness and blocked backend gaps.
+
+### Phase AH: Backend CLI and Export Gaps
+
+- [ ] AH1: Add deterministic benchmark JSON only if needed by export/readiness UI.
+- [ ] AH2: Add export command skeletons for `wasm_realtime` and `m7_static`.
+- [ ] AH3: Keep `apgcore` independent from platform APIs while adding export surfaces.
+- [ ] AH4: For M7 static output, generate C11-compatible tables with bounded memory and no runtime YAML parser.
+
+Pending tests to record during AH implementation:
+
+- Benchmark JSON has stable structural fields.
+- M7 export emits deterministic static bundle.
+- Unsupported target features produce stable diagnostics.
+
+Module note target: Backend CLI now exposes MVP export surfaces.
+
+### Phase AI: Deferred Test Implementation
+
+- [ ] AI1: Implement recorded Phase AC tests.
+- [ ] AI2: Implement recorded Phase AD tests.
+- [ ] AI3: Implement recorded Phase AE tests.
+- [ ] AI4: Implement recorded Phase AF tests.
+- [ ] AI5: Implement recorded Phase AG/AH tests.
+- [ ] AI6: Run package build/lint for web and `./build-and-test.sh` for C/APGCore.
+
+### Phase AJ: Final Docs and Goal Closure
+
+- [ ] AJ1: Update `task.md`, `plan.md`, `problem.md`, and relevant schema/readiness docs.
+- [ ] AJ2: Document remaining non-MVP follow-ups separately.
+- [ ] AJ3: Confirm no unrelated local files are staged.
+- [ ] AJ4: Commit final docs slice.
+
 ## Execution Order
 
 1. Stabilize unit UI metadata before exporting frontend-facing unit data.
@@ -208,11 +326,14 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 4. Stabilize JSON/CLI contracts before starting web UI implementation.
 5. Prove the workflow with a guitar pedalboard fixture before moving to frontend screens.
 6. Start web UI work from frozen backend samples before adding live backend integration.
+7. Complete AC-AH implementation modules before adding deferred tests in Phase AI.
+8. Finish final documentation and goal closure in Phase AJ.
 
 ## Per-Phase Workflow
 
 1. Pick one checkbox or a tight group of related checkboxes.
-2. Implement the smallest code and test change that proves the behavior.
+2. Implement the shortest clear code change that preserves intended behavior.
 3. Format touched C/H files with `clang-format` when source layout changes.
-4. Run `./build-and-test.sh` exactly once for the completed slice.
-5. Commit with `git commit -m "<which tasks are done>"`.
+4. During AC-AH, record pending tests instead of implementing them.
+5. Run build-only verification for implementation slices.
+6. Commit with `git commit -m "<which tasks are done>"`.

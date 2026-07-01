@@ -69,12 +69,14 @@ Reread `AGENTS.md` at the start of each new work slice before making repository 
 
 ## Continuous Work Protocol
 
-Current milestone: APGCore v2 backend handoff is complete and the next queue starts with Phase Z web UI implementation in `task.md` and `plan.md`. Preserve repository workflow rules and commit each completed, verified slice.
+Current milestone: Phase Z/AA/AB web handoff UI is complete. The active target is the full Audio Playground v2 MVP in `task.md` and `plan.md`: visual build/edit/save/validate/preview/export for a guitar-pedalboard DSP project across intended backend targets, while `apgcore` remains portable C11 and ARM/M7-compatible.
 
-When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, focused tests, formatting, verification, tracker updates, and commit. Prefer one coherent slice at a time, but continue into the next slice in the same turn when the path is clear and no approval or product decision is needed.
+When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, tracker updates, build-only verification, and commit. Prefer one coherent module at a time, but continue into the next module in the same turn when the path is clear and no approval or product decision is needed.
+
+During implementation phases AC through AH, do not add new tests yet. After each completed implementation module, record pending test cases in `task.md` and `plan.md`, add a module note of 40 words or fewer, run build-only verification, and commit. Implement recorded tests in Phase AI, then finish docs in Phase AJ.
 
 Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documents aligned as work advances. If a task is blocked by missing design context, record it in `problem.md`, update the trackers, and move to the next actionable item.
 
 For web UI work, start from `docs/WEB_UI_READINESS.md`, `projects-v2/guitar-pedalboard.project.v2.yaml`, and the frozen files in `test/golden/`. Treat those samples as the first frontend data contract. Build the project-level pedalboard workflow before unit-internals editing, and avoid changing backend JSON contracts unless a tracked UI requirement needs it.
 
-After each verified slice, stage only the files that belong to that slice and commit with `git commit -m "<which tasks are done>"`. Docs-only tracker updates do not require `./build-and-test.sh`; code/test slices do. Before ending a turn, report the phase, the committed slice, verification run, and the next planned task.
+After each slice, stage only the files that belong to that slice and commit with `git commit -m "<which tasks are done>"`. Docs-only tracker updates do not require `./build-and-test.sh`. Web implementation slices require `npm run build` inside `web-tools/unit-editor`; backend implementation slices require `./build-and-test.sh` when compile confidence is needed. Before ending a turn, report the phase, committed slice, verification run, and next planned task.
