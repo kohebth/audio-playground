@@ -196,10 +196,18 @@ Module note: Project drafts now preserve multi-file workspace state locally.
 
 ### Phase AE: Unit Graph Editing
 
-- [ ] AE1: Add a unit-internals view that renders atom nodes, signals, and bindings from unit inspect data.
-- [ ] AE2: Add atom insertion/config editing against backend atom metadata.
-- [ ] AE3: Add route/binding validation feedback before applying structural graph edits.
-- [ ] AE4: Export updated unit draft YAML through the same workspace model.
+- [x] AE1: Add a unit-internals view that renders atom nodes, signals, and bindings from unit inspect data.
+- [x] AE2: Add atom insertion/config editing against backend atom metadata.
+- [x] AE3: Add route/binding validation feedback before applying structural graph edits.
+- [x] AE4: Export updated unit draft YAML through the same workspace model.
+
+Pending AE tests for Phase AI:
+
+- [ ] Unit graph renders from unit inspect data.
+- [ ] Atom config edits update draft YAML.
+- [ ] Invalid binding shows inspector feedback.
+
+Module note: Unit graph edits now flow through draft workspace YAML.
 
 ### Phase AF: Live Preview Path
 

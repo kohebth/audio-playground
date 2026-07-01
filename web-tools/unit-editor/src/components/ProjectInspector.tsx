@@ -1,5 +1,6 @@
 import { AtomCatalogPanel } from './AtomCatalogPanel';
 import { DraftExportPanel } from './DraftExportPanel';
+import { UnitGraphEditor } from './UnitGraphEditor';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type {
   AtomCatalog,
@@ -235,6 +236,13 @@ export function ProjectInspector({
                 <span>Unit Reference</span>
                 <strong>{selectedNode.unit.file}</strong>
               </div>
+
+              <UnitGraphEditor
+                unit={unit}
+                catalog={atomCatalog}
+                workspaceFile={selectedWorkspaceFile}
+                onWorkspaceFileChange={onWorkspaceFileChange}
+              />
             </>
           ) : (
             <>
