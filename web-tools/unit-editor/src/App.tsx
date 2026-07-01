@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import { ContractGraphCanvas } from './components/ContractGraphCanvas';
 import { ProjectCanvas } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
@@ -17,8 +18,13 @@ function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): Projec
 }
 
 type InspectorView = 'project' | 'atom' | 'contract';
+type CanvasMode = 'project' | 'contract';
 
 const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v1';
+
+function normalizeWorkspacePath(path: string): string {
+  return path.replace(/^\.\.\//, '').replace(/^\.\//, '');
+}
 
 function loadWorkspaceFiles(): WorkspaceFile[] {
   if (typeof window === 'undefined') return initialWorkspaceFiles;
@@ -44,6 +50,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>('unit-drive1');
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
   const [inspectorView, setInspectorView] = useState<InspectorView>('project');
+  const [canvasMode, setCanvasMode] = useState<CanvasMode>('project');
   const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(backendSamples.project));
   const [workspaceFiles, setWorkspaceFiles] = useState(loadWorkspaceFiles);
   const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspaceFiles[0].path);
@@ -55,6 +62,12 @@ export default function App() {
   const hasDirtyDrafts = dirtyParamCount > 0 || workspaceDraftCount > 0;
   const selectedWorkspaceFile = workspaceFiles.find(file => file.path === selectedWorkspacePath) ?? workspaceFiles[0];
   const paramOverrides = useMemo(() => buildParamOverrides(backendSamples.project, paramDrafts), [paramDrafts]);
+  const selectedUnitWorkspaceFile = useMemo(() => {
+    if (selectedNode?.kind !== 'unit') return selectedWorkspaceFile;
+
+    const path = normalizeWorkspacePath(selectedNode.unit.file);
+    return workspaceFiles.find(file => file.path === path) ?? selectedWorkspaceFile;
+  }, [selectedNode, selectedWorkspaceFile, workspaceFiles]);
 
   useEffect(() => {
     const drafts = workspaceFiles.map(({ path, role, content }) => ({ path, role, content }));
@@ -66,9 +79,21 @@ export default function App() {
     setSelectedRouteIndex(null);
   }, []);
 
+  const openContractGraph = useCallback((id: string) => {
+    const node = nodes.find(item => item.id === id)?.data;
+    if (!node || node.kind !== 'unit') return;
+
+    const path = normalizeWorkspacePath(node.unit.file);
+    setSelectedId(id);
+    setSelectedRouteIndex(null);
+    setSelectedWorkspacePath(path);
+    setCanvasMode('contract');
+  }, [nodes]);
+
   const selectRoute = useCallback((index: number) => {
     setSelectedRouteIndex(index);
     setSelectedId(null);
+    setCanvasMode('project');
   }, []);
 
   const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
@@ -159,18 +184,29 @@ export default function App() {
           selectedRouteIndex={selectedRouteIndex}
           onSelectWorkspaceFile={setSelectedWorkspacePath}
           onSelectNode={selectProjectNode}
+          onOpenContractGraph={openContractGraph}
           onSelectRoute={selectRoute}
         />
 
-        <ProjectCanvas
-          nodes={nodes}
-          edges={edges}
-          selectedRouteIndex={selectedRouteIndex}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onSelectNode={selectProjectNode}
-          onSelectRoute={selectRoute}
-        />
+        {canvasMode === 'contract' && selectedNode?.kind === 'unit' ? (
+          <ContractGraphCanvas
+            catalog={backendSamples.atomCatalog}
+            selectedUnitLabel={selectedNode.unit.name}
+            workspaceFile={selectedUnitWorkspaceFile}
+            onBackToProject={() => setCanvasMode('project')}
+          />
+        ) : (
+          <ProjectCanvas
+            nodes={nodes}
+            edges={edges}
+            selectedRouteIndex={selectedRouteIndex}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onSelectNode={selectProjectNode}
+            onOpenContractGraph={openContractGraph}
+            onSelectRoute={selectRoute}
+          />
+        )}
 
         <ProjectInspector
           validation={backendSamples.validation}

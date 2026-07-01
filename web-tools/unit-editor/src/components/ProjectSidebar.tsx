@@ -9,6 +9,7 @@ type Props = {
   selectedRouteIndex: number | null;
   onSelectWorkspaceFile: (path: string) => void;
   onSelectNode: (id: string) => void;
+  onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
 };
 
@@ -21,6 +22,7 @@ export function ProjectSidebar({
   selectedRouteIndex,
   onSelectWorkspaceFile,
   onSelectNode,
+  onOpenContractGraph,
   onSelectRoute,
 }: Props) {
   return (
@@ -46,6 +48,7 @@ export function ProjectSidebar({
               key={instance.id}
               className={`project-list__item ${selectedNodeId === nodeId ? 'project-list__item--active' : ''}`}
               onClick={() => onSelectNode(nodeId)}
+              onDoubleClick={() => onOpenContractGraph(nodeId)}
               type="button"
             >
               <span className="project-list__index">{index + 1}</span>
