@@ -77,6 +77,9 @@ export default function App() {
   const selectProjectNode = useCallback((id: string) => {
     setSelectedId(id);
     setSelectedRouteIndex(null);
+    if (id.startsWith('unit-')) {
+      setInspectorView('atom');
+    }
   }, []);
 
   const openContractGraph = useCallback((id: string) => {
