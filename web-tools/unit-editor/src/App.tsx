@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
+import yaml from 'js-yaml';
 import '@xyflow/react/dist/style.css';
 
 import { ProjectCanvas } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
-import { backendCommands, backendSamples, initialWorkspaceFiles, sampleSources, type WorkspaceFile } from './lib/backendSamples';
+import {
+  backendCommands,
+  backendSamples,
+  initialWorkspaceFiles,
+  sampleSources,
+  type UnitInspect,
+  type WorkspaceFile,
+} from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
 import { buildParamDrafts, buildParamOverrides, countDirtyParams, paramDraftKey } from './lib/projectParams';
 import './App.css';
@@ -20,6 +28,93 @@ type InspectorView = 'project' | 'atom' | 'contract' | 'graph';
 
 function normalizeWorkspacePath(path: string): string {
   return path.replace(/^\.\.\//, '').replace(/^\.\//, '');
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseUnitPorts(raw: unknown): Array<{ name: string; type: string; channels?: string }> {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .filter(isObject)
+    .map(port => ({
+      name: String(port.name ?? 'signal'),
+      type: String(port.type ?? 'audio'),
+      channels: typeof port.channels === 'string' ? port.channels : undefined,
+    }));
+}
+
+function parseWorkspaceUnitInspect(file: WorkspaceFile): UnitInspect | null {
+  try {
+    const doc = yaml.load(file.content) as Record<string, unknown>;
+    if (!isObject(doc)) return null;
+
+    const params = isObject(doc.params)
+      ? Object.entries(doc.params).map(([name, raw]) => {
+          const spec = isObject(raw) ? raw : {};
+
+          return {
+            name,
+            type: String(spec.type ?? 'float'),
+            default: String(spec.default ?? 0),
+            min: spec.min === undefined ? undefined : String(spec.min),
+            max: spec.max === undefined ? undefined : String(spec.max),
+            smoothing_ms: spec.smoothing_ms === undefined ? undefined : String(spec.smoothing_ms),
+          };
+        })
+      : [];
+
+    const ports = isObject(doc.ports)
+      ? {
+          inputs: parseUnitPorts(doc.ports.inputs),
+          outputs: parseUnitPorts(doc.ports.outputs),
+        }
+      : { inputs: [], outputs: [] };
+
+    const graphRaw = isObject(doc.graph) ? doc.graph : {};
+    const graphSignals = Array.isArray(graphRaw.signals)
+      ? graphRaw.signals.filter((signal): signal is string => typeof signal === 'string')
+      : [];
+
+    const graphNodes = Array.isArray(graphRaw.nodes)
+      ? graphRaw.nodes
+          .filter(isObject)
+          .map((node, index) => {
+            const bindings = Object.fromEntries([
+              ...Object.entries(isObject(node.in) ? node.in : {}).map(([k, v]) => [k, String(v)]),
+              ...Object.entries(isObject(node.out) ? node.out : {}).map(([k, v]) => [k, String(v)]),
+            ]);
+
+            return {
+              id: String(node.id ?? `node-${index}`),
+              atom: String(node.atom ?? 'unknown'),
+              bindings,
+            };
+          })
+      : [];
+
+    const compatibility = isObject(doc.compatibility)
+      ? Object.fromEntries(
+          Object.entries(doc.compatibility).map(([key, value]) => [key, Boolean(value)]),
+        )
+      : undefined;
+
+    return {
+      schema: String(doc.schema ?? 'apg.unit.v2'),
+      file: file.path,
+      name: String(doc.name ?? 'unit'),
+      version: String(doc.version ?? '2.0.0'),
+      meta: isObject(doc.meta) ? (doc.meta as Record<string, string>) : undefined,
+      compatibility,
+      params,
+      ports,
+      graph: { signals: graphSignals, nodes: graphNodes },
+    };
+  } catch {
+    return null;
+  }
 }
 
 const unitWorkspacePathByInstance = new Map<string, string>();
@@ -70,6 +165,10 @@ export default function App() {
   const hasWorkspaceDrafts = workspaceDraftCount > 0;
   const hasDirtyDrafts = dirtyParamCount > 0 || workspaceDraftCount > 0;
   const selectedWorkspaceFile = workspaceFiles.find(file => file.path === selectedWorkspacePath) ?? workspaceFiles[0];
+  const selectedUnitForGraph =
+    selectedNode?.kind === 'unit' && selectedWorkspaceFile.role === 'unit'
+      ? parseWorkspaceUnitInspect(selectedWorkspaceFile)
+      : null;
   const paramOverrides = useMemo(() => buildParamOverrides(backendSamples.project, paramDrafts), [paramDrafts]);
 
   useEffect(() => {
@@ -216,7 +315,7 @@ export default function App() {
           onInspectorViewChange={setInspectorView}
           selectedNode={selectedNode}
           selectedRoute={selectedRoute}
-          unit={backendSamples.unit}
+          unit={selectedUnitForGraph ?? backendSamples.unit}
           atomCatalog={backendSamples.atomCatalog}
           atomCatalogManifest={backendSamples.atomCatalogManifest}
           projectFile={backendSamples.project.file}
