@@ -62,7 +62,7 @@ This file tracks known issues that should not block the current phase but need e
 
 ## Export CLI Surface
 
-- **Status:** Open
-- **Context:** Phase AG exposes export readiness in the web UI, but `apg-v2 export --target wasm_realtime`, `apg-v2 export --target m7_static`, and deterministic benchmark JSON are not implemented yet.
-- **Follow-up:** Add backend export command skeletons and M7 static bundle generation in Phase AH, keeping generated C11 tables bounded and ARM/M7-compatible.
+- **Status:** Partially Resolved
+- **Context:** Phase AH added deterministic benchmark JSON plus `wasm_realtime` and `m7_static` export command surfaces. M7 emits bounded C11 tables for compatible projects and rejects unsupported units.
+- **Follow-up:** Implement real WASM AudioWorklet bundle generation beyond the current blocked `wasm_realtime` skeleton.
 - **Related Plan Item:** `plan.md` Phase AG/AH.

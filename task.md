@@ -241,10 +241,18 @@ Module note: Export UI now exposes target readiness and blocked backend gaps.
 
 ### Phase AH: Backend CLI and Export Gaps
 
-- [ ] AH1: Add deterministic benchmark JSON only if needed by export/readiness UI.
-- [ ] AH2: Add export command skeletons for `wasm_realtime` and `m7_static`.
-- [ ] AH3: Keep `apgcore` independent from platform APIs while adding export surfaces.
-- [ ] AH4: For M7 static output, generate C11-compatible tables with bounded memory and no runtime YAML parser.
+- [x] AH1: Add deterministic benchmark JSON only if needed by export/readiness UI.
+- [x] AH2: Add export command skeletons for `wasm_realtime` and `m7_static`.
+- [x] AH3: Keep `apgcore` independent from platform APIs while adding export surfaces.
+- [x] AH4: For M7 static output, generate C11-compatible tables with bounded memory and no runtime YAML parser.
+
+Pending AH tests for Phase AI:
+
+- [ ] Benchmark JSON has stable structural fields.
+- [ ] M7 export emits deterministic static bundle.
+- [ ] Unsupported target features produce stable diagnostics.
+
+Module note: Backend CLI now exposes MVP export surfaces.
 
 ### Phase AI: Deferred Test Implementation
 
