@@ -214,18 +214,18 @@ During implementation phases, use build-only verification before commits. For we
 
 ### Phase AC: Contract-Accurate Web Data
 
-- [ ] AC1: Freeze a full atom catalog JSON sample from `apg-v2 inspect atoms` and retire the local atom catalog fallback from the web palette.
-- [ ] AC2: Add a frontend fixture loader shape that treats validation, unit inspect, project inspect, atom catalog, and render JSON as one backend contract bundle.
-- [ ] AC3: Show compatibility profile fields from backend atom/unit/project metadata instead of local labels.
-- [ ] AC4: Update `problem.md` when the full atom catalog frontend fixture gap is resolved.
+- [x] AC1: Freeze a full atom catalog JSON sample from `apg-v2 inspect atoms` and retire the local atom catalog fallback from the web palette.
+- [x] AC2: Add a frontend fixture loader shape that treats validation, unit inspect, project inspect, atom catalog, and render JSON as one backend contract bundle.
+- [x] AC3: Show compatibility profile fields from backend atom/unit/project metadata instead of local labels.
+- [x] AC4: Update `problem.md` when the full atom catalog frontend fixture gap is resolved.
 
-Pending tests to record during AC implementation:
+Pending AC tests for Phase AI:
 
-- Atom palette renders from backend JSON.
-- Local fallback is unused.
-- Backend catalog schema mismatch shows a visible failure.
+- [ ] Atom palette renders from backend JSON.
+- [ ] Local fallback is unused by the project workbench palette.
+- [ ] Backend catalog schema mismatch shows a visible failure.
 
-Module note target: Web atom data now comes from frozen backend catalog JSON.
+Module note: Web atom data now comes from frozen backend catalog JSON.
 
 ### Phase AD: Multi-File Workspace and Autosave
 

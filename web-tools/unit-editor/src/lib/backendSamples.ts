@@ -1,3 +1,4 @@
+import atomCatalogRaw from '../../../../test/golden/v2-inspect-atoms.json?raw';
 import atomCatalogManifestRaw from '../../../../test/golden/v2-inspect-atoms.manifest.txt?raw';
 import projectInspectRaw from '../../../../test/golden/v2-inspect-project-guitar-pedalboard.json?raw';
 import projectRenderRaw from '../../../../test/golden/v2-render-project-guitar-pedalboard.json?raw';
@@ -84,6 +85,28 @@ export type BackendCommands = {
   renderProject: string;
 };
 
+export type AtomCatalogField = {
+  name: string;
+  type: string;
+  buffer_samples?: number;
+};
+
+export type AtomCatalogAtom = {
+  name: string;
+  category: string;
+  stateful: boolean;
+  profiles: Compatibility;
+  inputs: AtomCatalogField[];
+  outputs: AtomCatalogField[];
+  config: AtomCatalogField[];
+  state: AtomCatalogField[];
+};
+
+export type AtomCatalog = {
+  schema: string;
+  atoms: AtomCatalogAtom[];
+};
+
 export type UnitInspect = {
   schema: string;
   file: string;
@@ -138,12 +161,22 @@ function parseManifest(raw: string): Record<string, string> {
   return Object.fromEntries(raw.trim().split('\n').map(line => line.split('='))) as Record<string, string>;
 }
 
-export const backendSamples = {
+export type BackendFixtureBundle = {
+  project: ProjectInspect;
+  validation: ValidationResult;
+  render: RenderResult;
+  unit: UnitInspect;
+  atomCatalog: AtomCatalog;
+  atomCatalogManifest: Record<string, string>;
+};
+
+export const backendSamples: BackendFixtureBundle = {
   project: parseJson<ProjectInspect>(projectInspectRaw),
   validation: parseJson<ValidationResult>(projectValidationRaw),
   render: parseJson<RenderResult>(projectRenderRaw),
   unit: parseJson<UnitInspect>(unitInspectRaw),
-  atomCatalog: parseManifest(atomCatalogManifestRaw),
+  atomCatalog: parseJson<AtomCatalog>(atomCatalogRaw),
+  atomCatalogManifest: parseManifest(atomCatalogManifestRaw),
 };
 
 export const backendCommands: BackendCommands = {
@@ -158,5 +191,6 @@ export const sampleSources = {
   validation: 'test/golden/v2-validate-project-guitar-pedalboard.json',
   render: 'test/golden/v2-render-project-guitar-pedalboard.json',
   unit: 'test/golden/v2-inspect-unit-simple_gain.json',
-  atomCatalog: 'test/golden/v2-inspect-atoms.manifest.txt',
+  atomCatalog: 'test/golden/v2-inspect-atoms.json',
+  atomCatalogManifest: 'test/golden/v2-inspect-atoms.manifest.txt',
 };

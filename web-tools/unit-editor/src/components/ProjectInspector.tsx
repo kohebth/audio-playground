@@ -2,6 +2,7 @@ import { AtomCatalogPanel } from './AtomCatalogPanel';
 import { DraftExportPanel } from './DraftExportPanel';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type {
+  AtomCatalog,
   BackendCommands,
   ProjectRoute,
   RenderResult,
@@ -24,7 +25,8 @@ type Props = {
   selectedNode: ProjectNodeData | null;
   selectedRoute: ProjectRoute | null;
   unit: UnitInspect;
-  atomCatalog: Record<string, string>;
+  atomCatalog: AtomCatalog;
+  atomCatalogManifest: Record<string, string>;
   projectFile: string;
   hasDirtyParamDrafts: boolean;
   paramDrafts: ParamDrafts;
@@ -55,6 +57,7 @@ export function ProjectInspector({
   selectedRoute,
   unit,
   atomCatalog,
+  atomCatalogManifest,
   projectFile,
   hasDirtyParamDrafts,
   paramDrafts,
@@ -240,7 +243,7 @@ export function ProjectInspector({
 
       {isContractView && (
         <>
-          <AtomCatalogPanel unit={unit} manifest={atomCatalog} />
+          <AtomCatalogPanel unit={unit} catalog={atomCatalog} manifest={atomCatalogManifest} />
 
           <section className="inspector-block">
             <div className="inspector-block__label">Backend Contract</div>
@@ -250,12 +253,20 @@ export function ProjectInspector({
                 <strong>{unit.name}</strong>
               </div>
               <div>
+                <span>Atom catalog schema</span>
+                <strong>{atomCatalog.schema}</strong>
+              </div>
+              <div>
+                <span>Atom catalog atoms</span>
+                <strong>{atomCatalog.atoms.length}</strong>
+              </div>
+              <div>
                 <span>Atom catalog bytes</span>
-                <strong>{atomCatalog.bytes}</strong>
+                <strong>{atomCatalogManifest.bytes}</strong>
               </div>
               <div>
                 <span>Atom catalog fnv1a64</span>
-                <strong>{atomCatalog.fnv1a64}</strong>
+                <strong>{atomCatalogManifest.fnv1a64}</strong>
               </div>
             </div>
           </section>

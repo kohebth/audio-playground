@@ -104,6 +104,7 @@ export default function App() {
           selectedRoute={selectedRoute}
           unit={backendSamples.unit}
           atomCatalog={backendSamples.atomCatalog}
+          atomCatalogManifest={backendSamples.atomCatalogManifest}
           projectFile={backendSamples.project.file}
           hasDirtyParamDrafts={hasDirtyParamDrafts}
           paramDrafts={paramDrafts}

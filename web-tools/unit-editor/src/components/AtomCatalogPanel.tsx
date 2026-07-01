@@ -1,39 +1,60 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 
-import { ATOM_CATALOG, CATEGORY_COLORS, type AtomDef } from '../atoms/atomCatalog';
-import type { UnitInspect } from '../lib/backendSamples';
+import type { AtomCatalog, AtomCatalogAtom, AtomCatalogField, UnitInspect } from '../lib/backendSamples';
 
 type Props = {
   unit: UnitInspect;
+  catalog: AtomCatalog;
   manifest: Record<string, string>;
 };
 
-function formatFields(fields: string[]): string {
-  return fields.length > 0 ? fields.join(', ') : 'none';
+const CATEGORY_COLORS: Record<string, string> = {
+  amplitude: '#10b981',
+  delay: '#8b5cf6',
+  detect: '#06b6d4',
+  filter: '#3b82f6',
+  freq: '#6366f1',
+  generation: '#f59e0b',
+  interpolation: '#84cc16',
+  mix: '#ec4899',
+  modulation: '#f97316',
+  nonlinear: '#ef4444',
+  src: '#14b8a6',
+};
+
+function categoryColor(category: string): string {
+  return CATEGORY_COLORS[category] ?? '#6b7280';
 }
 
-function configLabel(config: AtomDef['config']): string {
-  return config.length > 0 ? config.map(field => `${field.name}:${field.type}`).join(', ') : 'none';
+function fieldLabel(fields: AtomCatalogField[]): string {
+  return fields.length > 0 ? fields.map(field => `${field.name}:${field.type}`).join(', ') : 'none';
 }
 
-export function AtomCatalogPanel({ unit, manifest }: Props) {
+function profileLabel(atom: AtomCatalogAtom): string {
+  const enabled = Object.entries(atom.profiles)
+    .filter(([, supported]) => supported)
+    .map(([profile]) => profile);
+  return enabled.length > 0 ? enabled.join(', ') : 'none';
+}
+
+export function AtomCatalogPanel({ unit, catalog, manifest }: Props) {
   const unitAtomNames = unit.graph.nodes.map(node => node.atom);
-  const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? ATOM_CATALOG[0]?.name ?? '');
-  const selectedAtom = ATOM_CATALOG.find(atom => atom.name === selectedAtomName) ?? ATOM_CATALOG[0];
+  const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? catalog.atoms[0]?.name ?? '');
+  const selectedAtom = catalog.atoms.find(atom => atom.name === selectedAtomName) ?? catalog.atoms[0];
   const categoryCounts = useMemo(
     () =>
-      ATOM_CATALOG.reduce<Record<string, number>>((counts, atom) => {
+      catalog.atoms.reduce<Record<string, number>>((counts, atom) => {
         counts[atom.category] = (counts[atom.category] ?? 0) + 1;
         return counts;
       }, {}),
-    [],
+    [catalog.atoms],
   );
 
   return (
     <section className="inspector-block">
       <div className="inspector-block__label">Atom Palette</div>
       <div className="atom-palette__summary">
-        <strong>{ATOM_CATALOG.length} local atoms</strong>
+        <strong>{catalog.atoms.length} backend atoms</strong>
         <span>{manifest.schema} / {manifest.bytes} bytes</span>
       </div>
 
@@ -42,7 +63,7 @@ export function AtomCatalogPanel({ unit, manifest }: Props) {
           <span
             key={category}
             className="atom-palette__category"
-            style={{ '--category-color': CATEGORY_COLORS[category as AtomDef['category']] } as CSSProperties}
+            style={{ '--category-color': categoryColor(category) } as CSSProperties}
           >
             {category} {count}
           </span>
@@ -50,40 +71,46 @@ export function AtomCatalogPanel({ unit, manifest }: Props) {
       </div>
 
       <div className="atom-palette__list" aria-label="Atom palette">
-        {ATOM_CATALOG.map(atom => (
+        {catalog.atoms.map(atom => (
           <button
             key={atom.name}
-            className={`atom-palette__item ${atom.name === selectedAtom.name ? 'atom-palette__item--active' : ''}`}
+            className={`atom-palette__item ${atom.name === selectedAtomName ? 'atom-palette__item--active' : ''}`}
             onClick={() => setSelectedAtomName(atom.name)}
-            style={{ '--category-color': CATEGORY_COLORS[atom.category] } as CSSProperties}
+            style={{ '--category-color': categoryColor(atom.category) } as CSSProperties}
             type="button"
           >
             <span>{atom.name}</span>
-            <strong>{atom.category}</strong>
+            <strong>{atom.stateful ? 'stateful' : atom.category}</strong>
           </button>
         ))}
       </div>
 
-      <div className="atom-detail">
-        <div className="atom-detail__header">
-          <span style={{ background: CATEGORY_COLORS[selectedAtom.category] }} />
-          <strong>{selectedAtom.name}</strong>
+      {selectedAtom ? (
+        <div className="atom-detail">
+          <div className="atom-detail__header">
+            <span style={{ background: categoryColor(selectedAtom.category) }} />
+            <strong>{selectedAtom.name}</strong>
+          </div>
+          <div className="atom-detail__grid">
+            <div>
+              <span>Inputs</span>
+              <strong>{fieldLabel(selectedAtom.inputs)}</strong>
+            </div>
+            <div>
+              <span>Outputs</span>
+              <strong>{fieldLabel(selectedAtom.outputs)}</strong>
+            </div>
+            <div>
+              <span>Config</span>
+              <strong>{fieldLabel(selectedAtom.config)}</strong>
+            </div>
+            <div>
+              <span>Profiles</span>
+              <strong>{profileLabel(selectedAtom)}</strong>
+            </div>
+          </div>
         </div>
-        <div className="atom-detail__grid">
-          <div>
-            <span>Inputs</span>
-            <strong>{formatFields(selectedAtom.ins)}</strong>
-          </div>
-          <div>
-            <span>Outputs</span>
-            <strong>{formatFields(selectedAtom.outs)}</strong>
-          </div>
-          <div>
-            <span>Config</span>
-            <strong>{configLabel(selectedAtom.config)}</strong>
-          </div>
-        </div>
-      </div>
+      ) : null}
 
       <div className="unit-inspect">
         <div className="unit-inspect__header">

@@ -48,8 +48,7 @@ This file tracks known issues that should not block the current phase but need e
 
 ## Full Atom Catalog Frontend Fixture
 
-- **Status:** Open
-- **Context:** `docs/WEB_UI_READINESS.md` lists `apg-v2 inspect atoms`, but `test/golden/` currently stores only `v2-inspect-atoms.manifest.txt` rather than the full atom catalog JSON payload.
-- **Current UI Handling:** `web-tools/unit-editor/` renders the first atom palette from its existing local `atoms/atomCatalog.ts` data and labels it as a local catalog while still showing the backend manifest schema, byte count, and hash in the contract area.
-- **Follow-up:** Commit a frozen full atom catalog JSON sample, or add a generated frontend fixture, before replacing the local fallback with contract-accurate backend atom metadata.
-- **Related Plan Item:** `plan.md` Phase AB.
+- **Status:** Resolved
+- **Context:** `docs/WEB_UI_READINESS.md` lists `apg-v2 inspect atoms`, but `test/golden/` previously stored only `v2-inspect-atoms.manifest.txt` rather than the full atom catalog JSON payload.
+- **Resolution:** Phase AC committed `test/golden/v2-inspect-atoms.json` and the project workbench atom palette now reads atom fields, categories, statefulness, and compatibility profiles from that frozen backend JSON. The manifest remains as byte/hash provenance.
+- **Related Plan Item:** `plan.md` Phase AC.

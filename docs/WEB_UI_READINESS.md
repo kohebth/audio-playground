@@ -48,6 +48,7 @@ Committed sample files:
 - `test/golden/v2-inspect-project-two-gain-chain.json`
 - `test/golden/v2-inspect-project-guitar-pedalboard.json`
 - `test/golden/v2-render-project-guitar-pedalboard.json`
+- `test/golden/v2-inspect-atoms.json`
 - `test/golden/v2-inspect-atoms.manifest.txt`
 
 ## Backend Contracts Needed
