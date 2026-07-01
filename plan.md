@@ -304,12 +304,12 @@ Module note: Backend CLI now exposes MVP export surfaces.
 
 ### Phase AI: Deferred Test Implementation
 
-- [ ] AI1: Implement recorded Phase AC tests.
-- [ ] AI2: Implement recorded Phase AD tests.
-- [ ] AI3: Implement recorded Phase AE tests.
-- [ ] AI4: Implement recorded Phase AF tests.
-- [ ] AI5: Implement recorded Phase AG/AH tests.
-- [ ] AI6: Run package build/lint for web and `./build-and-test.sh` for C/APGCore.
+- [x] AI1: Implement recorded Phase AC tests.
+- [x] AI2: Implement recorded Phase AD tests.
+- [x] AI3: Implement recorded Phase AE tests.
+- [x] AI4: Implement recorded Phase AF tests.
+- [x] AI5: Implement recorded Phase AG/AH tests.
+- [x] AI6: Run package build/lint for web and `./build-and-test.sh` for C/APGCore.
 
 ### Phase AJ: Final Docs and Goal Closure
 

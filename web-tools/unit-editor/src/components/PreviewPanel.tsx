@@ -25,6 +25,7 @@ export function PreviewPanel({ render, paramOverrides, selectedInstanceId }: Pro
         <strong>{state}</strong>
         <span>deterministic render backend</span>
       </div>
+      <p className="diagnostic-empty">WASM AudioWorklet preview backend is pending; deterministic meters are shown.</p>
 
       <div className="preview-panel__actions">
         <button className="btn btn--ghost" onClick={() => setState(adapter.compile())} type="button">

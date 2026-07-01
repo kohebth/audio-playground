@@ -152,3 +152,55 @@ add_custom_target(check_v2
         COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} -L v2 --output-on-failure
         DEPENDS test_atom_catalog test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime
 )
+
+add_test(
+        NAME test_apg_v2_cli_benchmark
+        COMMAND apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml
+)
+set_tests_properties(test_apg_v2_cli_benchmark PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.benchmark.v1\".*\"ok\":true.*\"structural\""
+)
+
+add_test(
+        NAME test_apg_v2_cli_wasm_export_blocked
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml /tmp/apg-wasm-export || true"
+)
+set_tests_properties(test_apg_v2_cli_wasm_export_blocked PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v1\".*\"target\":\"wasm_realtime\".*\"APG_EXPORT_BLOCKED\""
+)
+
+add_test(
+        NAME test_apg_v2_cli_m7_export_rejects_unsupported
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/guitar-pedalboard.project.v2.yaml /tmp || true"
+)
+set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*does not support m7_static"
+)
+
+set(APG_M7_CLI_TEST_DIR /tmp/audio-playground-apgcore-m7-export)
+add_test(NAME test_apg_v2_cli_m7_export_prepare COMMAND ${CMAKE_COMMAND} -E make_directory ${APG_M7_CLI_TEST_DIR})
+set_tests_properties(test_apg_v2_cli_m7_export_prepare PROPERTIES LABELS v2)
+
+add_test(
+        NAME test_apg_v2_cli_m7_export_bundle
+        COMMAND apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_TEST_DIR}
+)
+set_tests_properties(test_apg_v2_cli_m7_export_bundle PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        DEPENDS test_apg_v2_cli_m7_export_prepare
+        PASS_REGULAR_EXPRESSION "\"ok\":true.*\"files\":\\[\"apg_project_m7.h\",\"apg_project_m7.c\"\\]"
+)
+
+add_test(NAME test_apg_v2_cli_m7_export_header COMMAND ${CMAKE_COMMAND} -E cat ${APG_M7_CLI_TEST_DIR}/apg_project_m7.h)
+set_tests_properties(test_apg_v2_cli_m7_export_header PROPERTIES
+        LABELS v2
+        DEPENDS test_apg_v2_cli_m7_export_bundle
+        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_NODE_COUNT 4u"
+)
