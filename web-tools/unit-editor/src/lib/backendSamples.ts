@@ -1,9 +1,16 @@
 import atomCatalogRaw from '../../../../test/golden/v2-inspect-atoms.json?raw';
 import atomCatalogManifestRaw from '../../../../test/golden/v2-inspect-atoms.manifest.txt?raw';
+import delayUnitYaml from '../../../../units-v2/delay.unit.v2.yaml?raw';
+import noiseGateUnitYaml from '../../../../units-v2/noise_gate.unit.v2.yaml?raw';
+import overdriveUnitYaml from '../../../../units-v2/overdrive.unit.v2.yaml?raw';
+import projectYaml from '../../../../projects-v2/guitar-pedalboard.project.v2.yaml?raw';
 import projectInspectRaw from '../../../../test/golden/v2-inspect-project-guitar-pedalboard.json?raw';
 import projectRenderRaw from '../../../../test/golden/v2-render-project-guitar-pedalboard.json?raw';
 import projectValidationRaw from '../../../../test/golden/v2-validate-project-guitar-pedalboard.json?raw';
+import toneStackUnitYaml from '../../../../units-v2/tone_stack.unit.v2.yaml?raw';
+import tremoloUnitYaml from '../../../../units-v2/tremolo.unit.v2.yaml?raw';
 import unitInspectRaw from '../../../../test/golden/v2-inspect-unit-simple_gain.json?raw';
+import wetDryMixUnitYaml from '../../../../units-v2/wet_dry_mix.unit.v2.yaml?raw';
 
 export type Compatibility = Record<string, boolean>;
 
@@ -170,6 +177,13 @@ export type BackendFixtureBundle = {
   atomCatalogManifest: Record<string, string>;
 };
 
+export type WorkspaceFile = {
+  path: string;
+  role: 'project' | 'unit';
+  content: string;
+  originalContent: string;
+};
+
 export const backendSamples: BackendFixtureBundle = {
   project: parseJson<ProjectInspect>(projectInspectRaw),
   validation: parseJson<ValidationResult>(projectValidationRaw),
@@ -194,3 +208,48 @@ export const sampleSources = {
   atomCatalog: 'test/golden/v2-inspect-atoms.json',
   atomCatalogManifest: 'test/golden/v2-inspect-atoms.manifest.txt',
 };
+
+export const initialWorkspaceFiles: WorkspaceFile[] = [
+  {
+    path: 'projects-v2/guitar-pedalboard.project.v2.yaml',
+    role: 'project',
+    content: projectYaml,
+    originalContent: projectYaml,
+  },
+  {
+    path: 'units-v2/noise_gate.unit.v2.yaml',
+    role: 'unit',
+    content: noiseGateUnitYaml,
+    originalContent: noiseGateUnitYaml,
+  },
+  {
+    path: 'units-v2/overdrive.unit.v2.yaml',
+    role: 'unit',
+    content: overdriveUnitYaml,
+    originalContent: overdriveUnitYaml,
+  },
+  {
+    path: 'units-v2/tone_stack.unit.v2.yaml',
+    role: 'unit',
+    content: toneStackUnitYaml,
+    originalContent: toneStackUnitYaml,
+  },
+  {
+    path: 'units-v2/tremolo.unit.v2.yaml',
+    role: 'unit',
+    content: tremoloUnitYaml,
+    originalContent: tremoloUnitYaml,
+  },
+  {
+    path: 'units-v2/delay.unit.v2.yaml',
+    role: 'unit',
+    content: delayUnitYaml,
+    originalContent: delayUnitYaml,
+  },
+  {
+    path: 'units-v2/wet_dry_mix.unit.v2.yaml',
+    role: 'unit',
+    content: wetDryMixUnitYaml,
+    originalContent: wetDryMixUnitYaml,
+  },
+];

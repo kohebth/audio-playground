@@ -1,10 +1,13 @@
-import type { ProjectInspect } from '../lib/backendSamples';
+import type { ProjectInspect, WorkspaceFile } from '../lib/backendSamples';
 
 type Props = {
   project: ProjectInspect;
   sampleSources: Record<string, string>;
+  workspaceFiles: WorkspaceFile[];
+  selectedWorkspacePath: string;
   selectedNodeId: string | null;
   selectedRouteIndex: number | null;
+  onSelectWorkspaceFile: (path: string) => void;
   onSelectNode: (id: string) => void;
   onSelectRoute: (index: number) => void;
 };
@@ -12,8 +15,11 @@ type Props = {
 export function ProjectSidebar({
   project,
   sampleSources,
+  workspaceFiles,
+  selectedWorkspacePath,
   selectedNodeId,
   selectedRouteIndex,
+  onSelectWorkspaceFile,
   onSelectNode,
   onSelectRoute,
 }: Props) {
@@ -78,6 +84,22 @@ export function ProjectSidebar({
             <span>{key}</span>
             <code>{path}</code>
           </div>
+        ))}
+      </div>
+
+      <div className="workspace-ledger">
+        <div className="sample-ledger__title">Workspace Drafts</div>
+        {workspaceFiles.map(file => (
+          <button
+            key={file.path}
+            className={`workspace-ledger__row ${selectedWorkspacePath === file.path ? 'workspace-ledger__row--active' : ''}`}
+            onClick={() => onSelectWorkspaceFile(file.path)}
+            type="button"
+          >
+            <span>{file.role}</span>
+            <code>{file.path}</code>
+            {file.content !== file.originalContent ? <strong>edited</strong> : null}
+          </button>
         ))}
       </div>
     </aside>

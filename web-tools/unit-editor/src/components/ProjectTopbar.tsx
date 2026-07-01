@@ -5,9 +5,24 @@ type Props = {
   validation: ValidationResult;
   dirtyParamCount: number;
   hasDirtyParamDrafts: boolean;
+  hasWorkspaceDrafts: boolean;
+  workspaceFileCount: number;
+  onExportWorkspace: () => void;
+  onImportWorkspace: (file: File | null) => void;
+  onResetWorkspace: () => void;
 };
 
-export function ProjectTopbar({ project, validation, dirtyParamCount, hasDirtyParamDrafts }: Props) {
+export function ProjectTopbar({
+  project,
+  validation,
+  dirtyParamCount,
+  hasDirtyParamDrafts,
+  hasWorkspaceDrafts,
+  workspaceFileCount,
+  onExportWorkspace,
+  onImportWorkspace,
+  onResetWorkspace,
+}: Props) {
   const draftStateClass = hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
 
   return (
@@ -37,6 +52,30 @@ export function ProjectTopbar({ project, validation, dirtyParamCount, hasDirtyPa
           <span className="project-summary__label">Draft Edits</span>
           <strong>{dirtyParamCount}</strong>
         </div>
+        <div>
+          <span className="project-summary__label">Workspace</span>
+          <strong>{workspaceFileCount} files</strong>
+        </div>
+      </div>
+
+      <div className="topbar__workspace-actions">
+        <label className="btn btn--ghost">
+          Import
+          <input
+            accept="application/json"
+            onChange={event => {
+              void onImportWorkspace(event.target.files?.[0] ?? null);
+              event.target.value = '';
+            }}
+            type="file"
+          />
+        </label>
+        <button className="btn btn--ghost" onClick={onExportWorkspace} type="button">
+          Export
+        </button>
+        <button className="btn btn--ghost" disabled={!hasWorkspaceDrafts} onClick={onResetWorkspace} type="button">
+          Reset
+        </button>
       </div>
 
       <div className={`status-pill ${validation.ok ? 'status-pill--ok' : 'status-pill--bad'}`}>

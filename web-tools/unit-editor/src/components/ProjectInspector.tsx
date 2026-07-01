@@ -8,6 +8,7 @@ import type {
   RenderResult,
   UnitInspect,
   ValidationResult,
+  WorkspaceFile,
 } from '../lib/backendSamples';
 import {
   countDirtyParamsForInstance,
@@ -29,11 +30,13 @@ type Props = {
   atomCatalogManifest: Record<string, string>;
   projectFile: string;
   hasDirtyParamDrafts: boolean;
+  selectedWorkspaceFile: WorkspaceFile;
   paramDrafts: ParamDrafts;
   paramOverrides: ParamOverride[];
   onParamChange: (instanceId: string, paramKey: string, value: string) => void;
   onParamReset: (instanceId: string, paramKey: string, value: string) => void;
   onResetUnitParams: (instanceId: string) => void;
+  onWorkspaceFileChange: (path: string, content: string) => void;
 };
 
 function compatibilityLabel(flags: Record<string, boolean>): string {
@@ -60,11 +63,13 @@ export function ProjectInspector({
   atomCatalogManifest,
   projectFile,
   hasDirtyParamDrafts,
+  selectedWorkspaceFile,
   paramDrafts,
   paramOverrides,
   onParamChange,
   onParamReset,
   onResetUnitParams,
+  onWorkspaceFileChange,
 }: Props) {
   const selectedDirtyCount =
     selectedNode?.kind === 'unit' ? countDirtyParamsForInstance(selectedNode.instance, paramDrafts) : 0;
@@ -243,6 +248,21 @@ export function ProjectInspector({
 
       {isContractView && (
         <>
+          <section className="inspector-block">
+            <div className="inspector-block__label">Workspace Draft</div>
+            <div className="workspace-editor__meta">
+              <strong>{selectedWorkspaceFile.path}</strong>
+              <span>{selectedWorkspaceFile.role}</span>
+            </div>
+            <textarea
+              aria-label={`Workspace file ${selectedWorkspaceFile.path}`}
+              className="workspace-editor"
+              onChange={event => onWorkspaceFileChange(selectedWorkspaceFile.path, event.target.value)}
+              spellCheck={false}
+              value={selectedWorkspaceFile.content}
+            />
+          </section>
+
           <AtomCatalogPanel unit={unit} catalog={atomCatalog} manifest={atomCatalogManifest} />
 
           <section className="inspector-block">

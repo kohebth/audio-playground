@@ -229,18 +229,18 @@ Module note: Web atom data now comes from frozen backend catalog JSON.
 
 ### Phase AD: Multi-File Workspace and Autosave
 
-- [ ] AD1: Add a web project workspace model for project YAML plus referenced unit files.
-- [ ] AD2: Add local autosave and restore for draft project/unit files.
-- [ ] AD3: Add import/export controls for the draft workspace without requiring manual YAML copy/paste.
-- [ ] AD4: Keep validation/readiness state tied to dirty drafts versus frozen or regenerated backend outputs.
+- [x] AD1: Add a web project workspace model for project YAML plus referenced unit files.
+- [x] AD2: Add local autosave and restore for draft project/unit files.
+- [x] AD3: Add import/export controls for the draft workspace without requiring manual YAML copy/paste.
+- [x] AD4: Keep validation/readiness state tied to dirty drafts versus frozen or regenerated backend outputs.
 
-Pending tests to record during AD implementation:
+Pending AD tests for Phase AI:
 
-- Autosave restores project and unit drafts.
-- Export includes all workspace files.
-- Dirty drafts mark validation/render as stale.
+- [ ] Autosave restores project and unit drafts.
+- [ ] Export includes all workspace files.
+- [ ] Dirty drafts mark validation/render as stale.
 
-Module note target: Project drafts now preserve multi-file workspace state locally.
+Module note: Project drafts now preserve multi-file workspace state locally.
 
 ### Phase AE: Unit Graph Editing
 
