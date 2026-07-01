@@ -23,6 +23,7 @@ type Props = {
   onNodesChange: OnNodesChange<Node<ProjectNodeData>>;
   onEdgesChange: OnEdgesChange;
   onSelectNode: (id: string) => void;
+  onDoubleSelectNode: (id: string) => void;
   onSelectRoute: (index: number) => void;
 };
 
@@ -38,6 +39,7 @@ export function ProjectCanvas({
   onNodesChange,
   onEdgesChange,
   onSelectNode,
+  onDoubleSelectNode,
   onSelectRoute,
 }: Props) {
   const displayedEdges = edges.map(edge => {
@@ -64,6 +66,7 @@ export function ProjectCanvas({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={(_, node) => onSelectNode(node.id)}
+            onNodeDoubleClick={(_, node) => onDoubleSelectNode(node.id)}
             onEdgeClick={(_, edge) => {
               const routeIndex = routeIndexFromEdge(edge);
               if (routeIndex !== null) onSelectRoute(routeIndex);

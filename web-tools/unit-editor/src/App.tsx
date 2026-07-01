@@ -16,7 +16,23 @@ function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): Projec
   return nodes.find(node => node.id === id)?.data ?? null;
 }
 
-type InspectorView = 'project' | 'atom' | 'contract';
+type InspectorView = 'project' | 'atom' | 'contract' | 'graph';
+
+function normalizeWorkspacePath(path: string): string {
+  return path.replace(/^\.\.\//, '').replace(/^\.\//, '');
+}
+
+const unitWorkspacePathByInstance = new Map<string, string>();
+
+for (const unit of backendSamples.project.units) {
+  const unitInstanceIds = backendSamples.project.nodes
+    .filter(instance => instance.unit === unit.id)
+    .map(instance => instance.id);
+
+  for (const instanceId of unitInstanceIds) {
+    unitWorkspacePathByInstance.set(instanceId, normalizeWorkspacePath(unit.file));
+  }
+}
 
 const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v1';
 
@@ -64,6 +80,23 @@ export default function App() {
   const selectProjectNode = useCallback((id: string) => {
     setSelectedId(id);
     setSelectedRouteIndex(null);
+  }, []);
+
+  const selectProjectNodeForGraph = useCallback((id: string) => {
+    if (!id.startsWith('unit-')) {
+      setSelectedId(id);
+      return;
+    }
+
+    const instanceId = id.replace(/^unit-/, '');
+    const workspacePath = unitWorkspacePathByInstance.get(instanceId);
+    if (workspacePath) {
+      setSelectedWorkspacePath(workspacePath);
+    }
+
+    setSelectedId(id);
+    setSelectedRouteIndex(null);
+    setInspectorView('graph');
   }, []);
 
   const selectRoute = useCallback((index: number) => {
@@ -159,6 +192,7 @@ export default function App() {
           selectedRouteIndex={selectedRouteIndex}
           onSelectWorkspaceFile={setSelectedWorkspacePath}
           onSelectNode={selectProjectNode}
+          onDoubleSelectNode={selectProjectNodeForGraph}
           onSelectRoute={selectRoute}
         />
 
@@ -169,6 +203,7 @@ export default function App() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onSelectNode={selectProjectNode}
+          onDoubleSelectNode={selectProjectNodeForGraph}
           onSelectRoute={selectRoute}
         />
 
