@@ -2,7 +2,6 @@ import { AtomCatalogPanel } from './AtomCatalogPanel';
 import { CompatibilityExportPanel } from './CompatibilityExportPanel';
 import { DraftExportPanel } from './DraftExportPanel';
 import { PreviewPanel } from './PreviewPanel';
-import { UnitGraphEditor } from './UnitGraphEditor';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type {
   AtomCatalog,
@@ -26,8 +25,8 @@ type Props = {
   render: RenderResult;
   commands: BackendCommands;
   project: ProjectInspect;
-  inspectorView: 'project' | 'atom' | 'contract' | 'graph';
-  onInspectorViewChange: (next: 'project' | 'atom' | 'contract' | 'graph') => void;
+  inspectorView: 'project' | 'atom' | 'contract';
+  onInspectorViewChange: (next: 'project' | 'atom' | 'contract') => void;
   selectedNode: ProjectNodeData | null;
   selectedRoute: ProjectRoute | null;
   unit: UnitInspect;
@@ -84,7 +83,6 @@ export function ProjectInspector({
   const isProjectView = inspectorView === 'project';
   const isAtomView = inspectorView === 'atom';
   const isContractView = inspectorView === 'contract';
-  const isGraphView = inspectorView === 'graph';
 
   return (
     <aside className="project-inspector">
@@ -109,13 +107,6 @@ export function ProjectInspector({
           type="button"
         >
           Contract
-        </button>
-        <button
-          className={`btn ${isGraphView ? 'btn--primary' : 'btn--ghost'}`}
-          onClick={() => onInspectorViewChange('graph')}
-          type="button"
-        >
-          Graph
         </button>
       </div>
       {isProjectView && (
@@ -257,7 +248,6 @@ export function ProjectInspector({
                 <span>Unit Reference</span>
                 <strong>{selectedNode.unit.file}</strong>
               </div>
-
             </>
           ) : (
             <>
@@ -314,28 +304,6 @@ export function ProjectInspector({
             </div>
           </section>
         </>
-      )}
-
-      {isGraphView && (
-        <section className="inspector-block inspector-block--selected">
-          <div className="inspector-block__label">Contract Graph</div>
-          {selectedNode?.kind === 'unit' ? (
-            <>
-              <div className="workspace-editor__meta">
-                <strong>{selectedWorkspaceFile.path}</strong>
-                <span>{selectedWorkspaceFile.role}</span>
-              </div>
-              <UnitGraphEditor
-                unit={unit}
-                catalog={atomCatalog}
-                workspaceFile={selectedWorkspaceFile}
-                onWorkspaceFileChange={onWorkspaceFileChange}
-              />
-            </>
-          ) : (
-            <p>Select a unit in the pedalboard to edit its contract graph.</p>
-          )}
-        </section>
       )}
     </aside>
   );
