@@ -90,6 +90,9 @@ export type RenderResult = {
 export type BackendCommands = {
   validateProject: string;
   renderProject: string;
+  benchmarkProject: string;
+  exportWasm: string;
+  exportM7: string;
 };
 
 export type AtomCatalogField = {
@@ -198,6 +201,12 @@ export const backendCommands: BackendCommands = {
     '/tmp/audio-playground-apgcore-build/apg-v2 validate project projects-v2/guitar-pedalboard.project.v2.yaml',
   renderProject:
     '/tmp/audio-playground-apgcore-build/apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml',
+  benchmarkProject:
+    '/tmp/audio-playground-apgcore-build/apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml',
+  exportWasm:
+    '/tmp/audio-playground-apgcore-build/apg-v2 export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml dist/web/',
+  exportM7:
+    '/tmp/audio-playground-apgcore-build/apg-v2 export --target m7_static projects-v2/guitar-pedalboard.project.v2.yaml build/m7/',
 };
 
 export const sampleSources = {

@@ -176,6 +176,7 @@ export default function App() {
           validation={backendSamples.validation}
           render={backendSamples.render}
           commands={backendCommands}
+          project={backendSamples.project}
           inspectorView={inspectorView}
           onInspectorViewChange={setInspectorView}
           selectedNode={selectedNode}

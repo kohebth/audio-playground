@@ -274,18 +274,18 @@ Module note: Preview controls now target the runtime adapter contract.
 
 ### Phase AG: Compatibility and Export Workflow
 
-- [ ] AG1: Add a compatibility matrix UI for `desktop_full`, `wasm_realtime`, `m7_static`, and `offline_render`.
-- [ ] AG2: Add export readiness panels for desktop/web/embedded targets.
-- [ ] AG3: Surface benchmark/export command gaps from `problem.md` as blocked export actions.
-- [ ] AG4: Add backend CLI/export tasks when the UI needs real generated bundles.
+- [x] AG1: Add a compatibility matrix UI for `desktop_full`, `wasm_realtime`, `m7_static`, and `offline_render`.
+- [x] AG2: Add export readiness panels for desktop/web/embedded targets.
+- [x] AG3: Surface benchmark/export command gaps from `problem.md` as blocked export actions.
+- [x] AG4: Add backend CLI/export tasks when the UI needs real generated bundles.
 
-Pending tests to record during AG implementation:
+Pending AG tests for Phase AI:
 
-- Matrix shows supported/unsupported target profiles.
-- Export panel blocks unavailable targets with reason.
-- M7 export path rejects unsupported atoms/features.
+- [ ] Matrix shows supported/unsupported target profiles.
+- [ ] Export panel blocks unavailable targets with reason.
+- [ ] M7 export path rejects unsupported atoms/features.
 
-Module note target: Export UI now exposes target readiness and blocked backend gaps.
+Module note: Export UI now exposes target readiness and blocked backend gaps.
 
 ### Phase AH: Backend CLI and Export Gaps
 

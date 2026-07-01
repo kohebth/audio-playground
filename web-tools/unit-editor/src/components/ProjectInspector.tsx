@@ -1,4 +1,5 @@
 import { AtomCatalogPanel } from './AtomCatalogPanel';
+import { CompatibilityExportPanel } from './CompatibilityExportPanel';
 import { DraftExportPanel } from './DraftExportPanel';
 import { PreviewPanel } from './PreviewPanel';
 import { UnitGraphEditor } from './UnitGraphEditor';
@@ -6,6 +7,7 @@ import type { ProjectNodeData } from '../lib/projectGraph';
 import type {
   AtomCatalog,
   BackendCommands,
+  ProjectInspect,
   ProjectRoute,
   RenderResult,
   UnitInspect,
@@ -23,6 +25,7 @@ type Props = {
   validation: ValidationResult;
   render: RenderResult;
   commands: BackendCommands;
+  project: ProjectInspect;
   inspectorView: 'project' | 'atom' | 'contract';
   onInspectorViewChange: (next: 'project' | 'atom' | 'contract') => void;
   selectedNode: ProjectNodeData | null;
@@ -56,6 +59,7 @@ export function ProjectInspector({
   validation,
   render,
   commands,
+  project,
   inspectorView,
   onInspectorViewChange,
   selectedNode,
@@ -174,6 +178,8 @@ export function ProjectInspector({
             paramOverrides={paramOverrides}
             selectedInstanceId={selectedNode?.kind === 'unit' ? selectedNode.instance.id : null}
           />
+
+          <CompatibilityExportPanel project={project} commands={commands} />
 
           <DraftExportPanel projectFile={projectFile} overrides={paramOverrides} />
         </>

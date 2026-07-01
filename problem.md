@@ -59,3 +59,10 @@ This file tracks known issues that should not block the current phase but need e
 - **Context:** Phase AF defines the web preview adapter boundary and UI state machine, but the browser runtime still uses deterministic render JSON rather than a real WASM AudioWorklet backend.
 - **Follow-up:** Add the WASM/AudioWorklet adapter that implements compile, start, stop, setParam, setBypass, and meter polling without sending audio buffers through main-thread JavaScript.
 - **Related Plan Item:** `plan.md` Phase AF.
+
+## Export CLI Surface
+
+- **Status:** Open
+- **Context:** Phase AG exposes export readiness in the web UI, but `apg-v2 export --target wasm_realtime`, `apg-v2 export --target m7_static`, and deterministic benchmark JSON are not implemented yet.
+- **Follow-up:** Add backend export command skeletons and M7 static bundle generation in Phase AH, keeping generated C11 tables bounded and ARM/M7-compatible.
+- **Related Plan Item:** `plan.md` Phase AG/AH.
