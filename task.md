@@ -2,19 +2,19 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through the Full MVP phases AC-AJ. Validation/inspect/render/benchmark JSON, frozen sample contracts, project workspace editing, deterministic preview, compatibility/export UI, M7 static export surfaces, deferred tests, and final docs are implemented.
+APGCore v2 MVP implementation work tracked in `plan.md` is complete through phases AC-AJ. Validation/inspect/render/benchmark JSON, frozen sample contracts, project workspace editing, deterministic preview, compatibility/export UI, M7 static export surfaces, deferred tests, and final docs are implemented.
 
-Current goal achieved: users can work from the v2 web UI contract to visually build, edit, save, validate, preview, and export a guitar-pedalboard DSP project across the intended MVP target surfaces, with `apgcore` remaining portable C11 and ARM/M7-aware.
+Current production focus: move beyond MVP surfaces toward hardware-ready multi-effect deployment. The project is not ready for STM32H7/M7 production yet. `m7_static` currently proves a bounded C11 export path for compatible/simple projects, while the full guitar-pedalboard fixture is not an embedded-ready target.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through AJ, and the Full MVP web/backend handoff are complete. Next work should come from post-MVP follow-ups in `problem.md`, especially real WASM AudioWorklet preview/export beyond the deterministic preview adapter and blocked `wasm_realtime` export skeleton.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through AJ, and the MVP web/backend handoff are complete. Next work should be production hardening: STM32H7/M7 export validation, cross-compilation, audio callback integration, memory/CPU budgeting, and real WASM AudioWorklet preview/export.
 
-Implementation lifecycle for the full v2 MVP:
+Implementation lifecycle for production phases:
 
 1. Implement as much as possible module-by-module.
-2. During AC-AH, pending test cases were recorded here and in `plan.md`, then implemented in Phase AI.
+2. Record pending tests next to production tasks before broad implementation.
 3. After each completed implementation module, add a module note of 40 words or fewer.
-4. After all implementation modules are complete, implement and run tests.
-5. After all tests pass, finish docs and close the goal.
+4. For hardware-facing work, verify with generated artifacts, cross-compile checks, and fixed memory/CPU budgets before calling it ready.
+5. After all tests pass, finish docs and close the production phase.
 6. Prefer the shortest clear code that preserves behavior; if shorter code works equally, choose it.
 
 Verification policy for future work: run focused tests for the changed area. For web changes, use `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/unit-editor`. For backend changes, use `./build-and-test.sh`.

@@ -12,9 +12,9 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 ## Readiness Declaration
 
-The APGCore v2 backend and web MVP are ready for the next post-MVP iteration. Final backend verification passed with `./build-and-test.sh` across all 20 CTest targets. Web verification passed with `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/unit-editor/`.
+The APGCore v2 backend and web MVP surfaces are ready for production hardening. Final MVP backend verification passed with `./build-and-test.sh` across all 20 CTest targets. Web verification passed with `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/unit-editor/`.
 
-The browser still uses deterministic render data for preview. Real WASM AudioWorklet generation remains a tracked follow-up; the `wasm_realtime` export command returns a stable blocked diagnostic until that backend exists.
+This is not a hardware readiness declaration. STM32H7/M7 production deployment is not ready yet: the `m7_static` path is a bounded C11 export surface for compatible/simple projects, not proof that the full guitar-pedalboard project runs on target hardware. Real WASM AudioWorklet generation also remains a tracked follow-up; the `wasm_realtime` export command returns a stable blocked diagnostic until that backend exists.
 
 ## Ready To Start Web UI When
 
@@ -120,7 +120,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase T:** Project loader resolves multi-file units safely. Complete.
 - **Phase U:** Project compiler creates a single runtime plan. Complete for mono project routes.
 - **Phase V:** CLI tooling emits JSON inspect/validate output and deterministic project render output. Complete.
-- **Phase AH:** CLI tooling emits deterministic benchmark JSON, blocked WASM export diagnostics, and bounded C11 M7 static bundles for compatible projects. Complete.
+- **Phase AH:** CLI tooling emits deterministic benchmark JSON, blocked WASM export diagnostics, and bounded C11 M7 static bundles for compatible/simple projects. Complete as an export surface, not as STM32H7 production readiness.
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute/solo state, and peak/RMS meter snapshots.
 - **Phase X:** Product unit fixtures, the guitar pedalboard project fixture, deterministic render proof, and compatibility/output capture are complete.
 - **Phase Y:** Web handoff package freezes sample contracts, documents exact fixture commands, refreshes repo guidance, and declares backend readiness. Complete.

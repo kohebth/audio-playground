@@ -65,3 +65,10 @@ This file tracks known issues that should not block the current phase but need e
 - **Context:** Phase AH added deterministic benchmark JSON plus `wasm_realtime` and `m7_static` export command surfaces. M7 emits bounded C11 tables for compatible projects and rejects unsupported units.
 - **Follow-up:** Implement real WASM AudioWorklet bundle generation beyond the current blocked `wasm_realtime` skeleton.
 - **Related Plan Item:** `plan.md` Phase AG/AH.
+
+## STM32H7 Production Readiness
+
+- **Status:** Open
+- **Context:** The MVP has an ARM/M7-aware core and a bounded `m7_static` export path for compatible/simple projects. It does not prove that the full guitar-pedalboard project runs on STM32H7 hardware.
+- **Follow-up:** Add an STM32H7 production phase with M7-compatible product units, ARM cross-compilation of generated bundles, fixed memory placement, SAI/I2S + DMA audio callback integration, cache coherency rules, and measured CPU/RAM budgets.
+- **Related Plan Item:** Production hardening after MVP phases AC-AJ.

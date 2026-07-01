@@ -6,21 +6,22 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project validation, project compilation, JSON contracts, runtime controls, product fixtures, web handoff package, and Full MVP phases AC-AJ are implemented.
-- The full Audio Playground v2 MVP now supports project-level visual build/edit/save/validate/preview/export workflows from frozen backend contracts while `apgcore` remains portable C11 and ARM/M7-aware.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project validation, project compilation, JSON contracts, runtime controls, product fixtures, web handoff package, and MVP phases AC-AJ are implemented.
+- The Audio Playground v2 MVP now supports project-level visual build/edit/save/validate/preview/export workflows from frozen backend contracts while `apgcore` remains portable C11 and ARM/M7-aware.
+- Production readiness is not achieved yet. STM32H7/M7 deployment still needs target export validation, cross-compilation, board audio integration, and measured memory/CPU budgets.
 - Final verification passed with `npm run test`, `npm run build`, and `npm run lint` in `web-tools/unit-editor`, plus `./build-and-test.sh` across 20 CTest targets.
-- Remaining work is post-MVP follow-up, primarily real WASM AudioWorklet preview/export beyond the deterministic preview and blocked export skeleton.
+- Remaining work is production hardening, primarily STM32H7/M7 readiness and real WASM AudioWorklet preview/export beyond the deterministic preview and blocked export skeleton.
 
-## Full MVP Implementation Lifecycle
+## Production Implementation Lifecycle
 
 1. Implement as much as possible module-by-module.
-2. During AC-AH, pending test cases were recorded in this plan and `task.md`, then implemented in Phase AI.
+2. Record pending tests in this plan and `task.md` before broad implementation.
 3. After each completed implementation module, add a module note of 40 words or fewer.
-4. After all implementation modules are complete, implement and run tests.
-5. After all tests pass, finish docs and close the goal.
+4. Hardware-facing work must pass generated artifact checks, cross-compile checks, fixed memory budgeting, and CPU budget measurement before being called production-ready.
+5. After all tests pass, finish docs and close the phase.
 6. Prefer the shortest clear code that preserves behavior; if shorter code works equally, choose it.
 
-During implementation phases, use build-only verification before commits. For web changes, run `npm run build` inside `web-tools/unit-editor`. For backend changes, run `./build-and-test.sh` only when backend implementation changes require compile confidence. Do not add new test cases before Phase AI.
+During implementation phases, use focused verification before commits. For web changes, run `npm run build` and `npm run lint` inside `web-tools/unit-editor`. For backend changes, run `./build-and-test.sh`; for STM32H7 work, also run the configured ARM cross-compile once the toolchain target exists.
 
 ## Completed Work
 
