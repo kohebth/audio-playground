@@ -1,5 +1,6 @@
 import { AtomCatalogPanel } from './AtomCatalogPanel';
 import { DraftExportPanel } from './DraftExportPanel';
+import { PreviewPanel } from './PreviewPanel';
 import { UnitGraphEditor } from './UnitGraphEditor';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type {
@@ -167,6 +168,12 @@ export function ProjectInspector({
               <code>{commands.renderProject}</code>
             </div>
           </section>
+
+          <PreviewPanel
+            render={render}
+            paramOverrides={paramOverrides}
+            selectedInstanceId={selectedNode?.kind === 'unit' ? selectedNode.instance.id : null}
+          />
 
           <DraftExportPanel projectFile={projectFile} overrides={paramOverrides} />
         </>

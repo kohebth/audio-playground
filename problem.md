@@ -52,3 +52,10 @@ This file tracks known issues that should not block the current phase but need e
 - **Context:** `docs/WEB_UI_READINESS.md` lists `apg-v2 inspect atoms`, but `test/golden/` previously stored only `v2-inspect-atoms.manifest.txt` rather than the full atom catalog JSON payload.
 - **Resolution:** Phase AC committed `test/golden/v2-inspect-atoms.json` and the project workbench atom palette now reads atom fields, categories, statefulness, and compatibility profiles from that frozen backend JSON. The manifest remains as byte/hash provenance.
 - **Related Plan Item:** `plan.md` Phase AC.
+
+## Browser WASM AudioWorklet Preview
+
+- **Status:** Open
+- **Context:** Phase AF defines the web preview adapter boundary and UI state machine, but the browser runtime still uses deterministic render JSON rather than a real WASM AudioWorklet backend.
+- **Follow-up:** Add the WASM/AudioWorklet adapter that implements compile, start, stop, setParam, setBypass, and meter polling without sending audio buffers through main-thread JavaScript.
+- **Related Plan Item:** `plan.md` Phase AF.

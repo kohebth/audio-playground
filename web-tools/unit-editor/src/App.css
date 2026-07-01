@@ -1268,6 +1268,30 @@ body {
   background: #d97706;
 }
 
+.preview-panel__state {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.preview-panel__state strong {
+  color: var(--text-primary);
+  font-size: 18px;
+  text-transform: capitalize;
+}
+
+.preview-panel__state span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.preview-panel__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0;
+}
+
 .param-list {
   display: flex;
   flex-direction: column;

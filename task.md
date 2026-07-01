@@ -211,10 +211,18 @@ Module note: Unit graph edits now flow through draft workspace YAML.
 
 ### Phase AF: Live Preview Path
 
-- [ ] AF1: Define the browser preview API boundary for compile, start/stop, set param, bypass, and meter polling.
-- [ ] AF2: Add a preview panel state machine using deterministic render JSON until WASM/AudioWorklet is available.
-- [ ] AF3: Wire meter and param controls to the runtime-control contract names.
-- [ ] AF4: Track missing WASM/AudioWorklet implementation gaps in `problem.md` if backend support is not ready.
+- [x] AF1: Define the browser preview API boundary for compile, start/stop, set param, bypass, and meter polling.
+- [x] AF2: Add a preview panel state machine using deterministic render JSON until WASM/AudioWorklet is available.
+- [x] AF3: Wire meter and param controls to the runtime-control contract names.
+- [x] AF4: Track missing WASM/AudioWorklet implementation gaps in `problem.md` if backend support is not ready.
+
+Pending AF tests for Phase AI:
+
+- [ ] Preview panel transitions through idle/ready/running/error.
+- [ ] Param and bypass controls call stable runtime names.
+- [ ] Meter display handles missing preview backend.
+
+Module note: Preview controls now target the runtime adapter contract.
 
 ### Phase AG: Compatibility and Export Workflow
 
