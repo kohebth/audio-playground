@@ -40,10 +40,9 @@ This file tracks known issues that should not block the current phase but need e
 
 ## Benchmark CLI Surface
 
-- **Status:** Narrowed
+- **Status:** Resolved
 - **Context:** Phase V added `apg-v2` validation and inspect JSON contracts plus golden outputs for frontend tests. Phase X3 added deterministic project render JSON through `apg-v2 render project <path>`.
-- **Reason:** Render output is stable and sufficient for the web UI handoff; a benchmark command still needs a non-flaky contract before it can support regression or performance checks.
-- **Follow-up:** Add benchmark output with deterministic structural fields and clearly separated timing fields if performance data is needed before broader rollout.
+- **Resolution:** Phase AH added `apg-v2 benchmark project <path>` with deterministic structural fields and `timing.available:false`.
 - **Related Plan Item:** `plan.md` Phase V3.
 
 ## Full Atom Catalog Frontend Fixture

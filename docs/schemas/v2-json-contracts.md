@@ -10,6 +10,10 @@ apg-v2 validate project projects-v2/two-gain-chain.project.v2.yaml
 apg-v2 inspect atoms
 apg-v2 inspect unit units-v2/simple_gain.unit.v2.yaml
 apg-v2 inspect project projects-v2/two-gain-chain.project.v2.yaml
+apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml
+apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml
+apg-v2 export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml dist/web/
+apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml build/m7/
 ```
 
 ## Validation
@@ -40,3 +44,17 @@ Current paths are coarse (`$.unit` or `$.project`) and stable. More granular YAM
 - `inspect project` returns `apg.project.inspect.v1` with unit refs, chain nodes, routes, targets, and compiled plan counts.
 
 Golden fixtures for frontend tests live under `test/golden/`.
+
+## Render
+
+`render project` returns `apg.project.render.v1` with deterministic mono input metadata, frame count, peak/RMS/sum, and sample output. It is the current browser preview fixture contract.
+
+## Benchmark
+
+`benchmark project` returns `apg.project.benchmark.v1` with deterministic structural fields and `timing.available:false`. Timing fields are intentionally absent from the stable contract until a non-flaky benchmark runner exists.
+
+## Export
+
+`export --target wasm_realtime` returns `apg.project.export.v1` with `ok:false` and `APG_EXPORT_BLOCKED` until the WASM AudioWorklet bundle generator is implemented.
+
+`export --target m7_static` validates target compatibility. Compatible projects emit `apg_project_m7.h` and `apg_project_m7.c` with bounded C11 tables and no runtime YAML parser. Unsupported units return stable diagnostics.

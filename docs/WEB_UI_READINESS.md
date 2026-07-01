@@ -8,13 +8,13 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`, including product units for overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix.
 - Project/session schema, deterministic fixtures, referenced-unit resolution, mono project compilation, and `projects-v2/guitar-pedalboard.project.v2.yaml` exist.
-- The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, and deterministic project render JSON through `apg-v2 render project <path>`. Validation, unit inspect, project inspect, render, and atom catalog sample contracts are frozen under `test/golden/`. Benchmark output remains pending as a nonblocking follow-up in `problem.md`.
+- The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, deterministic project render JSON, deterministic benchmark JSON, and export surfaces for `wasm_realtime` and `m7_static`. Validation, unit inspect, project inspect, render, and atom catalog sample contracts are frozen under `test/golden/`.
 
 ## Readiness Declaration
 
-The APGCore v2 backend is ready to start v2 web UI work. The frontend should begin with the frozen sample files and project-level pedalboard workflow documented below. Final backend verification passed with `./build-and-test.sh` across all 14 CTest targets.
+The APGCore v2 backend and web MVP are ready for the next post-MVP iteration. Final backend verification passed with `./build-and-test.sh` across all 20 CTest targets. Web verification passed with `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/unit-editor/`.
 
-Benchmark JSON remains outside the web handoff gate because deterministic render JSON is the current preview fixture contract.
+The browser still uses deterministic render data for preview. Real WASM AudioWorklet generation remains a tracked follow-up; the `wasm_realtime` export command returns a stable blocked diagnostic until that backend exists.
 
 ## Ready To Start Web UI When
 
@@ -37,6 +37,9 @@ Build the CLI once through the normal C workflow, then use these exact commands 
 /tmp/audio-playground-apgcore-build/apg-v2 inspect unit units-v2/simple_gain.unit.v2.yaml
 /tmp/audio-playground-apgcore-build/apg-v2 inspect project projects-v2/guitar-pedalboard.project.v2.yaml
 /tmp/audio-playground-apgcore-build/apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml
+/tmp/audio-playground-apgcore-build/apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml
+/tmp/audio-playground-apgcore-build/apg-v2 export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml dist/web/
+/tmp/audio-playground-apgcore-build/apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml build/m7/
 ```
 
 Committed sample files:
@@ -116,7 +119,8 @@ The UI needs a way to drive live or offline preview:
 - **Phase S:** Project schema and fixtures exist.
 - **Phase T:** Project loader resolves multi-file units safely. Complete.
 - **Phase U:** Project compiler creates a single runtime plan. Complete for mono project routes.
-- **Phase V:** CLI tooling emits JSON inspect/validate output and deterministic project render output. Benchmark output remains a nonblocking follow-up.
+- **Phase V:** CLI tooling emits JSON inspect/validate output and deterministic project render output. Complete.
+- **Phase AH:** CLI tooling emits deterministic benchmark JSON, blocked WASM export diagnostics, and bounded C11 M7 static bundles for compatible projects. Complete.
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute/solo state, and peak/RMS meter snapshots.
 - **Phase X:** Product unit fixtures, the guitar pedalboard project fixture, deterministic render proof, and compatibility/output capture are complete.
 - **Phase Y:** Web handoff package freezes sample contracts, documents exact fixture commands, refreshes repo guidance, and declares backend readiness. Complete.

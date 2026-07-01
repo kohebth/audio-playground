@@ -2,22 +2,22 @@
 
 ## Current Focus
 
-APGCore v2 implementation work tracked in `plan.md` is complete through Phase Y4. Phase V validate/inspect JSON contracts, deterministic project render JSON, fixture output capture, frozen sample contracts, documented handoff commands, web UI guidance refresh, final readiness declaration, and runtime product controls are implemented. The benchmark surface remains tracked separately as a nonblocking follow-up.
+APGCore v2 implementation work tracked in `plan.md` is complete through the Full MVP phases AC-AJ. Validation/inspect/render/benchmark JSON, frozen sample contracts, project workspace editing, deterministic preview, compatibility/export UI, M7 static export surfaces, deferred tests, and final docs are implemented.
 
-Previous goal achieved: stable backend contracts are ready for the v2 web UI to consume unit metadata, atom catalog data, project files, validation output, runtime controls, and product fixtures without depending on changing C internals.
+Current goal achieved: users can work from the v2 web UI contract to visually build, edit, save, validate, preview, and export a guitar-pedalboard DSP project across the intended MVP target surfaces, with `apgcore` remaining portable C11 and ARM/M7-aware.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through Y, and Phase V validate/inspect/render JSON contracts are complete. Phase Z initial web UI work, Phase AA refinement, and Phase AB completion pass are complete. The next target is the full v2 MVP from `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md`: contract-accurate multi-file web editing, local autosave, unit-internals editing, live preview path, compatibility/export workflow, and remaining backend CLI/export/adapter gaps. Use package-local web commands inside `web-tools/unit-editor/` for frontend slices.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through AJ, and the Full MVP web/backend handoff are complete. Next work should come from post-MVP follow-ups in `problem.md`, especially real WASM AudioWorklet preview/export beyond the deterministic preview adapter and blocked `wasm_realtime` export skeleton.
 
 Implementation lifecycle for the full v2 MVP:
 
 1. Implement as much as possible module-by-module.
-2. After each completed implementation module, record pending test cases here and in `plan.md`; do not implement those tests until Phase AI.
+2. During AC-AH, pending test cases were recorded here and in `plan.md`, then implemented in Phase AI.
 3. After each completed implementation module, add a module note of 40 words or fewer.
 4. After all implementation modules are complete, implement and run tests.
 5. After all tests pass, finish docs and close the goal.
 6. Prefer the shortest clear code that preserves behavior; if shorter code works equally, choose it.
 
-Verification policy during implementation phases: run build-only verification before each implementation commit. For web changes, run `npm run build` inside `web-tools/unit-editor`. For backend changes, run `./build-and-test.sh` only when backend implementation changes require compile confidence. Do not add new test cases before Phase AI.
+Verification policy for future work: run focused tests for the changed area. For web changes, use `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/unit-editor`. For backend changes, use `./build-and-test.sh`.
 
 ## Completed Foundation
 
@@ -265,10 +265,10 @@ Module note: Backend CLI now exposes MVP export surfaces.
 
 ### Phase AJ: Final Docs and Goal Closure
 
-- [ ] AJ1: Update `task.md`, `plan.md`, `problem.md`, and relevant schema/readiness docs.
-- [ ] AJ2: Document remaining non-MVP follow-ups separately.
-- [ ] AJ3: Confirm no unrelated local files are staged.
-- [ ] AJ4: Commit final docs slice.
+- [x] AJ1: Update `task.md`, `plan.md`, `problem.md`, and relevant schema/readiness docs.
+- [x] AJ2: Document remaining non-MVP follow-ups separately.
+- [x] AJ3: Confirm no unrelated local files are staged.
+- [x] AJ4: Commit final docs slice.
 
 ## Completed Work Queue
 

@@ -6,15 +6,15 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 
 - Phase 0 variable-frame atom migration is complete.
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
-- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, Phase V validate/inspect/render JSON contracts, Phase W runtime product controls, Phase X product fixture proof/captured outputs, and Phase Y web handoff package are implemented.
-- Backend readiness for the v2 web UI is declared in `docs/WEB_UI_READINESS.md`; Phase Z initial web UI implementation, Phase AA refinement, and Phase AB completion pass are complete.
-- The active target is the full Audio Playground v2 MVP from `audio-playground-v2-requirements.md` and `audio-playground-v2-design.md`: users can visually build, edit, save, validate, preview, and export a guitar-pedalboard DSP project across intended backend targets while `apgcore` remains portable C11 and ARM/M7-compatible.
-- Final backend readiness verification passed with `./build-and-test.sh` across all 14 CTest targets. The first web UI slices pass package build/lint and Playwright desktop/mobile smoke checks.
+- The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project validation, project compilation, JSON contracts, runtime controls, product fixtures, web handoff package, and Full MVP phases AC-AJ are implemented.
+- The full Audio Playground v2 MVP now supports project-level visual build/edit/save/validate/preview/export workflows from frozen backend contracts while `apgcore` remains portable C11 and ARM/M7-aware.
+- Final verification passed with `npm run test`, `npm run build`, and `npm run lint` in `web-tools/unit-editor`, plus `./build-and-test.sh` across 20 CTest targets.
+- Remaining work is post-MVP follow-up, primarily real WASM AudioWorklet preview/export beyond the deterministic preview and blocked export skeleton.
 
 ## Full MVP Implementation Lifecycle
 
 1. Implement as much as possible module-by-module.
-2. After each completed implementation module, record pending test cases in this plan and `task.md`; do not implement those tests until Phase AI.
+2. During AC-AH, pending test cases were recorded in this plan and `task.md`, then implemented in Phase AI.
 3. After each completed implementation module, add a module note of 40 words or fewer.
 4. After all implementation modules are complete, implement and run tests.
 5. After all tests pass, finish docs and close the goal.
@@ -313,10 +313,10 @@ Module note: Backend CLI now exposes MVP export surfaces.
 
 ### Phase AJ: Final Docs and Goal Closure
 
-- [ ] AJ1: Update `task.md`, `plan.md`, `problem.md`, and relevant schema/readiness docs.
-- [ ] AJ2: Document remaining non-MVP follow-ups separately.
-- [ ] AJ3: Confirm no unrelated local files are staged.
-- [ ] AJ4: Commit final docs slice.
+- [x] AJ1: Update `task.md`, `plan.md`, `problem.md`, and relevant schema/readiness docs.
+- [x] AJ2: Document remaining non-MVP follow-ups separately.
+- [x] AJ3: Confirm no unrelated local files are staged.
+- [x] AJ4: Commit final docs slice.
 
 ## Execution Order
 

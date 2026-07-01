@@ -69,11 +69,11 @@ Reread `AGENTS.md` at the start of each new work slice before making repository 
 
 ## Continuous Work Protocol
 
-Current milestone: Phase Z/AA/AB web handoff UI is complete. The active target is the full Audio Playground v2 MVP in `task.md` and `plan.md`: visual build/edit/save/validate/preview/export for a guitar-pedalboard DSP project across intended backend targets, while `apgcore` remains portable C11 and ARM/M7-compatible.
+Current milestone: Full Audio Playground v2 MVP phases AC-AJ are complete. The next target is post-MVP hardening in `problem.md`, primarily real WASM AudioWorklet preview/export beyond the deterministic preview adapter and blocked `wasm_realtime` export skeleton.
 
 When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, tracker updates, build-only verification, and commit. Prefer one coherent module at a time, but continue into the next module in the same turn when the path is clear and no approval or product decision is needed.
 
-During implementation phases AC through AH, do not add new tests yet. After each completed implementation module, record pending test cases in `task.md` and `plan.md`, add a module note of 40 words or fewer, run build-only verification, and commit. Implement recorded tests in Phase AI, then finish docs in Phase AJ.
+For future phased implementation, keep the AC-AJ lifecycle pattern: implement module slices first, record pending tests while implementation is active, add focused tests after implementation modules are complete, then finish docs.
 
 Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documents aligned as work advances. If a task is blocked by missing design context, record it in `problem.md`, update the trackers, and move to the next actionable item.
 
