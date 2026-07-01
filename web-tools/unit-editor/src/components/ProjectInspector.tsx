@@ -3,6 +3,7 @@ import { CompatibilityExportPanel } from './CompatibilityExportPanel';
 import { DraftExportPanel } from './DraftExportPanel';
 import { PreviewPanel } from './PreviewPanel';
 import type { ProjectNodeData } from '../lib/projectGraph';
+import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import type {
   AtomCatalog,
   BackendCommands,
@@ -52,6 +53,95 @@ function compatibilityLabel(flags: Record<string, boolean>): string {
 
 function formatNumber(value: number): string {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function formatDragValue(value: number): string {
+  return Number.isInteger(value) ? `${Math.round(value)}` : `${Number(value.toFixed(6))}`;
+}
+
+type DragParamInputProps = {
+  ariaLabel: string;
+  value: string;
+  onChange: (next: string) => void;
+};
+
+function DragParamInput({ ariaLabel, value, onChange }: DragParamInputProps) {
+  const [draft, setDraft] = useState(value);
+  const dragState = useRef<{
+    pointerId: number;
+    lastY: number;
+    lastTime: number;
+    value: number;
+    integer: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const startDrag = (event: PointerEvent<HTMLInputElement>) => {
+    if (event.button !== 0 || event.detail > 1) return;
+
+    const parsed = Number(draft);
+    if (!Number.isFinite(parsed)) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    dragState.current = {
+      pointerId: event.pointerId,
+      lastY: event.clientY,
+      lastTime: event.timeStamp,
+      value: parsed,
+      integer: Number.isInteger(parsed),
+    };
+  };
+
+  const updateDrag = (event: PointerEvent<HTMLInputElement>) => {
+    const state = dragState.current;
+    if (!state) return;
+
+    const dy = state.lastY - event.clientY;
+    const dt = Math.max(12, event.timeStamp - state.lastTime);
+    const speed = Math.abs(dy) / dt;
+    const base = state.integer ? 0.55 : 0.012;
+    const delta = dy * base * (1 + speed * 2);
+    const next = state.integer ? Math.round(state.value + delta) : state.value + delta;
+    const nextValue = Number.isInteger(next) ? next : Number(next.toFixed(6));
+
+    state.lastY = event.clientY;
+    state.lastTime = event.timeStamp;
+    state.value = Number(nextValue);
+
+    const formatted = formatDragValue(nextValue);
+    setDraft(formatted);
+    onChange(formatted);
+  };
+
+  const stopDrag = () => {
+    dragState.current = null;
+  };
+
+  return (
+    <input
+      aria-label={ariaLabel}
+      className="param-list__knob-input"
+      inputMode="decimal"
+      onBlur={() => {
+        const parsed = Number(draft);
+        setDraft(Number.isFinite(parsed) ? formatDragValue(parsed) : draft);
+      }}
+      onChange={event => {
+        setDraft(event.target.value);
+        onChange(event.target.value);
+      }}
+      onPointerCancel={stopDrag}
+      onPointerDown={startDrag}
+      onPointerMove={updateDrag}
+      onPointerUp={stopDrag}
+      value={draft}
+    />
+  );
 }
 
 export function ProjectInspector({
@@ -220,10 +310,9 @@ export function ProjectInspector({
                     <div key={param.key} className={`param-list__row ${dirty ? 'param-list__row--dirty' : ''}`}>
                       <label className="param-list__field">
                         <span>{param.key}</span>
-                        <input
-                          aria-label={`${selectedNode.instance.id} ${param.key}`}
-                          inputMode="decimal"
-                          onChange={event => onParamChange(selectedNode.instance.id, param.key, event.target.value)}
+                        <DragParamInput
+                          ariaLabel={`${selectedNode.instance.id} ${param.key}`}
+                          onChange={next => onParamChange(selectedNode.instance.id, param.key, next)}
                           value={value}
                         />
                       </label>
