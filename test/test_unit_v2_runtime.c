@@ -1,5 +1,6 @@
 #include <apgcore/compiler_v2.h>
 #include <apgcore/host_v2.h>
+#include <apgcore/measure_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
 #include <atom/dsp_types.h>
@@ -189,7 +190,7 @@ static int test_runtime_config_error_names_node_atom_and_binding(void) {
     plan.nodes[0].config[0].key = "missing_value";
     if (apg_v2_runtime_process(&runtime, 2u))
         return fail("runtime accepted missing config field metadata");
-    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "gain_value") || !strstr(last_error, "generation_dc") ||
         !strstr(last_error, "config binding key") || !strstr(last_error, "missing_value"))
         return fail("runtime config error did not include node, atom, and binding context");
@@ -236,7 +237,7 @@ static int test_simple_gain_process_mono(void) {
         return fail("runtime process metadata did not track requested frames");
     if (apg_v2_runtime_process_mono(&runtime, input, output, 9u))
         return fail("simple_gain accepted over-capacity frame count");
-    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "capacity"))
         return fail("simple_gain over-capacity failure did not expose a useful error");
 
@@ -472,13 +473,13 @@ static int test_named_mono_port_rejects_bad_buffer_layouts(void) {
     float       output[2] = {0.0f, 0.0f};
     if (apg_v2_runtime_process_mono_ports(&runtime, "input", NULL, "output", output, 2u))
         return fail("named mono processing accepted null input buffer");
-    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "buffers"))
         return fail("null buffer rejection did not expose a useful error");
 
     if (apg_v2_runtime_process_mono_ports(&runtime, "input", input, "input", output, 2u))
         return fail("named mono processing accepted input port as output");
-    last_error = apg_v2_runtime_last_error(&runtime);
+    last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "output audio port"))
         return fail("wrong output port rejection did not expose a useful error");
 
@@ -620,7 +621,7 @@ static int test_named_mono_port_process(void) {
 
     if (apg_v2_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 3u))
         return fail("named simple_gain accepted missing input port");
-    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "input audio port"))
         return fail("missing input port failure did not expose a useful error");
 
@@ -806,7 +807,7 @@ static int test_named_mono_port_rejects_multichannel_port(void) {
     float       output[2] = {0.0f, 0.0f};
     if (apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("named mono processing accepted a multi-channel input port");
-    const char *last_error = apg_v2_runtime_last_error(&runtime);
+    const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "mono audio ports"))
         return fail("multi-channel port rejection did not expose a useful error");
 

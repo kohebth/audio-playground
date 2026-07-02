@@ -74,6 +74,8 @@ Module note: Core boundary audit now records remaining runtime/measure/image lea
 
 Module note: Host and tooling tests now read runtime diagnostics and transport state through measure APIs.
 
+Module note: Runtime compatibility read wrappers for meters and last_error were removed; `test_unit_v2_runtime.c` now reads diagnostics through `apg_v2_measure_last_error(...)`.
+
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
 Module note: Runtime initialization now consumes runtime-image signal-binding and mix-matrix config plans instead of resolving descriptors.
 Module note: Delay-tap input field metadata now comes from atom registry lookup, not atom-name branching in runtime-image.

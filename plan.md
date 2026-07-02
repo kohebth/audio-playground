@@ -61,6 +61,8 @@ Module note: Runtime no longer owns or mutates meter snapshots at process time; 
 
 Module note: Measure v2 now exposes runtime snapshots, meters, and diagnostics for host/tooling reads.
 
+Module note: Runtime read compatibility wrappers for meters and diagnostics were removed; runtime tests now consume `apg_v2_measure_*` APIs directly.
+
 Note: v1 code is legacy. Audit, deprecate, and remove unused v1 runtime/unit/YAML paths only after confirming no tests, fixtures, or host tools still depend on them.
 
 Module note: V1 public APIs are now fenced as opt-in deprecated and legacy tests are labelled.

@@ -20,7 +20,7 @@
 
 ## PB2 Progress
 
-Host/tooling-facing render, smoke, load-all, offline-chain, hall-render, and project-compile tests now read diagnostics, meters, and project transport state through `measure_v2`. The remaining `apg_v2_runtime_last_error(...)` uses are runtime-specific compatibility tests and wrapper definitions.
+Host/tooling-facing render, smoke, load-all, offline-chain, hall-render, project-compile, and runtime tests now read diagnostics, meters, and project transport state through `measure_v2`. Runtime compatibility read wrappers for measure and diagnostics have been removed.
 
 ## PB3 Progress
 

@@ -1,4 +1,3 @@
-#include <apgcore/measure_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <atom/dsp_types.h>
 
@@ -837,18 +836,6 @@ bool apg_v2_runtime_set_project_solo(apg_v2_runtime_t *runtime, bool soloed) {
     return true;
 }
 
-bool apg_v2_runtime_get_input_meter(
-    const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
-) {
-    return apg_v2_measure_get_input_meter(runtime, port_name, channel_index, out);
-}
-
-bool apg_v2_runtime_get_output_meter(
-    const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
-) {
-    return apg_v2_measure_get_output_meter(runtime, port_name, channel_index, out);
-}
-
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
     if (!runtime || !runtime->plan || !runtime->plan->unit)
         return false;
@@ -1096,10 +1083,6 @@ bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, 
         runtime, first_audio_port_name(unit->input_ports, unit->input_ports_len), input,
         first_audio_port_name(unit->output_ports, unit->output_ports_len), output, frames
     );
-}
-
-const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime) {
-    return runtime && runtime->last_error[0] ? runtime->last_error : NULL;
 }
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
