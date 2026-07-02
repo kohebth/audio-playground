@@ -1,3 +1,4 @@
+#include <apgcore/measure_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/runtime_v2.h>
 
@@ -94,7 +95,7 @@ int main(void) {
         return fail("v2 offline chain RMS is out of range");
 
     apg_v2_meter_snapshot_t meter;
-    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) || !meter.valid || meter.frames != TEST_CHUNK)
+    if (!apg_v2_measure_get_output_meter(&runtime, "output", 0u, &meter) || !meter.valid || meter.frames != TEST_CHUNK)
         return fail("v2 offline chain output meter was not updated");
 
     apg_v2_runtime_destroy(&runtime);

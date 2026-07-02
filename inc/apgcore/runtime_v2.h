@@ -100,10 +100,11 @@ bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *i
 bool apg_v2_runtime_set_project_mute(apg_v2_runtime_t *runtime, bool muted);
 bool apg_v2_runtime_set_project_solo(apg_v2_runtime_t *runtime, bool soloed);
 
-/* Return the most recent peak/RMS snapshot for a public audio port channel. */
+/* Compatibility wrapper over apg_v2_measure_get_input_meter(...). Prefer measure_v2 for host/tooling reads. */
 bool apg_v2_runtime_get_input_meter(
     const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
 );
+/* Compatibility wrapper over apg_v2_measure_get_output_meter(...). Prefer measure_v2 for host/tooling reads. */
 bool apg_v2_runtime_get_output_meter(
     const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
 );
@@ -137,7 +138,7 @@ bool apg_v2_runtime_process_mono_ports(
     uint32_t          frames
 );
 
-/* Return the last runtime processing/setup error string, or NULL if no runtime error is currently recorded. */
+/* Compatibility wrapper over apg_v2_measure_last_error(...). Prefer measure_v2 for host/tooling reads. */
 const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime);
 
 /* Free all runtime-owned allocations and zero the runtime structure. */

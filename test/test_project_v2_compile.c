@@ -1,3 +1,4 @@
+#include <apgcore/measure_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/runtime_v2.h>
 
@@ -177,9 +178,9 @@ static int test_two_instance_project_compiles_and_runs(void) {
     }
 
     apg_v2_meter_snapshot_t meter;
-    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) || meter.valid)
+    if (!apg_v2_measure_get_output_meter(&runtime, "output", 0u, &meter) || meter.valid)
         return fail("two-instance project output meter was not initially empty");
-    if (apg_v2_runtime_get_output_meter(&runtime, "missing", 0u, &meter))
+    if (apg_v2_measure_get_output_meter(&runtime, "missing", 0u, &meter))
         return fail("two-instance project accepted missing output meter");
 
     const float input[2]  = {0.25f, -0.5f};
@@ -189,10 +190,10 @@ static int test_two_instance_project_compiles_and_runs(void) {
     const float expected_default[2] = {1.5f, -3.0f};
     if (expect_samples(output, expected_default, 2u, "two-instance project default"))
         return 1;
-    if (!apg_v2_runtime_get_input_meter(&runtime, "input", 0u, &meter) ||
+    if (!apg_v2_measure_get_input_meter(&runtime, "input", 0u, &meter) ||
         expect_meter_near(&meter, 0.5f, 0.3952847f, 2u, "two-instance project input"))
         return 1;
-    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) ||
+    if (!apg_v2_measure_get_output_meter(&runtime, "output", 0u, &meter) ||
         expect_meter_near(&meter, 3.0f, 2.3717082f, 2u, "two-instance project output"))
         return 1;
 
@@ -203,7 +204,7 @@ static int test_two_instance_project_compiles_and_runs(void) {
     const float expected_bypassed[2] = {0.75f, -1.5f};
     if (expect_samples(output, expected_bypassed, 2u, "two-instance project bypassed"))
         return 1;
-    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) ||
+    if (!apg_v2_measure_get_output_meter(&runtime, "output", 0u, &meter) ||
         expect_meter_near(&meter, 1.5f, 1.1858541f, 2u, "two-instance project bypassed output"))
         return 1;
 
@@ -216,7 +217,7 @@ static int test_two_instance_project_compiles_and_runs(void) {
     const float expected_muted[2] = {0.0f, 0.0f};
     if (expect_samples(output, expected_muted, 2u, "two-instance project muted"))
         return 1;
-    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) ||
+    if (!apg_v2_measure_get_output_meter(&runtime, "output", 0u, &meter) ||
         expect_meter_near(&meter, 0.0f, 0.0f, 2u, "two-instance project muted output"))
         return 1;
 

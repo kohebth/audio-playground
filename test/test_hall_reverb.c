@@ -1,3 +1,4 @@
+#include <apgcore/measure_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/runtime_v2.h>
 
@@ -99,7 +100,7 @@ int main(void) {
         return fail("pedalboard render RMS is out of range");
 
     apg_v2_meter_snapshot_t meter;
-    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) || !meter.valid || meter.frames != CHUNK)
+    if (!apg_v2_measure_get_output_meter(&runtime, "output", 0u, &meter) || !meter.valid || meter.frames != CHUNK)
         return fail("pedalboard render output meter was not updated");
 
     apg_v2_runtime_destroy(&runtime);
