@@ -74,6 +74,7 @@ Module note: Core boundary audit now records remaining runtime/measure/image lea
 
 Module note: Host and tooling tests now read runtime diagnostics and transport state through measure APIs.
 Module note: Host/project loading now builds a runtime-image in host-owned image arenas and initializes runtime from explicit image descriptors.
+Module note: Architecture docs now explicitly separate non-RT parsing/validation/compilation/image stages from RT execution, and classify `.v1` JSON schema identifiers as protocol tags, not legacy runtime usage.
 
 Module note: Runtime compatibility read wrappers for meters and last_error were removed; `test_unit_v2_runtime.c` now reads diagnostics through `apg_v2_measure_last_error(...)`.
 

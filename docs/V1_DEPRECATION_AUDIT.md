@@ -9,6 +9,7 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 ## Current Deprecation Fence
 
 - v1 runtime, control, and v1 unit-loader public APIs have been removed.
+- `*.v1` in contract JSON schema strings are protocol version labels for interoperability snapshots, not reintroduced legacy runtime behavior.
 - No default CTest target is currently labelled `legacy_v1`.
 - `test_runtime_process_frames` has been migrated to APGCore v2.
 - `test_ctrl_transition` has been migrated to APGCore v2 control-port smoothing.

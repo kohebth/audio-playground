@@ -97,6 +97,7 @@ Module note: Host/project loading now builds a runtime-image in host-owned image
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
 Module note: Delay-tap input field metadata is now looked up through atom registry API, removing runtime-image atom-name branching.
 Module note: Host now exposes `apg_v2_host_project_*` orchestration for project load/compile/image/runtime setup and mono transport in one API.
+Module note: Architecture docs now explicitly treat parser/validator/compiler/image as non-RT stages and mark `.v1` JSON schema labels as protocol tags, not legacy runtime execution paths.
 
 Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 

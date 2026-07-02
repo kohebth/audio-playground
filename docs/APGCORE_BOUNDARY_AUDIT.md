@@ -15,8 +15,8 @@
 
 - Runtime no longer stores meter snapshots or updates meter buffers. Metering is computed on demand in `measure_v2` from latest runtime signal buffers.
 - `apg_v2_runtime_init(...)` remains a compatibility wrapper that builds a temporary runtime image. Production host/export paths should prefer `apg_v2_runtime_image_build(...)` plus `apg_v2_runtime_init_from_image(...)`.
-- Runtime node initialization still binds signal-array pointer allocation and bypass/transport state in runtime control paths. Fixed signal/config binding plans are planned in runtime-image and consumed by runtime initialization.
-- Project mute, solo, and instance bypass are runtime controls today. Future host/control design should decide whether these become precompiled control targets or remain runtime-owned transport state.
+- Runtime node initialization consumes precomputed signal/config binding plans from runtime-image. Project mute/solo and instance bypass remain runtime transport controls for now.
+- Host/control design for mute/solo/bypass can move further toward precompiled control targets if a strict non-allocating runtime control interface is required.
 
 ## PB2 Progress
 
