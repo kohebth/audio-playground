@@ -10,6 +10,26 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     return status;
 }
 
+static uc_status build_runtime_from_plan(
+    const apg_v2_compiled_unit_t *plan,
+    uint32_t                      frame_capacity,
+    float                         sample_rate,
+    uc_arena                     *image_arena,
+    apg_v2_runtime_image_t       *image,
+    apg_v2_runtime_t             *runtime,
+    uc_error                     *err
+) {
+    if (!plan || !image_arena || !image || !runtime || !err)
+        return UC_E_TYPE;
+
+    uc_status status =
+        apg_v2_runtime_image_build_with_growth(plan, frame_capacity, sample_rate, image_arena, image, err);
+    if (status != UC_OK)
+        return status;
+
+    return apg_v2_runtime_init_from_image(image, runtime, err);
+}
+
 uc_status apg_v2_host_load_file(
     const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_unit_t *out, uc_error *err
 ) {
@@ -20,10 +40,14 @@ uc_status apg_v2_host_load_file(
 
     if (uc_arena_init(&out->arena, 1024u * 1024u) != 0)
         return set_error(err, UC_E_OOM, "v2 host arena allocation failed");
-    out->arena_ready     = true;
-    uc_arena image_arena = {0};
+    out->arena_ready = true;
 
     uc_status status = apg_unit_v2_load_file(path, &out->arena, &out->unit, err);
+    if (uc_arena_init(&out->image_arena, 1024u * 1024u) != 0) {
+        status = set_error(err, UC_E_OOM, "v2 host image arena allocation failed");
+        goto fail;
+    }
+    out->image_ready = true;
     if (status != UC_OK)
         goto fail;
 
@@ -31,7 +55,9 @@ uc_status apg_v2_host_load_file(
     if (status != UC_OK)
         goto fail;
 
-    status = apg_v2_runtime_init_from_plan(&out->plan, frame_capacity, sample_rate, &image_arena, &out->runtime, err);
+    status = build_runtime_from_plan(
+        &out->plan, frame_capacity, sample_rate, &out->image_arena, &out->image, &out->runtime, err
+    );
     if (status != UC_OK)
         goto fail;
 
@@ -67,6 +93,8 @@ void apg_v2_host_destroy(apg_v2_host_unit_t *host) {
         return;
     if (host->runtime_ready)
         apg_v2_runtime_destroy(&host->runtime);
+    if (host->image_ready)
+        uc_arena_free(&host->image_arena);
     if (host->arena_ready)
         uc_arena_free(&host->arena);
     memset(host, 0, sizeof(*host));
@@ -82,10 +110,14 @@ uc_status apg_v2_host_project_load_file(
 
     if (uc_arena_init(&out->arena, 2 * 1024 * 1024u) != 0)
         return set_error(err, UC_E_OOM, "v2 host arena allocation failed");
-    out->arena_ready     = true;
-    uc_arena image_arena = {0};
+    out->arena_ready = true;
 
     uc_status status = apg_project_v2_load_resolved_file(path, &out->arena, &out->resolved_project, err);
+    if (uc_arena_init(&out->image_arena, 2 * 1024 * 1024u) != 0) {
+        status = set_error(err, UC_E_OOM, "v2 host image arena allocation failed");
+        goto fail;
+    }
+    out->image_ready = true;
     if (status != UC_OK)
         goto fail;
 
@@ -93,8 +125,8 @@ uc_status apg_v2_host_project_load_file(
     if (status != UC_OK)
         goto fail;
 
-    status = apg_v2_runtime_init_from_plan(
-        &out->compiled.plan, frame_capacity, sample_rate, &image_arena, &out->runtime, err
+    status = build_runtime_from_plan(
+        &out->compiled.plan, frame_capacity, sample_rate, &out->image_arena, &out->image, &out->runtime, err
     );
     if (status != UC_OK)
         goto fail;
@@ -131,6 +163,8 @@ void apg_v2_host_project_destroy(apg_v2_host_project_t *host) {
         return;
     if (host->runtime_ready)
         apg_v2_runtime_destroy(&host->runtime);
+    if (host->image_ready)
+        uc_arena_free(&host->image_arena);
     if (host->arena_ready)
         uc_arena_free(&host->arena);
     memset(host, 0, sizeof(*host));

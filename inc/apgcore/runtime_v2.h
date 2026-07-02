@@ -91,7 +91,9 @@ uc_status apg_v2_runtime_init(
 );
 
 /*
- * Production path: build a runtime image in the provided arena and initialize a runtime.
+ * Compatibility path kept for callers that compile and initialize in one step.
+ * Prefer building an `apg_v2_runtime_image_t` explicitly and calling
+ * `apg_v2_runtime_init_from_image` for the production pipeline.
  * This returns a runtime with all stage-specific allocation complete and image metadata owned by runtime.
  */
 uc_status apg_v2_runtime_init_from_plan(
