@@ -586,6 +586,12 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         if (!out->state_buffer_pool)
             return set_error(err, UC_E_OOM, "v2 runtime state buffer pool allocation failed");
     }
+    if (image->signal_array_pointer_slots > 0u) {
+        out->signal_array_pool_len = image->signal_array_pointer_slots;
+        out->signal_array_pool     = calloc(out->signal_array_pool_len, sizeof(*out->signal_array_pool));
+        if (!out->signal_array_pool)
+            return set_error(err, UC_E_OOM, "v2 runtime signal array pool allocation failed");
+    }
 
     for (size_t i = 0; i < out->nodes_len; i++) {
         const atom_registry_entry_t        *atom   = plan->nodes[i].atom;
@@ -599,21 +605,17 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
             layout->config_offset + layout->config_size > out->atom_storage_bytes ||
             layout->state_offset + layout->state_size > out->atom_storage_bytes)
             return set_error(err, UC_E_RANGE, "v2 runtime image atom storage layout exceeds pool");
-        node->out_storage    = (char *)out->atom_storage_pool + layout->out_offset;
-        node->in_storage     = (char *)out->atom_storage_pool + layout->in_offset;
-        node->config_storage = (char *)out->atom_storage_pool + layout->config_offset;
-        node->state_storage  = (char *)out->atom_storage_pool + layout->state_offset;
-        if (layout->signal_array_pointer_slots > 0u) {
-            node->signal_array_pool = calloc(layout->signal_array_pointer_slots, sizeof(*node->signal_array_pool));
-            if (!node->signal_array_pool)
-                return set_error(err, UC_E_OOM, "v2 runtime signal array pool allocation failed");
-            node->signal_array_pool_len  = layout->signal_array_pointer_slots;
-            node->signal_array_pool_used = layout->signal_array_pointer_slots;
-        }
-        node->config_refreshes     = layout->config_refreshes;
-        node->config_refreshes_len = layout->config_refreshes_len;
-        node->input_refreshes      = layout->input_refreshes;
-        node->input_refreshes_len  = layout->input_refreshes_len;
+        node->out_storage            = (char *)out->atom_storage_pool + layout->out_offset;
+        node->in_storage             = (char *)out->atom_storage_pool + layout->in_offset;
+        node->config_storage         = (char *)out->atom_storage_pool + layout->config_offset;
+        node->state_storage          = (char *)out->atom_storage_pool + layout->state_offset;
+        node->signal_array_pool      = out->signal_array_pool + layout->signal_array_pool_offset;
+        node->signal_array_pool_len  = layout->signal_array_pointer_slots;
+        node->signal_array_pool_used = layout->signal_array_pointer_slots;
+        node->config_refreshes       = layout->config_refreshes;
+        node->config_refreshes_len   = layout->config_refreshes_len;
+        node->input_refreshes        = layout->input_refreshes;
+        node->input_refreshes_len    = layout->input_refreshes_len;
 
         node->call.out    = node->out_storage;
         node->call.in     = node->in_storage;
@@ -1232,8 +1234,8 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     for (size_t i = 0; i < runtime->nodes_len; i++) {
         free(runtime->nodes[i].state_buffers);
         free(runtime->nodes[i].state_buffer_samples);
-        free(runtime->nodes[i].signal_array_pool);
     }
+    free(runtime->signal_array_pool);
     free(runtime->nodes);
     free(runtime->atom_storage_pool);
     free(runtime->state_buffer_pool);

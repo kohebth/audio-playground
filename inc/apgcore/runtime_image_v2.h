@@ -50,6 +50,7 @@ typedef struct {
     size_t                           state_buffers_len;
     size_t                           state_buffer_samples;
     size_t                           signal_array_pointer_slots;
+    size_t                           signal_array_pool_offset;
     size_t                           signal_bindings_len;
     apg_v2_runtime_signal_binding_t *signal_bindings;
     apg_v2_runtime_scalar_refresh_t *config_refreshes;
@@ -81,6 +82,7 @@ typedef struct {
     size_t                           state_buffers_len;
     size_t                           state_buffer_samples;
     size_t                           atom_storage_bytes;
+    size_t                           signal_array_pointer_slots;
 } apg_v2_runtime_image_t;
 
 /*

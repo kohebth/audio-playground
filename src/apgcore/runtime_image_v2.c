@@ -250,6 +250,7 @@ static uc_status fill_signal_bindings(
     size_t                           items_cap,
     size_t                          *items_len,
     apg_v2_runtime_node_layout_t    *layout,
+    size_t                           node_array_base,
     uc_error                        *err
 ) {
     size_t len = 0u;
@@ -263,6 +264,10 @@ static uc_status fill_signal_bindings(
     if (!items || !items_len)
         return set_error(err, UC_E_MISSING, "v2 runtime image signal binding output buffer is missing");
     if (*items_len > SIZE_MAX - len || *items_len + len > items_cap)
+        return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+    if (!array_cursor)
+        return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor is missing");
+    if (*array_cursor < node_array_base)
         return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
 
     size_t local_array_cursor = 0u;
@@ -302,9 +307,7 @@ static uc_status fill_signal_bindings(
                 item.signal_array_len = binding->indices_len;
                 if (binding->indices_len > SIZE_MAX - local_array_cursor)
                     return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is too large");
-                if (!array_cursor)
-                    return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor is missing");
-                item.signal_array_offset = *array_cursor + local_array_cursor;
+                item.signal_array_offset = *array_cursor - node_array_base + local_array_cursor;
                 if (binding->indices_len == 0u)
                     return set_error(err, UC_E_RANGE, "v2 runtime image input binding has empty signal array");
                 for (size_t j = 0; j < binding->indices_len; j++) {
@@ -328,9 +331,7 @@ static uc_status fill_signal_bindings(
                 item.signal_array_len = binding->indices_len;
                 if (binding->indices_len > SIZE_MAX - local_array_cursor)
                     return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is too large");
-                if (!array_cursor)
-                    return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor is missing");
-                item.signal_array_offset = *array_cursor + local_array_cursor;
+                item.signal_array_offset = *array_cursor - node_array_base + local_array_cursor;
                 if (binding->indices_len == 0u)
                     return set_error(err, UC_E_RANGE, "v2 runtime image output binding has empty signal array");
                 for (size_t j = 0; j < binding->indices_len; j++) {
@@ -346,15 +347,13 @@ static uc_status fill_signal_bindings(
         items[*items_len + item_index++] = item;
     }
 
-    if (item_index != len || local_array_cursor > layout->signal_array_pointer_slots)
+    if (local_array_cursor > layout->signal_array_pointer_slots)
         return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
-    if (array_cursor) {
-        if (*array_cursor > SIZE_MAX - local_array_cursor)
-            return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor overflow");
-        if (*array_cursor + local_array_cursor > layout->signal_array_pointer_slots)
-            return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
-        *array_cursor += local_array_cursor;
-    }
+    if (item_index != len)
+        return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+    if (local_array_cursor > SIZE_MAX - *array_cursor)
+        return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor overflow");
+    *array_cursor += local_array_cursor;
     *items_len += item_index;
     return UC_OK;
 }
@@ -440,6 +439,7 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
 
     size_t atom_storage_cursor = 0u;
     size_t state_buffer_cursor = 0u;
+    size_t signal_array_cursor = 0u;
     for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
         const atom_registry_entry_t  *atom   = out->plan->nodes[node_index].atom;
         apg_v2_runtime_node_layout_t *layout = &out->node_layouts[node_index];
@@ -467,6 +467,7 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         layout->signal_array_pointer_slots =
             signal_array_pointer_slots(out->plan->nodes[node_index].in, out->plan->nodes[node_index].in_len) +
             signal_array_pointer_slots(out->plan->nodes[node_index].out, out->plan->nodes[node_index].out_len);
+        layout->signal_array_pool_offset = signal_array_cursor;
 
         for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
             if (atom->state_fields[field_index].type == FIELD_BUFFER)
@@ -521,12 +522,10 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
 
         size_t signal_binding_index = 0u;
 
-        size_t signal_array_cursor = 0u;
-
         status = fill_signal_bindings(
             out, &out->plan->nodes[node_index], out->plan->nodes[node_index].out, out->plan->nodes[node_index].out_len,
             false, &signal_array_cursor, layout->signal_bindings, layout->signal_bindings_len, &signal_binding_index,
-            layout, err
+            layout, layout->signal_array_pool_offset, err
         );
         if (status != UC_OK)
             return status;
@@ -534,19 +533,23 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         status = fill_signal_bindings(
             out, &out->plan->nodes[node_index], out->plan->nodes[node_index].in, out->plan->nodes[node_index].in_len,
             true, &signal_array_cursor, layout->signal_bindings, layout->signal_bindings_len, &signal_binding_index,
-            layout, err
+            layout, layout->signal_array_pool_offset, err
         );
         if (status != UC_OK)
             return status;
         if (signal_binding_index != layout->signal_bindings_len)
             return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
 
+        if (signal_array_cursor - layout->signal_array_pool_offset > layout->signal_array_pointer_slots)
+            return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+
         status = fill_mix_matrix_layout(arena, &out->plan->nodes[node_index], layout, err);
         if (status != UC_OK)
             return status;
     }
-    out->state_buffer_samples = state_buffer_cursor;
-    out->atom_storage_bytes   = atom_storage_cursor;
+    out->signal_array_pointer_slots = signal_array_cursor;
+    out->state_buffer_samples       = state_buffer_cursor;
+    out->atom_storage_bytes         = atom_storage_cursor;
     return UC_OK;
 }
 

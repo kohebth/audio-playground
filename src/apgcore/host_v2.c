@@ -1,11 +1,48 @@
 #include <apgcore/host_v2.h>
 
+#include <limits.h>
+#include <stddef.h>
 #include <string.h>
 
 static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     uc_loc loc = {0, 0};
     uc_error_set(err, status, loc, "%s", msg);
     return status;
+}
+
+static uc_status build_runtime_image_with_growth(
+    const apg_v2_compiled_unit_t *plan,
+    uint32_t                      frame_capacity,
+    float                         sample_rate,
+    uc_arena                     *out_arena,
+    apg_v2_runtime_image_t       *out_image,
+    uc_error                     *err
+) {
+    if (!plan || !out_arena || !out_image || !err)
+        return UC_E_TYPE;
+
+    memset(out_image, 0, sizeof(*out_image));
+
+    size_t image_arena_size = 4096u;
+    while (image_arena_size > 0u && image_arena_size <= (SIZE_MAX >> 1)) {
+        uc_arena image_arena;
+        if (uc_arena_init(&image_arena, image_arena_size) != 0) {
+            return set_error(err, UC_E_OOM, "v2 host runtime image arena allocation failed");
+        }
+
+        uc_status status = apg_v2_runtime_image_build(plan, frame_capacity, sample_rate, &image_arena, out_image, err);
+        if (status == UC_OK) {
+            *out_arena = image_arena;
+            return UC_OK;
+        }
+
+        uc_arena_free(&image_arena);
+        if (status != UC_E_OOM)
+            return status;
+        image_arena_size *= 2u;
+    }
+
+    return set_error(err, UC_E_OOM, "v2 host runtime image arena growth overflow");
 }
 
 uc_status apg_v2_host_load_file(
@@ -28,10 +65,17 @@ uc_status apg_v2_host_load_file(
     if (status != UC_OK)
         goto fail;
 
-    status = apg_v2_runtime_init(&out->plan, frame_capacity, sample_rate, &out->runtime, err);
+    status =
+        build_runtime_image_with_growth(&out->plan, frame_capacity, sample_rate, &out->image_arena, &out->image, err);
     if (status != UC_OK)
         goto fail;
-    out->runtime_ready = true;
+
+    status = apg_v2_runtime_init_from_image(&out->image, &out->runtime, err);
+    if (status != UC_OK)
+        goto fail;
+
+    out->image_arena_ready = true;
+    out->runtime_ready     = true;
     return UC_OK;
 
 fail:
@@ -63,6 +107,8 @@ void apg_v2_host_destroy(apg_v2_host_unit_t *host) {
         return;
     if (host->runtime_ready)
         apg_v2_runtime_destroy(&host->runtime);
+    if (host->image_arena_ready)
+        uc_arena_free(&host->image_arena);
     if (host->arena_ready)
         uc_arena_free(&host->arena);
     memset(host, 0, sizeof(*host));

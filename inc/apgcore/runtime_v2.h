@@ -58,6 +58,8 @@ typedef struct {
     size_t                           control_targets_len;
     bool                             project_muted;
     bool                             project_soloed;
+    float                          **signal_array_pool;
+    size_t                           signal_array_pool_len;
     bool                             image_arena_ready;
     uc_arena                         image_arena;
     size_t                           input_meters_len;

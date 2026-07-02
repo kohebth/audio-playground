@@ -8,6 +8,7 @@
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
 
+#include <limits.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -384,6 +385,45 @@ void apg_v2_json_write_inspect_project(FILE *out, const char *path) {
 #define APG_RENDER_FRAMES      16u
 #define APG_RENDER_SAMPLE_RATE 48000.0f
 
+static void set_error(uc_error *err, uc_status status, const char *msg) {
+    uc_loc loc = {0, 0};
+    uc_error_set(err, status, loc, "%s", msg);
+}
+
+static uc_status build_runtime_image_for_render(
+    const apg_v2_compiled_unit_t *plan, uc_error *err, uc_arena *image_arena, apg_v2_runtime_image_t *runtime_image
+) {
+    if (!plan || !err || !image_arena || !runtime_image)
+        return UC_E_TYPE;
+
+    memset(runtime_image, 0, sizeof(*runtime_image));
+
+    size_t arena_size = 4096u;
+    while (arena_size > 0u && arena_size <= (SIZE_MAX >> 1)) {
+        uc_arena local_arena;
+        if (uc_arena_init(&local_arena, arena_size) != 0) {
+            set_error(err, UC_E_OOM, "apg project render runtime image arena allocation failed");
+            return UC_E_OOM;
+        }
+
+        uc_status status = apg_v2_runtime_image_build(
+            plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, &local_arena, runtime_image, err
+        );
+        if (status == UC_OK) {
+            *image_arena = local_arena;
+            return UC_OK;
+        }
+
+        uc_arena_free(&local_arena);
+        if (status != UC_E_OOM)
+            return status;
+        arena_size *= 2u;
+    }
+
+    set_error(err, UC_E_OOM, "apg project render runtime image arena growth overflow");
+    return UC_E_OOM;
+}
+
 static void fill_deterministic_render_input(float *input, uint32_t frames) {
     static const float pattern[APG_RENDER_FRAMES] = {
         0.0f, 0.25f, 0.5f, -0.25f, 0.75f, -0.5f, 0.125f, 0.375f, 0.0f, -0.75f, 0.6f, -0.1f, 0.3f, -0.4f, 0.2f, 0.0f,
@@ -430,7 +470,10 @@ static void write_project_render(FILE *out, const char *path, const float *outpu
 void apg_v2_json_write_render_project(FILE *out, const char *path) {
     if (!out)
         return;
-    uc_arena arena;
+    uc_arena               arena;
+    uc_arena               image_arena       = {0};
+    bool                   image_arena_ready = false;
+    apg_v2_runtime_image_t runtime_image     = {0};
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
         write_validation_error(out, "apg.project.render.v1", path, "$.project", &err);
@@ -446,8 +489,12 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     if (status == UC_OK)
         status = apg_project_v2_compile(&project, &arena, &compiled, &err);
     if (status == UC_OK) {
-        status        = apg_v2_runtime_init(&compiled.plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, &runtime, &err);
-        runtime_ready = status == UC_OK;
+        status = build_runtime_image_for_render(&compiled.plan, &err, &image_arena, &runtime_image);
+        if (status == UC_OK) {
+            image_arena_ready = true;
+            status            = apg_v2_runtime_init_from_image(&runtime_image, &runtime, &err);
+            runtime_ready     = status == UC_OK;
+        }
     }
 
     float input[APG_RENDER_FRAMES];
@@ -468,5 +515,7 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
 
     if (runtime_ready)
         apg_v2_runtime_destroy(&runtime);
+    if (image_arena_ready)
+        uc_arena_free(&image_arena);
     uc_arena_free(&arena);
 }
