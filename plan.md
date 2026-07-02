@@ -29,11 +29,13 @@ During implementation phases, use focused verification before commits. For web c
 ### Production Core Refactor
 
 - [x] PA1: Add an explicit APGCore v2 parser boundary that parses YAML strings/files into a raw contract graph without semantic validation.
-- [ ] PA2: Split unit/project semantic checks into validator modules while preserving current public loader APIs.
+- [x] PA2: Split unit/project semantic checks into validator modules while preserving current public loader APIs.
 - [ ] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
 - [ ] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
+
+Module note: Unit and project validators now own semantic graph checks behind thin parser-backed loaders.
 
 ### Foundation and Adapters
 
