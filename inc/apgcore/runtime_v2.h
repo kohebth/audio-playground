@@ -60,9 +60,7 @@ typedef struct {
     bool                             project_soloed;
     bool                             image_arena_ready;
     uc_arena                         image_arena;
-    apg_v2_meter_snapshot_t         *input_meters;
     size_t                           input_meters_len;
-    apg_v2_meter_snapshot_t         *output_meters;
     size_t                           output_meters_len;
     void                            *atom_storage_pool;
     size_t                           atom_storage_bytes;

@@ -13,9 +13,9 @@
 
 ## Boundary Leaks To Close
 
-- Runtime still stores meter buffers and updates meter snapshots after processing. Keep this as an implementation detail for now, but host/tooling callers should use `measure_v2`.
+- Runtime no longer stores meter snapshots or updates meter buffers. Metering is computed on demand in `measure_v2` from latest runtime signal buffers.
 - `apg_v2_runtime_init(...)` remains a compatibility wrapper that builds a temporary runtime image. Production host/export paths should prefer `apg_v2_runtime_image_build(...)` plus `apg_v2_runtime_init_from_image(...)`.
-- Runtime node initialization still binds signal and scalar config pointers from compiled bindings. Continue moving fixed layout decisions into runtime-image descriptors before STM32H7 static export is considered ready.
+- Runtime node initialization still binds signal-array pointer allocation and bypass/transport state in runtime control paths. Fixed signal/config binding plans are planned in runtime-image and consumed by runtime initialization.
 - Project mute, solo, and instance bypass are runtime controls today. Future host/control design should decide whether these become precompiled control targets or remain runtime-owned transport state.
 
 ## PB2 Progress
@@ -24,7 +24,7 @@ Host/tooling-facing render, smoke, load-all, offline-chain, hall-render, and pro
 
 ## PB3 Progress
 
-Runtime image now records per-node atom storage sizes and state-buffer counts. Runtime initialization consumes those image layouts instead of recomputing storage sizes and buffer counts directly from atom metadata.
+Runtime image now records per-node atom storage sizes and state-buffer counts. Runtime initialization now consumes precomputed signal/config binding plans and no longer resolves signal/config pointers from compiled binding descriptors.
 
 ## PB4 Progress
 

@@ -56,6 +56,8 @@ Module note: Unit and project validators now own semantic graph checks behind th
 
 Module note: Runtime image now precomputes layout/defaults/control targets before runtime allocation.
 
+Module note: Runtime no longer owns or mutates meter snapshots at process time; `measure_v2` computes port meter values from runtime signal buffers.
+
 Module note: Measure v2 now exposes runtime snapshots, meters, and diagnostics for host/tooling reads.
 
 Note: v1 code is legacy. Audit, deprecate, and remove unused v1 runtime/unit/YAML paths only after confirming no tests, fixtures, or host tools still depend on them.

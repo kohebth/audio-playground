@@ -3,7 +3,6 @@
 #include <atom/dsp_types.h>
 
 #include <limits.h>
-#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -234,23 +233,6 @@ static uc_status init_signal_buffers(const apg_v2_runtime_image_t *image, apg_v2
 
     for (size_t i = 0; i < out->signals_len; i++)
         out->signals[i] = &out->signal_pool[i * (size_t)image->frame_capacity];
-    return UC_OK;
-}
-
-static uc_status init_meters(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
-    out->input_meters_len = image->input_meters_len;
-    if (out->input_meters_len > 0u) {
-        out->input_meters = calloc(out->input_meters_len, sizeof(*out->input_meters));
-        if (!out->input_meters)
-            return set_error(err, UC_E_OOM, "v2 runtime input meter allocation failed");
-    }
-
-    out->output_meters_len = image->output_meters_len;
-    if (out->output_meters_len > 0u) {
-        out->output_meters = calloc(out->output_meters_len, sizeof(*out->output_meters));
-        if (!out->output_meters)
-            return set_error(err, UC_E_OOM, "v2 runtime output meter allocation failed");
-    }
     return UC_OK;
 }
 
@@ -582,10 +564,9 @@ uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, ap
     uc_status status = init_signal_buffers(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_meters(image, out, err);
-    if (status != UC_OK)
-        goto fail;
-    status = init_params(image, out, err);
+    out->input_meters_len  = image->input_meters_len;
+    out->output_meters_len = image->output_meters_len;
+    status                 = init_params(image, out, err);
     if (status != UC_OK)
         goto fail;
     status = init_control_targets(image, out, err);
@@ -768,67 +749,6 @@ static bool apply_instance_bypass(apg_v2_runtime_t *runtime, const char *instanc
     return true;
 }
 
-static apg_v2_meter_snapshot_t meter_snapshot_from_signal(const float *signal, uint32_t frames) {
-    apg_v2_meter_snapshot_t snapshot = {0};
-    if (!signal || frames == 0u)
-        return snapshot;
-
-    float  peak       = 0.0f;
-    double sum_square = 0.0;
-    for (uint32_t i = 0; i < frames; i++) {
-        float sample     = signal[i];
-        float abs_sample = fabsf(sample);
-        if (abs_sample > peak)
-            peak = abs_sample;
-        sum_square += (double)sample * (double)sample;
-    }
-    snapshot.peak   = peak;
-    snapshot.rms    = (float)sqrt(sum_square / (double)frames);
-    snapshot.frames = frames;
-    snapshot.valid  = true;
-    return snapshot;
-}
-
-static void update_meters_for_ports(
-    apg_v2_runtime_t         *runtime,
-    const apg_unit_v2_port_t *ports,
-    size_t                    ports_len,
-    apg_v2_meter_snapshot_t  *meters,
-    size_t                    meters_len,
-    uint32_t                  frames
-) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !meters)
-        return;
-    const apg_unit_v2_t *unit   = runtime->plan->unit;
-    size_t               offset = 0u;
-    for (size_t i = 0; i < ports_len; i++) {
-        const apg_unit_v2_port_t *port = &ports[i];
-        if (!port->type || strcmp(port->type, "audio") != 0)
-            continue;
-        size_t channels = 0u;
-        if (!parse_port_channel_count(port, &channels))
-            continue;
-        for (size_t ch = 0; ch < channels && offset < meters_len; ch++, offset++) {
-            int index      = signal_index_by_name(unit, audio_port_channel_signal_name(port, ch));
-            meters[offset] = index >= 0 && (size_t)index < runtime->signals_len
-                                 ? meter_snapshot_from_signal(runtime->signals[index], frames)
-                                 : (apg_v2_meter_snapshot_t){0};
-        }
-    }
-}
-
-static void update_public_port_meters(apg_v2_runtime_t *runtime, uint32_t frames) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit)
-        return;
-    const apg_unit_v2_t *unit = runtime->plan->unit;
-    update_meters_for_ports(
-        runtime, unit->input_ports, unit->input_ports_len, runtime->input_meters, runtime->input_meters_len, frames
-    );
-    update_meters_for_ports(
-        runtime, unit->output_ports, unit->output_ports_len, runtime->output_meters, runtime->output_meters_len, frames
-    );
-}
-
 static void apply_project_mute(apg_v2_runtime_t *runtime, uint32_t frames) {
     if (!runtime || !runtime->project_muted || !runtime->plan || !runtime->plan->unit)
         return;
@@ -963,10 +883,6 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
             runtime->signal_pool, 0,
             runtime->signals_len * (size_t)runtime->frame_capacity * sizeof(*runtime->signal_pool)
         );
-    if (runtime->input_meters && runtime->input_meters_len > 0u)
-        memset(runtime->input_meters, 0, runtime->input_meters_len * sizeof(*runtime->input_meters));
-    if (runtime->output_meters && runtime->output_meters_len > 0u)
-        memset(runtime->output_meters, 0, runtime->output_meters_len * sizeof(*runtime->output_meters));
     for (size_t i = 0; i < runtime->params_len && i < runtime->plan->unit->params_len; i++) {
         runtime->params[i] = runtime->param_defaults ? runtime->param_defaults[i] : 0.0f;
         if (runtime->param_targets)
@@ -1053,7 +969,6 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
         compiled->atom->thunk(&runtime->nodes[scheduled_index].call);
     }
     apply_project_mute(runtime, frames);
-    update_public_port_meters(runtime, frames);
     runtime->has_processed = true;
     return true;
 }
@@ -1231,8 +1146,6 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     free(runtime->param_defaults);
     free(runtime->param_targets);
     free(runtime->param_smoothing_remaining_frames);
-    free(runtime->input_meters);
-    free(runtime->output_meters);
     free(runtime->signals);
     free(runtime->signal_pool);
     memset(runtime, 0, sizeof(*runtime));
