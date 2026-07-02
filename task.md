@@ -30,7 +30,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PB1: Audit `src/apgcore` and `inc/apgcore` for remaining boundary leaks between parser, validator, compiler, runtime image, runtime, measure, and host APIs.
 - [x] PB2: Move any remaining host/tooling read concerns out of `runtime_v2` into `measure_v2` compatibility wrappers.
 - [x] PB3: Tighten runtime-image ownership so runtime initialization consumes precomputed layout metadata instead of recomputing resource registration.
-- [ ] PB4: Add fixed-memory/static-image readiness checks for generated M7 export artifacts.
+- [x] PB4: Add fixed-memory/static-image readiness checks for generated M7 export artifacts.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -71,6 +71,8 @@ Module note: Core boundary audit now records remaining runtime/measure/image lea
 Module note: Host and tooling tests now read runtime diagnostics and transport state through measure APIs.
 
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
+
+Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 
 Pending tests to record for PB:
 

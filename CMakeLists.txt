@@ -200,5 +200,13 @@ add_test(NAME test_apg_v2_cli_m7_export_header COMMAND ${CMAKE_COMMAND} -E cat $
 set_tests_properties(test_apg_v2_cli_m7_export_header PROPERTIES
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_bundle
-        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_NODE_COUNT 4u"
+        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_NODE_COUNT 4u.*APG_M7_PROJECT_USES_RUNTIME_YAML 0u.*APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u"
+)
+
+add_test(NAME test_apg_v2_cli_m7_export_source_static COMMAND ${CMAKE_COMMAND} -E cat ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c)
+set_tests_properties(test_apg_v2_cli_m7_export_source_static PROPERTIES
+        LABELS v2
+        DEPENDS test_apg_v2_cli_m7_export_bundle
+        PASS_REGULAR_EXPRESSION "const uint32_t apg_m7_project_schedule\\[APG_M7_PROJECT_SCHEDULE_COUNT\\].*const char \\*const apg_m7_project_nodes\\[APG_M7_PROJECT_NODE_COUNT\\]"
+        FAIL_REGULAR_EXPRESSION "malloc|calloc|realloc|free|uc_arena|yaml|load_resolved|runtime_init"
 )

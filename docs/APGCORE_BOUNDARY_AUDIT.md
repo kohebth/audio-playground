@@ -26,6 +26,10 @@ Host/tooling-facing render, smoke, load-all, offline-chain, hall-render, and pro
 
 Runtime image now records per-node atom storage sizes and state-buffer counts. Runtime initialization consumes those image layouts instead of recomputing storage sizes and buffer counts directly from atom metadata.
 
+## PB4 Progress
+
+M7 static export artifacts declare no runtime YAML parser and no dynamic allocation. CTest now checks generated source for static schedule/node tables and rejects allocation, YAML, loader, or runtime-init symbols.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

@@ -174,6 +174,8 @@ static bool write_m7_header(const char *path, const apg_project_v2_compiled_t *c
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_COUNT %zuu\n", compiled->expanded_unit.signals_len);
     fprintf(out, "#define APG_M7_PROJECT_NODE_COUNT %zuu\n", compiled->plan.nodes_len);
     fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_COUNT %zuu\n\n", compiled->plan.schedule_len);
+    fputs("#define APG_M7_PROJECT_USES_RUNTIME_YAML 0u\n", out);
+    fputs("#define APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u\n\n", out);
     fputs("extern const char apg_m7_project_name[];\n", out);
     fputs("extern const uint32_t apg_m7_project_schedule[APG_M7_PROJECT_SCHEDULE_COUNT];\n", out);
     fputs("extern const char *const apg_m7_project_nodes[APG_M7_PROJECT_NODE_COUNT];\n", out);

@@ -57,4 +57,4 @@ Golden fixtures for frontend tests live under `test/golden/`.
 
 `export --target wasm_realtime` returns `apg.project.export.v1` with `ok:false` and `APG_EXPORT_BLOCKED` until the WASM AudioWorklet bundle generator is implemented.
 
-`export --target m7_static` validates target compatibility. Compatible projects emit `apg_project_m7.h` and `apg_project_m7.c` with bounded C11 tables and no runtime YAML parser. Unsupported units return stable diagnostics.
+`export --target m7_static` validates target compatibility. Compatible projects emit `apg_project_m7.h` and `apg_project_m7.c` with bounded C11 tables and no runtime YAML parser. The header declares `APG_M7_PROJECT_USES_RUNTIME_YAML 0u` and `APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u`; CTest rejects generated source that contains allocation, YAML, loader, or runtime-init symbols. Unsupported units return stable diagnostics.
