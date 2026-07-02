@@ -35,7 +35,8 @@ During implementation phases, use focused verification before commits. For web c
 - [x] PA5a: Audit and deprecate v1 runtime/control/unit-loader paths without removing still-tested legacy code.
 - [x] PA5b1: Migrate explicit-frame runtime process coverage from v1 runtime to APGCore v2.
 - [x] PA5b2: Migrate control transition coverage from v1 ctrl/runtime adapters to APGCore v2.
-- [ ] PA5b3: Remove unused v1 code after migrating or deleting remaining legacy tests, live paths, and fixtures.
+- [x] PA5b3: Migrate unit fixture load-all smoke coverage from v1 units to APGCore v2.
+- [ ] PA5b4: Remove unused v1 code after migrating or deleting remaining legacy tests, live paths, and fixtures.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -52,6 +53,8 @@ Module note: V1 public APIs are now fenced as opt-in deprecated and legacy tests
 Module note: Explicit-frame runtime capacity coverage now exercises APGCore v2 instead of v1.
 
 Module note: Control transition coverage now exercises APGCore v2 control-port smoothing.
+
+Module note: Unit fixture load-all smoke now exercises APGCore v2 host loading and mono runtime processing.
 
 ### Foundation and Adapters
 

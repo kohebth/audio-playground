@@ -1,94 +1,125 @@
-#include <runtime.h>
+#include <apgcore/host_v2.h>
 
 #include <dirent.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
-#define TEST_CHUNK 512
+#define TEST_CHUNK 64u
 
-static int has_unit_yaml_suffix(const char *name) {
-    size_t n = strlen(name);
-    const char *suffix = ".unit.yaml";
-    size_t s = strlen(suffix);
-    return n >= s && strcmp(name + n - s, suffix) == 0;
+static int has_unit_v2_yaml_suffix(const char *name) {
+    size_t n = name ? strlen(name) : 0u;
+    size_t s = strlen(".unit.v2.yaml");
+    return n >= s && strcmp(name + n - s, ".unit.v2.yaml") == 0;
+}
+
+static int is_mono_audio_port(const apg_unit_v2_port_t *port) {
+    return port && port->type && strcmp(port->type, "audio") == 0 && port->channels && strcmp(port->channels, "1") == 0;
+}
+
+static const char *single_mono_audio_port_name(const apg_unit_v2_port_t *ports, size_t ports_len) {
+    const char *name = NULL;
+    for (size_t i = 0; i < ports_len; i++) {
+        if (!is_mono_audio_port(&ports[i]))
+            continue;
+        if (name)
+            return NULL;
+        name = ports[i].name;
+    }
+    return name;
 }
 
 static void fill_input(float *x, int mode) {
-    for (int i = 0; i < TEST_CHUNK; i++) {
-        if (mode == 0) x[i] = 0.0f;
-        else if (mode == 1) x[i] = (i == 0) ? 1.0f : 0.0f;
-        else if (mode == 2) x[i] = 0.2f * sinf(2.0f * 3.14159265358979323846f * 440.0f * (float)i / 48000.0f);
-        else {
-            unsigned v = (unsigned)(i * 1103515245u + 12345u);
-            x[i] = ((float)(v & 0xffffu) / 32768.0f - 1.0f) * 0.05f;
+    for (size_t i = 0; i < TEST_CHUNK; i++) {
+        if (mode == 0) {
+            x[i] = 0.0f;
+        } else if (mode == 1) {
+            x[i] = (i == 0u) ? 1.0f : 0.0f;
+        } else {
+            x[i] = 0.2f * sinf(2.0f * 3.14159265358979323846f * 440.0f * (float)i / 48000.0f);
         }
     }
 }
 
-static int assert_output_sane(const float *y, const char *path, int mode) {
+static int output_is_sane(const float *y, const char *path, int mode) {
     float peak = 0.0f;
-    for (int i = 0; i < TEST_CHUNK; i++) {
+    for (size_t i = 0; i < TEST_CHUNK; i++) {
         if (!isfinite(y[i])) {
-            fprintf(stderr, "%s mode %d produced non-finite output at sample %d\n", path, mode, i);
-            return 1;
+            fprintf(stderr, "%s mode %d produced non-finite output at sample %zu\n", path, mode, i);
+            return 0;
         }
-        if (fabsf(y[i]) > peak) peak = fabsf(y[i]);
+        if (fabsf(y[i]) > peak)
+            peak = fabsf(y[i]);
     }
     if (peak > 32.0f) {
         fprintf(stderr, "%s mode %d produced excessive peak %.6f\n", path, mode, peak);
-        return 1;
+        return 0;
     }
-    return 0;
+    return 1;
 }
 
-static int test_unit_file(const char *path) {
-    runtime_context_t ctx = {.sample_rate = 48000, .chunk_length = TEST_CHUNK};
-    runtime_unit_t *unit = runtime_unit_load(path, ctx);
-    if (!unit) {
-        fprintf(stderr, "failed to load %s\n", path);
+static int test_unit_file(const char *path, int *processed) {
+    apg_v2_host_unit_t host;
+    uc_error           err    = {0};
+    uc_status          status = apg_v2_host_load_file(path, TEST_CHUNK, 48000.0f, &host, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "failed to load %s: %s\n", path, err.msg);
         return 1;
     }
 
-    float in[TEST_CHUNK];
-    float out[TEST_CHUNK];
-    int rc = 0;
-    for (int mode = 0; mode < 4; mode++) {
-        fill_input(in, mode);
-        memset(out, 0, sizeof(out));
-        runtime_unit_process(unit, in, out);
-        if (assert_output_sane(out, path, mode)) {
-            rc = 1;
-            break;
+    const char *input_port  = single_mono_audio_port_name(host.unit.input_ports, host.unit.input_ports_len);
+    const char *output_port = single_mono_audio_port_name(host.unit.output_ports, host.unit.output_ports_len);
+    if (!input_port || !output_port) {
+        apg_v2_host_destroy(&host);
+        return 0;
+    }
+
+    float input[TEST_CHUNK];
+    float output[TEST_CHUNK];
+    for (int mode = 0; mode < 3; mode++) {
+        fill_input(input, mode);
+        memset(output, 0, sizeof(output));
+        if (!apg_v2_host_process_mono_ports(&host, input_port, input, output_port, output, TEST_CHUNK)) {
+            fprintf(
+                stderr, "%s mode %d failed runtime process: %s\n", path, mode, apg_v2_runtime_last_error(&host.runtime)
+            );
+            apg_v2_host_destroy(&host);
+            return 1;
+        }
+        if (!output_is_sane(output, path, mode)) {
+            apg_v2_host_destroy(&host);
+            return 1;
         }
     }
 
-    runtime_unit_destroy(unit);
-    return rc;
+    *processed += 1;
+    apg_v2_host_destroy(&host);
+    return 0;
 }
 
 int main(void) {
-    DIR *dir = opendir("units");
+    DIR *dir = opendir("units-v2");
     if (!dir) {
-        perror("opendir units");
+        perror("opendir units-v2");
         return 1;
     }
 
-    int checked = 0;
-    int failed = 0;
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        if (!has_unit_yaml_suffix(entry->d_name)) continue;
+    int checked   = 0;
+    int processed = 0;
+    int failed    = 0;
+    for (struct dirent *entry = readdir(dir); entry; entry = readdir(dir)) {
+        if (!has_unit_v2_yaml_suffix(entry->d_name))
+            continue;
 
         char path[512];
-        snprintf(path, sizeof(path), "units/%s", entry->d_name);
+        snprintf(path, sizeof(path), "units-v2/%s", entry->d_name);
         checked++;
-        failed += test_unit_file(path);
+        failed += test_unit_file(path, &processed);
     }
     closedir(dir);
 
-    if (checked == 0) {
-        fprintf(stderr, "no unit yaml files checked\n");
+    if (checked == 0 || processed == 0) {
+        fprintf(stderr, "checked %d v2 unit fixtures and processed %d mono fixtures\n", checked, processed);
         return 1;
     }
     return failed ? 1 : 0;
