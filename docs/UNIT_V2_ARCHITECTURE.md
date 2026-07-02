@@ -40,3 +40,5 @@ The loader and compiler write all parsed unit data, binding arrays, schedules, a
 The runtime image borrows the compiled plan and stores arena-owned metadata/default/layout tables. The runtime borrows both the image-derived plan metadata and owns only its heap allocations: signal pool, signal pointer table, parameter/default/target values, control target table, per-node call storage, and descriptor-sized state buffers. Runtime lookup APIs return pointers into owned buffers; callers must not free them and must stop using them after `apg_v2_runtime_destroy(...)`. Destroying a runtime frees only runtime-owned memory and does not free the arena, runtime image, or compiled plan.
 
 Current limits: control ports update params only, atom in/out fields are bound by compiled binding order, and state allocation currently covers `FIELD_BUFFER` descriptors with atom-declared capacities. The v1 runtime/unit/YAML paths are legacy; see `docs/V1_DEPRECATION_AUDIT.md` before removing anything.
+
+For STM32H7/M7 deployment boundaries, see `docs/STM32H7_M7_BOARD_INTEGRATION.md`.

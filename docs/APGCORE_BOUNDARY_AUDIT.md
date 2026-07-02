@@ -42,6 +42,10 @@ M7 static export accepts `--max-static-ram <bytes>` and rejects compatible bundl
 
 M7 static export tests now run an ARM/M7 freestanding syntax check for generated bundles when `APG_M7_C_COMPILER` or `arm-none-eabi-gcc` is available. Without a configured toolchain, CTest records an explicit skipped-gate message.
 
+## PC4 Progress
+
+`docs/STM32H7_M7_BOARD_INTEGRATION.md` defines the fixed-block audio callback, DMA ownership, cache maintenance, memory placement, control, and measure contract expected from a future STM32H7 board support package.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.
