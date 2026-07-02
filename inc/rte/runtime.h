@@ -5,6 +5,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#if defined(APG_ENABLE_V1_DEPRECATED_WARNINGS)
+#if defined(__GNUC__) || defined(__clang__)
+#define APG_V1_DEPRECATED __attribute__((deprecated("APG v1 runtime is legacy; use APGCore v2 runtime/image APIs")))
+#else
+#define APG_V1_DEPRECATED
+#endif
+#else
+#define APG_V1_DEPRECATED
+#endif
+
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
@@ -96,19 +106,21 @@ typedef struct {
 // Public API
 // ─────────────────────────────────────────────
 
+// Legacy v1 runtime API. Keep only while v1 tests, units/, and optional live tooling depend on it.
+
 // Load a unit from a YAML file and instantiate it
-runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx);
+APG_V1_DEPRECATED runtime_unit_t *runtime_unit_load(const char *yaml_path, runtime_context_t ctx);
 
 // Process one chunk of audio through the unit using ctx.chunk_length frames
-void runtime_unit_process(runtime_unit_t *unit, float *in, float *out);
+APG_V1_DEPRECATED void runtime_unit_process(runtime_unit_t *unit, float *in, float *out);
 
 // Process an explicit frame count up to the unit's allocated chunk capacity
-bool runtime_unit_process_frames(runtime_unit_t *unit, float *in, float *out, uint32_t frames);
+APG_V1_DEPRECATED bool runtime_unit_process_frames(runtime_unit_t *unit, float *in, float *out, uint32_t frames);
 
 // Update a user-facing parameter by name
-bool runtime_unit_set_param(runtime_unit_t *unit, const char *name, float value);
+APG_V1_DEPRECATED bool runtime_unit_set_param(runtime_unit_t *unit, const char *name, float value);
 
 // Free all resources
-void runtime_unit_destroy(runtime_unit_t *unit);
+APG_V1_DEPRECATED void runtime_unit_destroy(runtime_unit_t *unit);
 
 #endif // AUDIO_PLAYGROUND_RUNTIME_H

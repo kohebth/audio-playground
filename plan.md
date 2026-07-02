@@ -32,7 +32,8 @@ During implementation phases, use focused verification before commits. For web c
 - [x] PA2: Split unit/project semantic checks into validator modules while preserving current public loader APIs.
 - [x] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
 - [x] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
-- [ ] PA5: Deprecate and remove unused v1 code after auditing which legacy runtime, unit, and YAML paths are no longer needed.
+- [x] PA5a: Audit and deprecate v1 runtime/control/unit-loader paths without removing still-tested legacy code.
+- [ ] PA5b: Remove unused v1 code after migrating or deleting remaining legacy tests, live paths, and fixtures.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -43,6 +44,8 @@ Module note: Runtime image now precomputes layout/defaults/control targets befor
 Module note: Measure v2 now exposes runtime snapshots, meters, and diagnostics for host/tooling reads.
 
 Note: v1 code is legacy. Audit, deprecate, and remove unused v1 runtime/unit/YAML paths only after confirming no tests, fixtures, or host tools still depend on them.
+
+Module note: V1 public APIs are now fenced as opt-in deprecated and legacy tests are labelled.
 
 ### Foundation and Adapters
 
