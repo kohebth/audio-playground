@@ -62,13 +62,13 @@ if(PIPEWIRE_FOUND)
     )
     target_link_libraries(live "${PIPEWIRE_LIB}" m)
 
-    add_executable(test_runtime
-            src/test_runtime.c
-            src/util/fast_chunk.c
-            ${UTIL_SOURCES}
-    )
-    target_link_libraries(test_runtime "${PIPEWIRE_LIB}" m)
 endif()
+
+add_executable(test_runtime
+        src/test_runtime.c
+        ${UTIL_SOURCES}
+)
+target_link_libraries(test_runtime m)
 
 add_executable(fast_math_test
         src/fast_math_test.c

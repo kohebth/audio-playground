@@ -4,7 +4,7 @@ APG v1 is legacy and should be removed only after the remaining default-build de
 
 ## Still Active
 
-- `src/rte/runtime.c` and `inc/rte/runtime.h`: used by `src/live.c` and `src/test_runtime.c` when PipeWire targets are enabled.
+- `src/rte/runtime.c` and `inc/rte/runtime.h`: used by `src/live.c` when PipeWire targets are enabled.
 - `src/ctrl/ctrls.c` and `inc/ctrl/ctrls.h`: used by optional live control paths.
 - `src/unit/*.c` and `inc/unit/*.h`: fixed-size v1 adapters still covered by adapter tests.
 - `src/yaml/loader.c` and `inc/yaml/loader.h`: v1 unit loader; the lower-level YAML lexer/parser is shared by v2 parser wrappers and must not be removed.
@@ -19,11 +19,12 @@ APG v1 is legacy and should be removed only after the remaining default-build de
 - `test_unit_load_all` has been migrated to APGCore v2 fixture load/compile/runtime smoke coverage.
 - `test_offline_chain` has been migrated to an APGCore v2 project runtime offline-chain regression.
 - `test_hall_reverb` has been migrated to an in-memory APGCore v2 pedalboard offline-render regression.
+- `src/test_runtime.c` has been migrated to an APGCore v2 host smoke utility and now builds without PipeWire.
 - v2 parser, validator, compiler, runtime image, runtime, and measure modules are the production path.
 
 ## Removal Blockers
 
-- Migrate or retire PipeWire-only `src/live.c` and `src/test_runtime.c`.
+- Migrate or retire PipeWire-only `src/live.c`.
 - Decide whether `src/live.c` should move to APGCore v2 or be removed.
 - Replace any needed `units/*.unit.yaml` fixtures with `units-v2/*.unit.v2.yaml` or project-v2 fixtures.
 - Keep `src/yaml/arena.c`, `lexer.c`, `parser.c`, and shared node/error utilities unless a replacement parser is chosen.

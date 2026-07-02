@@ -1,54 +1,64 @@
-#include <runtime.h>
-#include <stdio.h>
+#include <apgcore/host_v2.h>
+
 #include <math.h>
+#include <stdio.h>
 
-int main() {
-    runtime_context_t rt_ctx = {.sample_rate = 48000, .chunk_length = 512};
-    runtime_unit_t *unit = runtime_unit_load("../units/electric_piano.unit.yaml", rt_ctx);
-    if (!unit) {
-        printf("Failed to load unit\n");
-        return 1;
+#define TEST_FRAMES 512u
+
+static int fail(const char *msg) {
+    fprintf(stderr, "FAIL: %s\n", msg);
+    return 1;
+}
+
+static void fill_input(float *input, int chunk) {
+    for (uint32_t i = 0; i < TEST_FRAMES; i++) {
+        uint32_t n = (uint32_t)chunk * TEST_FRAMES + i;
+        float    t = (float)n / 48000.0f;
+        input[i]   = 0.2f * sinf(2.0f * 3.14159265358979323846f * 220.0f * t);
     }
-    
-    float in[512] = {0};
-    float out[512];
-    
-    // Find the latched_freq signal to monitor it
-    float *latched_freq_sig = NULL;
-    for (int i = 0; i < unit->n_signals; i++) {
-        if (strcmp(unit->signals[i].name, "latched_freq") == 0) {
-            latched_freq_sig = unit->signals[i].buffer;
-            break;
-        }
-    }
-    
-    FILE *fp = fopen("../units/test_audio.raw", "rb");
-    if (!fp) {
-        printf("Failed to open test_audio.raw\n");
-        return 1;
+}
+
+int main(void) {
+    apg_v2_host_unit_t host;
+    uc_error           err = {0};
+    uc_status status = apg_v2_host_load_file("units-v2/simple_gain.unit.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "load error: %s\n", err.msg);
+        return fail("failed to load v2 runtime smoke unit");
     }
 
-    int chunk = 0;
-    while (fread(in, sizeof(float), 512, fp) == 512) {
-        runtime_unit_process(unit, in, out);
-        
-        float rms = 0;
-        for(int i=0; i<512; i++) rms += out[i] * out[i];
-        rms = sqrtf(rms / 512.0f);
-        
-        float track_f = 0.0f, quant_f = 0.0f, latch_f = 0.0f;
-        for (int i = 0; i < unit->n_signals; i++) {
-            if (strcmp(unit->signals[i].name, "tracked_freq") == 0) track_f = unit->signals[i].buffer[0];
-            if (strcmp(unit->signals[i].name, "quantized_freq") == 0) quant_f = unit->signals[i].buffer[0];
-            if (strcmp(unit->signals[i].name, "latched_freq") == 0) latch_f = unit->signals[i].buffer[0];
-        }
-        
-        if (latch_f > 0.0f || track_f > 0.0f) {
-            printf("Chunk %3d: RMS=%.6f, Tracked=%.2f, Quantized=%.2f, Latched=%.2f\n", chunk, rms, track_f, quant_f, latch_f);
-        }
-        chunk++;
+    if (!apg_v2_host_set_param(&host, "gain", 1.5f)) {
+        apg_v2_host_destroy(&host);
+        return fail("failed to set v2 runtime smoke gain");
     }
-    
-    fclose(fp);
-    return 0;
+
+    float  input[TEST_FRAMES];
+    float  output[TEST_FRAMES];
+    double sum_sq = 0.0;
+    float  peak   = 0.0f;
+    for (int chunk = 0; chunk < 8; chunk++) {
+        fill_input(input, chunk);
+        if (!apg_v2_host_process_mono_ports(&host, "input", input, "output", output, TEST_FRAMES)) {
+            fprintf(stderr, "runtime error: %s\n", apg_v2_runtime_last_error(&host.runtime));
+            apg_v2_host_destroy(&host);
+            return fail("v2 runtime smoke processing failed");
+        }
+
+        for (uint32_t i = 0; i < TEST_FRAMES; i++) {
+            if (!isfinite(output[i])) {
+                apg_v2_host_destroy(&host);
+                return fail("v2 runtime smoke produced non-finite output");
+            }
+            float a = fabsf(output[i]);
+            if (a > peak)
+                peak = a;
+            sum_sq += (double)output[i] * (double)output[i];
+        }
+    }
+
+    double rms = sqrt(sum_sq / (double)(8u * TEST_FRAMES));
+    printf("v2 runtime smoke: peak=%.6f rms=%.6f\n", peak, rms);
+
+    apg_v2_host_destroy(&host);
+    return (peak > 1e-6f && peak < 0.4f && rms > 1e-7 && rms < 0.3) ? 0 : fail("v2 runtime smoke output out of range");
 }
