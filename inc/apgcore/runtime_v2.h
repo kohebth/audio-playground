@@ -9,6 +9,7 @@
 #include <apgcore/process.h>
 #include <apgcore/runtime_image_v2.h>
 #include <atom_registry.h>
+#include <yaml/arena.h>
 #include <yaml/error.h>
 
 typedef struct {
@@ -23,12 +24,12 @@ typedef struct {
     float                                **signal_array_pool;
     size_t                                 signal_array_pool_len;
     size_t                                 signal_array_pool_used;
+    const apg_v2_runtime_signal_binding_t *signal_bindings;
+    size_t                                 signal_bindings_len;
     const apg_v2_runtime_scalar_refresh_t *config_refreshes;
     size_t                                 config_refreshes_len;
     const apg_v2_runtime_scalar_refresh_t *input_refreshes;
     size_t                                 input_refreshes_len;
-    void                                 **aux_blocks;
-    size_t                                 aux_blocks_len;
 } apg_v2_runtime_node_t;
 
 typedef struct {
@@ -57,6 +58,8 @@ typedef struct {
     size_t                           control_targets_len;
     bool                             project_muted;
     bool                             project_soloed;
+    bool                             image_arena_ready;
+    uc_arena                         image_arena;
     apg_v2_meter_snapshot_t         *input_meters;
     size_t                           input_meters_len;
     apg_v2_meter_snapshot_t         *output_meters;

@@ -619,6 +619,11 @@ uc_status apg_v2_runtime_init(
         uc_status status = apg_v2_runtime_image_build(plan, frame_capacity, sample_rate, &image_arena, &image, err);
         if (status == UC_OK) {
             status = apg_v2_runtime_init_from_image(&image, out, err);
+            if (status == UC_OK) {
+                out->image_arena_ready = true;
+                out->image_arena       = image_arena;
+                return UC_OK;
+            }
             uc_arena_free(&image_arena);
             return status;
         }
@@ -1206,6 +1211,9 @@ const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime) { return 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     if (!runtime)
         return;
+
+    if (runtime->image_arena_ready)
+        uc_arena_free(&runtime->image_arena);
 
     for (size_t i = 0; i < runtime->nodes_len; i++) {
         free(runtime->nodes[i].state_buffers);
