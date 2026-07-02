@@ -15,12 +15,13 @@ typedef struct {
 } apg_v2_runtime_control_target_t;
 
 typedef struct {
-    size_t out_size;
-    size_t in_size;
-    size_t config_size;
-    size_t state_size;
-    size_t state_buffers_len;
-    size_t state_buffer_samples;
+    size_t  out_size;
+    size_t  in_size;
+    size_t  config_size;
+    size_t  state_size;
+    size_t *state_buffer_samples_by_index;
+    size_t  state_buffers_len;
+    size_t  state_buffer_samples;
 } apg_v2_runtime_node_layout_t;
 
 typedef struct {

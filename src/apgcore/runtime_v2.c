@@ -580,7 +580,10 @@ static uc_status init_state_buffers(
         const atom_field_desc_t *field = &atom->state_fields[i];
         if (field->type != FIELD_BUFFER)
             continue;
-        if (field->buffer_samples == 0u) {
+        size_t buffer_samples = layout->state_buffer_samples_by_index
+                                    ? layout->state_buffer_samples_by_index[buffer_index]
+                                    : field->buffer_samples;
+        if (buffer_samples == 0u) {
             char msg[192];
             snprintf(
                 msg, sizeof(msg), "node '%s' atom '%s' state binding key '%s' is missing buffer capacity",
@@ -588,7 +591,7 @@ static uc_status init_state_buffers(
             );
             return set_error(err, UC_E_MISSING, msg);
         }
-        float *buffer = calloc(field->buffer_samples, sizeof(*buffer));
+        float *buffer = calloc(buffer_samples, sizeof(*buffer));
         if (!buffer) {
             char msg[192];
             snprintf(
@@ -598,7 +601,7 @@ static uc_status init_state_buffers(
             return set_error(err, UC_E_OOM, msg);
         }
         node->state_buffers[buffer_index]        = buffer;
-        node->state_buffer_samples[buffer_index] = field->buffer_samples;
+        node->state_buffer_samples[buffer_index] = buffer_samples;
         buffer_index++;
         float **field_ptr = (float **)((char *)node->state_storage + field->offset);
         *field_ptr        = buffer;

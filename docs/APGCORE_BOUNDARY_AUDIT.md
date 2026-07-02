@@ -15,7 +15,7 @@
 
 - Runtime still stores meter buffers and updates meter snapshots after processing. Keep this as an implementation detail for now, but host/tooling callers should use `measure_v2`.
 - `apg_v2_runtime_init(...)` remains a compatibility wrapper that builds a temporary runtime image. Production host/export paths should prefer `apg_v2_runtime_image_build(...)` plus `apg_v2_runtime_init_from_image(...)`.
-- Runtime node initialization still binds atom storage from compiled bindings. PB3 should move more binding layout decisions into runtime-image descriptors before STM32H7 static export is considered ready.
+- Runtime node initialization still binds signal and scalar config pointers from compiled bindings. Continue moving fixed layout decisions into runtime-image descriptors before STM32H7 static export is considered ready.
 - Project mute, solo, and instance bypass are runtime controls today. Future host/control design should decide whether these become precompiled control targets or remain runtime-owned transport state.
 
 ## PB2 Progress
@@ -45,6 +45,10 @@ M7 static export tests now run an ARM/M7 freestanding syntax check for generated
 ## PC4 Progress
 
 `docs/STM32H7_M7_BOARD_INTEGRATION.md` defines the fixed-block audio callback, DMA ownership, cache maintenance, memory placement, control, and measure contract expected from a future STM32H7 board support package.
+
+## PD1 Progress
+
+Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.
 
 ## Immediate Direction
 

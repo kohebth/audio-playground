@@ -66,6 +66,8 @@ static int test_runtime_image_layout(void) {
     if (!image.node_layouts || image.node_layouts[0].out_size == 0u || image.node_layouts[0].in_size == 0u ||
         image.node_layouts[0].config_size == 0u || image.node_layouts[0].state_size == 0u)
         return fail("unexpected runtime image node layout");
+    if (image.node_layouts[0].state_buffer_samples_by_index)
+        return fail("stateless node should not have state buffer sample layout");
 
     apg_v2_runtime_t runtime;
     status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
@@ -93,6 +95,55 @@ static int test_runtime_image_layout(void) {
     }
 
     apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&image_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_runtime_image_state_buffer_samples(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_fixture("units-v2/delay_line_state.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 4096) != 0) {
+        uc_arena_free(&arena);
+        return fail("image arena init failed");
+    }
+
+    apg_v2_runtime_image_t image;
+    uc_error               err    = {0};
+    uc_status              status = apg_v2_runtime_image_build(&plan, 64u, 48000.0f, &image_arena, &image, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime image error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to build stateful runtime image");
+    }
+
+    size_t stateful_layouts = 0u;
+    for (size_t i = 0; i < image.nodes_len; i++) {
+        const apg_v2_runtime_node_layout_t *layout = &image.node_layouts[i];
+        if (layout->state_buffers_len == 0u)
+            continue;
+        stateful_layouts++;
+        if (!layout->state_buffer_samples_by_index)
+            return fail("stateful node is missing state buffer sample layout");
+        for (size_t j = 0; j < layout->state_buffers_len; j++) {
+            if (layout->state_buffer_samples_by_index[j] == 0u)
+                return fail("state buffer sample layout did not preserve capacity");
+        }
+    }
+    if (stateful_layouts == 0u || image.state_buffers_len == 0u || image.state_buffer_samples == 0u)
+        return fail("expected stateful runtime image layout");
+
     uc_arena_free(&image_arena);
     uc_arena_free(&arena);
     return 0;
@@ -152,6 +203,8 @@ static int test_runtime_image_control_targets(void) {
 
 int main(void) {
     if (test_runtime_image_layout())
+        return 1;
+    if (test_runtime_image_state_buffer_samples())
         return 1;
     return test_runtime_image_control_targets();
 }

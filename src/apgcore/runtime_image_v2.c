@@ -113,10 +113,24 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         layout->in_size     = atom_storage_size(atom->in_size);
         layout->config_size = atom_storage_size(atom->config_size);
         layout->state_size  = atom_storage_size(atom->state_size);
+
+        for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
+            if (atom->state_fields[field_index].type == FIELD_BUFFER)
+                layout->state_buffers_len++;
+        }
+        if (layout->state_buffers_len > 0u) {
+            layout->state_buffer_samples_by_index = uc_arena_alloc(
+                arena, layout->state_buffers_len * sizeof(*layout->state_buffer_samples_by_index), sizeof(size_t)
+            );
+            if (!layout->state_buffer_samples_by_index)
+                return set_error(err, UC_E_OOM, "v2 runtime image state buffer layout allocation failed");
+        }
+
+        size_t buffer_index = 0u;
         for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
             if (atom->state_fields[field_index].type != FIELD_BUFFER)
                 continue;
-            layout->state_buffers_len++;
+            layout->state_buffer_samples_by_index[buffer_index++] = atom->state_fields[field_index].buffer_samples;
             layout->state_buffer_samples += atom->state_fields[field_index].buffer_samples;
         }
         out->state_buffers_len += layout->state_buffers_len;

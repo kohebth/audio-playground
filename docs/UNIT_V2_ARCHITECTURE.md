@@ -27,7 +27,7 @@ The compiler treats public audio inputs as initially available, then repeatedly 
 
 ## Runtime MVP
 
-`apg_v2_runtime_image_build(...)` creates an arena-owned runtime image descriptor from a compiled plan. It precomputes signal, param, meter, per-node atom storage, schedule, state-buffer, and control-target layout metadata without allocating audio/runtime buffers.
+`apg_v2_runtime_image_build(...)` creates an arena-owned runtime image descriptor from a compiled plan. It precomputes signal, param, meter, per-node atom storage, schedule, state-buffer count/capacity, and control-target layout metadata without allocating audio/runtime buffers.
 
 `apg_v2_runtime_init_from_image(...)` creates `apg_v2_runtime_t` from that descriptor. `apg_v2_runtime_init(...)` remains a compatibility wrapper that builds a temporary image first. The runtime owns signal buffers, param/default tables, image-derived control targets, and per-node `atom_call_t` storage. `apg_v2_runtime_find_input_port_signal(...)` and `apg_v2_runtime_find_output_port_signal(...)` expose the first channel of named public audio ports, while explicit channel APIs expose mapped channel buffers. `apg_v2_runtime_set_control_port(...)` uses the runtime image control target table. `apg_v2_runtime_reset(...)` clears signal buffers, restores image-derived param defaults, and resets state storage while preserving internal buffer pointers. Processing APIs copy named external buffers, refresh scalar bindings, execute the compiled schedule through atom thunks, update meters, and copy outputs back to the caller.
 

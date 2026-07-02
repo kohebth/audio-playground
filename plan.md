@@ -114,6 +114,14 @@ Module note: M7 export syntax is now checked by an ARM/M7 compiler when configur
 
 Module note: STM32H7 board integration now has a fixed-block DMA/cache contract.
 
+### Runtime Image Hardening
+
+- [x] PD1: Move per-node state-buffer sample capacities into runtime image metadata.
+- [ ] PD2: Move signal-array auxiliary allocation sizing into runtime image metadata.
+- [ ] PD3: Precompute scalar config/input refresh plans so runtime processing does not scan binding keys.
+
+Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
+
 ### Foundation and Adapters
 
 - [x] Added `apg_process_info_t` and routed atom execution through explicit process metadata.
