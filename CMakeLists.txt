@@ -147,10 +147,10 @@ foreach(TEST_TARGET ${TEST_TARGETS})
     set_tests_properties(${TEST_TARGET} PROPERTIES
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
-    if(TEST_TARGET MATCHES "^test_unit_v2_" OR TEST_TARGET STREQUAL "test_unit_load_all" OR TEST_TARGET STREQUAL "test_atom_catalog" OR TEST_TARGET STREQUAL "test_contract_parser_v2" OR TEST_TARGET STREQUAL "test_contract_validator_v2" OR TEST_TARGET STREQUAL "test_runtime_image_v2" OR TEST_TARGET STREQUAL "test_measure_v2" OR TEST_TARGET MATCHES "^test_project_v2_" OR TEST_TARGET STREQUAL "test_v2_json_contract")
+    if(TEST_TARGET MATCHES "^test_unit_v2_" OR TEST_TARGET STREQUAL "test_unit_load_all" OR TEST_TARGET STREQUAL "test_offline_chain" OR TEST_TARGET STREQUAL "test_atom_catalog" OR TEST_TARGET STREQUAL "test_contract_parser_v2" OR TEST_TARGET STREQUAL "test_contract_validator_v2" OR TEST_TARGET STREQUAL "test_runtime_image_v2" OR TEST_TARGET STREQUAL "test_measure_v2" OR TEST_TARGET MATCHES "^test_project_v2_" OR TEST_TARGET STREQUAL "test_v2_json_contract")
         set_tests_properties(${TEST_TARGET} PROPERTIES LABELS v2)
     endif()
-    if(TEST_TARGET STREQUAL "test_offline_chain" OR TEST_TARGET STREQUAL "test_hall_reverb")
+    if(TEST_TARGET STREQUAL "test_hall_reverb")
         set_tests_properties(${TEST_TARGET} PROPERTIES LABELS legacy_v1)
     endif()
 endforeach()

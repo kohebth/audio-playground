@@ -1,142 +1,103 @@
-#include <apgcore/host_v2.h>
-#include <ctrl/ctrls.h>
-#include <runtime.h>
+#include <apgcore/project_compiler_v2.h>
+#include <apgcore/runtime_v2.h>
 
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 
-#define TEST_CHUNK 512
+#define TEST_CHUNK 512u
 
 static int fail(const char *msg) {
     fprintf(stderr, "FAIL: %s\n", msg);
     return 1;
 }
 
-static int process_ctrl(ctrl_unit_t *ctrl, const float *input, float *output) {
-    float in_copy[TEST_CHUNK];
-    memcpy(in_copy, input, sizeof(in_copy));
-    ctrl_unit_process(ctrl, in_copy, output);
-    for (int i = 0; i < TEST_CHUNK; i++) {
-        if (!isfinite(output[i]))
-            return 1;
+static int load_compile_project(
+    const char *path, uc_arena *arena, apg_project_v2_resolved_t *project, apg_project_v2_compiled_t *compiled
+) {
+    uc_error  err    = {0};
+    uc_status status = apg_project_v2_load_resolved_file(path, arena, project, &err);
+    if (status == UC_OK)
+        status = apg_project_v2_compile(project, arena, compiled, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "project setup error: %s\n", err.msg);
+        return 1;
     }
     return 0;
 }
 
-static int run_v2_host_regression(void) {
-    apg_v2_host_unit_t host;
-    uc_error           err = {0};
-    uc_status status = apg_v2_host_load_file("units-v2/simple_gain.unit.v2.yaml", TEST_CHUNK, 48000.0f, &host, &err);
-    if (status != UC_OK) {
-        fprintf(stderr, "v2 host load error: %s\n", err.msg);
-        return fail("failed to load v2 regression fixture");
-    }
-    if (!apg_v2_host_set_param(&host, "gain", 1.75f))
-        return fail("failed to set v2 regression gain");
-
-    float  input[TEST_CHUNK];
-    float  output[TEST_CHUNK];
-    float  peak         = 0.0f;
-    double sum_sq       = 0.0;
-    int    sample_count = 0;
-    for (int chunk = 0; chunk < 64; chunk++) {
-        for (int i = 0; i < TEST_CHUNK; i++) {
-            int   n    = chunk * TEST_CHUNK + i;
-            float sine = sinf(2.0f * 3.14159265358979323846f * 220.0f * (float)n / 48000.0f);
-            input[i]   = 0.1f * sine;
-        }
-        if (!apg_v2_host_process_mono_ports(&host, "input", input, "output", output, TEST_CHUNK))
-            return fail("v2 regression processing failed");
-        for (int i = 0; i < TEST_CHUNK; i++) {
-            if (!isfinite(output[i]))
-                return fail("v2 regression produced non-finite output");
-            float a = fabsf(output[i]);
-            if (a > peak)
-                peak = a;
-            sum_sq += (double)output[i] * (double)output[i];
-            sample_count++;
-        }
+static int process_chunk(apg_v2_runtime_t *runtime, int chunk, float *output, float *previous_last, double *sum_sq) {
+    float input[TEST_CHUNK];
+    for (size_t i = 0; i < TEST_CHUNK; i++) {
+        size_t n = (size_t)chunk * TEST_CHUNK + i;
+        input[i] = 0.15f * sinf(2.0f * 3.14159265358979323846f * 110.0f * (float)n / 48000.0f);
     }
 
-    double rms = sqrt(sum_sq / (double)sample_count);
-    apg_v2_host_destroy(&host);
-    if (peak <= 1e-7f || peak > 0.2f)
-        return fail("v2 regression peak is out of range");
-    if (rms <= 1e-8 || rms > 0.13)
-        return fail("v2 regression RMS is out of range");
+    if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, TEST_CHUNK)) {
+        fprintf(stderr, "runtime error: %s\n", apg_v2_runtime_last_error(runtime));
+        return fail("v2 offline chain processing failed");
+    }
+
+    for (size_t i = 0; i < TEST_CHUNK; i++) {
+        if (!isfinite(output[i]))
+            return fail("v2 offline chain produced non-finite output");
+        *sum_sq += (double)output[i] * (double)output[i];
+    }
+
+    if (chunk > 0 && fabsf(output[0] - *previous_last) > 4.0f)
+        return fail("v2 offline chain produced a large chunk-boundary discontinuity");
+    *previous_last = output[TEST_CHUNK - 1u];
     return 0;
 }
 
 int main(void) {
-    const char       *amp_path = "units/marshall_plexi_head_amp.unit.yaml";
-    const char       *cab_path = "units/marshall_4x12_greenback_cabinet.unit.yaml";
-    runtime_context_t ctx      = {.sample_rate = 48000, .chunk_length = TEST_CHUNK};
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024u * 1024u) != 0)
+        return fail("arena init failed");
 
-    runtime_unit_t *amp = runtime_unit_load(amp_path, ctx);
-    runtime_unit_t *cab = runtime_unit_load(cab_path, ctx);
-    if (!amp || !cab)
-        return fail("failed to load amp/cab chain");
+    apg_project_v2_resolved_t project;
+    apg_project_v2_compiled_t compiled;
+    if (load_compile_project("projects-v2/two-gain-chain.project.v2.yaml", &arena, &project, &compiled)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
 
-    ctrl_unit_t amp_ctrl;
-    ctrl_unit_t cab_ctrl;
-    if (!ctrl_unit_init(&amp_ctrl, amp, amp_path))
-        return fail("failed to init amp ctrl");
-    if (!ctrl_unit_init(&cab_ctrl, cab, cab_path))
-        return fail("failed to init cab ctrl");
+    apg_v2_runtime_t runtime;
+    uc_error         err = {0};
+    if (apg_v2_runtime_init(&compiled.plan, TEST_CHUNK, 48000.0f, &runtime, &err) != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize v2 offline chain");
+    }
 
-    ctrl_unit_set_smoothing_ms(&amp_ctrl, "input_gain", 80.0f);
-    ctrl_unit_set_target(&amp_ctrl, "input_gain", 8.5f);
-    ctrl_unit_set_smoothing_ms(&amp_ctrl, "presence", 50.0f);
-    ctrl_unit_set_target(&amp_ctrl, "presence", 0.8f);
+    if (!apg_v2_runtime_set_param(&runtime, "gain1.gain", 1.5f) ||
+        !apg_v2_runtime_set_param(&runtime, "gain2.gain", 2.0f))
+        return fail("failed to set v2 offline chain params");
 
-    float  input[TEST_CHUNK];
-    float  amp_out[TEST_CHUNK];
-    float  cab_out[TEST_CHUNK];
+    float  output[TEST_CHUNK];
     float  previous_last = 0.0f;
     float  peak          = 0.0f;
     double sum_sq        = 0.0;
-    int    sample_count  = 0;
-
     for (int chunk = 0; chunk < 64; chunk++) {
-        for (int i = 0; i < TEST_CHUNK; i++) {
-            int   n    = chunk * TEST_CHUNK + i;
-            float sine = sinf(2.0f * 3.14159265358979323846f * 110.0f * (float)n / 48000.0f);
-            input[i]   = 0.18f * sine;
-        }
-
-        if (process_ctrl(&amp_ctrl, input, amp_out))
-            return fail("amp produced non-finite output");
-        if (process_ctrl(&cab_ctrl, amp_out, cab_out))
-            return fail("cab produced non-finite output");
-
-        if (chunk > 0) {
-            float boundary_delta = fabsf(cab_out[0] - previous_last);
-            if (boundary_delta > 4.0f)
-                return fail("chain produced a large chunk-boundary discontinuity");
-        }
-        previous_last = cab_out[TEST_CHUNK - 1];
-
-        for (int i = 0; i < TEST_CHUNK; i++) {
-            float a = fabsf(cab_out[i]);
+        if (process_chunk(&runtime, chunk, output, &previous_last, &sum_sq))
+            return 1;
+        for (size_t i = 0; i < TEST_CHUNK; i++) {
+            float a = fabsf(output[i]);
             if (a > peak)
                 peak = a;
-            sum_sq += (double)cab_out[i] * (double)cab_out[i];
-            sample_count++;
         }
     }
 
-    double rms = sqrt(sum_sq / (double)sample_count);
-    if (peak <= 1e-7f)
-        return fail("chain output is silent");
-    if (peak > 8.0f)
-        return fail("chain output peak is excessive");
-    if (rms <= 1e-8 || rms > 2.0)
-        return fail("chain output RMS is out of range");
+    double rms = sqrt(sum_sq / (double)(64u * TEST_CHUNK));
+    if (peak <= 1e-7f || peak > 0.6f)
+        return fail("v2 offline chain peak is out of range");
+    if (rms <= 1e-8 || rms > 0.43)
+        return fail("v2 offline chain RMS is out of range");
 
-    ctrl_unit_destroy(&amp_ctrl);
-    ctrl_unit_destroy(&cab_ctrl);
-    runtime_unit_destroy(amp);
-    runtime_unit_destroy(cab);
-    return run_v2_host_regression();
+    apg_v2_meter_snapshot_t meter;
+    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) || !meter.valid || meter.frames != TEST_CHUNK)
+        return fail("v2 offline chain output meter was not updated");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
 }

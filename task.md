@@ -18,7 +18,8 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PA5b1: Migrate explicit-frame runtime process coverage from v1 runtime to APGCore v2.
 - [x] PA5b2: Migrate control transition coverage from v1 ctrl/runtime adapters to APGCore v2.
 - [x] PA5b3: Migrate unit fixture load-all smoke coverage from v1 units to APGCore v2.
-- [ ] PA5b4: Remove unused v1 code after migrating or deleting remaining legacy tests, live paths, and fixtures.
+- [x] PA5b4: Migrate offline chain regression from v1 amp/cab units to an APGCore v2 project runtime.
+- [ ] PA5b5: Remove unused v1 code after migrating or deleting remaining legacy tests, live paths, and fixtures.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -37,6 +38,8 @@ Module note: Explicit-frame runtime capacity coverage now exercises APGCore v2 i
 Module note: Control transition coverage now exercises APGCore v2 control-port smoothing.
 
 Module note: Unit fixture load-all smoke now exercises APGCore v2 host loading and mono runtime processing.
+
+Module note: Offline chain coverage now runs through a compiled APGCore v2 project runtime.
 
 Implementation lifecycle for production phases:
 
