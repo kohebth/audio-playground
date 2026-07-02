@@ -1,5 +1,5 @@
-#include <apgcore/runtime_v2.h>
 #include <apgcore/measure_v2.h>
+#include <apgcore/runtime_v2.h>
 #include <atom/dsp_types.h>
 
 #include <limits.h>
@@ -590,34 +590,21 @@ uc_status apg_v2_runtime_init(
     if (!plan || !plan->unit || !out || !err)
         return UC_E_TYPE;
 
-    size_t image_arena_size = 4096u;
+    apg_v2_runtime_image_t image;
+    uc_status              status =
+        apg_v2_runtime_image_build_with_growth(plan, frame_capacity, sample_rate, &out->image_arena, &image, err);
+    if (status != UC_OK)
+        return status;
 
-    while (image_arena_size > 0u && image_arena_size <= (SIZE_MAX >> 1)) {
-        uc_arena image_arena;
-        if (uc_arena_init(&image_arena, image_arena_size) != 0) {
-            return set_error(err, UC_E_OOM, "v2 runtime image arena allocation failed");
-        }
-
-        apg_v2_runtime_image_t image;
-        uc_status status = apg_v2_runtime_image_build(plan, frame_capacity, sample_rate, &image_arena, &image, err);
-        if (status == UC_OK) {
-            status = apg_v2_runtime_init_from_image(&image, out, err);
-            if (status == UC_OK) {
-                out->image_arena_ready = true;
-                out->image_arena       = image_arena;
-                return UC_OK;
-            }
-            uc_arena_free(&image_arena);
-            return status;
-        }
-
-        uc_arena_free(&image_arena);
-        if (status != UC_E_OOM)
-            return status;
-        image_arena_size *= 2u;
+    status = apg_v2_runtime_init_from_image(&image, out, err);
+    if (status != UC_OK) {
+        uc_arena_free(&out->image_arena);
+        out->image_arena_ready = false;
+        return status;
     }
 
-    return set_error(err, UC_E_OOM, "v2 runtime image arena size overflow during growth");
+    out->image_arena_ready = true;
+    return UC_OK;
 }
 
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {

@@ -10,41 +10,6 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     return status;
 }
 
-static uc_status build_runtime_image_with_growth(
-    const apg_v2_compiled_unit_t *plan,
-    uint32_t                      frame_capacity,
-    float                         sample_rate,
-    uc_arena                     *out_arena,
-    apg_v2_runtime_image_t       *out_image,
-    uc_error                     *err
-) {
-    if (!plan || !out_arena || !out_image || !err)
-        return UC_E_TYPE;
-
-    memset(out_image, 0, sizeof(*out_image));
-
-    size_t image_arena_size = 4096u;
-    while (image_arena_size > 0u && image_arena_size <= (SIZE_MAX >> 1)) {
-        uc_arena image_arena;
-        if (uc_arena_init(&image_arena, image_arena_size) != 0) {
-            return set_error(err, UC_E_OOM, "v2 host runtime image arena allocation failed");
-        }
-
-        uc_status status = apg_v2_runtime_image_build(plan, frame_capacity, sample_rate, &image_arena, out_image, err);
-        if (status == UC_OK) {
-            *out_arena = image_arena;
-            return UC_OK;
-        }
-
-        uc_arena_free(&image_arena);
-        if (status != UC_E_OOM)
-            return status;
-        image_arena_size *= 2u;
-    }
-
-    return set_error(err, UC_E_OOM, "v2 host runtime image arena growth overflow");
-}
-
 uc_status apg_v2_host_load_file(
     const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_unit_t *out, uc_error *err
 ) {
@@ -65,8 +30,9 @@ uc_status apg_v2_host_load_file(
     if (status != UC_OK)
         goto fail;
 
-    status =
-        build_runtime_image_with_growth(&out->plan, frame_capacity, sample_rate, &out->image_arena, &out->image, err);
+    status = apg_v2_runtime_image_build_with_growth(
+        &out->plan, frame_capacity, sample_rate, &out->image_arena, &out->image, err
+    );
     if (status != UC_OK)
         goto fail;
 
