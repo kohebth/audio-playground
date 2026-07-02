@@ -25,7 +25,8 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PA5b8: Split CMake source groups so v1 runtime/control/loader code is not compiled into default v2 targets.
 - [x] PA5b9: Remove unused v1 runtime/control/unit-loader source and headers.
 - [x] PA5b10: Remove remaining fixed-size unit adapter helpers and their direct adapter test.
-- [ ] PA5b11: Retire legacy `units/*.unit.yaml` fixtures after resolving unrelated local modifications.
+- [x] PA5b11a: Remove clean tracked legacy `units/` fixtures that no default build or test references.
+- [ ] PA5b11b: Decide whether to keep, port, or delete remaining modified/untracked legacy `units/` files.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -58,6 +59,8 @@ Module note: Default CMake targets now exclude v1 runtime/control sources and th
 Module note: V1 runtime/control/unit-loader code has been removed after all default users migrated to APGCore v2.
 
 Module note: Fixed-size unit adapter helpers have been removed; product behavior now lives in v2 unit contracts.
+
+Module note: Clean legacy unit fixtures have been removed; modified local unit files remain untouched.
 
 Implementation lifecycle for production phases:
 

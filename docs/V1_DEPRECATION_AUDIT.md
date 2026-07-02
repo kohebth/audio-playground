@@ -4,7 +4,7 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 
 ## Still Active
 
-- `units/*.unit.yaml`: v1 fixtures retained only for local legacy experiments.
+- Modified `units/*.unit.yaml` files remain in the worktree and are not used by default builds.
 
 ## Current Deprecation Fence
 
@@ -20,9 +20,10 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 - Default CMake source groups no longer compile v1 runtime/control sources or the v1 YAML unit loader into v2 targets.
 - v1 runtime/control implementation, headers, and unit-loader implementation have been removed from source.
 - Fixed-size `src/unit` adapter helpers and their direct adapter test have been removed.
+- Clean tracked v1 fixture files have been removed; only pre-existing modified or untracked `units/` files remain.
 - v2 parser, validator, compiler, runtime image, runtime, and measure modules are the production path.
 
 ## Removal Blockers
 
-- Replace any needed `units/*.unit.yaml` fixtures with `units-v2/*.unit.v2.yaml` or project-v2 fixtures.
+- Decide whether to keep, port, or delete the remaining modified/untracked `units/` files.
 - Keep `src/yaml/arena.c`, `lexer.c`, `parser.c`, and shared node/error utilities unless a replacement parser is chosen.
