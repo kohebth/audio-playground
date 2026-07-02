@@ -23,7 +23,8 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PA5b6: Migrate `src/test_runtime.c` from v1 unit/raw-file smoke to an always-built APGCore v2 host smoke.
 - [x] PA5b7: Migrate `src/live.c` from v1 runtime/control unit chains to APGCore v2 host-unit chains.
 - [x] PA5b8: Split CMake source groups so v1 runtime/control/loader code is not compiled into default v2 targets.
-- [ ] PA5b9: Remove unused v1 code after migrating or deleting remaining v1 adapters and fixtures.
+- [x] PA5b9: Remove unused v1 runtime/control/unit-loader source and headers.
+- [ ] PA5b10: Decide whether to keep or remove remaining fixed-size unit adapters and legacy fixtures.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -52,6 +53,8 @@ Module note: Test runtime smoke now builds without PipeWire and runs through APG
 Module note: Live PipeWire playback now loads APGCore v2 units before entering the audio callback.
 
 Module note: Default CMake targets now exclude v1 runtime/control sources and the v1 YAML unit loader.
+
+Module note: V1 runtime/control/unit-loader code has been removed after all default users migrated to APGCore v2.
 
 Implementation lifecycle for production phases:
 
