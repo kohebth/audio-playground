@@ -4,7 +4,7 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 
 ## Still Active
 
-- Modified `units/*.unit.yaml` files remain in the worktree and are not used by default builds.
+- Legacy `units/*.unit.yaml` files were removed after migration to `units-v2/*.unit.v2.yaml` fixtures.
 
 ## Current Deprecation Fence
 
@@ -25,5 +25,5 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 
 ## Removal Blockers
 
-- Decide whether to keep, port, or delete the remaining modified/untracked `units/` files.
+- v1 `units/*.unit.yaml` fixtures have been deleted; legacy references were reviewed and no longer referenced by tests or runtime workflows.
 - Keep `src/yaml/arena.c`, `lexer.c`, `parser.c`, and shared node/error utilities unless a replacement parser is chosen.

@@ -30,4 +30,4 @@ A migrated fixture is complete when it loads, compiles, runs through the v2 runt
 
 ## Current Status
 
-Clean tracked v1 fixture files have been removed. Keep, port, or delete any remaining modified/untracked `units/` files only after an explicit product decision, then update `docs/V1_DEPRECATION_AUDIT.md`, `plan.md`, and `task.md`.
+Clean tracked v1 fixture files have been removed. Remaining modified/untracked `units/` files were removed as PA5b11b cleanup, and future migration work now lands directly in `units-v2/`.

@@ -44,7 +44,7 @@ During implementation phases, use focused verification before commits. For web c
 - [x] PA5b9: Remove unused v1 runtime/control/unit-loader source and headers.
 - [x] PA5b10: Remove remaining fixed-size unit adapter helpers and their direct adapter test.
 - [x] PA5b11a: Remove clean tracked legacy `units/` fixtures that no default build or test references.
-- [ ] PA5b11b: Decide whether to keep, port, or delete remaining modified/untracked legacy `units/` files.
+- [x] PA5b11b: Decide whether to keep, port, or delete remaining modified/untracked legacy `units/` files.
 - [x] PB1: Audit `src/apgcore` and `inc/apgcore` for remaining boundary leaks between parser, validator, compiler, runtime image, runtime, measure, and host APIs.
 - [x] PB2: Move any remaining host/tooling read concerns out of `runtime_v2` into `measure_v2` compatibility wrappers.
 - [x] PB3: Tighten runtime-image ownership so runtime initialization consumes precomputed layout metadata instead of recomputing resource registration.
@@ -82,7 +82,7 @@ Module note: V1 runtime/control/unit-loader code has been removed after all defa
 
 Module note: Fixed-size unit adapter helpers have been removed; product behavior now lives in v2 unit contracts.
 
-Module note: Clean legacy unit fixtures have been removed; modified local unit files remain untouched.
+Module note: Remaining legacy `units/*.unit.yaml` files have been removed after confirming no production path depends on v1 fixture loading.
 
 Module note: Core boundary audit now records remaining runtime/measure/image leaks and moves meter tests to measure APIs.
 
@@ -119,12 +119,14 @@ Module note: STM32H7 board integration now has a fixed-block DMA/cache contract.
 - [x] PD1: Move per-node state-buffer sample capacities into runtime image metadata.
 - [x] PD2: Move signal-array auxiliary allocation sizing into runtime image metadata.
 - [x] PD3: Precompute scalar config/input refresh plans so runtime processing does not scan binding keys.
+- [x] PB3b: Move signal-binding and mix-matrix structured-config plans into runtime-image descriptors consumed by runtime init.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
 
 Module note: Runtime image now sizes signal-array pointer pools for runtime binding.
 
 Module note: Runtime processing now refreshes scalar fields from image plans.
+Module note: Runtime now consumes precomputed signal-binding and mix-matrix config plans from runtime-image with no runtime-time descriptor resolution.
 
 ### Runtime Memory Hardening
 

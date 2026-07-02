@@ -26,11 +26,12 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PA5b9: Remove unused v1 runtime/control/unit-loader source and headers.
 - [x] PA5b10: Remove remaining fixed-size unit adapter helpers and their direct adapter test.
 - [x] PA5b11a: Remove clean tracked legacy `units/` fixtures that no default build or test references.
-- [ ] PA5b11b: Decide whether to keep, port, or delete remaining modified/untracked legacy `units/` files.
+- [x] PA5b11b: Decide whether to keep, port, or delete remaining modified/untracked legacy `units/` files.
 - [x] PB1: Audit `src/apgcore` and `inc/apgcore` for remaining boundary leaks between parser, validator, compiler, runtime image, runtime, measure, and host APIs.
 - [x] PB2: Move any remaining host/tooling read concerns out of `runtime_v2` into `measure_v2` compatibility wrappers.
 - [x] PB3: Tighten runtime-image ownership so runtime initialization consumes precomputed layout metadata instead of recomputing resource registration.
 - [x] PB4: Add fixed-memory/static-image readiness checks for generated M7 export artifacts.
+- [x] PB3b: Move signal-binding and mix-matrix structured-config resolution to runtime-image plans consumed at runtime init.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -64,13 +65,14 @@ Module note: V1 runtime/control/unit-loader code has been removed after all defa
 
 Module note: Fixed-size unit adapter helpers have been removed; product behavior now lives in v2 unit contracts.
 
-Module note: Clean legacy unit fixtures have been removed; modified local unit files remain untouched.
+Module note: Remaining legacy `units/*.unit.yaml` files have been removed after confirming no production path depends on v1 fixture loading.
 
 Module note: Core boundary audit now records remaining runtime/measure/image leaks and moves meter tests to measure APIs.
 
 Module note: Host and tooling tests now read runtime diagnostics and transport state through measure APIs.
 
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
+Module note: Runtime initialization now consumes runtime-image signal-binding and mix-matrix config plans instead of resolving descriptors.
 
 Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 
