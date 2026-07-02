@@ -331,20 +331,40 @@ static uc_status apply_signal_bindings(
 static uc_status refresh_scalar_plan(
     const apg_v2_runtime_scalar_refresh_t *items,
     size_t                                 items_len,
+    const apg_v2_compiled_node_t          *compiled_node,
     apg_v2_runtime_t                      *runtime,
     void                                  *storage,
     uc_error                              *err
 ) {
+    if (!runtime || !runtime->plan || !runtime->plan->unit || !compiled_node || !compiled_node->atom)
+        return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh context is missing");
+
     for (size_t i = 0; i < items_len; i++) {
-        if (items[i].binding_key && items[i].binding && items[i].binding->key &&
-            strcmp(items[i].binding_key, items[i].binding->key) != 0) {
+        if (!items[i].binding)
+            return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh metadata is missing");
+        if (items[i].binding_key && items[i].binding->key && strcmp(items[i].binding_key, items[i].binding->key) != 0) {
             char msg[192];
             snprintf(
                 msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing",
-                items[i].node_id ? items[i].node_id : "", items[i].atom_name ? items[i].atom_name : "",
-                items[i].config ? "config" : "in", items[i].binding->key
+                compiled_node->id ? compiled_node->id : "", compiled_node->atom->name ? compiled_node->atom->name : "",
+                items[i].config ? "config" : "input", items[i].binding->key
             );
             return set_error(err, UC_E_MISSING, msg);
+        }
+        if (items[i].binding->kind != APG_BIND_PARAM && items[i].binding->kind != APG_BIND_LITERAL) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing",
+                compiled_node->id ? compiled_node->id : "", compiled_node->atom->name ? compiled_node->atom->name : "",
+                items[i].config ? "config" : "input", items[i].binding->key ? items[i].binding->key : ""
+            );
+            return set_error(err, UC_E_TYPE, msg);
+        }
+        if (items[i].binding->kind == APG_BIND_PARAM) {
+            uint32_t param_index = items[i].binding->index;
+            if (param_index >= runtime->params_len) {
+                return set_error(err, UC_E_RANGE, "v2 runtime scalar refresh param index is out of bounds");
+            }
         }
         void *addr  = (char *)storage + items[i].storage_offset;
         float value = compiled_scalar_value(items[i].binding, runtime);
@@ -352,8 +372,9 @@ static uc_status refresh_scalar_plan(
             *(int *)addr = (int)value;
         else if (items[i].field_type == FIELD_FLOAT)
             *(float *)addr = value;
-        else
+        else {
             return set_error(err, UC_E_TYPE, "v2 runtime scalar refresh field type is unsupported");
+        }
     }
     return UC_OK;
 }
@@ -497,11 +518,14 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         status                    = apply_signal_bindings(layout, out, node, err);
         if (status != UC_OK)
             return status;
-        status =
-            refresh_scalar_plan(node->config_refreshes, node->config_refreshes_len, out, node->config_storage, err);
+        status = refresh_scalar_plan(
+            node->config_refreshes, node->config_refreshes_len, &plan->nodes[i], out, node->config_storage, err
+        );
         if (status != UC_OK)
             return status;
-        status = refresh_scalar_plan(node->input_refreshes, node->input_refreshes_len, out, node->in_storage, err);
+        status = refresh_scalar_plan(
+            node->input_refreshes, node->input_refreshes_len, &plan->nodes[i], out, node->in_storage, err
+        );
         if (status != UC_OK)
             return status;
         status = apply_mix_matrix_config(layout, node, err);
@@ -908,13 +932,14 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
         }
         apg_v2_runtime_node_t *node = &runtime->nodes[scheduled_index];
         if (refresh_scalar_plan(
-                node->config_refreshes, node->config_refreshes_len, runtime, node->config_storage, &err
+                node->config_refreshes, node->config_refreshes_len, compiled, runtime, node->config_storage, &err
             ) != UC_OK) {
             runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime config refresh failed");
             return false;
         }
-        if (refresh_scalar_plan(node->input_refreshes, node->input_refreshes_len, runtime, node->in_storage, &err) !=
-            UC_OK) {
+        if (refresh_scalar_plan(
+                node->input_refreshes, node->input_refreshes_len, compiled, runtime, node->in_storage, &err
+            ) != UC_OK) {
             runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime input refresh failed");
             return false;
         }

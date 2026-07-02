@@ -206,8 +206,6 @@ static uc_status fill_scalar_refreshes(
         if (!scalar_refresh_field(field))
             return set_error(err, UC_E_TYPE, "v2 runtime image scalar refresh field type is unsupported");
         items[item_index].binding        = &bindings[i];
-        items[item_index].node_id        = node->id;
-        items[item_index].atom_name      = node->atom ? node->atom->name : NULL;
         items[item_index].binding_key    = bindings[i].key;
         items[item_index].storage_offset = field->offset;
         items[item_index].field_type     = field->type;

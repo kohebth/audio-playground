@@ -28,8 +28,6 @@ typedef struct {
 
 typedef struct {
     const apg_v2_compiled_binding_t *binding;
-    const char                      *node_id;
-    const char                      *atom_name;
     const char                      *binding_key;
     size_t                           storage_offset;
     atom_field_type_t                field_type;
