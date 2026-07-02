@@ -7,6 +7,7 @@
 
 #include <apgcore/compiler_v2.h>
 #include <apgcore/process.h>
+#include <apgcore/runtime_image_v2.h>
 #include <atom_registry.h>
 #include <yaml/error.h>
 
@@ -31,28 +32,31 @@ typedef struct {
 } apg_v2_meter_snapshot_t;
 
 typedef struct {
-    const apg_v2_compiled_unit_t *plan;
-    apg_process_info_t            process_info;
-    uint32_t                      frame_capacity;
-    float                        *signal_pool;
-    float                       **signals;
-    size_t                        signals_len;
-    float                        *params;
-    float                        *param_targets;
-    uint32_t                     *param_smoothing_remaining_frames;
-    size_t                        params_len;
-    bool                          has_processed;
-    char                        **bypassed_instances;
-    size_t                        bypassed_instances_len;
-    bool                          project_muted;
-    bool                          project_soloed;
-    apg_v2_meter_snapshot_t      *input_meters;
-    size_t                        input_meters_len;
-    apg_v2_meter_snapshot_t      *output_meters;
-    size_t                        output_meters_len;
-    apg_v2_runtime_node_t        *nodes;
-    size_t                        nodes_len;
-    char                          last_error[160];
+    const apg_v2_compiled_unit_t    *plan;
+    apg_process_info_t               process_info;
+    uint32_t                         frame_capacity;
+    float                           *signal_pool;
+    float                          **signals;
+    size_t                           signals_len;
+    float                           *params;
+    float                           *param_defaults;
+    float                           *param_targets;
+    uint32_t                        *param_smoothing_remaining_frames;
+    size_t                           params_len;
+    bool                             has_processed;
+    char                           **bypassed_instances;
+    size_t                           bypassed_instances_len;
+    apg_v2_runtime_control_target_t *control_targets;
+    size_t                           control_targets_len;
+    bool                             project_muted;
+    bool                             project_soloed;
+    apg_v2_meter_snapshot_t         *input_meters;
+    size_t                           input_meters_len;
+    apg_v2_meter_snapshot_t         *output_meters;
+    size_t                           output_meters_len;
+    apg_v2_runtime_node_t           *nodes;
+    size_t                           nodes_len;
+    char                             last_error[160];
 } apg_v2_runtime_t;
 
 /*
@@ -62,6 +66,12 @@ typedef struct {
 uc_status apg_v2_runtime_init(
     const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, float sample_rate, apg_v2_runtime_t *out, uc_error *err
 );
+
+/*
+ * Initialize a runtime from a prebuilt runtime image descriptor.
+ * The image and compiled plan must outlive the runtime.
+ */
+uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err);
 
 /* Return the mutable internal signal buffer for a graph signal name, or NULL if missing. */
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name);

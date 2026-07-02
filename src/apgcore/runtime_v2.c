@@ -55,20 +55,6 @@ audio_port_by_name(const apg_unit_v2_port_t *ports, size_t ports_len, const char
     return NULL;
 }
 
-static const apg_unit_v2_port_t *
-control_port_by_name(const apg_unit_v2_port_t *ports, size_t ports_len, const char *port_name) {
-    if (!ports || !port_name)
-        return NULL;
-    for (size_t i = 0; i < ports_len; i++) {
-        if (!ports[i].name || strcmp(ports[i].name, port_name) != 0)
-            continue;
-        if (!ports[i].type || strcmp(ports[i].type, "control") != 0)
-            return NULL;
-        return &ports[i];
-    }
-    return NULL;
-}
-
 static bool parse_port_channel_count(const apg_unit_v2_port_t *port, size_t *out_count) {
     if (!port || !port->channels || !out_count || port->channels[0] == '\0')
         return false;
@@ -242,14 +228,6 @@ static bool signal_is_public_output(const apg_v2_runtime_t *runtime, size_t sign
     return false;
 }
 
-static float parse_param_default(const apg_unit_v2_param_t *param) {
-    if (!param || !param->default_value)
-        return 0.0f;
-    if (param->type && strcmp(param->type, "bool") == 0)
-        return strcmp(param->default_value, "true") == 0 ? 1.0f : 0.0f;
-    return strtof(param->default_value, NULL);
-}
-
 static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, const apg_v2_runtime_t *runtime) {
     if (!param || !param->smoothing_ms || !runtime)
         return 0u;
@@ -264,33 +242,32 @@ static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, const a
     return rounded > 0u ? rounded : 1u;
 }
 
-static uc_status
-init_signal_buffers(const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, apg_v2_runtime_t *out, uc_error *err) {
-    out->signals_len = plan->unit->signals_len;
+static uc_status init_signal_buffers(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
+    out->signals_len = image->signals_len;
     if (out->signals_len == 0u)
         return UC_OK;
-    if (frame_capacity > 0u && out->signals_len > SIZE_MAX / (size_t)frame_capacity / sizeof(float))
+    if (image->signal_samples > SIZE_MAX / sizeof(float))
         return set_error(err, UC_E_RANGE, "v2 runtime signal pool is too large");
 
     out->signals     = calloc(out->signals_len, sizeof(*out->signals));
-    out->signal_pool = calloc(out->signals_len * (size_t)frame_capacity, sizeof(*out->signal_pool));
+    out->signal_pool = calloc(image->signal_samples, sizeof(*out->signal_pool));
     if (!out->signals || !out->signal_pool)
         return set_error(err, UC_E_OOM, "v2 runtime signal allocation failed");
 
     for (size_t i = 0; i < out->signals_len; i++)
-        out->signals[i] = &out->signal_pool[i * (size_t)frame_capacity];
+        out->signals[i] = &out->signal_pool[i * (size_t)image->frame_capacity];
     return UC_OK;
 }
 
-static uc_status init_meters(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_t *out, uc_error *err) {
-    out->input_meters_len = audio_port_meter_count(plan->unit->input_ports, plan->unit->input_ports_len);
+static uc_status init_meters(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
+    out->input_meters_len = image->input_meters_len;
     if (out->input_meters_len > 0u) {
         out->input_meters = calloc(out->input_meters_len, sizeof(*out->input_meters));
         if (!out->input_meters)
             return set_error(err, UC_E_OOM, "v2 runtime input meter allocation failed");
     }
 
-    out->output_meters_len = audio_port_meter_count(plan->unit->output_ports, plan->unit->output_ports_len);
+    out->output_meters_len = image->output_meters_len;
     if (out->output_meters_len > 0u) {
         out->output_meters = calloc(out->output_meters_len, sizeof(*out->output_meters));
         if (!out->output_meters)
@@ -299,21 +276,34 @@ static uc_status init_meters(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_
     return UC_OK;
 }
 
-static uc_status init_params(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_t *out, uc_error *err) {
-    out->params_len = plan->unit->params_len;
+static uc_status init_params(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
+    out->params_len = image->params_len;
     if (out->params_len == 0u)
         return UC_OK;
 
     out->params                           = calloc(out->params_len, sizeof(*out->params));
+    out->param_defaults                   = calloc(out->params_len, sizeof(*out->param_defaults));
     out->param_targets                    = calloc(out->params_len, sizeof(*out->param_targets));
     out->param_smoothing_remaining_frames = calloc(out->params_len, sizeof(*out->param_smoothing_remaining_frames));
-    if (!out->params || !out->param_targets || !out->param_smoothing_remaining_frames)
+    if (!out->params || !out->param_defaults || !out->param_targets || !out->param_smoothing_remaining_frames)
         return set_error(err, UC_E_OOM, "v2 runtime param allocation failed");
 
     for (size_t i = 0; i < out->params_len; i++) {
-        out->params[i]        = parse_param_default(&plan->unit->params[i]);
-        out->param_targets[i] = out->params[i];
+        out->param_defaults[i] = image->param_defaults ? image->param_defaults[i] : 0.0f;
+        out->params[i]         = out->param_defaults[i];
+        out->param_targets[i]  = out->params[i];
     }
+    return UC_OK;
+}
+
+static uc_status init_control_targets(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
+    out->control_targets_len = image->control_targets_len;
+    if (out->control_targets_len == 0u)
+        return UC_OK;
+    out->control_targets = calloc(out->control_targets_len, sizeof(*out->control_targets));
+    if (!out->control_targets)
+        return set_error(err, UC_E_OOM, "v2 runtime control target allocation failed");
+    memcpy(out->control_targets, image->control_targets, out->control_targets_len * sizeof(*out->control_targets));
     return UC_OK;
 }
 
@@ -690,39 +680,58 @@ static uc_status init_node_calls(const apg_v2_compiled_unit_t *plan, apg_v2_runt
     return UC_OK;
 }
 
-uc_status apg_v2_runtime_init(
-    const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, float sample_rate, apg_v2_runtime_t *out, uc_error *err
-) {
-    if (!plan || !plan->unit || !out || !err)
+uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
+    if (!image || !image->plan || !image->plan->unit || !out || !err)
         return UC_E_TYPE;
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
-    if (frame_capacity == 0u)
+    if (image->frame_capacity == 0u)
         return set_error(err, UC_E_RANGE, "v2 runtime frame capacity must be greater than zero");
 
-    out->plan                       = plan;
-    out->frame_capacity             = frame_capacity;
-    out->process_info.sample_rate   = sample_rate > 0.0f ? sample_rate : 48000.0f;
-    out->process_info.frames        = frame_capacity;
-    out->process_info.output_frames = frame_capacity;
+    out->plan                       = image->plan;
+    out->frame_capacity             = image->frame_capacity;
+    out->process_info.sample_rate   = image->sample_rate;
+    out->process_info.frames        = image->frame_capacity;
+    out->process_info.output_frames = image->frame_capacity;
     out->process_info.channels      = 1u;
 
-    uc_status status = init_signal_buffers(plan, frame_capacity, out, err);
+    uc_status status = init_signal_buffers(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_meters(plan, out, err);
+    status = init_meters(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_params(plan, out, err);
+    status = init_params(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_node_calls(plan, out, err);
+    status = init_control_targets(image, out, err);
+    if (status != UC_OK)
+        goto fail;
+    status = init_node_calls(image->plan, out, err);
     if (status != UC_OK)
         goto fail;
     return UC_OK;
 
 fail:
     apg_v2_runtime_destroy(out);
+    return status;
+}
+
+uc_status apg_v2_runtime_init(
+    const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, float sample_rate, apg_v2_runtime_t *out, uc_error *err
+) {
+    if (!plan || !plan->unit || !out || !err)
+        return UC_E_TYPE;
+
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 4096) != 0)
+        return set_error(err, UC_E_OOM, "v2 runtime image arena allocation failed");
+
+    apg_v2_runtime_image_t image;
+    uc_status status = apg_v2_runtime_image_build(plan, frame_capacity, sample_rate, &image_arena, &image, err);
+    if (status == UC_OK)
+        status = apg_v2_runtime_init_from_image(&image, out, err);
+    uc_arena_free(&image_arena);
     return status;
 }
 
@@ -961,16 +970,17 @@ bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float
 }
 
 bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !port_name)
+    if (!runtime || !port_name)
         return false;
-    const apg_unit_v2_t      *unit = runtime->plan->unit;
-    const apg_unit_v2_port_t *port = control_port_by_name(unit->input_ports, unit->input_ports_len, port_name);
-    if (!port)
-        return false;
-    if (port->target_kind && strcmp(port->target_kind, "param") != 0)
-        return false;
-    const char *target = port->target_name ? port->target_name : (port->target_param ? port->target_param : port->name);
-    return apg_v2_runtime_set_param(runtime, target, value);
+    for (size_t i = 0; i < runtime->control_targets_len; i++) {
+        const apg_v2_runtime_control_target_t *target = &runtime->control_targets[i];
+        if (!target->port_name || strcmp(target->port_name, port_name) != 0)
+            continue;
+        if (target->param_index >= runtime->params_len)
+            return false;
+        return apg_v2_runtime_set_param(runtime, target->param_name, value);
+    }
+    return false;
 }
 
 bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *instance_id, bool enabled) {
@@ -1074,7 +1084,7 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
     if (runtime->output_meters && runtime->output_meters_len > 0u)
         memset(runtime->output_meters, 0, runtime->output_meters_len * sizeof(*runtime->output_meters));
     for (size_t i = 0; i < runtime->params_len && i < runtime->plan->unit->params_len; i++) {
-        runtime->params[i] = parse_param_default(&runtime->plan->unit->params[i]);
+        runtime->params[i] = runtime->param_defaults ? runtime->param_defaults[i] : 0.0f;
         if (runtime->param_targets)
             runtime->param_targets[i] = runtime->params[i];
         if (runtime->param_smoothing_remaining_frames)
@@ -1333,7 +1343,9 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     for (size_t i = 0; i < runtime->bypassed_instances_len; i++)
         free(runtime->bypassed_instances[i]);
     free(runtime->bypassed_instances);
+    free(runtime->control_targets);
     free(runtime->params);
+    free(runtime->param_defaults);
     free(runtime->param_targets);
     free(runtime->param_smoothing_remaining_frames);
     free(runtime->input_meters);

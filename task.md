@@ -12,12 +12,17 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 
 - [x] PA1: Add an explicit APGCore v2 parser boundary that parses YAML strings/files into a raw contract graph without semantic validation.
 - [x] PA2: Split unit/project semantic checks into validator modules while preserving current public loader APIs.
-- [ ] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
+- [x] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
 - [ ] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
+- [ ] PA5: Deprecate and remove unused v1 code after auditing which legacy runtime, unit, and YAML paths are no longer needed.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
 Module note: Unit and project validators now own semantic graph checks behind thin parser-backed loaders.
+
+Module note: Runtime image now precomputes layout/defaults/control targets before runtime allocation.
+
+Note: v1 code is legacy. Audit, deprecate, and remove unused v1 runtime/unit/YAML paths only after confirming no tests, fixtures, or host tools still depend on them.
 
 Implementation lifecycle for production phases:
 
