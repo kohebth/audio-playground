@@ -22,7 +22,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PA5b5: Migrate hall reverb/sample-writing regression to an in-memory APGCore v2 pedalboard render.
 - [x] PA5b6: Migrate `src/test_runtime.c` from v1 unit/raw-file smoke to an always-built APGCore v2 host smoke.
 - [x] PA5b7: Migrate `src/live.c` from v1 runtime/control unit chains to APGCore v2 host-unit chains.
-- [ ] PA5b8: Split CMake source groups so v1 runtime/control/loader code is not compiled into default v2 targets.
+- [x] PA5b8: Split CMake source groups so v1 runtime/control/loader code is not compiled into default v2 targets.
 - [ ] PA5b9: Remove unused v1 code after migrating or deleting remaining v1 adapters and fixtures.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
@@ -50,6 +50,8 @@ Module note: Hall render coverage now uses an in-memory APGCore v2 pedalboard ru
 Module note: Test runtime smoke now builds without PipeWire and runs through APGCore v2 host loading.
 
 Module note: Live PipeWire playback now loads APGCore v2 units before entering the audio callback.
+
+Module note: Default CMake targets now exclude v1 runtime/control sources and the v1 YAML unit loader.
 
 Implementation lifecycle for production phases:
 

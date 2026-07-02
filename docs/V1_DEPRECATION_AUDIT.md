@@ -1,13 +1,12 @@
 # APG v1 Deprecation Audit
 
-APG v1 is legacy and should be removed only after remaining adapter and source-list dependencies are migrated or deleted.
+APG v1 is legacy and should be removed only after remaining adapter and fixture dependencies are migrated or deleted.
 
 ## Still Active
 
-- `src/unit/*.c` and `inc/unit/*.h`: fixed-size v1 adapters still covered by adapter tests.
+- `src/unit/*.c` and `inc/unit/*.h`: fixed-size adapter tests still cover these direct atom-composition helpers.
 - `src/yaml/loader.c` and `inc/yaml/loader.h`: v1 unit loader; the lower-level YAML lexer/parser is shared by v2 parser wrappers and must not be removed.
 - `units/*.unit.yaml`: v1 fixtures retained only for local legacy experiments.
-- `src/rte/*.c` and `src/ctrl/*.c`: still compiled into shared CMake source lists until v1/v2 source groups are split.
 
 ## Current Deprecation Fence
 
@@ -20,10 +19,10 @@ APG v1 is legacy and should be removed only after remaining adapter and source-l
 - `test_hall_reverb` has been migrated to an in-memory APGCore v2 pedalboard offline-render regression.
 - `src/test_runtime.c` has been migrated to an APGCore v2 host smoke utility and now builds without PipeWire.
 - `src/live.c` has been migrated to APGCore v2 host-unit loading and runtime processing.
+- Default CMake source groups no longer compile v1 runtime/control sources or the v1 YAML unit loader into v2 targets.
 - v2 parser, validator, compiler, runtime image, runtime, and measure modules are the production path.
 
 ## Removal Blockers
 
-- Split CMake source groups so v1 runtime/control/loader sources are not compiled into default v2 targets.
 - Replace any needed `units/*.unit.yaml` fixtures with `units-v2/*.unit.v2.yaml` or project-v2 fixtures.
 - Keep `src/yaml/arena.c`, `lexer.c`, `parser.c`, and shared node/error utilities unless a replacement parser is chosen.
