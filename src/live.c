@@ -1,11 +1,11 @@
-#include <ctrl/ctrls.h>
-#include <runtime.h>
+#include <apgcore/host_v2.h>
 #include <util/fast_chunk.h>
 
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
 
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +14,6 @@
 #define CHUNK_LENGTH 512
 #define MAX_UNITS    8
 #define SAMPLE_RATE  48000
-#define BOUND        32767.0
 
 struct IOBuffers {
     LiveChunk        chunks[16];
@@ -26,13 +25,12 @@ struct AudioNode {
     struct pw_main_loop *loop;
     struct pw_stream    *stream;
     struct IOBuffers    *buffer;
-    runtime_unit_t     **units;
-    ctrl_unit_t         *ctrls;
+    apg_v2_host_unit_t  *units;
     int                  n_units;
     int                  max_units;
 };
 
-inline bool is_not_null(void *ptr) { return ptr != NULL; }
+static inline bool is_not_null(void *ptr) { return ptr != NULL; }
 
 static void on_capture_process(void *userdata) {
     struct AudioNode *node = (struct AudioNode *)(userdata);
@@ -94,17 +92,24 @@ static void on_playback_process(void *userdata) {
             if (chunk_size > size)
                 chunk_size = size;
 
-            float *current_in  = chunk->data;
-            float *current_out = output_data;
-
             if (node->n_units > 0) {
+                float        stage_a[CHUNK_LENGTH];
+                float        stage_b[CHUNK_LENGTH];
+                const float *current_in = chunk->data;
+                bool         processed  = true;
                 for (int i = 0; i < node->n_units; i++) {
-                    if (!ctrl_unit_process_frames(&node->ctrls[i], current_in, current_out, chunk_size)) {
-                        memset(current_out, 0, chunk_size * sizeof(float));
+                    float *current_out = (current_in == stage_a) ? stage_b : stage_a;
+                    if (!apg_v2_host_process_mono_ports(
+                            &node->units[i], "input", current_in, "output", current_out, chunk_size
+                        )) {
+                        memset(output_data, 0, chunk_size * sizeof(float));
+                        processed = false;
                         break;
                     }
-                    current_in = current_out; // Output of this unit is input to next
+                    current_in = current_out;
                 }
+                if (processed)
+                    memcpy(output_data, current_in, chunk_size * sizeof(float));
             } else {
                 memcpy(output_data, chunk->data, chunk_size * sizeof(float));
             }
@@ -146,11 +151,9 @@ int main(int argc, char *argv[]) {
     struct IOBuffers io_buffer = {.chunks = {0}, .write_idx = 0, .read_idx = 0};
 
     // Create capture stream (microphone)
-    runtime_unit_t **capture_units = calloc(MAX_UNITS, sizeof(runtime_unit_t *));
-    ctrl_unit_t     *capture_ctrls = calloc(MAX_UNITS, sizeof(ctrl_unit_t));
-    struct AudioNode capture       = {
-              .loop   = loop,
-              .stream = pw_stream_new_simple(
+    struct AudioNode capture = {
+        .loop   = loop,
+        .stream = pw_stream_new_simple(
             pw_main_loop_get_loop(loop), "n!audio-capture",
             pw_properties_new(
                 PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Capture", PW_KEY_MEDIA_ROLE, "Music",
@@ -158,18 +161,16 @@ int main(int argc, char *argv[]) {
             ),
             &capture_events, &capture
         ),
-              .buffer    = &io_buffer,
-              .units     = capture_units,
-              .ctrls     = capture_ctrls,
-              .n_units   = 0,
-              .max_units = MAX_UNITS
+        .buffer    = &io_buffer,
+        .units     = NULL,
+        .n_units   = 0,
+        .max_units = MAX_UNITS
     };
 
-    runtime_unit_t **playback_units = calloc(MAX_UNITS, sizeof(runtime_unit_t *));
-    ctrl_unit_t     *playback_ctrls = calloc(MAX_UNITS, sizeof(ctrl_unit_t));
-    struct AudioNode playback       = {
-              .loop   = loop,
-              .stream = pw_stream_new_simple(
+    apg_v2_host_unit_t *playback_units = calloc(MAX_UNITS, sizeof(apg_v2_host_unit_t));
+    struct AudioNode    playback       = {
+                 .loop   = loop,
+                 .stream = pw_stream_new_simple(
             pw_main_loop_get_loop(loop), "n!audio-playback",
             pw_properties_new(
                 PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Playback", PW_KEY_MEDIA_ROLE, "Music",
@@ -177,37 +178,32 @@ int main(int argc, char *argv[]) {
             ),
             &playback_events, &playback
         ),
-              .buffer    = &io_buffer,
-              .units     = playback_units,
-              .ctrls     = playback_ctrls,
-              .n_units   = 0,
-              .max_units = MAX_UNITS
+                 .buffer    = &io_buffer,
+                 .units     = playback_units,
+                 .n_units   = 0,
+                 .max_units = MAX_UNITS
     };
 
-    // Load DSP units from YAML arguments
-    runtime_context_t rt_ctx = {.sample_rate = SAMPLE_RATE, .chunk_length = CHUNK_LENGTH};
     if (argc > 1) {
         for (int i = 1; i < argc && playback.n_units < playback.max_units; i++) {
-            printf("Loading unit: %s\n", argv[i]);
-            int unit_index             = playback.n_units;
-            playback.units[unit_index] = runtime_unit_load(argv[i], rt_ctx);
-            if (playback.units[unit_index] &&
-                ctrl_unit_init(&playback.ctrls[unit_index], playback.units[unit_index], argv[i])) {
+            printf("Loading v2 unit: %s\n", argv[i]);
+            int      unit_index = playback.n_units;
+            uc_error err        = {0};
+            if (apg_v2_host_load_file(argv[i], CHUNK_LENGTH, (float)SAMPLE_RATE, &playback.units[unit_index], &err) ==
+                UC_OK) {
                 playback.n_units++;
             } else {
-                fprintf(stderr, "Failed to load unit: %s\n", argv[i]);
-                if (playback.units[unit_index]) {
-                    runtime_unit_destroy(playback.units[unit_index]);
-                    playback.units[unit_index] = NULL;
-                }
+                fprintf(stderr, "Failed to load v2 unit %s: %s\n", argv[i], err.msg);
             }
         }
     } else {
-        // Default to shimmer if no args
-        playback.units[0] = runtime_unit_load("../units/cave_reverb.unit.yaml", rt_ctx);
-        if (playback.units[0] &&
-            ctrl_unit_init(&playback.ctrls[0], playback.units[0], "../units/cave_reverb.unit.yaml")) {
+        uc_error err = {0};
+        if (apg_v2_host_load_file(
+                "../units-v2/simple_gain.unit.v2.yaml", CHUNK_LENGTH, (float)SAMPLE_RATE, &playback.units[0], &err
+            ) == UC_OK) {
             playback.n_units = 1;
+        } else {
+            fprintf(stderr, "Failed to load default v2 unit: %s\n", err.msg);
         }
     }
 
@@ -246,13 +242,9 @@ int main(int argc, char *argv[]) {
     pw_stream_destroy(playback.stream);
     pw_main_loop_destroy(loop);
     for (int i = 0; i < playback.n_units; i++) {
-        ctrl_unit_destroy(&playback.ctrls[i]);
-        runtime_unit_destroy(playback.units[i]);
+        apg_v2_host_destroy(&playback.units[i]);
     }
     free(playback_units);
-    free(playback_ctrls);
-    free(capture_units);
-    free(capture_ctrls);
     pw_deinit();
 
     return 0;
