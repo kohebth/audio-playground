@@ -168,16 +168,38 @@ static int test_runtime_image_state_buffer_samples(void) {
         if (layout->state_buffers_len == 0u)
             continue;
         stateful_layouts++;
-        if (!layout->state_buffer_samples_by_index)
+        if (!layout->state_buffer_samples_by_index || !layout->state_buffer_sample_offsets_by_index)
             return fail("stateful node is missing state buffer sample layout");
         for (size_t j = 0; j < layout->state_buffers_len; j++) {
             if (layout->state_buffer_samples_by_index[j] == 0u)
                 return fail("state buffer sample layout did not preserve capacity");
+            if (layout->state_buffer_sample_offsets_by_index[j] >= image.state_buffer_samples)
+                return fail("state buffer sample offset is out of range");
         }
     }
     if (stateful_layouts == 0u || image.state_buffers_len == 0u || image.state_buffer_samples == 0u)
         return fail("expected stateful runtime image layout");
 
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to initialize stateful runtime");
+    }
+    if (!runtime.state_buffer_pool || runtime.state_buffer_samples != image.state_buffer_samples)
+        return fail("runtime did not allocate image state buffer pool");
+    for (size_t i = 0; i < runtime.nodes_len; i++) {
+        for (size_t j = 0; j < runtime.nodes[i].state_buffers_len; j++) {
+            const float *buffer = runtime.nodes[i].state_buffers[j];
+            if (buffer < runtime.state_buffer_pool ||
+                buffer >= runtime.state_buffer_pool + runtime.state_buffer_samples)
+                return fail("runtime state buffer does not point into state buffer pool");
+        }
+    }
+
+    apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&image_arena);
     uc_arena_free(&arena);
     return 0;

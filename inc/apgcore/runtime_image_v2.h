@@ -36,6 +36,7 @@ typedef struct {
     size_t                           config_offset;
     size_t                           state_offset;
     size_t                          *state_buffer_samples_by_index;
+    size_t                          *state_buffer_sample_offsets_by_index;
     size_t                           state_buffers_len;
     size_t                           state_buffer_samples;
     size_t                           signal_array_pointer_slots;

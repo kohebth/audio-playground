@@ -62,6 +62,10 @@ Runtime image node layouts now record scalar config and scalar input refresh pla
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.
 
+## PE2 Progress
+
+Runtime image node layouts now record per-buffer state sample offsets. Runtime initialization allocates one contiguous state-buffer pool and points per-node state buffer tables into it.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

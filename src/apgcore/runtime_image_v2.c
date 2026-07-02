@@ -258,6 +258,7 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         return set_error(err, UC_E_OOM, "v2 runtime image node layout allocation failed");
 
     size_t atom_storage_cursor = 0u;
+    size_t state_buffer_cursor = 0u;
     for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
         const atom_registry_entry_t  *atom   = out->plan->nodes[node_index].atom;
         apg_v2_runtime_node_layout_t *layout = &out->node_layouts[node_index];
@@ -292,7 +293,10 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
             layout->state_buffer_samples_by_index = uc_arena_alloc(
                 arena, layout->state_buffers_len * sizeof(*layout->state_buffer_samples_by_index), sizeof(size_t)
             );
-            if (!layout->state_buffer_samples_by_index)
+            layout->state_buffer_sample_offsets_by_index = uc_arena_alloc(
+                arena, layout->state_buffers_len * sizeof(*layout->state_buffer_sample_offsets_by_index), sizeof(size_t)
+            );
+            if (!layout->state_buffer_samples_by_index || !layout->state_buffer_sample_offsets_by_index)
                 return set_error(err, UC_E_OOM, "v2 runtime image state buffer layout allocation failed");
         }
 
@@ -301,6 +305,10 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
             if (atom->state_fields[field_index].type != FIELD_BUFFER)
                 continue;
             layout->state_buffer_samples_by_index[buffer_index++] = atom->state_fields[field_index].buffer_samples;
+            layout->state_buffer_sample_offsets_by_index[buffer_index - 1u] = state_buffer_cursor;
+            if (atom->state_fields[field_index].buffer_samples > SIZE_MAX - state_buffer_cursor)
+                return set_error(err, UC_E_RANGE, "v2 runtime image state buffer layout is too large");
+            state_buffer_cursor += atom->state_fields[field_index].buffer_samples;
             layout->state_buffer_samples += atom->state_fields[field_index].buffer_samples;
         }
         out->state_buffers_len += layout->state_buffers_len;
@@ -317,7 +325,8 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         if (status != UC_OK)
             return status;
     }
-    out->atom_storage_bytes = atom_storage_cursor;
+    out->state_buffer_samples = state_buffer_cursor;
+    out->atom_storage_bytes   = atom_storage_cursor;
     return UC_OK;
 }
 

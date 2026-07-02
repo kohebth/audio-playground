@@ -111,10 +111,12 @@ Module note: Runtime processing now refreshes scalar fields from image plans.
 ## Runtime Memory Hardening Queue
 
 - [x] PE1: Move atom out/in/config/state call storage into one runtime-image-planned contiguous pool.
-- [ ] PE2: Move state buffer allocations toward one state-buffer pool using image offsets.
+- [x] PE2: Move state buffer allocations toward one state-buffer pool using image offsets.
 - [ ] PE3: Add static export memory sections for atom storage, signal buffers, params, and state buffers.
 
 Module note: Runtime atom call storage now uses one image-planned contiguous pool.
+
+Module note: Runtime state buffers now use one image-planned contiguous pool.
 
 Implementation lifecycle for production phases:
 

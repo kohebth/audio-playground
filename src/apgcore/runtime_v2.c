@@ -522,6 +522,7 @@ bind_structured_config(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_no
 static uc_status init_state_buffers(
     const apg_v2_compiled_node_t       *compiled,
     const apg_v2_runtime_node_layout_t *layout,
+    apg_v2_runtime_t                   *runtime,
     apg_v2_runtime_node_t              *node,
     uc_error                           *err
 ) {
@@ -557,15 +558,12 @@ static uc_status init_state_buffers(
             );
             return set_error(err, UC_E_MISSING, msg);
         }
-        float *buffer = calloc(buffer_samples, sizeof(*buffer));
-        if (!buffer) {
-            char msg[192];
-            snprintf(
-                msg, sizeof(msg), "node '%s' atom '%s' state binding key '%s' buffer allocation failed",
-                compiled->id ? compiled->id : "", atom->name ? atom->name : "", field->name ? field->name : ""
-            );
-            return set_error(err, UC_E_OOM, msg);
-        }
+        size_t offset = layout->state_buffer_sample_offsets_by_index
+                            ? layout->state_buffer_sample_offsets_by_index[buffer_index]
+                            : 0u;
+        if (!runtime || !runtime->state_buffer_pool || offset + buffer_samples > runtime->state_buffer_samples)
+            return set_error(err, UC_E_RANGE, "v2 runtime state buffer layout exceeds pool");
+        float *buffer                            = &runtime->state_buffer_pool[offset];
         node->state_buffers[buffer_index]        = buffer;
         node->state_buffer_samples[buffer_index] = buffer_samples;
         buffer_index++;
@@ -592,6 +590,12 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         out->atom_storage_pool = calloc(1u, out->atom_storage_bytes);
         if (!out->atom_storage_pool)
             return set_error(err, UC_E_OOM, "v2 runtime atom storage pool allocation failed");
+    }
+    out->state_buffer_samples = image->state_buffer_samples;
+    if (out->state_buffer_samples > 0u) {
+        out->state_buffer_pool = calloc(out->state_buffer_samples, sizeof(*out->state_buffer_pool));
+        if (!out->state_buffer_pool)
+            return set_error(err, UC_E_OOM, "v2 runtime state buffer pool allocation failed");
     }
 
     for (size_t i = 0; i < out->nodes_len; i++) {
@@ -627,7 +631,7 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         node->call.state  = node->state_storage;
         node->call.info   = &out->process_info;
 
-        uc_status status = init_state_buffers(&plan->nodes[i], layout, node, err);
+        uc_status status = init_state_buffers(&plan->nodes[i], layout, out, node, err);
         if (status != UC_OK)
             return status;
         status = bind_signal_fields(
@@ -1285,8 +1289,6 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
         return;
 
     for (size_t i = 0; i < runtime->nodes_len; i++) {
-        for (size_t j = 0; j < runtime->nodes[i].state_buffers_len; j++)
-            free(runtime->nodes[i].state_buffers[j]);
         free(runtime->nodes[i].state_buffers);
         free(runtime->nodes[i].state_buffer_samples);
         free(runtime->nodes[i].signal_array_pool);
@@ -1296,6 +1298,7 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     }
     free(runtime->nodes);
     free(runtime->atom_storage_pool);
+    free(runtime->state_buffer_pool);
     for (size_t i = 0; i < runtime->bypassed_instances_len; i++)
         free(runtime->bypassed_instances[i]);
     free(runtime->bypassed_instances);
