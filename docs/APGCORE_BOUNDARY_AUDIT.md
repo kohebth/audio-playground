@@ -58,6 +58,10 @@ Runtime image node layouts now record signal-array pointer pool sizes. Runtime i
 
 Runtime image node layouts now record scalar config and scalar input refresh plans. Runtime processing walks those compact entries instead of scanning binding keys and atom field metadata per node.
 
+## PE1 Progress
+
+Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

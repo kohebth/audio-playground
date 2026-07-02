@@ -31,6 +31,10 @@ typedef struct {
     size_t                           in_size;
     size_t                           config_size;
     size_t                           state_size;
+    size_t                           out_offset;
+    size_t                           in_offset;
+    size_t                           config_offset;
+    size_t                           state_offset;
     size_t                          *state_buffer_samples_by_index;
     size_t                           state_buffers_len;
     size_t                           state_buffer_samples;
@@ -58,6 +62,7 @@ typedef struct {
     size_t                           schedule_len;
     size_t                           state_buffers_len;
     size_t                           state_buffer_samples;
+    size_t                           atom_storage_bytes;
 } apg_v2_runtime_image_t;
 
 /*

@@ -587,6 +587,12 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
     out->nodes = calloc(out->nodes_len, sizeof(*out->nodes));
     if (!out->nodes)
         return set_error(err, UC_E_OOM, "v2 runtime node allocation failed");
+    out->atom_storage_bytes = image->atom_storage_bytes;
+    if (out->atom_storage_bytes > 0u) {
+        out->atom_storage_pool = calloc(1u, out->atom_storage_bytes);
+        if (!out->atom_storage_pool)
+            return set_error(err, UC_E_OOM, "v2 runtime atom storage pool allocation failed");
+    }
 
     for (size_t i = 0; i < out->nodes_len; i++) {
         const atom_registry_entry_t        *atom   = plan->nodes[i].atom;
@@ -595,12 +601,15 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         if (!atom)
             return set_error(err, UC_E_MISSING, "v2 runtime node is missing atom metadata");
 
-        node->out_storage    = calloc(1u, layout->out_size);
-        node->in_storage     = calloc(1u, layout->in_size);
-        node->config_storage = calloc(1u, layout->config_size);
-        node->state_storage  = calloc(1u, layout->state_size);
-        if (!node->out_storage || !node->in_storage || !node->config_storage || !node->state_storage)
-            return set_error(err, UC_E_OOM, "v2 runtime atom call allocation failed");
+        if (layout->out_offset + layout->out_size > out->atom_storage_bytes ||
+            layout->in_offset + layout->in_size > out->atom_storage_bytes ||
+            layout->config_offset + layout->config_size > out->atom_storage_bytes ||
+            layout->state_offset + layout->state_size > out->atom_storage_bytes)
+            return set_error(err, UC_E_RANGE, "v2 runtime image atom storage layout exceeds pool");
+        node->out_storage    = (char *)out->atom_storage_pool + layout->out_offset;
+        node->in_storage     = (char *)out->atom_storage_pool + layout->in_offset;
+        node->config_storage = (char *)out->atom_storage_pool + layout->config_offset;
+        node->state_storage  = (char *)out->atom_storage_pool + layout->state_offset;
         if (layout->signal_array_pointer_slots > 0u) {
             node->signal_array_pool = calloc(layout->signal_array_pointer_slots, sizeof(*node->signal_array_pool));
             if (!node->signal_array_pool)
@@ -1284,12 +1293,9 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
         for (size_t j = 0; j < runtime->nodes[i].aux_blocks_len; j++)
             free(runtime->nodes[i].aux_blocks[j]);
         free(runtime->nodes[i].aux_blocks);
-        free(runtime->nodes[i].out_storage);
-        free(runtime->nodes[i].in_storage);
-        free(runtime->nodes[i].config_storage);
-        free(runtime->nodes[i].state_storage);
     }
     free(runtime->nodes);
+    free(runtime->atom_storage_pool);
     for (size_t i = 0; i < runtime->bypassed_instances_len; i++)
         free(runtime->bypassed_instances[i]);
     free(runtime->bypassed_instances);

@@ -16,6 +16,29 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
 
 static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
 
+static size_t runtime_storage_align(void) { return _Alignof(max_align_t); }
+
+static bool align_up_size(size_t value, size_t alignment, size_t *out) {
+    size_t mask = alignment - 1u;
+    if (alignment == 0u || (alignment & mask) != 0u)
+        return false;
+    if (value > SIZE_MAX - mask)
+        return false;
+    *out = (value + mask) & ~mask;
+    return true;
+}
+
+static uc_status reserve_storage(size_t size, size_t *cursor, size_t *out_offset, uc_error *err) {
+    size_t aligned = 0u;
+    if (!align_up_size(*cursor, runtime_storage_align(), &aligned))
+        return set_error(err, UC_E_RANGE, "v2 runtime image atom storage alignment overflow");
+    if (size > SIZE_MAX - aligned)
+        return set_error(err, UC_E_RANGE, "v2 runtime image atom storage layout is too large");
+    *out_offset = aligned;
+    *cursor     = aligned + size;
+    return UC_OK;
+}
+
 static bool parse_port_channel_count(const apg_unit_v2_port_t *port, size_t *out_count) {
     if (!port || !port->channels || !out_count || port->channels[0] == '\0')
         return false;
@@ -234,6 +257,7 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
     if (!out->node_layouts)
         return set_error(err, UC_E_OOM, "v2 runtime image node layout allocation failed");
 
+    size_t atom_storage_cursor = 0u;
     for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
         const atom_registry_entry_t  *atom   = out->plan->nodes[node_index].atom;
         apg_v2_runtime_node_layout_t *layout = &out->node_layouts[node_index];
@@ -244,6 +268,18 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         layout->in_size     = atom_storage_size(atom->in_size);
         layout->config_size = atom_storage_size(atom->config_size);
         layout->state_size  = atom_storage_size(atom->state_size);
+        uc_status status    = reserve_storage(layout->out_size, &atom_storage_cursor, &layout->out_offset, err);
+        if (status != UC_OK)
+            return status;
+        status = reserve_storage(layout->in_size, &atom_storage_cursor, &layout->in_offset, err);
+        if (status != UC_OK)
+            return status;
+        status = reserve_storage(layout->config_size, &atom_storage_cursor, &layout->config_offset, err);
+        if (status != UC_OK)
+            return status;
+        status = reserve_storage(layout->state_size, &atom_storage_cursor, &layout->state_offset, err);
+        if (status != UC_OK)
+            return status;
         layout->signal_array_pointer_slots =
             signal_array_pointer_slots(out->plan->nodes[node_index].in, out->plan->nodes[node_index].in_len) +
             signal_array_pointer_slots(out->plan->nodes[node_index].out, out->plan->nodes[node_index].out_len);
@@ -270,7 +306,7 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         out->state_buffers_len += layout->state_buffers_len;
         out->state_buffer_samples += layout->state_buffer_samples;
 
-        uc_status status = fill_scalar_refreshes(
+        status = fill_scalar_refreshes(
             arena, &out->plan->nodes[node_index], &layout->config_refreshes, &layout->config_refreshes_len, true, err
         );
         if (status != UC_OK)
@@ -281,6 +317,7 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         if (status != UC_OK)
             return status;
     }
+    out->atom_storage_bytes = atom_storage_cursor;
     return UC_OK;
 }
 

@@ -79,9 +79,14 @@ static int test_runtime_image_layout(void) {
     if (image.input_meters_len != 1u || image.output_meters_len != 1u || image.nodes_len != 2u ||
         image.schedule_len != 2u || image.state_buffers_len != 0u || image.state_buffer_samples != 0u)
         return fail("unexpected runtime image execution layout");
+    if (image.atom_storage_bytes == 0u)
+        return fail("runtime image did not reserve atom storage");
     if (!image.node_layouts || image.node_layouts[0].out_size == 0u || image.node_layouts[0].in_size == 0u ||
         image.node_layouts[0].config_size == 0u || image.node_layouts[0].state_size == 0u)
         return fail("unexpected runtime image node layout");
+    if (image.node_layouts[0].out_offset >= image.atom_storage_bytes ||
+        image.node_layouts[1].state_offset >= image.atom_storage_bytes)
+        return fail("runtime image atom storage offsets are out of range");
     if (image.node_layouts[0].state_buffer_samples_by_index)
         return fail("stateless node should not have state buffer sample layout");
     if (image.node_layouts[0].config_refreshes_len != 1u || image.node_layouts[1].config_refreshes_len != 0u)
@@ -102,6 +107,14 @@ static int test_runtime_image_layout(void) {
         runtime.input_meters_len != image.input_meters_len || runtime.output_meters_len != image.output_meters_len ||
         runtime.nodes_len != image.nodes_len)
         return fail("runtime did not adopt image layout");
+    if (!runtime.atom_storage_pool || runtime.atom_storage_bytes != image.atom_storage_bytes)
+        return fail("runtime did not allocate image atom storage pool");
+    const char *pool = (const char *)runtime.atom_storage_pool;
+    if ((const char *)runtime.nodes[0].out_storage < pool ||
+        (const char *)runtime.nodes[0].out_storage >= pool + runtime.atom_storage_bytes ||
+        (const char *)runtime.nodes[1].state_storage < pool ||
+        (const char *)runtime.nodes[1].state_storage >= pool + runtime.atom_storage_bytes)
+        return fail("runtime node storage does not point into atom storage pool");
     if (runtime.nodes[0].config_refreshes_len != image.node_layouts[0].config_refreshes_len ||
         runtime.nodes[1].config_refreshes_len != image.node_layouts[1].config_refreshes_len)
         return fail("runtime did not adopt config refresh plan");

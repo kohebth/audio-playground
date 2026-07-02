@@ -61,6 +61,8 @@ typedef struct {
     size_t                           input_meters_len;
     apg_v2_meter_snapshot_t         *output_meters;
     size_t                           output_meters_len;
+    void                            *atom_storage_pool;
+    size_t                           atom_storage_bytes;
     apg_v2_runtime_node_t           *nodes;
     size_t                           nodes_len;
     char                             last_error[160];
