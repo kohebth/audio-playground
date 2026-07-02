@@ -284,43 +284,6 @@ static void advance_smoothed_params(apg_v2_runtime_t *runtime, uint32_t frames) 
     }
 }
 
-static const atom_field_desc_t delay_tap_feedback_in_fields[] = {
-    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedback_in_t,       buffer)},
-    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedback_in_t, tap_position)},
-};
-
-static const atom_field_desc_t delay_tap_feedforward_in_fields[] = {
-    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedforward_in_t,       buffer)},
-    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedforward_in_t, tap_position)},
-};
-
-static const atom_field_desc_t *
-find_field_in_list(const atom_field_desc_t *fields, size_t fields_len, const char *key) {
-    if (!fields || !key)
-        return NULL;
-    for (size_t i = 0; i < fields_len; i++) {
-        if (fields[i].name && strcmp(fields[i].name, key) == 0)
-            return &fields[i];
-    }
-    return NULL;
-}
-
-static const atom_field_desc_t *find_input_field(const atom_registry_entry_t *atom, const char *key) {
-    if (!atom || !atom->name)
-        return NULL;
-    if (strcmp(atom->name, "delay_tap_feedback") == 0)
-        return find_field_in_list(
-            delay_tap_feedback_in_fields,
-            sizeof(delay_tap_feedback_in_fields) / sizeof(delay_tap_feedback_in_fields[0]), key
-        );
-    if (strcmp(atom->name, "delay_tap_feedforward") == 0)
-        return find_field_in_list(
-            delay_tap_feedforward_in_fields,
-            sizeof(delay_tap_feedforward_in_fields) / sizeof(delay_tap_feedforward_in_fields[0]), key
-        );
-    return NULL;
-}
-
 static float compiled_scalar_value(const apg_v2_compiled_binding_t *binding, const apg_v2_runtime_t *runtime) {
     if (binding->kind == APG_BIND_PARAM)
         return binding->index < runtime->params_len ? runtime->params[binding->index] : 0.0f;
