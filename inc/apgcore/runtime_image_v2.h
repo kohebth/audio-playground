@@ -1,10 +1,12 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_RUNTIME_IMAGE_V2_H
 #define AUDIO_PLAYGROUND_APGCORE_RUNTIME_IMAGE_V2_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <apgcore/compiler_v2.h>
+#include <atom_registry.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
 
@@ -15,14 +17,28 @@ typedef struct {
 } apg_v2_runtime_control_target_t;
 
 typedef struct {
-    size_t  out_size;
-    size_t  in_size;
-    size_t  config_size;
-    size_t  state_size;
-    size_t *state_buffer_samples_by_index;
-    size_t  state_buffers_len;
-    size_t  state_buffer_samples;
-    size_t  signal_array_pointer_slots;
+    const apg_v2_compiled_binding_t *binding;
+    const char                      *node_id;
+    const char                      *atom_name;
+    const char                      *binding_key;
+    size_t                           storage_offset;
+    atom_field_type_t                field_type;
+    bool                             config;
+} apg_v2_runtime_scalar_refresh_t;
+
+typedef struct {
+    size_t                           out_size;
+    size_t                           in_size;
+    size_t                           config_size;
+    size_t                           state_size;
+    size_t                          *state_buffer_samples_by_index;
+    size_t                           state_buffers_len;
+    size_t                           state_buffer_samples;
+    size_t                           signal_array_pointer_slots;
+    apg_v2_runtime_scalar_refresh_t *config_refreshes;
+    size_t                           config_refreshes_len;
+    apg_v2_runtime_scalar_refresh_t *input_refreshes;
+    size_t                           input_refreshes_len;
 } apg_v2_runtime_node_layout_t;
 
 typedef struct {

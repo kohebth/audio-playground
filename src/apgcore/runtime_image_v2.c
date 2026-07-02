@@ -2,8 +2,11 @@
 
 #include <limits.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <atom/dsp_types.h>
 
 static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     uc_loc loc = {0, 0};
@@ -70,6 +73,125 @@ static size_t signal_array_pointer_slots(const apg_v2_compiled_binding_t *bindin
             slots += bindings[i].indices_len;
     }
     return slots;
+}
+
+static const atom_field_desc_t delay_tap_feedback_in_fields[] = {
+    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedback_in_t,       buffer)},
+    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedback_in_t, tap_position)},
+};
+
+static const atom_field_desc_t delay_tap_feedforward_in_fields[] = {
+    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedforward_in_t,       buffer)},
+    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedforward_in_t, tap_position)},
+};
+
+static const atom_field_desc_t *
+find_field_in_list(const atom_field_desc_t *fields, size_t fields_len, const char *key) {
+    if (!fields || !key)
+        return NULL;
+    for (size_t i = 0; i < fields_len; i++) {
+        if (fields[i].name && strcmp(fields[i].name, key) == 0)
+            return &fields[i];
+    }
+    return NULL;
+}
+
+static const atom_field_desc_t *find_input_field(const atom_registry_entry_t *atom, const char *key) {
+    if (!atom || !atom->name)
+        return NULL;
+    if (strcmp(atom->name, "delay_tap_feedback") == 0)
+        return find_field_in_list(
+            delay_tap_feedback_in_fields,
+            sizeof(delay_tap_feedback_in_fields) / sizeof(delay_tap_feedback_in_fields[0]), key
+        );
+    if (strcmp(atom->name, "delay_tap_feedforward") == 0)
+        return find_field_in_list(
+            delay_tap_feedforward_in_fields,
+            sizeof(delay_tap_feedforward_in_fields) / sizeof(delay_tap_feedforward_in_fields[0]), key
+        );
+    return NULL;
+}
+
+static const atom_field_desc_t *find_config_field(const atom_registry_entry_t *atom, const char *key) {
+    if (!atom || !key)
+        return NULL;
+    for (int i = 0; i < atom->n_config_fields; i++) {
+        if (atom->config_fields[i].name && strcmp(atom->config_fields[i].name, key) == 0)
+            return &atom->config_fields[i];
+    }
+    return NULL;
+}
+
+static bool scalar_refresh_field(const atom_field_desc_t *field) {
+    return field && (field->type == FIELD_INT || field->type == FIELD_FLOAT);
+}
+
+static size_t count_config_refreshes(const apg_v2_compiled_node_t *node) {
+    size_t count = 0u;
+    for (size_t i = 0; node && i < node->config_len; i++) {
+        if (node->config[i].kind == APG_BIND_FLOAT_MATRIX)
+            continue;
+        count++;
+    }
+    return count;
+}
+
+static size_t count_input_refreshes(const apg_v2_compiled_node_t *node) {
+    size_t count = 0u;
+    for (size_t i = 0; node && i < node->in_len; i++) {
+        const atom_field_desc_t *field = find_input_field(node->atom, node->in[i].key);
+        if (scalar_refresh_field(field))
+            count++;
+    }
+    return count;
+}
+
+static uc_status fill_scalar_refreshes(
+    uc_arena                         *arena,
+    const apg_v2_compiled_node_t     *node,
+    apg_v2_runtime_scalar_refresh_t **out_items,
+    size_t                           *out_len,
+    bool                              config,
+    uc_error                         *err
+) {
+    size_t len = config ? count_config_refreshes(node) : count_input_refreshes(node);
+    *out_items = NULL;
+    *out_len   = len;
+    if (len == 0u)
+        return UC_OK;
+
+    apg_v2_runtime_scalar_refresh_t *items = uc_arena_alloc(arena, len * sizeof(*items), sizeof(void *));
+    if (!items)
+        return set_error(err, UC_E_OOM, "v2 runtime image scalar refresh allocation failed");
+
+    size_t                           item_index  = 0u;
+    size_t                           binding_len = config ? node->config_len : node->in_len;
+    const apg_v2_compiled_binding_t *bindings    = config ? node->config : node->in;
+    for (size_t i = 0; i < binding_len; i++) {
+        if (config && bindings[i].kind == APG_BIND_FLOAT_MATRIX)
+            continue;
+        const atom_field_desc_t *field =
+            config ? find_config_field(node->atom, bindings[i].key) : find_input_field(node->atom, bindings[i].key);
+        if (!field && !config)
+            continue;
+        if (!config && !scalar_refresh_field(field))
+            continue;
+        if (!field)
+            return set_error(err, UC_E_MISSING, "v2 runtime image config refresh metadata is missing");
+        if (!scalar_refresh_field(field))
+            return set_error(err, UC_E_TYPE, "v2 runtime image scalar refresh field type is unsupported");
+        items[item_index].binding        = &bindings[i];
+        items[item_index].node_id        = node->id;
+        items[item_index].atom_name      = node->atom ? node->atom->name : NULL;
+        items[item_index].binding_key    = bindings[i].key;
+        items[item_index].storage_offset = field->offset;
+        items[item_index].field_type     = field->type;
+        items[item_index].config         = config;
+        item_index++;
+    }
+
+    *out_items = items;
+    return UC_OK;
 }
 
 static uc_status fill_control_targets(uc_arena *arena, apg_v2_runtime_image_t *out, uc_error *err) {
@@ -147,6 +269,17 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         }
         out->state_buffers_len += layout->state_buffers_len;
         out->state_buffer_samples += layout->state_buffer_samples;
+
+        uc_status status = fill_scalar_refreshes(
+            arena, &out->plan->nodes[node_index], &layout->config_refreshes, &layout->config_refreshes_len, true, err
+        );
+        if (status != UC_OK)
+            return status;
+        status = fill_scalar_refreshes(
+            arena, &out->plan->nodes[node_index], &layout->input_refreshes, &layout->input_refreshes_len, false, err
+        );
+        if (status != UC_OK)
+            return status;
     }
     return UC_OK;
 }

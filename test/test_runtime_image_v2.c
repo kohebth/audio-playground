@@ -84,6 +84,8 @@ static int test_runtime_image_layout(void) {
         return fail("unexpected runtime image node layout");
     if (image.node_layouts[0].state_buffer_samples_by_index)
         return fail("stateless node should not have state buffer sample layout");
+    if (image.node_layouts[0].config_refreshes_len != 1u || image.node_layouts[1].config_refreshes_len != 0u)
+        return fail("unexpected runtime image config refresh layout");
 
     apg_v2_runtime_t runtime;
     status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
@@ -100,6 +102,9 @@ static int test_runtime_image_layout(void) {
         runtime.input_meters_len != image.input_meters_len || runtime.output_meters_len != image.output_meters_len ||
         runtime.nodes_len != image.nodes_len)
         return fail("runtime did not adopt image layout");
+    if (runtime.nodes[0].config_refreshes_len != image.node_layouts[0].config_refreshes_len ||
+        runtime.nodes[1].config_refreshes_len != image.node_layouts[1].config_refreshes_len)
+        return fail("runtime did not adopt config refresh plan");
 
     float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
     float output[4] = {0};
@@ -308,12 +313,98 @@ static int test_runtime_image_signal_array_pool(void) {
     return 0;
 }
 
+static int test_runtime_image_scalar_input_refresh(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: tap_image\n"
+                       "version: 2.0.0\n"
+                       "params:\n"
+                       "  tap:\n"
+                       "    type: int\n"
+                       "    default: 2\n"
+                       "    min: 0\n"
+                       "    max: 8\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - input\n"
+                       "    - output\n"
+                       "  nodes:\n"
+                       "    - id: tap\n"
+                       "      atom: delay_tap_feedback\n"
+                       "      in:\n"
+                       "        buffer: input\n"
+                       "        tap_position: ${params.tap}\n"
+                       "      out:\n"
+                       "        signal: output\n"
+                       "      config:\n"
+                       "        coefficient: 0.5\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_string(yaml, &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 4096) != 0) {
+        uc_arena_free(&arena);
+        return fail("image arena init failed");
+    }
+
+    apg_v2_runtime_image_t image;
+    uc_error               err    = {0};
+    uc_status              status = apg_v2_runtime_image_build(&plan, 8u, 48000.0f, &image_arena, &image, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime image error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to build scalar-input runtime image");
+    }
+    if (image.nodes_len != 1u || image.node_layouts[0].input_refreshes_len != 1u ||
+        image.node_layouts[0].config_refreshes_len != 1u)
+        return fail("unexpected scalar refresh image layout");
+
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to initialize scalar-input runtime");
+    }
+    if (runtime.nodes[0].input_refreshes_len != 1u || runtime.nodes[0].config_refreshes_len != 1u)
+        return fail("runtime did not adopt scalar refresh plans");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&image_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 int main(void) {
     if (test_runtime_image_layout())
         return 1;
     if (test_runtime_image_state_buffer_samples())
         return 1;
     if (test_runtime_image_signal_array_pool())
+        return 1;
+    if (test_runtime_image_scalar_input_refresh())
         return 1;
     return test_runtime_image_control_targets();
 }

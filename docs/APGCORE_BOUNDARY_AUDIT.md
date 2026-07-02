@@ -54,6 +54,10 @@ Runtime image node layouts now record per-node state-buffer sample counts. Runti
 
 Runtime image node layouts now record signal-array pointer pool sizes. Runtime initialization uses one pre-sized per-node pointer pool for signal-array bindings instead of allocating one auxiliary block per binding.
 
+## PD3 Progress
+
+Runtime image node layouts now record scalar config and scalar input refresh plans. Runtime processing walks those compact entries instead of scanning binding keys and atom field metadata per node.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

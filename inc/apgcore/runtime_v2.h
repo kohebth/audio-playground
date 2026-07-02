@@ -12,19 +12,23 @@
 #include <yaml/error.h>
 
 typedef struct {
-    atom_call_t call;
-    void       *out_storage;
-    void       *in_storage;
-    void       *config_storage;
-    void       *state_storage;
-    float     **state_buffers;
-    size_t     *state_buffer_samples;
-    size_t      state_buffers_len;
-    float     **signal_array_pool;
-    size_t      signal_array_pool_len;
-    size_t      signal_array_pool_used;
-    void      **aux_blocks;
-    size_t      aux_blocks_len;
+    atom_call_t                            call;
+    void                                  *out_storage;
+    void                                  *in_storage;
+    void                                  *config_storage;
+    void                                  *state_storage;
+    float                                **state_buffers;
+    size_t                                *state_buffer_samples;
+    size_t                                 state_buffers_len;
+    float                                **signal_array_pool;
+    size_t                                 signal_array_pool_len;
+    size_t                                 signal_array_pool_used;
+    const apg_v2_runtime_scalar_refresh_t *config_refreshes;
+    size_t                                 config_refreshes_len;
+    const apg_v2_runtime_scalar_refresh_t *input_refreshes;
+    size_t                                 input_refreshes_len;
+    void                                 **aux_blocks;
+    size_t                                 aux_blocks_len;
 } apg_v2_runtime_node_t;
 
 typedef struct {

@@ -454,49 +454,32 @@ static uc_status bind_signal_fields(
     return UC_OK;
 }
 
-static const atom_field_desc_t *find_config_field(const atom_registry_entry_t *atom, const char *key) {
-    for (int i = 0; i < atom->n_config_fields; i++) {
-        if (atom->config_fields[i].name && strcmp(atom->config_fields[i].name, key) == 0)
-            return &atom->config_fields[i];
-    }
-    return NULL;
-}
-
-static float compiled_config_value(const apg_v2_compiled_binding_t *binding, const apg_v2_runtime_t *runtime) {
-    return compiled_scalar_value(binding, runtime);
-}
-
-static uc_status refresh_node_config(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_t *runtime, uc_error *err) {
-    apg_v2_runtime_node_t *node = &runtime->nodes[compiled - runtime->plan->nodes];
-    for (size_t i = 0; i < compiled->config_len; i++) {
-        if (compiled->config[i].kind == APG_BIND_FLOAT_MATRIX)
-            continue;
-        const atom_field_desc_t *field = find_config_field(compiled->atom, compiled->config[i].key);
-        if (!field) {
+static uc_status refresh_scalar_plan(
+    const apg_v2_runtime_scalar_refresh_t *items,
+    size_t                                 items_len,
+    apg_v2_runtime_t                      *runtime,
+    void                                  *storage,
+    uc_error                              *err
+) {
+    for (size_t i = 0; i < items_len; i++) {
+        if (items[i].binding_key && items[i].binding && items[i].binding->key &&
+            strcmp(items[i].binding_key, items[i].binding->key) != 0) {
             char msg[192];
             snprintf(
-                msg, sizeof(msg), "node '%s' atom '%s' config binding key '%s' metadata is missing",
-                compiled->id ? compiled->id : "", compiled->atom ? compiled->atom->name : "",
-                compiled->config[i].key ? compiled->config[i].key : ""
+                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing",
+                items[i].node_id ? items[i].node_id : "", items[i].atom_name ? items[i].atom_name : "",
+                items[i].config ? "config" : "in", items[i].binding->key
             );
             return set_error(err, UC_E_MISSING, msg);
         }
-
-        void *addr  = (char *)node->config_storage + field->offset;
-        float value = compiled_config_value(&compiled->config[i], runtime);
-        if (field->type == FIELD_INT)
+        void *addr  = (char *)storage + items[i].storage_offset;
+        float value = compiled_scalar_value(items[i].binding, runtime);
+        if (items[i].field_type == FIELD_INT)
             *(int *)addr = (int)value;
-        else if (field->type == FIELD_FLOAT)
+        else if (items[i].field_type == FIELD_FLOAT)
             *(float *)addr = value;
-        else {
-            char msg[192];
-            snprintf(
-                msg, sizeof(msg), "node '%s' atom '%s' config binding key '%s' field type is not scalar",
-                compiled->id ? compiled->id : "", compiled->atom ? compiled->atom->name : "",
-                compiled->config[i].key ? compiled->config[i].key : ""
-            );
-            return set_error(err, UC_E_TYPE, msg);
-        }
+        else
+            return set_error(err, UC_E_TYPE, "v2 runtime scalar refresh field type is unsupported");
     }
     return UC_OK;
 }
@@ -533,20 +516,6 @@ bind_structured_config(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_no
     params->coefficients        = rows;
     params->num_out             = (int)matrix->rows;
     params->num_in              = (int)matrix->cols;
-    return UC_OK;
-}
-
-static uc_status
-refresh_node_input_scalars(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_t *runtime, uc_error *err) {
-    apg_v2_runtime_node_t *node = &runtime->nodes[compiled - runtime->plan->nodes];
-    for (size_t i = 0; i < compiled->in_len; i++) {
-        const atom_field_desc_t *field = find_input_field(compiled->atom, compiled->in[i].key);
-        if (!field || field->type == FIELD_SIGNAL)
-            continue;
-        uc_status status = bind_input_field(compiled, &compiled->in[i], field, runtime, node->in_storage, err);
-        if (status != UC_OK)
-            return status;
-    }
     return UC_OK;
 }
 
@@ -638,6 +607,10 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
                 return set_error(err, UC_E_OOM, "v2 runtime signal array pool allocation failed");
             node->signal_array_pool_len = layout->signal_array_pointer_slots;
         }
+        node->config_refreshes     = layout->config_refreshes;
+        node->config_refreshes_len = layout->config_refreshes_len;
+        node->input_refreshes      = layout->input_refreshes;
+        node->input_refreshes_len  = layout->input_refreshes_len;
 
         node->call.out    = node->out_storage;
         node->call.in     = node->in_storage;
@@ -658,7 +631,11 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         );
         if (status != UC_OK)
             return status;
-        status = refresh_node_config(&plan->nodes[i], out, err);
+        status =
+            refresh_scalar_plan(node->config_refreshes, node->config_refreshes_len, out, node->config_storage, err);
+        if (status != UC_OK)
+            return status;
+        status = refresh_scalar_plan(node->input_refreshes, node->input_refreshes_len, out, node->in_storage, err);
         if (status != UC_OK)
             return status;
         status = bind_structured_config(&plan->nodes[i], node, err);
@@ -1124,11 +1101,15 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
                 return false;
             continue;
         }
-        if (refresh_node_config(compiled, runtime, &err) != UC_OK) {
+        apg_v2_runtime_node_t *node = &runtime->nodes[scheduled_index];
+        if (refresh_scalar_plan(
+                node->config_refreshes, node->config_refreshes_len, runtime, node->config_storage, &err
+            ) != UC_OK) {
             runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime config refresh failed");
             return false;
         }
-        if (refresh_node_input_scalars(compiled, runtime, &err) != UC_OK) {
+        if (refresh_scalar_plan(node->input_refreshes, node->input_refreshes_len, runtime, node->in_storage, &err) !=
+            UC_OK) {
             runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime input refresh failed");
             return false;
         }
