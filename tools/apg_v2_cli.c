@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int usage(const char *argv0) {
@@ -19,8 +20,9 @@ static int usage(const char *argv0) {
         "  %s inspect project <path>\n"
         "  %s render project <path>\n"
         "  %s benchmark project <path>\n"
-        "  %s export --target <wasm_realtime|m7_static> <project> <outdir>\n",
-        argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0
+        "  %s export --target <wasm_realtime|m7_static> <project> <outdir>\n"
+        "  %s export --target m7_static --max-static-ram <bytes> <project> <outdir>\n",
+        argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0
     );
     return 2;
 }
@@ -177,6 +179,17 @@ typedef struct {
 
 static size_t storage_size(size_t size) { return size > 0u ? size : 1u; }
 
+static bool parse_size_arg(const char *text, size_t *out) {
+    if (!text || !out || text[0] == '\0')
+        return false;
+    char              *end   = NULL;
+    unsigned long long value = strtoull(text, &end, 10);
+    if (!end || *end != '\0' || value > (unsigned long long)SIZE_MAX)
+        return false;
+    *out = (size_t)value;
+    return true;
+}
+
 static m7_memory_manifest_t m7_memory_manifest(const apg_project_v2_compiled_t *compiled) {
     m7_memory_manifest_t memory = {0};
     if (!compiled)
@@ -267,7 +280,8 @@ static int export_wasm_skeleton(const char *project_path, const char *out_dir) {
     return 1;
 }
 
-static int export_m7_static(const char *project_path, const char *out_dir) {
+static int
+export_m7_static(const char *project_path, const char *out_dir, bool has_static_ram_budget, size_t static_ram_budget) {
     uc_arena arena;
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
@@ -292,6 +306,17 @@ static int export_m7_static(const char *project_path, const char *out_dir) {
         return rc;
     }
 
+    m7_memory_manifest_t memory = m7_memory_manifest(&compiled);
+    if (has_static_ram_budget && memory.static_ram_bytes > static_ram_budget) {
+        uc_error_set(
+            &err, UC_E_RANGE, (uc_loc){0, 0}, "m7_static static RAM budget exceeded: %zu > %zu bytes",
+            memory.static_ram_bytes, static_ram_budget
+        );
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
     char header_path[512];
     char source_path[512];
     if (!join_path(header_path, sizeof(header_path), out_dir, "apg_project_m7.h") ||
@@ -302,7 +327,6 @@ static int export_m7_static(const char *project_path, const char *out_dir) {
         return rc;
     }
 
-    m7_memory_manifest_t memory = m7_memory_manifest(&compiled);
     if (!write_m7_header(header_path, &compiled, &memory) || !write_m7_source(source_path, &project, &compiled)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write m7_static export files");
         int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
@@ -385,12 +409,23 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "export") == 0) {
-        if (argc != 6 || strcmp(argv[2], "--target") != 0)
+        if ((argc != 6 && argc != 8) || strcmp(argv[2], "--target") != 0)
             return usage(argv[0]);
-        if (strcmp(argv[3], "wasm_realtime") == 0)
+        if (strcmp(argv[3], "wasm_realtime") == 0) {
+            if (argc != 6)
+                return usage(argv[0]);
             return export_wasm_skeleton(argv[4], argv[5]);
-        if (strcmp(argv[3], "m7_static") == 0)
-            return export_m7_static(argv[4], argv[5]);
+        }
+        if (strcmp(argv[3], "m7_static") == 0) {
+            if (argc == 6)
+                return export_m7_static(argv[4], argv[5], false, 0u);
+            if (strcmp(argv[4], "--max-static-ram") != 0)
+                return usage(argv[0]);
+            size_t max_static_ram = 0u;
+            if (!parse_size_arg(argv[5], &max_static_ram))
+                return usage(argv[0]);
+            return export_m7_static(argv[6], argv[7], true, max_static_ram);
+        }
         uc_error err = {0};
         uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "unsupported export target");
         return write_cli_error(stdout, "apg.project.export.v1", argv[4], argv[3], &err);

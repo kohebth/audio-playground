@@ -210,3 +210,14 @@ set_tests_properties(test_apg_v2_cli_m7_export_source_static PROPERTIES
         PASS_REGULAR_EXPRESSION "const uint32_t apg_m7_project_schedule\\[APG_M7_PROJECT_SCHEDULE_COUNT\\].*const char \\*const apg_m7_project_nodes\\[APG_M7_PROJECT_NODE_COUNT\\]"
         FAIL_REGULAR_EXPRESSION "malloc|calloc|realloc|free|uc_arena|yaml|load_resolved|runtime_init"
 )
+
+add_test(
+        NAME test_apg_v2_cli_m7_export_static_ram_budget
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static --max-static-ram 100 projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_TEST_DIR} || true"
+)
+set_tests_properties(test_apg_v2_cli_m7_export_static_ram_budget PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        DEPENDS test_apg_v2_cli_m7_export_bundle
+        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*\"APG_RANGE_ERROR\".*static RAM budget exceeded"
+)

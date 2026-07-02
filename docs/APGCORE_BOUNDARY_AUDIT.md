@@ -34,6 +34,10 @@ M7 static export artifacts declare no runtime YAML parser and no dynamic allocat
 
 M7 static export now emits a deterministic memory manifest in JSON and generated header macros, including block frames, signal buffer bytes, param bytes, schedule bytes, atom storage bytes, state buffer bytes, and total static RAM bytes.
 
+## PC2 Progress
+
+M7 static export accepts `--max-static-ram <bytes>` and rejects compatible bundles whose computed static RAM manifest exceeds the provided board budget.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.
