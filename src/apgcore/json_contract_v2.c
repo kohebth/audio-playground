@@ -2,6 +2,7 @@
 
 #include <apgcore/atom_catalog.h>
 #include <apgcore/compiler_v2.h>
+#include <apgcore/measure_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/project_v2.h>
 #include <apgcore/runtime_v2.h>
@@ -454,7 +455,7 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     if (status == UC_OK) {
         fill_deterministic_render_input(input, APG_RENDER_FRAMES);
         if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, APG_RENDER_FRAMES)) {
-            const char *msg = apg_v2_runtime_last_error(&runtime);
+            const char *msg = apg_v2_measure_last_error(&runtime);
             uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "%s", msg ? msg : "project render failed");
             status = UC_E_TYPE;
         }

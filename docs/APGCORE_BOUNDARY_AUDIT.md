@@ -18,6 +18,10 @@
 - Runtime node initialization still binds atom storage from compiled bindings. PB3 should move more binding layout decisions into runtime-image descriptors before STM32H7 static export is considered ready.
 - Project mute, solo, and instance bypass are runtime controls today. Future host/control design should decide whether these become precompiled control targets or remain runtime-owned transport state.
 
+## PB2 Progress
+
+Host/tooling-facing render, smoke, load-all, offline-chain, hall-render, and project-compile tests now read diagnostics, meters, and project transport state through `measure_v2`. The remaining `apg_v2_runtime_last_error(...)` uses are runtime-specific compatibility tests and wrapper definitions.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

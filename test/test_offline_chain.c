@@ -34,7 +34,7 @@ static int process_chunk(apg_v2_runtime_t *runtime, int chunk, float *output, fl
     }
 
     if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, TEST_CHUNK)) {
-        fprintf(stderr, "runtime error: %s\n", apg_v2_runtime_last_error(runtime));
+        fprintf(stderr, "runtime error: %s\n", apg_v2_measure_last_error(runtime));
         return fail("v2 offline chain processing failed");
     }
 

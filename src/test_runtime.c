@@ -1,4 +1,5 @@
 #include <apgcore/host_v2.h>
+#include <apgcore/measure_v2.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -39,7 +40,7 @@ int main(void) {
     for (int chunk = 0; chunk < 8; chunk++) {
         fill_input(input, chunk);
         if (!apg_v2_host_process_mono_ports(&host, "input", input, "output", output, TEST_FRAMES)) {
-            fprintf(stderr, "runtime error: %s\n", apg_v2_runtime_last_error(&host.runtime));
+            fprintf(stderr, "runtime error: %s\n", apg_v2_measure_last_error(&host.runtime));
             apg_v2_host_destroy(&host);
             return fail("v2 runtime smoke processing failed");
         }

@@ -123,7 +123,7 @@ static int test_simple_project_compiles_and_runs(void) {
     const float input[3]  = {0.25f, -0.5f, 1.0f};
     float       output[3] = {0.0f, 0.0f, 0.0f};
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u)) {
-        fprintf(stderr, "runtime error: %s\n", apg_v2_runtime_last_error(&runtime));
+        fprintf(stderr, "runtime error: %s\n", apg_v2_measure_last_error(&runtime));
         return fail("project runtime processing failed");
     }
     const float expected_default[3] = {0.5f, -1.0f, 2.0f};
@@ -208,7 +208,9 @@ static int test_two_instance_project_compiles_and_runs(void) {
         expect_meter_near(&meter, 1.5f, 1.1858541f, 2u, "two-instance project bypassed output"))
         return 1;
 
-    if (!apg_v2_runtime_set_project_solo(&runtime, true) || !runtime.project_soloed)
+    apg_v2_measure_runtime_snapshot_t snapshot;
+    if (!apg_v2_runtime_set_project_solo(&runtime, true) || !apg_v2_measure_runtime_snapshot(&runtime, &snapshot) ||
+        !snapshot.project_soloed)
         return fail("two-instance runtime did not store project solo state");
     if (!apg_v2_runtime_set_project_mute(&runtime, true))
         return fail("two-instance runtime did not accept project mute");
@@ -280,7 +282,7 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
     const float input[4]  = {0.3f, 0.6f, -0.2f, 0.1f};
     float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
-        fprintf(stderr, "runtime error: %s\n", apg_v2_runtime_last_error(&runtime));
+        fprintf(stderr, "runtime error: %s\n", apg_v2_measure_last_error(&runtime));
         return fail("pedalboard project processing failed");
     }
     if (expect_finite_samples(output, 4u, "pedalboard project"))

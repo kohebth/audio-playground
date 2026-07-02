@@ -45,7 +45,7 @@ static int process_render(apg_v2_runtime_t *runtime, float *peak, double *sum_sq
     for (uint32_t chunk = 0; chunk < CHUNKS; chunk++) {
         fill_guitar_like_input(input, chunk);
         if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, CHUNK)) {
-            fprintf(stderr, "pedalboard runtime error: %s\n", apg_v2_runtime_last_error(runtime));
+            fprintf(stderr, "pedalboard runtime error: %s\n", apg_v2_measure_last_error(runtime));
             return fail("pedalboard offline render failed");
         }
         if (chunk > 0 && fabsf(output[0] - previous_last) > 3.0f)
