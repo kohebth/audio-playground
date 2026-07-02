@@ -75,6 +75,7 @@ Module note: Host and tooling tests now read runtime diagnostics and transport s
 
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
 Module note: Runtime initialization now consumes runtime-image signal-binding and mix-matrix config plans instead of resolving descriptors.
+Module note: Delay-tap input field metadata now comes from atom registry lookup, not atom-name branching in runtime-image.
 
 Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 

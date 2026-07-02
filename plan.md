@@ -91,6 +91,7 @@ Module note: Core boundary audit now records remaining runtime/measure/image lea
 Module note: Host and tooling tests now read runtime diagnostics and transport state through measure APIs.
 
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
+Module note: Delay-tap input field metadata is now looked up through atom registry API, removing runtime-image atom-name branching.
 
 Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 
