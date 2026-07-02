@@ -606,7 +606,7 @@ uc_status apg_v2_runtime_image_build_with_growth(
     apg_v2_runtime_image_t       *out_image,
     uc_error                     *err
 ) {
-    if (!out_arena || !out_image)
+    if (!plan || !out_arena || !out_image || !err)
         return UC_E_TYPE;
 
     *out_arena = (uc_arena){0};
