@@ -82,6 +82,19 @@ uc_status apg_v2_runtime_init(
 );
 
 /*
+ * Production path: build a runtime image in the provided arena and initialize a runtime.
+ * This returns a runtime with all stage-specific allocation complete and image metadata owned by runtime.
+ */
+uc_status apg_v2_runtime_init_from_plan(
+    const apg_v2_compiled_unit_t *plan,
+    uint32_t                      frame_capacity,
+    float                         sample_rate,
+    uc_arena                     *image_arena,
+    apg_v2_runtime_t             *out,
+    uc_error                     *err
+);
+
+/*
  * Initialize a runtime from a prebuilt runtime image descriptor.
  * The image and compiled plan must outlive the runtime.
  */

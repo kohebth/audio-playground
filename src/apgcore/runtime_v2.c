@@ -576,19 +576,40 @@ uc_status apg_v2_runtime_init(
     if (!plan || !plan->unit || !out || !err)
         return UC_E_TYPE;
 
-    apg_v2_runtime_image_t image;
+    memset(out, 0, sizeof(*out));
+    uc_status status = apg_v2_runtime_init_from_plan(plan, frame_capacity, sample_rate, &out->image_arena, out, err);
+    if (status != UC_OK)
+        return status;
+
+    return UC_OK;
+}
+
+uc_status apg_v2_runtime_init_from_plan(
+    const apg_v2_compiled_unit_t *plan,
+    uint32_t                      frame_capacity,
+    float                         sample_rate,
+    uc_arena                     *image_arena,
+    apg_v2_runtime_t             *out,
+    uc_error                     *err
+) {
+    if (!plan || !plan->unit || !out || !err || !image_arena)
+        return UC_E_TYPE;
+
+    apg_v2_runtime_image_t image = {0};
     uc_status              status =
-        apg_v2_runtime_image_build_with_growth(plan, frame_capacity, sample_rate, &out->image_arena, &image, err);
+        apg_v2_runtime_image_build_with_growth(plan, frame_capacity, sample_rate, image_arena, &image, err);
     if (status != UC_OK)
         return status;
 
     status = apg_v2_runtime_init_from_image(&image, out, err);
     if (status != UC_OK) {
-        uc_arena_free(&out->image_arena);
-        out->image_arena_ready = false;
+        apg_v2_runtime_destroy(out);
+        uc_arena_free(image_arena);
+        *image_arena = (uc_arena){0};
         return status;
     }
 
+    out->image_arena       = *image_arena;
     out->image_arena_ready = true;
     return UC_OK;
 }

@@ -30,18 +30,12 @@ uc_status apg_v2_host_load_file(
     if (status != UC_OK)
         goto fail;
 
-    status = apg_v2_runtime_image_build_with_growth(
-        &out->plan, frame_capacity, sample_rate, &out->image_arena, &out->image, err
-    );
+    status =
+        apg_v2_runtime_init_from_plan(&out->plan, frame_capacity, sample_rate, &out->image_arena, &out->runtime, err);
     if (status != UC_OK)
         goto fail;
 
-    status = apg_v2_runtime_init_from_image(&out->image, &out->runtime, err);
-    if (status != UC_OK)
-        goto fail;
-
-    out->image_arena_ready = true;
-    out->runtime_ready     = true;
+    out->runtime_ready = true;
     return UC_OK;
 
 fail:
@@ -100,18 +94,13 @@ uc_status apg_v2_host_project_load_file(
     if (status != UC_OK)
         goto fail;
 
-    status = apg_v2_runtime_image_build_with_growth(
-        &out->compiled.plan, frame_capacity, sample_rate, &out->image_arena, &out->image, err
+    status = apg_v2_runtime_init_from_plan(
+        &out->compiled.plan, frame_capacity, sample_rate, &out->image_arena, &out->runtime, err
     );
     if (status != UC_OK)
         goto fail;
 
-    status = apg_v2_runtime_init_from_image(&out->image, &out->runtime, err);
-    if (status != UC_OK)
-        goto fail;
-
-    out->image_arena_ready = true;
-    out->runtime_ready     = true;
+    out->runtime_ready = true;
     return UC_OK;
 
 fail:
