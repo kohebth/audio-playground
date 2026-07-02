@@ -66,6 +66,10 @@ Runtime image node layouts now record aligned offsets into one atom storage pool
 
 Runtime image node layouts now record per-buffer state sample offsets. Runtime initialization allocates one contiguous state-buffer pool and points per-node state buffer tables into it.
 
+## PE3 Progress
+
+M7 static export now emits section names and section-placed RAM buffers for signal buffers, params, atom storage, and state buffers. CTest verifies those generated bundle sections stay present.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

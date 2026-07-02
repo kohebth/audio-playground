@@ -234,6 +234,13 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     fprintf(out, "#define APG_M7_PROJECT_ATOM_STORAGE_BYTES %zuu\n", memory->atom_storage_bytes);
     fprintf(out, "#define APG_M7_PROJECT_STATE_BUFFER_BYTES %zuu\n", memory->state_buffer_bytes);
     fprintf(out, "#define APG_M7_PROJECT_STATIC_RAM_BYTES %zuu\n\n", memory->static_ram_bytes);
+    fputs("#define APG_M7_SECTION_SIGNAL_BUFFERS \".apg_m7_signal_buffers\"\n", out);
+    fputs("#define APG_M7_SECTION_PARAMS \".apg_m7_params\"\n", out);
+    fputs("#define APG_M7_SECTION_ATOM_STORAGE \".apg_m7_atom_storage\"\n", out);
+    fputs("#define APG_M7_SECTION_STATE_BUFFERS \".apg_m7_state_buffers\"\n", out);
+    fputs("#if defined(__GNUC__)\n", out);
+    fputs("#define APG_M7_SECTION_ATTR(name) __attribute__((section(name), aligned(4)))\n", out);
+    fputs("#else\n#define APG_M7_SECTION_ATTR(name)\n#endif\n\n", out);
     fputs("#define APG_M7_PROJECT_USES_RUNTIME_YAML 0u\n", out);
     fputs("#define APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u\n\n", out);
     fputs("extern const char apg_m7_project_name[];\n", out);
@@ -263,7 +270,32 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
             fputs(", ", out);
         write_c_string(out, compiled->plan.nodes[i].id);
     }
-    fputs("};\n", out);
+    fputs("};\n\n", out);
+    fputs("#if APG_M7_PROJECT_SIGNAL_BUFFER_BYTES > 0u\n", out);
+    fputs(
+        "uint8_t apg_m7_project_signal_buffers[APG_M7_PROJECT_SIGNAL_BUFFER_BYTES] "
+        "APG_M7_SECTION_ATTR(APG_M7_SECTION_SIGNAL_BUFFERS);\n",
+        out
+    );
+    fputs("#endif\n\n#if APG_M7_PROJECT_PARAM_BYTES > 0u\n", out);
+    fputs(
+        "uint8_t apg_m7_project_params[APG_M7_PROJECT_PARAM_BYTES] "
+        "APG_M7_SECTION_ATTR(APG_M7_SECTION_PARAMS);\n",
+        out
+    );
+    fputs("#endif\n\n#if APG_M7_PROJECT_ATOM_STORAGE_BYTES > 0u\n", out);
+    fputs(
+        "uint8_t apg_m7_project_atom_storage[APG_M7_PROJECT_ATOM_STORAGE_BYTES] "
+        "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_STORAGE);\n",
+        out
+    );
+    fputs("#endif\n\n#if APG_M7_PROJECT_STATE_BUFFER_BYTES > 0u\n", out);
+    fputs(
+        "uint8_t apg_m7_project_state_buffers[APG_M7_PROJECT_STATE_BUFFER_BYTES] "
+        "APG_M7_SECTION_ATTR(APG_M7_SECTION_STATE_BUFFERS);\n",
+        out
+    );
+    fputs("#endif\n", out);
     return fclose(out) == 0;
 }
 

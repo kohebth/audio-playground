@@ -112,11 +112,13 @@ Module note: Runtime processing now refreshes scalar fields from image plans.
 
 - [x] PE1: Move atom out/in/config/state call storage into one runtime-image-planned contiguous pool.
 - [x] PE2: Move state buffer allocations toward one state-buffer pool using image offsets.
-- [ ] PE3: Add static export memory sections for atom storage, signal buffers, params, and state buffers.
+- [x] PE3: Add static export memory sections for atom storage, signal buffers, params, and state buffers.
 
 Module note: Runtime atom call storage now uses one image-planned contiguous pool.
 
 Module note: Runtime state buffers now use one image-planned contiguous pool.
+
+Module note: M7 export now declares section-placed runtime memory buffers.
 
 Implementation lifecycle for production phases:
 
