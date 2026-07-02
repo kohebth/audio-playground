@@ -32,6 +32,12 @@ typedef struct {
     size_t                                 input_refreshes_len;
 } apg_v2_runtime_node_t;
 
+typedef struct apg_v2_runtime_bypass_entry_t {
+    char  *instance_id;
+    size_t input_index;
+    size_t output_index;
+} apg_v2_runtime_bypass_entry_t;
+
 typedef struct {
     float    peak;
     float    rms;
@@ -52,12 +58,15 @@ typedef struct {
     uint32_t                        *param_smoothing_remaining_frames;
     size_t                           params_len;
     bool                             has_processed;
-    char                           **bypassed_instances;
+    apg_v2_runtime_bypass_entry_t   *bypassed_instances;
     size_t                           bypassed_instances_len;
+    size_t                          *bypass_index_by_node;
     apg_v2_runtime_control_target_t *control_targets;
     size_t                           control_targets_len;
     bool                             project_muted;
     bool                             project_soloed;
+    size_t                          *project_mute_output_indices;
+    size_t                           project_mute_output_indices_len;
     float                          **signal_array_pool;
     size_t                           signal_array_pool_len;
     bool                             image_arena_ready;
