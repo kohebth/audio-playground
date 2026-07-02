@@ -1,5 +1,7 @@
 # Unit v2 Compiler Architecture
 
+`core-design.md` is the current production module-boundary target: metadata, parser, validator, compiler, runtime image, runtime, measure, and host.
+
 ## Parser and Validator
 
 `apg_v2_parse_file(...)` and `apg_v2_parse_string(...)` parse YAML into a raw arena-owned `uc_node` contract graph without semantic validation. Unit and project validators then fill `apg_unit_v2_t` or `apg_project_v2_t` and validate schema rules, atom metadata references, graph names, binding keys, compatibility flags, and `${params.name}` references.
@@ -28,6 +30,8 @@ The compiler treats public audio inputs as initially available, then repeatedly 
 `apg_v2_runtime_image_build(...)` creates an arena-owned runtime image descriptor from a compiled plan. It precomputes signal, param, meter, node, schedule, state-buffer, and control-target layout metadata without allocating audio/runtime buffers.
 
 `apg_v2_runtime_init_from_image(...)` creates `apg_v2_runtime_t` from that descriptor. `apg_v2_runtime_init(...)` remains a compatibility wrapper that builds a temporary image first. The runtime owns signal buffers, param/default tables, image-derived control targets, and per-node `atom_call_t` storage. `apg_v2_runtime_find_input_port_signal(...)` and `apg_v2_runtime_find_output_port_signal(...)` expose the first channel of named public audio ports, while explicit channel APIs expose mapped channel buffers. `apg_v2_runtime_set_control_port(...)` uses the runtime image control target table. `apg_v2_runtime_reset(...)` clears signal buffers, restores image-derived param defaults, and resets state storage while preserving internal buffer pointers. Processing APIs copy named external buffers, refresh scalar bindings, execute the compiled schedule through atom thunks, update meters, and copy outputs back to the caller.
+
+`apg_v2_measure_*` APIs expose host/tooling reads for runtime snapshots, meters, and diagnostics. Legacy runtime meter/error getters remain compatibility wrappers over the measure module.
 
 ## Memory Ownership
 

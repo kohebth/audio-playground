@@ -4,7 +4,7 @@
 
 APGCore v2 MVP implementation work tracked in `plan.md` is complete through phases AC-AJ. Validation/inspect/render/benchmark JSON, frozen sample contracts, project workspace editing, deterministic preview, compatibility/export UI, M7 static export surfaces, deferred tests, and final docs are implemented.
 
-Current production focus: move beyond MVP surfaces toward a hardware-ready multi-effect core. The target architecture isolates `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` so parsing, validation, graph expansion, resource registration, and measurement stay out of the real-time execution path.
+Current production focus: move beyond MVP surfaces toward a hardware-ready multi-effect core. The target architecture in `core-design.md` isolates `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` so parsing, validation, graph expansion, resource registration, and measurement stay out of the real-time execution path.
 
 Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through AJ, and the MVP web/backend handoff are complete. The project is not ready for STM32H7/M7 production yet. Next work should first make the core boundaries production-shaped, then continue STM32H7/M7 export validation, cross-compilation, audio callback integration, memory/CPU budgeting, and real WASM AudioWorklet preview/export.
 
@@ -13,7 +13,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PA1: Add an explicit APGCore v2 parser boundary that parses YAML strings/files into a raw contract graph without semantic validation.
 - [x] PA2: Split unit/project semantic checks into validator modules while preserving current public loader APIs.
 - [x] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
-- [ ] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
+- [x] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
 - [ ] PA5: Deprecate and remove unused v1 code after auditing which legacy runtime, unit, and YAML paths are no longer needed.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
@@ -21,6 +21,8 @@ Module note: Parser v2 now exposes raw YAML contract graphs before validator-spe
 Module note: Unit and project validators now own semantic graph checks behind thin parser-backed loaders.
 
 Module note: Runtime image now precomputes layout/defaults/control targets before runtime allocation.
+
+Module note: Measure v2 now exposes runtime snapshots, meters, and diagnostics for host/tooling reads.
 
 Note: v1 code is legacy. Audit, deprecate, and remove unused v1 runtime/unit/YAML paths only after confirming no tests, fixtures, or host tools still depend on them.
 

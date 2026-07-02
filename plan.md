@@ -11,7 +11,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - Production readiness is not achieved yet. STM32H7/M7 deployment still needs target export validation, cross-compilation, board audio integration, and measured memory/CPU budgets.
 - Final verification passed with `npm run test`, `npm run build`, and `npm run lint` in `web-tools/unit-editor`, plus `./build-and-test.sh` across 20 CTest targets.
 - Remaining work is production hardening, primarily STM32H7/M7 readiness and real WASM AudioWorklet preview/export beyond the deterministic preview and blocked export skeleton.
-- Current production architecture target: isolate `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` so the real-time path only executes a compact prebuilt schedule over registered memory.
+- Current production architecture target: isolate `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` as described in `core-design.md`, so the real-time path only executes a compact prebuilt schedule over registered memory.
 
 ## Production Implementation Lifecycle
 
@@ -31,7 +31,7 @@ During implementation phases, use focused verification before commits. For web c
 - [x] PA1: Add an explicit APGCore v2 parser boundary that parses YAML strings/files into a raw contract graph without semantic validation.
 - [x] PA2: Split unit/project semantic checks into validator modules while preserving current public loader APIs.
 - [x] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
-- [ ] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
+- [x] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
 - [ ] PA5: Deprecate and remove unused v1 code after auditing which legacy runtime, unit, and YAML paths are no longer needed.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
@@ -39,6 +39,8 @@ Module note: Parser v2 now exposes raw YAML contract graphs before validator-spe
 Module note: Unit and project validators now own semantic graph checks behind thin parser-backed loaders.
 
 Module note: Runtime image now precomputes layout/defaults/control targets before runtime allocation.
+
+Module note: Measure v2 now exposes runtime snapshots, meters, and diagnostics for host/tooling reads.
 
 Note: v1 code is legacy. Audit, deprecate, and remove unused v1 runtime/unit/YAML paths only after confirming no tests, fixtures, or host tools still depend on them.
 

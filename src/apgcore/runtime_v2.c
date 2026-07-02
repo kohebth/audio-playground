@@ -1,3 +1,4 @@
+#include <apgcore/measure_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <atom/dsp_types.h>
 
@@ -103,29 +104,6 @@ static size_t audio_port_meter_count(const apg_unit_v2_port_t *ports, size_t por
             count += channels;
     }
     return count;
-}
-
-static bool audio_port_meter_index(
-    const apg_unit_v2_port_t *ports, size_t ports_len, const char *port_name, size_t channel_index, size_t *out_index
-) {
-    if (!ports || !port_name || !out_index)
-        return false;
-    size_t offset = 0u;
-    for (size_t i = 0; i < ports_len; i++) {
-        if (!ports[i].type || strcmp(ports[i].type, "audio") != 0)
-            continue;
-        size_t channels = 0u;
-        if (!parse_port_channel_count(&ports[i], &channels))
-            continue;
-        if (ports[i].name && strcmp(ports[i].name, port_name) == 0) {
-            if (channel_index >= channels)
-                return false;
-            *out_index = offset + channel_index;
-            return true;
-        }
-        offset += channels;
-    }
-    return false;
 }
 
 static bool node_id_has_instance_prefix(const char *node_id, const char *instance_id) {
@@ -1042,31 +1020,13 @@ bool apg_v2_runtime_set_project_solo(apg_v2_runtime_t *runtime, bool soloed) {
 bool apg_v2_runtime_get_input_meter(
     const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
 ) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !out)
-        return false;
-    size_t index = 0u;
-    if (!audio_port_meter_index(
-            runtime->plan->unit->input_ports, runtime->plan->unit->input_ports_len, port_name, channel_index, &index
-        ) ||
-        index >= runtime->input_meters_len)
-        return false;
-    *out = runtime->input_meters ? runtime->input_meters[index] : (apg_v2_meter_snapshot_t){0};
-    return true;
+    return apg_v2_measure_get_input_meter(runtime, port_name, channel_index, out);
 }
 
 bool apg_v2_runtime_get_output_meter(
     const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
 ) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !out)
-        return false;
-    size_t index = 0u;
-    if (!audio_port_meter_index(
-            runtime->plan->unit->output_ports, runtime->plan->unit->output_ports_len, port_name, channel_index, &index
-        ) ||
-        index >= runtime->output_meters_len)
-        return false;
-    *out = runtime->output_meters ? runtime->output_meters[index] : (apg_v2_meter_snapshot_t){0};
-    return true;
+    return apg_v2_measure_get_output_meter(runtime, port_name, channel_index, out);
 }
 
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
@@ -1318,9 +1278,7 @@ bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, 
     );
 }
 
-const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime) {
-    return runtime && runtime->last_error[0] ? runtime->last_error : NULL;
-}
+const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime) { return apg_v2_measure_last_error(runtime); }
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     if (!runtime)
