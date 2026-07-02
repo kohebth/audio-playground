@@ -33,9 +33,11 @@ typedef struct {
 } apg_v2_runtime_node_t;
 
 typedef struct apg_v2_runtime_bypass_entry_t {
-    char  *instance_id;
-    size_t input_index;
-    size_t output_index;
+    const char *instance_id;
+    size_t      instance_id_len;
+    size_t      input_index;
+    size_t      output_index;
+    bool        enabled;
 } apg_v2_runtime_bypass_entry_t;
 
 typedef struct {
