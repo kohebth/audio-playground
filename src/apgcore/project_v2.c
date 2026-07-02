@@ -1,8 +1,7 @@
 #include <apgcore/project_v2.h>
 
-#include <yaml/lexer.h>
+#include <apgcore/parser_v2.h>
 #include <yaml/node.h>
-#include <yaml/parser.h>
 
 #include <errno.h>
 #include <limits.h>
@@ -520,46 +519,24 @@ apg_project_v2_load_string(const char *src, size_t src_len, uc_arena *arena, apg
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
 
-    uc_token_vec tokens = {0};
-    uc_status    status = uc_lex(src, src_len, arena, &tokens, err);
-    if (status != UC_OK)
-        return status;
-    uc_node *root = NULL;
-    status        = uc_parse(&tokens, arena, &root, err);
+    uc_node  *root   = NULL;
+    uc_status status = apg_v2_parse_string(src, src_len, arena, &root, err);
     if (status != UC_OK)
         return status;
     return validate_project_root(root, arena, out, err);
 }
 
 uc_status apg_project_v2_load_file(const char *path, uc_arena *arena, apg_project_v2_t *out, uc_error *err) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        uc_loc loc = {0, 0};
-        uc_error_set(err, UC_E_IO, loc, "cannot open '%s'", path);
-        return UC_E_IO;
-    }
+    if (!arena || !out || !err)
+        return UC_E_TYPE;
+    memset(out, 0, sizeof(*out));
+    err->status = UC_OK;
 
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    if (size < 0) {
-        fclose(file);
-        return set_error(err, UC_E_IO, "ftell failed");
-    }
-
-    char *buffer = uc_arena_alloc(arena, (size_t)size + 1u, 1u);
-    if (!buffer) {
-        fclose(file);
-        return set_error(err, UC_E_OOM, "arena OOM");
-    }
-    if (fread(buffer, 1u, (size_t)size, file) != (size_t)size) {
-        fclose(file);
-        return set_error(err, UC_E_IO, "fread failed");
-    }
-    buffer[size] = '\0';
-    fclose(file);
-
-    return apg_project_v2_load_string(buffer, (size_t)size, arena, out, err);
+    uc_node  *root   = NULL;
+    uc_status status = apg_v2_parse_file(path, arena, &root, err);
+    if (status != UC_OK)
+        return status;
+    return validate_project_root(root, arena, out, err);
 }
 
 uc_status

@@ -90,6 +90,7 @@ set(TEST_TARGETS
         test_atom_basic
         test_atom_catalog
         test_project_v2_validate
+        test_contract_parser_v2
         test_project_v2_compile
         test_v2_json_contract
         test_unit_load_all
@@ -143,14 +144,14 @@ foreach(TEST_TARGET ${TEST_TARGETS})
     set_tests_properties(${TEST_TARGET} PROPERTIES
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
-    if(TEST_TARGET MATCHES "^test_unit_v2_" OR TEST_TARGET STREQUAL "test_atom_catalog" OR TEST_TARGET MATCHES "^test_project_v2_" OR TEST_TARGET STREQUAL "test_v2_json_contract")
+    if(TEST_TARGET MATCHES "^test_unit_v2_" OR TEST_TARGET STREQUAL "test_atom_catalog" OR TEST_TARGET STREQUAL "test_contract_parser_v2" OR TEST_TARGET MATCHES "^test_project_v2_" OR TEST_TARGET STREQUAL "test_v2_json_contract")
         set_tests_properties(${TEST_TARGET} PROPERTIES LABELS v2)
     endif()
 endforeach()
 
 add_custom_target(check_v2
         COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} -L v2 --output-on-failure
-        DEPENDS test_atom_catalog test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime
+        DEPENDS test_atom_catalog test_contract_parser_v2 test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime
 )
 
 add_test(

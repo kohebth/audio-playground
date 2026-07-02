@@ -11,6 +11,7 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - Production readiness is not achieved yet. STM32H7/M7 deployment still needs target export validation, cross-compilation, board audio integration, and measured memory/CPU budgets.
 - Final verification passed with `npm run test`, `npm run build`, and `npm run lint` in `web-tools/unit-editor`, plus `./build-and-test.sh` across 20 CTest targets.
 - Remaining work is production hardening, primarily STM32H7/M7 readiness and real WASM AudioWorklet preview/export beyond the deterministic preview and blocked export skeleton.
+- Current production architecture target: isolate `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` so the real-time path only executes a compact prebuilt schedule over registered memory.
 
 ## Production Implementation Lifecycle
 
@@ -24,6 +25,15 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 During implementation phases, use focused verification before commits. For web changes, run `npm run build` and `npm run lint` inside `web-tools/unit-editor`. For backend changes, run `./build-and-test.sh`; for STM32H7 work, also run the configured ARM cross-compile once the toolchain target exists.
 
 ## Completed Work
+
+### Production Core Refactor
+
+- [x] PA1: Add an explicit APGCore v2 parser boundary that parses YAML strings/files into a raw contract graph without semantic validation.
+- [ ] PA2: Split unit/project semantic checks into validator modules while preserving current public loader APIs.
+- [ ] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
+- [ ] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
+
+Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
 ### Foundation and Adapters
 

@@ -4,9 +4,18 @@
 
 APGCore v2 MVP implementation work tracked in `plan.md` is complete through phases AC-AJ. Validation/inspect/render/benchmark JSON, frozen sample contracts, project workspace editing, deterministic preview, compatibility/export UI, M7 static export surfaces, deferred tests, and final docs are implemented.
 
-Current production focus: move beyond MVP surfaces toward hardware-ready multi-effect deployment. The project is not ready for STM32H7/M7 production yet. `m7_static` currently proves a bounded C11 export path for compatible/simple projects, while the full guitar-pedalboard fixture is not an embedded-ready target.
+Current production focus: move beyond MVP surfaces toward a hardware-ready multi-effect core. The target architecture isolates `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` so parsing, validation, graph expansion, resource registration, and measurement stay out of the real-time execution path.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through AJ, and the MVP web/backend handoff are complete. Next work should be production hardening: STM32H7/M7 export validation, cross-compilation, audio callback integration, memory/CPU budgeting, and real WASM AudioWorklet preview/export.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through AJ, and the MVP web/backend handoff are complete. The project is not ready for STM32H7/M7 production yet. Next work should first make the core boundaries production-shaped, then continue STM32H7/M7 export validation, cross-compilation, audio callback integration, memory/CPU budgeting, and real WASM AudioWorklet preview/export.
+
+## Production Core Refactor Queue
+
+- [x] PA1: Add an explicit APGCore v2 parser boundary that parses YAML strings/files into a raw contract graph without semantic validation.
+- [ ] PA2: Split unit/project semantic checks into validator modules while preserving current public loader APIs.
+- [ ] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
+- [ ] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
+
+Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
 Implementation lifecycle for production phases:
 
