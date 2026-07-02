@@ -8,12 +8,12 @@ APG v1 is legacy and should be removed only after the remaining default-build de
 - `src/ctrl/ctrls.c` and `inc/ctrl/ctrls.h`: used by optional live control paths.
 - `src/unit/*.c` and `inc/unit/*.h`: fixed-size v1 adapters still covered by adapter tests.
 - `src/yaml/loader.c` and `inc/yaml/loader.h`: v1 unit loader; the lower-level YAML lexer/parser is shared by v2 parser wrappers and must not be removed.
-- `units/*.unit.yaml`: v1 fixtures used by the legacy tests and optional live examples.
+- `units/*.unit.yaml`: v1 fixtures used by optional live examples and local experiments.
 
 ## Current Deprecation Fence
 
 - v1 runtime, control, and v1 unit-loader public APIs have opt-in deprecated attributes behind `APG_ENABLE_V1_DEPRECATED_WARNINGS`.
-- v1-dependent CTest targets are labelled `legacy_v1`.
+- No default CTest target is currently labelled `legacy_v1`.
 - `test_runtime_process_frames` has been migrated to APGCore v2.
 - `test_ctrl_transition` has been migrated to APGCore v2 control-port smoothing.
 - `test_unit_load_all` has been migrated to APGCore v2 fixture load/compile/runtime smoke coverage.
