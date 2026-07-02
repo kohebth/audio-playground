@@ -15,7 +15,8 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PA3: Introduce a runtime image layer for compact params, signals, state, control metadata, and schedule storage.
 - [x] PA4: Move host/tooling introspection toward a measure module that reads runtime/image state without owning DSP execution.
 - [x] PA5a: Audit and deprecate v1 runtime/control/unit-loader paths without removing still-tested legacy code.
-- [ ] PA5b: Remove unused v1 code after migrating or deleting remaining legacy tests, live paths, and fixtures.
+- [x] PA5b1: Migrate explicit-frame runtime process coverage from v1 runtime to APGCore v2.
+- [ ] PA5b2: Remove unused v1 code after migrating or deleting remaining legacy tests, live paths, and fixtures.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -28,6 +29,8 @@ Module note: Measure v2 now exposes runtime snapshots, meters, and diagnostics f
 Note: v1 code is legacy. Audit, deprecate, and remove unused v1 runtime/unit/YAML paths only after confirming no tests, fixtures, or host tools still depend on them.
 
 Module note: V1 public APIs are now fenced as opt-in deprecated and legacy tests are labelled.
+
+Module note: Explicit-frame runtime capacity coverage now exercises APGCore v2 instead of v1.
 
 Implementation lifecycle for production phases:
 

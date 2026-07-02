@@ -1,4 +1,6 @@
-#include <runtime.h>
+#include <apgcore/compiler_v2.h>
+#include <apgcore/runtime_v2.h>
+#include <apgcore/unit_v2.h>
 
 #include <math.h>
 #include <stdbool.h>
@@ -38,11 +40,40 @@ static int assert_output(const float *output, uint32_t frames) {
     return 0;
 }
 
+static int load_runtime(uc_arena *arena, apg_v2_runtime_t *runtime) {
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    uc_error               err    = {0};
+    uc_status              status = apg_unit_v2_load_file("units-v2/simple_gain.unit.v2.yaml", arena, &unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "load error: %s\n", err.msg);
+        return fail("failed to load v2 fixture");
+    }
+
+    status = apg_v2_compile_unit(&unit, arena, &plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "compile error: %s\n", err.msg);
+        return fail("failed to compile v2 fixture");
+    }
+
+    status = apg_v2_runtime_init(&plan, TEST_CAPACITY, 48000.0f, runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        return fail("failed to initialize v2 runtime");
+    }
+    return 0;
+}
+
 int main(void) {
-    runtime_context_t ctx  = {.sample_rate = 48000.0f, .chunk_length = TEST_CAPACITY};
-    runtime_unit_t   *unit = runtime_unit_load("units/analog_delay.unit.yaml", ctx);
-    if (!unit)
-        return fail("failed to load analog_delay unit");
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_v2_runtime_t runtime;
+    if (load_runtime(&arena, &runtime)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
 
     float          input[TEST_CAPACITY];
     float          output[TEST_CAPACITY];
@@ -53,19 +84,20 @@ int main(void) {
         for (uint32_t k = 0; k < TEST_CAPACITY; k++)
             output[k] = SENTINEL;
 
-        if (!runtime_unit_process_frames(unit, input, output, frames[i]))
-            return fail("runtime_unit_process_frames rejected a valid frame count");
+        if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, frames[i]))
+            return fail("v2 runtime rejected a valid explicit frame count");
         if (assert_output(output, frames[i]))
             return 1;
     }
 
     for (uint32_t k = 0; k < TEST_CAPACITY; k++)
         output[k] = SENTINEL;
-    if (runtime_unit_process_frames(unit, input, output, TEST_CAPACITY + 1u))
-        return fail("runtime_unit_process_frames accepted a frame count beyond capacity");
+    if (apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, TEST_CAPACITY + 1u))
+        return fail("v2 runtime accepted a frame count beyond capacity");
     if (output[0] != SENTINEL)
         return fail("rejected explicit-frame process modified output");
 
-    runtime_unit_destroy(unit);
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
     return 0;
 }
