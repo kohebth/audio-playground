@@ -302,20 +302,6 @@ static void advance_smoothed_params(apg_v2_runtime_t *runtime, uint32_t frames) 
     }
 }
 
-static uc_status
-runtime_node_aux_alloc(apg_v2_runtime_node_t *node, size_t size, void **out_ptr, uc_error *err, const char *msg) {
-    void **blocks = realloc(node->aux_blocks, (node->aux_blocks_len + 1u) * sizeof(*blocks));
-    if (!blocks)
-        return set_error(err, UC_E_OOM, msg ? msg : "v2 runtime aux allocation failed");
-    void *block = calloc(1u, atom_storage_size(size));
-    if (!block)
-        return set_error(err, UC_E_OOM, msg ? msg : "v2 runtime aux allocation failed");
-    blocks[node->aux_blocks_len++] = block;
-    node->aux_blocks               = blocks;
-    *out_ptr                       = block;
-    return UC_OK;
-}
-
 static const atom_field_desc_t delay_tap_feedback_in_fields[] = {
     {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedback_in_t,       buffer)},
     {"tap_position",    FIELD_INT, offsetof(delay_tap_feedback_in_t, tap_position)},
@@ -361,95 +347,38 @@ static float compiled_scalar_value(const apg_v2_compiled_binding_t *binding, con
     return 0.0f;
 }
 
-static uc_status bind_input_field(
-    const apg_v2_compiled_node_t    *compiled,
-    const apg_v2_compiled_binding_t *binding,
-    const atom_field_desc_t         *field,
-    apg_v2_runtime_t                *out,
-    void                            *storage,
-    uc_error                        *err
+static uc_status apply_signal_bindings(
+    const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_t *runtime, apg_v2_runtime_node_t *node, uc_error *err
 ) {
-    void *addr = (char *)storage + field->offset;
-    if (field->type == FIELD_SIGNAL) {
-        if (binding->kind != APG_BIND_SIGNAL || binding->index >= out->signals_len) {
-            char msg[192];
-            snprintf(
-                msg, sizeof(msg), "node '%s' atom '%s' in binding key '%s' references invalid signal index",
-                compiled && compiled->id ? compiled->id : "", compiled && compiled->atom ? compiled->atom->name : "",
-                binding->key ? binding->key : ""
-            );
-            return set_error(err, UC_E_MISSING, msg);
-        }
-        *(float **)addr = out->signals[binding->index];
+    if (!layout || !runtime || !node)
         return UC_OK;
-    }
-    if (field->type == FIELD_INT) {
-        if (binding->kind == APG_BIND_SIGNAL)
-            return set_error(err, UC_E_TYPE, "v2 runtime scalar input cannot be bound to a signal");
-        *(int *)addr = (int)compiled_scalar_value(binding, out);
-        return UC_OK;
-    }
-    if (field->type == FIELD_FLOAT) {
-        if (binding->kind == APG_BIND_SIGNAL)
-            return set_error(err, UC_E_TYPE, "v2 runtime scalar input cannot be bound to a signal");
-        *(float *)addr = compiled_scalar_value(binding, out);
-        return UC_OK;
-    }
-    return set_error(err, UC_E_TYPE, "v2 runtime input field type is unsupported");
-}
 
-static uc_status bind_signal_fields(
-    const apg_v2_compiled_node_t    *compiled,
-    const char                      *section,
-    const apg_v2_compiled_binding_t *bindings,
-    size_t                           bindings_len,
-    apg_v2_runtime_t                *out,
-    apg_v2_runtime_node_t           *node,
-    void                            *storage,
-    uc_error                        *err
-) {
-    float **fields = (float **)storage;
-    for (size_t i = 0; i < bindings_len; i++) {
-        const atom_field_desc_t *input_field = section && strcmp(section, "in") == 0
-                                                   ? find_input_field(compiled ? compiled->atom : NULL, bindings[i].key)
-                                                   : NULL;
-        if (input_field) {
-            uc_status status = bind_input_field(compiled, &bindings[i], input_field, out, storage, err);
-            if (status != UC_OK)
-                return status;
-            continue;
-        }
-        if (bindings[i].kind == APG_BIND_SIGNAL_ARRAY) {
-            if (node->signal_array_pool_used + bindings[i].indices_len > node->signal_array_pool_len)
+    for (size_t i = 0; i < layout->signal_bindings_len; i++) {
+        const apg_v2_runtime_signal_binding_t *entry   = &layout->signal_bindings[i];
+        void                                  *storage = entry->is_input ? node->in_storage : node->out_storage;
+        if (!entry->binding || !entry->binding->key)
+            return set_error(err, UC_E_MISSING, "v2 runtime signal binding metadata is missing");
+
+        if (entry->is_signal_array) {
+            if (entry->signal_array_len == 0u)
+                return set_error(err, UC_E_RANGE, "v2 runtime signal binding has empty signal array");
+            if (entry->signal_array_offset + entry->signal_array_len > node->signal_array_pool_len)
                 return set_error(err, UC_E_RANGE, "v2 runtime signal array pool is too small");
-            float **signal_array = &node->signal_array_pool[node->signal_array_pool_used];
-            node->signal_array_pool_used += bindings[i].indices_len;
-            for (size_t j = 0; j < bindings[i].indices_len; j++) {
-                if (bindings[i].indices[j] >= out->signals_len) {
-                    char msg[192];
-                    snprintf(
-                        msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' references invalid signal index",
-                        compiled && compiled->id ? compiled->id : "",
-                        compiled && compiled->atom ? compiled->atom->name : "", section ? section : "binding",
-                        bindings[i].key ? bindings[i].key : ""
-                    );
-                    return set_error(err, UC_E_MISSING, msg);
-                }
-                signal_array[j] = out->signals[bindings[i].indices[j]];
+
+            float **signal_array = &node->signal_array_pool[entry->signal_array_offset];
+            for (size_t j = 0; j < entry->signal_array_len; j++) {
+                size_t signal_index = entry->binding->indices[j];
+                if (signal_index >= runtime->signals_len)
+                    return set_error(err, UC_E_MISSING, "v2 runtime signal binding references invalid signal index");
+                signal_array[j] = runtime->signals[signal_index];
             }
-            ((float ***)storage)[i] = signal_array;
+            *(float ***)(((char *)storage) + entry->storage_offset) = signal_array;
             continue;
         }
-        if (bindings[i].kind != APG_BIND_SIGNAL || bindings[i].index >= out->signals_len) {
-            char msg[192];
-            snprintf(
-                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' references invalid signal index",
-                compiled && compiled->id ? compiled->id : "", compiled && compiled->atom ? compiled->atom->name : "",
-                section ? section : "binding", bindings[i].key ? bindings[i].key : ""
-            );
-            return set_error(err, UC_E_MISSING, msg);
-        }
-        fields[i] = out->signals[bindings[i].index];
+
+        if (entry->signal_index >= runtime->signals_len)
+            return set_error(err, UC_E_MISSING, "v2 runtime signal binding references invalid signal index");
+        *(float **)(((char *)storage) + entry->storage_offset) = runtime->signals[entry->signal_index];
     }
     return UC_OK;
 }
@@ -484,38 +413,19 @@ static uc_status refresh_scalar_plan(
     return UC_OK;
 }
 
-static const apg_v2_compiled_binding_t *
-find_compiled_binding(const apg_v2_compiled_binding_t *bindings, size_t bindings_len, const char *key) {
-    for (size_t i = 0; i < bindings_len; i++) {
-        if (bindings[i].key && key && strcmp(bindings[i].key, key) == 0)
-            return &bindings[i];
-    }
-    return NULL;
-}
-
 static uc_status
-bind_structured_config(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_node_t *node, uc_error *err) {
-    if (!compiled || !compiled->atom || !compiled->atom->name || strcmp(compiled->atom->name, "mix_matrix") != 0)
+apply_mix_matrix_config(const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_node_t *node, uc_error *err) {
+    if (!layout || !node)
         return UC_OK;
-
-    const apg_v2_compiled_binding_t *matrix =
-        find_compiled_binding(compiled->config, compiled->config_len, "coefficients");
-    if (!matrix || matrix->kind != APG_BIND_FLOAT_MATRIX)
-        return set_error(err, UC_E_TYPE, "mix_matrix requires coefficient matrix binding");
-
-    float   **rows   = NULL;
-    uc_status status = runtime_node_aux_alloc(
-        node, matrix->rows * sizeof(*rows), (void **)&rows, err, "v2 runtime coefficient matrix allocation failed"
-    );
-    if (status != UC_OK)
-        return status;
-    for (size_t row = 0; row < matrix->rows; row++)
-        rows[row] = &matrix->numbers[row * matrix->cols];
+    if (!layout->mix_matrix_row_pointers)
+        return UC_OK;
+    if (layout->mix_matrix_num_out > INT_MAX || layout->mix_matrix_num_in > INT_MAX)
+        return set_error(err, UC_E_RANGE, "v2 runtime mix_matrix row/col counts exceed int range");
 
     mix_matrix_params_t *params = (mix_matrix_params_t *)node->config_storage;
-    params->coefficients        = rows;
-    params->num_out             = (int)matrix->rows;
-    params->num_in              = (int)matrix->cols;
+    params->coefficients        = layout->mix_matrix_row_pointers;
+    params->num_out             = (int)layout->mix_matrix_num_out;
+    params->num_in              = (int)layout->mix_matrix_num_in;
     return UC_OK;
 }
 
@@ -618,7 +528,8 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
             node->signal_array_pool = calloc(layout->signal_array_pointer_slots, sizeof(*node->signal_array_pool));
             if (!node->signal_array_pool)
                 return set_error(err, UC_E_OOM, "v2 runtime signal array pool allocation failed");
-            node->signal_array_pool_len = layout->signal_array_pointer_slots;
+            node->signal_array_pool_len  = layout->signal_array_pointer_slots;
+            node->signal_array_pool_used = layout->signal_array_pointer_slots;
         }
         node->config_refreshes     = layout->config_refreshes;
         node->config_refreshes_len = layout->config_refreshes_len;
@@ -634,14 +545,9 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         uc_status status = init_state_buffers(&plan->nodes[i], layout, out, node, err);
         if (status != UC_OK)
             return status;
-        status = bind_signal_fields(
-            &plan->nodes[i], "out", plan->nodes[i].out, plan->nodes[i].out_len, out, node, node->out_storage, err
-        );
-        if (status != UC_OK)
-            return status;
-        status = bind_signal_fields(
-            &plan->nodes[i], "in", plan->nodes[i].in, plan->nodes[i].in_len, out, node, node->in_storage, err
-        );
+        node->signal_bindings     = layout->signal_bindings;
+        node->signal_bindings_len = layout->signal_bindings_len;
+        status                    = apply_signal_bindings(layout, out, node, err);
         if (status != UC_OK)
             return status;
         status =
@@ -651,7 +557,7 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         status = refresh_scalar_plan(node->input_refreshes, node->input_refreshes_len, out, node->in_storage, err);
         if (status != UC_OK)
             return status;
-        status = bind_structured_config(&plan->nodes[i], node, err);
+        status = apply_mix_matrix_config(layout, node, err);
         if (status != UC_OK)
             return status;
     }
@@ -701,16 +607,30 @@ uc_status apg_v2_runtime_init(
     if (!plan || !plan->unit || !out || !err)
         return UC_E_TYPE;
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0)
-        return set_error(err, UC_E_OOM, "v2 runtime image arena allocation failed");
+    size_t       image_arena_size     = 4096u;
+    const size_t max_image_arena_size = 4u * 1024u * 1024u;
 
-    apg_v2_runtime_image_t image;
-    uc_status status = apg_v2_runtime_image_build(plan, frame_capacity, sample_rate, &image_arena, &image, err);
-    if (status == UC_OK)
-        status = apg_v2_runtime_init_from_image(&image, out, err);
-    uc_arena_free(&image_arena);
-    return status;
+    while (image_arena_size <= max_image_arena_size) {
+        uc_arena image_arena;
+        if (uc_arena_init(&image_arena, image_arena_size) != 0) {
+            return set_error(err, UC_E_OOM, "v2 runtime image arena allocation failed");
+        }
+
+        apg_v2_runtime_image_t image;
+        uc_status status = apg_v2_runtime_image_build(plan, frame_capacity, sample_rate, &image_arena, &image, err);
+        if (status == UC_OK) {
+            status = apg_v2_runtime_init_from_image(&image, out, err);
+            uc_arena_free(&image_arena);
+            return status;
+        }
+
+        uc_arena_free(&image_arena);
+        if (status != UC_E_OOM)
+            return status;
+        image_arena_size *= 2u;
+    }
+
+    return set_error(err, UC_E_OOM, "v2 runtime image arena grows beyond supported limits");
 }
 
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
@@ -1292,9 +1212,6 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
         free(runtime->nodes[i].state_buffers);
         free(runtime->nodes[i].state_buffer_samples);
         free(runtime->nodes[i].signal_array_pool);
-        for (size_t j = 0; j < runtime->nodes[i].aux_blocks_len; j++)
-            free(runtime->nodes[i].aux_blocks[j]);
-        free(runtime->nodes[i].aux_blocks);
     }
     free(runtime->nodes);
     free(runtime->atom_storage_pool);
