@@ -38,6 +38,10 @@ M7 static export now emits a deterministic memory manifest in JSON and generated
 
 M7 static export accepts `--max-static-ram <bytes>` and rejects compatible bundles whose computed static RAM manifest exceeds the provided board budget.
 
+## PC3 Progress
+
+M7 static export tests now run an ARM/M7 freestanding syntax check for generated bundles when `APG_M7_C_COMPILER` or `arm-none-eabi-gcc` is available. Without a configured toolchain, CTest records an explicit skipped-gate message.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

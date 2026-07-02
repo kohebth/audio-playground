@@ -221,3 +221,32 @@ set_tests_properties(test_apg_v2_cli_m7_export_static_ram_budget PROPERTIES
         DEPENDS test_apg_v2_cli_m7_export_bundle
         PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*\"APG_RANGE_ERROR\".*static RAM budget exceeded"
 )
+
+set(APG_M7_C_COMPILER "" CACHE FILEPATH "Optional ARM/M7 C compiler used to syntax-check generated m7_static bundles")
+if(NOT APG_M7_C_COMPILER)
+    find_program(APG_M7_C_COMPILER_DETECTED arm-none-eabi-gcc)
+    if(APG_M7_C_COMPILER_DETECTED)
+        set(APG_M7_C_COMPILER "${APG_M7_C_COMPILER_DETECTED}" CACHE FILEPATH
+                "Optional ARM/M7 C compiler used to syntax-check generated m7_static bundles" FORCE)
+    endif()
+endif()
+
+if(APG_M7_C_COMPILER)
+    add_test(
+            NAME test_apg_v2_cli_m7_export_arm_syntax
+            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -fsyntax-only ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_arm_syntax PROPERTIES
+            LABELS v2
+            DEPENDS test_apg_v2_cli_m7_export_bundle
+    )
+else()
+    add_test(
+            NAME test_apg_v2_cli_m7_export_arm_syntax_unconfigured
+            COMMAND ${CMAKE_COMMAND} -E echo "APG_M7_C_COMPILER not configured; skipping ARM/M7 syntax gate"
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_arm_syntax_unconfigured PROPERTIES
+            LABELS v2
+            PASS_REGULAR_EXPRESSION "skipping ARM/M7 syntax gate"
+    )
+endif()
