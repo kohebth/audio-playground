@@ -607,10 +607,9 @@ uc_status apg_v2_runtime_init(
     if (!plan || !plan->unit || !out || !err)
         return UC_E_TYPE;
 
-    size_t       image_arena_size     = 4096u;
-    const size_t max_image_arena_size = 4u * 1024u * 1024u;
+    size_t image_arena_size = 4096u;
 
-    while (image_arena_size <= max_image_arena_size) {
+    while (image_arena_size > 0u && image_arena_size <= (SIZE_MAX >> 1)) {
         uc_arena image_arena;
         if (uc_arena_init(&image_arena, image_arena_size) != 0) {
             return set_error(err, UC_E_OOM, "v2 runtime image arena allocation failed");
@@ -630,7 +629,7 @@ uc_status apg_v2_runtime_init(
         image_arena_size *= 2u;
     }
 
-    return set_error(err, UC_E_OOM, "v2 runtime image arena grows beyond supported limits");
+    return set_error(err, UC_E_OOM, "v2 runtime image arena size overflow during growth");
 }
 
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
