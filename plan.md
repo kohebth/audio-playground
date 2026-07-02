@@ -92,6 +92,7 @@ Module note: Remaining legacy `units/*.unit.yaml` files have been removed after 
 Module note: Core boundary audit now records remaining runtime/measure/image leaks and moves meter tests to measure APIs.
 
 Module note: Host and tooling tests now read runtime diagnostics and transport state through measure APIs.
+Module note: Host/project loading now builds a runtime-image in host-owned image arenas and initializes runtime from explicit image descriptors.
 
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
 Module note: Delay-tap input field metadata is now looked up through atom registry API, removing runtime-image atom-name branching.

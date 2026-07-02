@@ -73,6 +73,7 @@ Module note: Remaining legacy `units/*.unit.yaml` files have been removed after 
 Module note: Core boundary audit now records remaining runtime/measure/image leaks and moves meter tests to measure APIs.
 
 Module note: Host and tooling tests now read runtime diagnostics and transport state through measure APIs.
+Module note: Host/project loading now builds a runtime-image in host-owned image arenas and initializes runtime from explicit image descriptors.
 
 Module note: Runtime compatibility read wrappers for meters and last_error were removed; `test_unit_v2_runtime.c` now reads diagnostics through `apg_v2_measure_last_error(...)`.
 
