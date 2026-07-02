@@ -2,6 +2,25 @@
 
 `core-design.md` is the current production module-boundary target: metadata, parser, validator, compiler, runtime image, runtime, measure, and host.
 
+## Production Module Flow
+
+```mermaid
+flowchart LR
+    Source["YAML Source"] --> Parser["parser"]
+    Parser --> Validator["validator"]
+    Metadata["metadata"] --> Validator
+    Validator --> Compiler["compiler"]
+    Metadata --> Compiler
+    Compiler --> RuntimeImage["runtime image"]
+    RuntimeImage --> Runtime["runtime"]
+    RuntimeImage --> Measure["measure"]
+    Runtime --> Measure
+    Metadata --> Runtime
+    RuntimeImage --> Host["host"]
+    Measure --> Host
+    Host --> Runtime
+```
+
 ## Parser and Validator
 
 `apg_v2_parse_file(...)` and `apg_v2_parse_string(...)` parse YAML into a raw arena-owned `uc_node` contract graph without semantic validation. Unit and project validators then fill `apg_unit_v2_t` or `apg_project_v2_t` and validate schema rules, atom metadata references, graph names, binding keys, compatibility flags, and `${params.name}` references.
