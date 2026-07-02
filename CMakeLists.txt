@@ -193,14 +193,14 @@ set_tests_properties(test_apg_v2_cli_m7_export_bundle PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_prepare
-        PASS_REGULAR_EXPRESSION "\"ok\":true.*\"files\":\\[\"apg_project_m7.h\",\"apg_project_m7.c\"\\]"
+        PASS_REGULAR_EXPRESSION "\"ok\":true.*\"files\":\\[\"apg_project_m7.h\",\"apg_project_m7.c\"\\].*\"memory\":\\{.*\"static_ram_bytes\":[0-9]+"
 )
 
 add_test(NAME test_apg_v2_cli_m7_export_header COMMAND ${CMAKE_COMMAND} -E cat ${APG_M7_CLI_TEST_DIR}/apg_project_m7.h)
 set_tests_properties(test_apg_v2_cli_m7_export_header PROPERTIES
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_bundle
-        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_NODE_COUNT 4u.*APG_M7_PROJECT_USES_RUNTIME_YAML 0u.*APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u"
+        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_NODE_COUNT 4u.*APG_M7_PROJECT_BLOCK_FRAMES 64u.*APG_M7_PROJECT_STATIC_RAM_BYTES [0-9]+u.*APG_M7_PROJECT_USES_RUNTIME_YAML 0u.*APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u"
 )
 
 add_test(NAME test_apg_v2_cli_m7_export_source_static COMMAND ${CMAKE_COMMAND} -E cat ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c)

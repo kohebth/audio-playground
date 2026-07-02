@@ -99,6 +99,15 @@ Pending tests to record for PB:
 - Measure APIs expose host snapshots without owning or mutating DSP execution state.
 - M7 export artifact check rejects dynamic YAML/runtime allocation assumptions.
 
+### STM32H7/M7 Readiness
+
+- [x] PC1: Add deterministic M7 static memory manifest fields to export JSON and generated headers.
+- [ ] PC2: Add configurable M7 memory budgets and reject generated bundles that exceed them.
+- [ ] PC3: Add an ARM/M7 cross-compile gate for generated bundle syntax when a toolchain is configured.
+- [ ] PC4: Define the board audio callback integration contract for fixed block processing, DMA ownership, and cache coherency.
+
+Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
+
 ### Foundation and Adapters
 
 - [x] Added `apg_process_info_t` and routed atom execution through explicit process metadata.

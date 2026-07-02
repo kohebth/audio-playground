@@ -164,7 +164,47 @@ static bool join_path(char *out, size_t out_size, const char *dir, const char *n
     return written >= 0 && (size_t)written < out_size;
 }
 
-static bool write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled) {
+enum { APG_M7_BLOCK_FRAMES = 64u };
+
+typedef struct {
+    size_t signal_buffer_bytes;
+    size_t param_bytes;
+    size_t schedule_bytes;
+    size_t atom_storage_bytes;
+    size_t state_buffer_bytes;
+    size_t static_ram_bytes;
+} m7_memory_manifest_t;
+
+static size_t storage_size(size_t size) { return size > 0u ? size : 1u; }
+
+static m7_memory_manifest_t m7_memory_manifest(const apg_project_v2_compiled_t *compiled) {
+    m7_memory_manifest_t memory = {0};
+    if (!compiled)
+        return memory;
+
+    memory.signal_buffer_bytes = compiled->expanded_unit.signals_len * APG_M7_BLOCK_FRAMES * sizeof(float);
+    memory.param_bytes         = compiled->expanded_unit.params_len * sizeof(float);
+    memory.schedule_bytes      = compiled->plan.schedule_len * sizeof(uint32_t);
+
+    for (size_t i = 0; i < compiled->plan.nodes_len; i++) {
+        const atom_registry_entry_t *atom = compiled->plan.nodes[i].atom;
+        if (!atom)
+            continue;
+        memory.atom_storage_bytes += storage_size(atom->out_size) + storage_size(atom->in_size) +
+                                     storage_size(atom->config_size) + storage_size(atom->state_size);
+        for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
+            if (atom->state_fields[field_index].type == FIELD_BUFFER)
+                memory.state_buffer_bytes += atom->state_fields[field_index].buffer_samples * sizeof(float);
+        }
+    }
+
+    memory.static_ram_bytes =
+        memory.signal_buffer_bytes + memory.param_bytes + memory.atom_storage_bytes + memory.state_buffer_bytes;
+    return memory;
+}
+
+static bool
+write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, const m7_memory_manifest_t *memory) {
     FILE *out = fopen(path, "w");
     if (!out)
         return false;
@@ -174,6 +214,13 @@ static bool write_m7_header(const char *path, const apg_project_v2_compiled_t *c
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_COUNT %zuu\n", compiled->expanded_unit.signals_len);
     fprintf(out, "#define APG_M7_PROJECT_NODE_COUNT %zuu\n", compiled->plan.nodes_len);
     fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_COUNT %zuu\n\n", compiled->plan.schedule_len);
+    fprintf(out, "#define APG_M7_PROJECT_BLOCK_FRAMES %uu\n", APG_M7_BLOCK_FRAMES);
+    fprintf(out, "#define APG_M7_PROJECT_SIGNAL_BUFFER_BYTES %zuu\n", memory->signal_buffer_bytes);
+    fprintf(out, "#define APG_M7_PROJECT_PARAM_BYTES %zuu\n", memory->param_bytes);
+    fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_BYTES %zuu\n", memory->schedule_bytes);
+    fprintf(out, "#define APG_M7_PROJECT_ATOM_STORAGE_BYTES %zuu\n", memory->atom_storage_bytes);
+    fprintf(out, "#define APG_M7_PROJECT_STATE_BUFFER_BYTES %zuu\n", memory->state_buffer_bytes);
+    fprintf(out, "#define APG_M7_PROJECT_STATIC_RAM_BYTES %zuu\n\n", memory->static_ram_bytes);
     fputs("#define APG_M7_PROJECT_USES_RUNTIME_YAML 0u\n", out);
     fputs("#define APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u\n\n", out);
     fputs("extern const char apg_m7_project_name[];\n", out);
@@ -255,7 +302,8 @@ static int export_m7_static(const char *project_path, const char *out_dir) {
         return rc;
     }
 
-    if (!write_m7_header(header_path, &compiled) || !write_m7_source(source_path, &project, &compiled)) {
+    m7_memory_manifest_t memory = m7_memory_manifest(&compiled);
+    if (!write_m7_header(header_path, &compiled, &memory) || !write_m7_source(source_path, &project, &compiled)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write m7_static export files");
         int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
         uc_arena_free(&arena);
@@ -267,8 +315,14 @@ static int export_m7_static(const char *project_path, const char *out_dir) {
     fputs(",\"target\":\"m7_static\",\"out_dir\":", stdout);
     write_json_string(stdout, out_dir);
     fprintf(
-        stdout, ",\"files\":[\"apg_project_m7.h\",\"apg_project_m7.c\"],\"nodes\":%zu,\"schedule\":%zu}\n",
-        compiled.plan.nodes_len, compiled.plan.schedule_len
+        stdout,
+        ",\"files\":[\"apg_project_m7.h\",\"apg_project_m7.c\"],\"nodes\":%zu,\"schedule\":%zu,"
+        "\"memory\":{\"block_frames\":%u,\"signal_buffer_bytes\":%zu,\"param_bytes\":%zu,"
+        "\"schedule_bytes\":%zu,\"atom_storage_bytes\":%zu,\"state_buffer_bytes\":%zu,"
+        "\"static_ram_bytes\":%zu}}\n",
+        compiled.plan.nodes_len, compiled.plan.schedule_len, APG_M7_BLOCK_FRAMES, memory.signal_buffer_bytes,
+        memory.param_bytes, memory.schedule_bytes, memory.atom_storage_bytes, memory.state_buffer_bytes,
+        memory.static_ram_bytes
     );
     uc_arena_free(&arena);
     return 0;
