@@ -32,6 +32,7 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PB3: Tighten runtime-image ownership so runtime initialization consumes precomputed layout metadata instead of recomputing resource registration.
 - [x] PB4: Add fixed-memory/static-image readiness checks for generated M7 export artifacts.
 - [x] PB3b: Move signal-binding and mix-matrix structured-config resolution to runtime-image plans consumed at runtime init.
+- [x] PB5: Add host-level project orchestration APIs for resolved-project load, compile, runtime-image build, and mono runtime transport.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -76,6 +77,7 @@ Module note: Host and tooling tests now read runtime diagnostics and transport s
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
 Module note: Runtime initialization now consumes runtime-image signal-binding and mix-matrix config plans instead of resolving descriptors.
 Module note: Delay-tap input field metadata now comes from atom registry lookup, not atom-name branching in runtime-image.
+Module note: `apg_v2_host_project_*` now exposes production project orchestration from resolved project load through runtime initialization and mono processing.
 
 Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 

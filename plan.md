@@ -49,6 +49,7 @@ During implementation phases, use focused verification before commits. For web c
 - [x] PB2: Move any remaining host/tooling read concerns out of `runtime_v2` into `measure_v2` compatibility wrappers.
 - [x] PB3: Tighten runtime-image ownership so runtime initialization consumes precomputed layout metadata instead of recomputing resource registration.
 - [x] PB4: Add fixed-memory/static-image readiness checks for generated M7 export artifacts.
+- [x] PB5: Add host-level project orchestration from resolved project load through runtime-image init and mono transport.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -92,6 +93,7 @@ Module note: Host and tooling tests now read runtime diagnostics and transport s
 
 Module note: Runtime image now owns per-node storage layout consumed by runtime initialization.
 Module note: Delay-tap input field metadata is now looked up through atom registry API, removing runtime-image atom-name branching.
+Module note: Host now exposes `apg_v2_host_project_*` orchestration for project load/compile/image/runtime setup and mono transport in one API.
 
 Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 

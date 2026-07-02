@@ -5,6 +5,8 @@
 #include <stdint.h>
 
 #include <apgcore/compiler_v2.h>
+#include <apgcore/project_compiler_v2.h>
+#include <apgcore/project_v2.h>
 #include <apgcore/runtime_image_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
@@ -23,6 +25,19 @@ typedef struct {
     bool                   runtime_ready;
 } apg_v2_host_unit_t;
 
+typedef struct {
+    uc_arena                  arena;
+    uc_arena                  image_arena;
+    apg_project_v2_t          project;
+    apg_project_v2_resolved_t resolved_project;
+    apg_project_v2_compiled_t compiled;
+    apg_v2_runtime_image_t    image;
+    apg_v2_runtime_t          runtime;
+    bool                      arena_ready;
+    bool                      image_arena_ready;
+    bool                      runtime_ready;
+} apg_v2_host_project_t;
+
 uc_status apg_v2_host_load_file(
     const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_unit_t *out, uc_error *err
 );
@@ -39,5 +54,22 @@ bool apg_v2_host_process_mono_ports(
 );
 
 void apg_v2_host_destroy(apg_v2_host_unit_t *host);
+
+uc_status apg_v2_host_project_load_file(
+    const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_project_t *out, uc_error *err
+);
+
+bool apg_v2_host_project_set_param(apg_v2_host_project_t *host, const char *name, float value);
+
+bool apg_v2_host_project_process_mono_ports(
+    apg_v2_host_project_t *host,
+    const char            *input_port_name,
+    const float           *input,
+    const char            *output_port_name,
+    float                 *output,
+    uint32_t               frames
+);
+
+void apg_v2_host_project_destroy(apg_v2_host_project_t *host);
 
 #endif // AUDIO_PLAYGROUND_APGCORE_HOST_V2_H
