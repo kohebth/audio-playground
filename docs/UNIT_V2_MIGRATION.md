@@ -1,6 +1,6 @@
 # Unit v2 Migration Path
 
-This document defines the first practical path for moving selected v1 `units/*.unit.yaml` graphs to `units-v2/*.unit.v2.yaml` fixtures.
+This document defines the historical path for moving selected v1 `units/*.unit.yaml` graphs to `units-v2/*.unit.v2.yaml` fixtures. The production path is now APGCore v2; remaining files under `units/` are legacy local drafts and are not loaded by the default build.
 
 ## Migration Order
 
@@ -15,7 +15,7 @@ Defer large reverb, cabinet, amp, and generated-audio chains until their v2 grap
 
 ## Mechanical Mapping
 
-For each v1 unit:
+For each legacy unit selected for preservation:
 
 - Convert public `params` to v2 typed params with numeric bounds.
 - Convert external audio/control names to `ports.inputs` and `ports.outputs`.
@@ -27,3 +27,7 @@ For each v1 unit:
 ## Acceptance Criteria
 
 A migrated fixture is complete when it loads, compiles, runs through the v2 runtime or host bridge, has deterministic sample assertions, and is listed in `units-v2/` with no generated audio dependency.
+
+## Current Status
+
+Clean tracked v1 fixture files have been removed. Keep, port, or delete any remaining modified/untracked `units/` files only after an explicit product decision, then update `docs/V1_DEPRECATION_AUDIT.md`, `plan.md`, and `task.md`.

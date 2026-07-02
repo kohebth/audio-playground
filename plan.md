@@ -45,6 +45,10 @@ During implementation phases, use focused verification before commits. For web c
 - [x] PA5b10: Remove remaining fixed-size unit adapter helpers and their direct adapter test.
 - [x] PA5b11a: Remove clean tracked legacy `units/` fixtures that no default build or test references.
 - [ ] PA5b11b: Decide whether to keep, port, or delete remaining modified/untracked legacy `units/` files.
+- [ ] PB1: Audit `src/apgcore` and `inc/apgcore` for remaining boundary leaks between parser, validator, compiler, runtime image, runtime, measure, and host APIs.
+- [ ] PB2: Move any remaining host/tooling read concerns out of `runtime_v2` into `measure_v2` compatibility wrappers.
+- [ ] PB3: Tighten runtime-image ownership so runtime initialization consumes precomputed layout metadata instead of recomputing resource registration.
+- [ ] PB4: Add fixed-memory/static-image readiness checks for generated M7 export artifacts.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -79,6 +83,13 @@ Module note: V1 runtime/control/unit-loader code has been removed after all defa
 Module note: Fixed-size unit adapter helpers have been removed; product behavior now lives in v2 unit contracts.
 
 Module note: Clean legacy unit fixtures have been removed; modified local unit files remain untouched.
+
+Pending tests to record for PB:
+
+- Boundary audit proves parser output can be inspected without semantic validation.
+- Runtime initialization from image does not recompute signal, param, control, or schedule layout.
+- Measure APIs expose host snapshots without owning or mutating DSP execution state.
+- M7 export artifact check rejects dynamic YAML/runtime allocation assumptions.
 
 ### Foundation and Adapters
 

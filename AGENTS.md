@@ -4,8 +4,9 @@
 
 This repository contains several independent project areas:
 
-- `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, atom registry, YAML loaders, APGCore v2 compiler/runtime, and CTest targets.
-- `units/`: v1 DSP unit YAML loaded by the legacy runtime.
+- `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, metadata registry, YAML parser helpers, APGCore v2 parser/validator/compiler/runtime-image/runtime/measure modules, and CTest targets.
+- `core-design.md`: current production architecture target. Keep new core work aligned with the `metadata -> parser -> validator -> compiler -> runtime image -> runtime -> measure -> host` boundary.
+- `units/`: legacy local v1 YAML drafts only. They are not loaded by the default production build; do not stage modified files here unless the user explicitly decides to port or delete them.
 - `units-v2/` and `projects-v2/`: v2 compiler/runtime fixtures, including product units and guitar pedalboard project examples.
 - `test/golden/`: frozen JSON samples for frontend contract tests and mock data.
 - `docs/schemas/unit-v2.md`, `docs/schemas/project-v2.md`, `docs/UNIT_V2_ARCHITECTURE.md`, and `docs/WEB_UI_READINESS.md`: current v2 schemas, compiler/runtime design notes, and web handoff context.
@@ -51,11 +52,11 @@ C uses LLVM `clang-format` with 4-space indentation and a 120-column limit. The 
 clang-format -i src/**/*.c inc/**/*.h test/**/*.c
 ```
 
-Name C tests `test_<feature>.c`. Name v1 units `<effect>.unit.yaml` and v2 fixtures `<name>.unit.v2.yaml`. Keep v2 atom binding keys aligned with `src/apgcore/compiler_v2.c` metadata.
+Name C tests `test_<feature>.c`. Name v2 fixtures `<name>.unit.v2.yaml` and `<name>.project.v2.yaml`. Treat v1 `*.unit.yaml` files as legacy drafts only. Keep v2 atom binding keys aligned with `src/apgcore/compiler_v2.c` metadata.
 
 ## Testing Guidelines
 
-C tests are CTest targets. Add focused tests under `test/` for atom behavior, loaders, compiler contracts, runtime execution, and adapter frame limits. V2 fixture coverage should load/compile all `units-v2/*.unit.v2.yaml`, and runtime tests should exercise named signal buffers, params, schedule execution, state buffers, and failure messages.
+C tests are CTest targets. Add focused tests under `test/` for atom behavior, parser boundaries, validator contracts, compiler plans, runtime-image layout, runtime execution, and measure/host reads. V2 fixture coverage should load/compile all `units-v2/*.unit.v2.yaml`, and runtime tests should exercise named signal buffers, params, schedule execution, state buffers, and failure messages.
 
 ## Commit & Pull Request Guidelines
 
@@ -69,7 +70,7 @@ Reread `AGENTS.md` at the start of each new work slice before making repository 
 
 ## Continuous Work Protocol
 
-Current milestone: Full Audio Playground v2 MVP phases AC-AJ are complete. The next target is post-MVP hardening in `problem.md`, primarily real WASM AudioWorklet preview/export beyond the deterministic preview adapter and blocked `wasm_realtime` export skeleton.
+Current milestone: Full Audio Playground v2 MVP phases AC-AJ are complete. The next target is production core hardening from `core-design.md`: make `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` stay isolated so the real-time path only executes a compact prebuilt schedule over registered contiguous memory. After that, continue STM32H7/M7 export validation and real WASM AudioWorklet preview/export from `problem.md`.
 
 When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, tracker updates, build-only verification, and commit. Prefer one coherent module at a time, but continue into the next module in the same turn when the path is clear and no approval or product decision is needed.
 

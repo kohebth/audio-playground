@@ -833,7 +833,7 @@ const uc_node *uc_node_find(const uc_node *n, const char *key) {
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        fprintf(stderr, "usage: %s <file.unit.yaml>\n", argv[0]);
+        fprintf(stderr, "usage: %s <contract.yaml>\n", argv[0]);
         return 2;
     }
 
