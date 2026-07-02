@@ -1,159 +1,108 @@
-#include <wave.h>
-#include <ctrl/ctrls.h>
-#include <runtime.h>
+#include <apgcore/project_compiler_v2.h>
+#include <apgcore/runtime_v2.h>
 
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#define CHUNK 512
+#define CHUNK  512u
+#define CHUNKS 48u
 
-static float *process_unit_buf(const char *unit_path,
-                               const float *in, size_t n_frames, int sr) {
-    runtime_context_t ctx = {.sample_rate = (float)sr, .chunk_length = CHUNK};
-    runtime_unit_t *unit = runtime_unit_load(unit_path, ctx);
-    if (!unit) return NULL;
-
-    ctrl_unit_t ctrl;
-    if (!ctrl_unit_init(&ctrl, unit, unit_path)) {
-        runtime_unit_destroy(unit);
-        return NULL;
-    }
-
-    float *out = calloc(n_frames, sizeof(float));
-    float buf[CHUNK], obuf[CHUNK];
-    size_t pos = 0;
-    while (pos < n_frames) {
-        size_t len = n_frames - pos;
-        if (len > CHUNK) len = CHUNK;
-        memcpy(buf, in + pos, len * sizeof(float));
-        if (len < CHUNK) memset(buf + len, 0, (CHUNK - len) * sizeof(float));
-        ctrl_unit_process(&ctrl, buf, obuf);
-        memcpy(out + pos, obuf, len * sizeof(float));
-        pos += CHUNK;
-    }
-
-    ctrl_unit_destroy(&ctrl);
-    runtime_unit_destroy(unit);
-    return out;
+static int fail(const char *msg) {
+    fprintf(stderr, "FAIL: %s\n", msg);
+    return 1;
 }
 
-static int process_unit(const char *unit_path, const char *out_path,
-                        float *mono, size_t n_frames, int sr) {
-    runtime_context_t ctx = {.sample_rate = (float)sr, .chunk_length = CHUNK};
-    runtime_unit_t *unit = runtime_unit_load(unit_path, ctx);
-    if (!unit) return -1;
-
-    ctrl_unit_t ctrl;
-    if (!ctrl_unit_init(&ctrl, unit, unit_path)) {
-        runtime_unit_destroy(unit);
-        return -1;
+static int load_pedalboard(uc_arena *arena, apg_project_v2_compiled_t *compiled) {
+    apg_project_v2_resolved_t project;
+    uc_error                  err = {0};
+    uc_status                 status =
+        apg_project_v2_load_resolved_file("projects-v2/guitar-pedalboard.project.v2.yaml", arena, &project, &err);
+    if (status == UC_OK)
+        status = apg_project_v2_compile(&project, arena, compiled, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "pedalboard setup error: %s\n", err.msg);
+        return 1;
     }
+    return 0;
+}
 
-    Samples out = {0};
-    out.size = n_frames;
-    out.data = calloc(n_frames, sizeof(float));
+static void fill_guitar_like_input(float *input, uint32_t chunk_index) {
+    for (uint32_t i = 0; i < CHUNK; i++) {
+        uint32_t n = chunk_index * CHUNK + i;
+        float    t = (float)n / 48000.0f;
+        float    a = 0.34f * expf(-0.45f * t);
+        input[i]   = a * (sinf(2.0f * 3.14159265358979323846f * 110.0f * t) +
+                        0.45f * sinf(2.0f * 3.14159265358979323846f * 220.0f * t));
+    }
+}
 
-    float buf[CHUNK], obuf[CHUNK];
-    size_t pos = 0;
-    int chunk = 0;
-    while (pos < n_frames) {
-        size_t len = n_frames - pos;
-        if (len > CHUNK) len = CHUNK;
-        memcpy(buf, mono + pos, len * sizeof(float));
-        if (len < CHUNK) memset(buf + len, 0, (CHUNK - len) * sizeof(float));
-        ctrl_unit_process(&ctrl, buf, obuf);
-        memcpy(out.data + pos, obuf, len * sizeof(float));
-        pos += CHUNK;
+static int process_render(apg_v2_runtime_t *runtime, float *peak, double *sum_sq) {
+    float input[CHUNK];
+    float output[CHUNK];
+    float previous_last = 0.0f;
 
-        if (chunk == 0) {
-            float peak = 0;
-            for (int k = 0; k < CHUNK; k++) {
-                float a = fabsf(obuf[k]);
-                if (a > peak) peak = a;
-            }
-            printf("  first chunk peak=%.6f\n", peak);
+    for (uint32_t chunk = 0; chunk < CHUNKS; chunk++) {
+        fill_guitar_like_input(input, chunk);
+        if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, CHUNK)) {
+            fprintf(stderr, "pedalboard runtime error: %s\n", apg_v2_runtime_last_error(runtime));
+            return fail("pedalboard offline render failed");
         }
-        chunk++;
+        if (chunk > 0 && fabsf(output[0] - previous_last) > 3.0f)
+            return fail("pedalboard render produced a large chunk-boundary discontinuity");
+        previous_last = output[CHUNK - 1u];
+
+        for (uint32_t i = 0; i < CHUNK; i++) {
+            if (!isfinite(output[i]))
+                return fail("pedalboard render produced non-finite output");
+            float a = fabsf(output[i]);
+            if (a > *peak)
+                *peak = a;
+            *sum_sq += (double)output[i] * (double)output[i];
+        }
     }
-
-    writeWav(out_path, &out, (float)sr);
-    printf("  -> %s\n", out_path);
-
-    free(out.data);
-    ctrl_unit_destroy(&ctrl);
-    runtime_unit_destroy(unit);
     return 0;
 }
 
 int main(void) {
-    Samples in = {0};
-    if (!readWav("samples/clean-strum-and-arpeggio.wav", &in, 0)) {
-        fprintf(stderr, "FAIL: read wav\n");
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024u * 1024u) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_compiled_t compiled;
+    if (load_pedalboard(&arena, &compiled)) {
+        uc_arena_free(&arena);
         return 1;
     }
-    int sr = 44100;
-    size_t n_frames = in.size / in.channels;
-    printf("input: %zu samples, %d ch, %zu frames, %d Hz\n",
-           in.size, in.channels, n_frames, sr);
 
-    float *mono = malloc(n_frames * sizeof(float));
-    for (size_t i = 0; i < n_frames; i++) {
-        float sum = 0.0f;
-        for (int c = 0; c < in.channels; c++)
-            sum += in.data[i * in.channels + c];
-        mono[i] = sum / in.channels;
+    apg_v2_runtime_t runtime;
+    uc_error         err = {0};
+    if (apg_v2_runtime_init(&compiled.plan, CHUNK, 48000.0f, &runtime, &err) != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize pedalboard runtime");
     }
 
-    // printf("\n--- hall_reverb ---\n");
-    // process_unit("units/hall_reverb.unit.yaml",
-    //              "analysis/clean-strum-and-arpeggio-hall-reverb.wav",
-    //              mono, n_frames, sr);
+    if (!apg_v2_runtime_set_param(&runtime, "drive1.drive", 3.0f) ||
+        !apg_v2_runtime_set_param(&runtime, "delay1.mix", 0.45f) ||
+        !apg_v2_runtime_set_param(&runtime, "blend1.mix", 0.35f))
+        return fail("failed to set pedalboard render params");
 
-    // printf("\n--- overdrive ---\n");
-    // process_unit("units/overdrive.unit.yaml",
-    //              "analysis/clean-strum-and-arpeggio-overdrive.wav",
-    //              mono, n_frames, sr);
+    float  peak   = 0.0f;
+    double sum_sq = 0.0;
+    if (process_render(&runtime, &peak, &sum_sq))
+        return 1;
 
-    // printf("\n--- church_reverb ---\n");
-    // process_unit("units/church_reverb.unit.yaml",
-    //              "analysis/clean-strum-and-arpeggio-church-reverb.wav",
-    //              mono, n_frames, sr);
+    double rms = sqrt(sum_sq / (double)(CHUNKS * CHUNK));
+    if (peak <= 1e-6f || peak > 4.0f)
+        return fail("pedalboard render peak is out of range");
+    if (rms <= 1e-7 || rms > 1.5)
+        return fail("pedalboard render RMS is out of range");
 
-    // printf("\n--- analog_delay ---\n");
-    // process_unit("units/analog_delay.unit.yaml",
-    //              "analysis/clean-strum-and-arpeggio-analog-delay.wav",
-    //              mono, n_frames, sr);
+    apg_v2_meter_snapshot_t meter;
+    if (!apg_v2_runtime_get_output_meter(&runtime, "output", 0u, &meter) || !meter.valid || meter.frames != CHUNK)
+        return fail("pedalboard render output meter was not updated");
 
-    printf("\n--- marshall_plexi -> marshall_4x12 ---\n");
-    float *plexi = process_unit_buf("units/marshall_plexi_head_amp.unit.yaml",
-                                     mono, n_frames, sr);
-    if (plexi) {
-        process_unit("units/marshall_4x12_greenback_cabinet.unit.yaml",
-                     "analysis/clean-strum-and-arpeggio-marshall-chain.wav",
-                     plexi, n_frames, sr);
-        free(plexi);
-    }
-
-    printf("\n--- plexi -> cab -> analog_delay -> hall_reverb ---\n");
-    {
-        float *a = process_unit_buf("units/marshall_plexi_head_amp.unit.yaml", mono, n_frames, sr);
-        if (!a) goto cleanup;
-        float *b = process_unit_buf("units/marshall_4x12_greenback_cabinet.unit.yaml", a, n_frames, sr);
-        free(a); a = NULL;
-        if (!b) goto cleanup;
-        float *c = process_unit_buf("units/analog_delay.unit.yaml", b, n_frames, sr);
-        free(b); b = NULL;
-        if (!c) goto cleanup;
-        process_unit("units/hall_reverb.unit.yaml",
-                     "analysis/clean-strum-and-arpeggio-full-chain.wav",
-                     c, n_frames, sr);
-        free(c);
-    }
-
-cleanup:
-    free(mono);
-    free(in.data);
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
     return 0;
 }

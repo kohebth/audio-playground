@@ -37,7 +37,8 @@ During implementation phases, use focused verification before commits. For web c
 - [x] PA5b2: Migrate control transition coverage from v1 ctrl/runtime adapters to APGCore v2.
 - [x] PA5b3: Migrate unit fixture load-all smoke coverage from v1 units to APGCore v2.
 - [x] PA5b4: Migrate offline chain regression from v1 amp/cab units to an APGCore v2 project runtime.
-- [ ] PA5b5: Remove unused v1 code after migrating or deleting remaining legacy tests, live paths, and fixtures.
+- [x] PA5b5: Migrate hall reverb/sample-writing regression to an in-memory APGCore v2 pedalboard render.
+- [ ] PA5b6: Remove unused v1 code after migrating or deleting remaining live paths and fixtures.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -58,6 +59,8 @@ Module note: Control transition coverage now exercises APGCore v2 control-port s
 Module note: Unit fixture load-all smoke now exercises APGCore v2 host loading and mono runtime processing.
 
 Module note: Offline chain coverage now runs through a compiled APGCore v2 project runtime.
+
+Module note: Hall render coverage now uses an in-memory APGCore v2 pedalboard runtime path.
 
 ### Foundation and Adapters
 
