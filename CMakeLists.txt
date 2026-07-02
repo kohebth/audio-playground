@@ -22,7 +22,6 @@ pkg_check_modules(PIPEWIRE QUIET libpipewire-0.3)
 include_directories(
         ${CMAKE_SOURCE_DIR}/inc/
         ${CMAKE_SOURCE_DIR}/inc/rte
-        ${CMAKE_SOURCE_DIR}/inc/unit
         ${CMAKE_SOURCE_DIR}/inc/util
         ${CMAKE_SOURCE_DIR}/inc/yaml
         ${PIPEWIRE_INCLUDE_DIRS}
@@ -31,7 +30,6 @@ include_directories(
 file(GLOB APGCORE_SOURCES src/apgcore/*.c)
 file(GLOB ATOM_SOURCES src/atom/*.c)
 set(ATOM_REGISTRY_SOURCE src/rte/atom_register.c)
-file(GLOB UNIT_SOURCES src/unit/*.c)
 file(GLOB UTIL_SOURCES src/util/*.c)
 file(GLOB YAML_SOURCES src/yaml/*.c)
 file(GLOB WAVE_SOURCES src/wave.c)
@@ -39,7 +37,6 @@ list(REMOVE_ITEM UTIL_SOURCES "${CMAKE_SOURCE_DIR}/src/util/fast_chunk.c")
 list(APPEND UTIL_SOURCES ${APGCORE_SOURCES})
 list(APPEND UTIL_SOURCES ${ATOM_SOURCES})
 list(APPEND UTIL_SOURCES ${ATOM_REGISTRY_SOURCE})
-list(APPEND UTIL_SOURCES ${UNIT_SOURCES})
 list(APPEND UTIL_SOURCES ${YAML_SOURCES})
 list(APPEND UTIL_SOURCES ${WAVE_SOURCES})
 
@@ -95,7 +92,6 @@ set(TEST_TARGETS
         test_unit_load_all
         test_ctrl_transition
         test_runtime_process_frames
-        test_unit_adapters_frame_limits
         test_unit_v2_validate
         test_unit_v2_compile
         test_unit_v2_runtime

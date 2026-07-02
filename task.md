@@ -24,7 +24,8 @@ Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phas
 - [x] PA5b7: Migrate `src/live.c` from v1 runtime/control unit chains to APGCore v2 host-unit chains.
 - [x] PA5b8: Split CMake source groups so v1 runtime/control/loader code is not compiled into default v2 targets.
 - [x] PA5b9: Remove unused v1 runtime/control/unit-loader source and headers.
-- [ ] PA5b10: Decide whether to keep or remove remaining fixed-size unit adapters and legacy fixtures.
+- [x] PA5b10: Remove remaining fixed-size unit adapter helpers and their direct adapter test.
+- [ ] PA5b11: Retire legacy `units/*.unit.yaml` fixtures after resolving unrelated local modifications.
 
 Module note: Parser v2 now exposes raw YAML contract graphs before validator-specific semantic checks.
 
@@ -55,6 +56,8 @@ Module note: Live PipeWire playback now loads APGCore v2 units before entering t
 Module note: Default CMake targets now exclude v1 runtime/control sources and the v1 YAML unit loader.
 
 Module note: V1 runtime/control/unit-loader code has been removed after all default users migrated to APGCore v2.
+
+Module note: Fixed-size unit adapter helpers have been removed; product behavior now lives in v2 unit contracts.
 
 Implementation lifecycle for production phases:
 

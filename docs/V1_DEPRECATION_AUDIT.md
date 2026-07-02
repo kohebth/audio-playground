@@ -4,7 +4,6 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 
 ## Still Active
 
-- `src/unit/*.c` and `inc/unit/*.h`: fixed-size adapter tests still cover these direct atom-composition helpers.
 - `units/*.unit.yaml`: v1 fixtures retained only for local legacy experiments.
 
 ## Current Deprecation Fence
@@ -20,6 +19,7 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 - `src/live.c` has been migrated to APGCore v2 host-unit loading and runtime processing.
 - Default CMake source groups no longer compile v1 runtime/control sources or the v1 YAML unit loader into v2 targets.
 - v1 runtime/control implementation, headers, and unit-loader implementation have been removed from source.
+- Fixed-size `src/unit` adapter helpers and their direct adapter test have been removed.
 - v2 parser, validator, compiler, runtime image, runtime, and measure modules are the production path.
 
 ## Removal Blockers
