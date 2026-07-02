@@ -20,7 +20,8 @@ uc_status apg_v2_host_load_file(
 
     if (uc_arena_init(&out->arena, 1024u * 1024u) != 0)
         return set_error(err, UC_E_OOM, "v2 host arena allocation failed");
-    out->arena_ready = true;
+    out->arena_ready     = true;
+    uc_arena image_arena = {0};
 
     uc_status status = apg_unit_v2_load_file(path, &out->arena, &out->unit, err);
     if (status != UC_OK)
@@ -30,8 +31,7 @@ uc_status apg_v2_host_load_file(
     if (status != UC_OK)
         goto fail;
 
-    status =
-        apg_v2_runtime_init_from_plan(&out->plan, frame_capacity, sample_rate, &out->image_arena, &out->runtime, err);
+    status = apg_v2_runtime_init_from_plan(&out->plan, frame_capacity, sample_rate, &image_arena, &out->runtime, err);
     if (status != UC_OK)
         goto fail;
 
@@ -67,8 +67,6 @@ void apg_v2_host_destroy(apg_v2_host_unit_t *host) {
         return;
     if (host->runtime_ready)
         apg_v2_runtime_destroy(&host->runtime);
-    if (host->image_arena_ready)
-        uc_arena_free(&host->image_arena);
     if (host->arena_ready)
         uc_arena_free(&host->arena);
     memset(host, 0, sizeof(*host));
@@ -84,7 +82,8 @@ uc_status apg_v2_host_project_load_file(
 
     if (uc_arena_init(&out->arena, 2 * 1024 * 1024u) != 0)
         return set_error(err, UC_E_OOM, "v2 host arena allocation failed");
-    out->arena_ready = true;
+    out->arena_ready     = true;
+    uc_arena image_arena = {0};
 
     uc_status status = apg_project_v2_load_resolved_file(path, &out->arena, &out->resolved_project, err);
     if (status != UC_OK)
@@ -95,7 +94,7 @@ uc_status apg_v2_host_project_load_file(
         goto fail;
 
     status = apg_v2_runtime_init_from_plan(
-        &out->compiled.plan, frame_capacity, sample_rate, &out->image_arena, &out->runtime, err
+        &out->compiled.plan, frame_capacity, sample_rate, &image_arena, &out->runtime, err
     );
     if (status != UC_OK)
         goto fail;
@@ -132,8 +131,6 @@ void apg_v2_host_project_destroy(apg_v2_host_project_t *host) {
         return;
     if (host->runtime_ready)
         apg_v2_runtime_destroy(&host->runtime);
-    if (host->image_arena_ready)
-        uc_arena_free(&host->image_arena);
     if (host->arena_ready)
         uc_arena_free(&host->arena);
     memset(host, 0, sizeof(*host));

@@ -7,7 +7,6 @@
 #include <apgcore/compiler_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/project_v2.h>
-#include <apgcore/runtime_image_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
 #include <yaml/arena.h>
@@ -15,26 +14,20 @@
 
 typedef struct {
     uc_arena               arena;
-    uc_arena               image_arena;
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    apg_v2_runtime_image_t image;
     apg_v2_runtime_t       runtime;
     bool                   arena_ready;
-    bool                   image_arena_ready;
     bool                   runtime_ready;
 } apg_v2_host_unit_t;
 
 typedef struct {
     uc_arena                  arena;
-    uc_arena                  image_arena;
     apg_project_v2_t          project;
     apg_project_v2_resolved_t resolved_project;
     apg_project_v2_compiled_t compiled;
-    apg_v2_runtime_image_t    image;
     apg_v2_runtime_t          runtime;
     bool                      arena_ready;
-    bool                      image_arena_ready;
     bool                      runtime_ready;
 } apg_v2_host_project_t;
 
