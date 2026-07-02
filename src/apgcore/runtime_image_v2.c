@@ -63,6 +63,15 @@ static size_t control_port_count(const apg_unit_v2_port_t *ports, size_t ports_l
     return count;
 }
 
+static size_t signal_array_pointer_slots(const apg_v2_compiled_binding_t *bindings, size_t bindings_len) {
+    size_t slots = 0u;
+    for (size_t i = 0; i < bindings_len; i++) {
+        if (bindings[i].kind == APG_BIND_SIGNAL_ARRAY)
+            slots += bindings[i].indices_len;
+    }
+    return slots;
+}
+
 static uc_status fill_control_targets(uc_arena *arena, apg_v2_runtime_image_t *out, uc_error *err) {
     const apg_unit_v2_t *unit = out->plan->unit;
     out->control_targets_len  = control_port_count(unit->input_ports, unit->input_ports_len);
@@ -113,6 +122,9 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         layout->in_size     = atom_storage_size(atom->in_size);
         layout->config_size = atom_storage_size(atom->config_size);
         layout->state_size  = atom_storage_size(atom->state_size);
+        layout->signal_array_pointer_slots =
+            signal_array_pointer_slots(out->plan->nodes[node_index].in, out->plan->nodes[node_index].in_len) +
+            signal_array_pointer_slots(out->plan->nodes[node_index].out, out->plan->nodes[node_index].out_len);
 
         for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
             if (atom->state_fields[field_index].type == FIELD_BUFFER)

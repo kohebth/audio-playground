@@ -420,13 +420,10 @@ static uc_status bind_signal_fields(
             continue;
         }
         if (bindings[i].kind == APG_BIND_SIGNAL_ARRAY) {
-            float   **signal_array = NULL;
-            uc_status status       = runtime_node_aux_alloc(
-                node, bindings[i].indices_len * sizeof(*signal_array), (void **)&signal_array, err,
-                "v2 runtime signal array allocation failed"
-            );
-            if (status != UC_OK)
-                return status;
+            if (node->signal_array_pool_used + bindings[i].indices_len > node->signal_array_pool_len)
+                return set_error(err, UC_E_RANGE, "v2 runtime signal array pool is too small");
+            float **signal_array = &node->signal_array_pool[node->signal_array_pool_used];
+            node->signal_array_pool_used += bindings[i].indices_len;
             for (size_t j = 0; j < bindings[i].indices_len; j++) {
                 if (bindings[i].indices[j] >= out->signals_len) {
                     char msg[192];
@@ -635,6 +632,12 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         node->state_storage  = calloc(1u, layout->state_size);
         if (!node->out_storage || !node->in_storage || !node->config_storage || !node->state_storage)
             return set_error(err, UC_E_OOM, "v2 runtime atom call allocation failed");
+        if (layout->signal_array_pointer_slots > 0u) {
+            node->signal_array_pool = calloc(layout->signal_array_pointer_slots, sizeof(*node->signal_array_pool));
+            if (!node->signal_array_pool)
+                return set_error(err, UC_E_OOM, "v2 runtime signal array pool allocation failed");
+            node->signal_array_pool_len = layout->signal_array_pointer_slots;
+        }
 
         node->call.out    = node->out_storage;
         node->call.in     = node->in_storage;
@@ -1296,6 +1299,7 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
             free(runtime->nodes[i].state_buffers[j]);
         free(runtime->nodes[i].state_buffers);
         free(runtime->nodes[i].state_buffer_samples);
+        free(runtime->nodes[i].signal_array_pool);
         for (size_t j = 0; j < runtime->nodes[i].aux_blocks_len; j++)
             free(runtime->nodes[i].aux_blocks[j]);
         free(runtime->nodes[i].aux_blocks);

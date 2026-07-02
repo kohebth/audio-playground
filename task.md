@@ -99,10 +99,12 @@ Module note: STM32H7 board integration now has a fixed-block DMA/cache contract.
 ## Runtime Image Hardening Queue
 
 - [x] PD1: Move per-node state-buffer sample capacities into runtime image metadata.
-- [ ] PD2: Move signal-array auxiliary allocation sizing into runtime image metadata.
+- [x] PD2: Move signal-array auxiliary allocation sizing into runtime image metadata.
 - [ ] PD3: Precompute scalar config/input refresh plans so runtime processing does not scan binding keys.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
+
+Module note: Runtime image now sizes signal-array pointer pools for runtime binding.
 
 Implementation lifecycle for production phases:
 

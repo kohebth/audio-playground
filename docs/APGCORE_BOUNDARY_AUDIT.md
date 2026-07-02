@@ -50,6 +50,10 @@ M7 static export tests now run an ARM/M7 freestanding syntax check for generated
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.
 
+## PD2 Progress
+
+Runtime image node layouts now record signal-array pointer pool sizes. Runtime initialization uses one pre-sized per-node pointer pool for signal-array bindings instead of allocating one auxiliary block per binding.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

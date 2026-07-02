@@ -27,6 +27,22 @@ static int load_compile_fixture(const char *path, uc_arena *arena, apg_unit_v2_t
     return 0;
 }
 
+static int load_compile_string(const char *yaml, uc_arena *arena, apg_unit_v2_t *unit, apg_v2_compiled_unit_t *plan) {
+    uc_error  err    = {0};
+    uc_status status = apg_unit_v2_load_string(yaml, strlen(yaml), arena, unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "load error: %s\n", err.msg);
+        return fail("failed to load unit string");
+    }
+
+    status = apg_v2_compile_unit(unit, arena, plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "compile error: %s\n", err.msg);
+        return fail("failed to compile unit string");
+    }
+    return 0;
+}
+
 static int test_runtime_image_layout(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -201,10 +217,103 @@ static int test_runtime_image_control_targets(void) {
     return 0;
 }
 
+static int test_runtime_image_signal_array_pool(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: matrix_image\n"
+                       "version: 2.0.0\n"
+                       "params: {}\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: a\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "    - name: b\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: sum\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "    - name: diff\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - a\n"
+                       "    - b\n"
+                       "    - sum\n"
+                       "    - diff\n"
+                       "  nodes:\n"
+                       "    - id: matrix\n"
+                       "      atom: mix_matrix\n"
+                       "      in:\n"
+                       "        signals:\n"
+                       "          - a\n"
+                       "          - b\n"
+                       "      out:\n"
+                       "        signals:\n"
+                       "          - sum\n"
+                       "          - diff\n"
+                       "      config:\n"
+                       "        coefficients:\n"
+                       "          row0: { c0: 0.5, c1: 0.5 }\n"
+                       "          row1: { c0: 1.0, c1: -1.0 }\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_string(yaml, &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 4096) != 0) {
+        uc_arena_free(&arena);
+        return fail("image arena init failed");
+    }
+
+    apg_v2_runtime_image_t image;
+    uc_error               err    = {0};
+    uc_status              status = apg_v2_runtime_image_build(&plan, 8u, 48000.0f, &image_arena, &image, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime image error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to build signal-array runtime image");
+    }
+    if (image.nodes_len != 1u || image.node_layouts[0].signal_array_pointer_slots != 4u)
+        return fail("unexpected signal-array pointer pool layout");
+
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to initialize signal-array runtime");
+    }
+    if (runtime.nodes[0].signal_array_pool_len != 4u || runtime.nodes[0].signal_array_pool_used != 4u)
+        return fail("runtime did not consume image signal-array pool");
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&image_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 int main(void) {
     if (test_runtime_image_layout())
         return 1;
     if (test_runtime_image_state_buffer_samples())
+        return 1;
+    if (test_runtime_image_signal_array_pool())
         return 1;
     return test_runtime_image_control_targets();
 }

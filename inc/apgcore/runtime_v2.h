@@ -20,6 +20,9 @@ typedef struct {
     float     **state_buffers;
     size_t     *state_buffer_samples;
     size_t      state_buffers_len;
+    float     **signal_array_pool;
+    size_t      signal_array_pool_len;
+    size_t      signal_array_pool_used;
     void      **aux_blocks;
     size_t      aux_blocks_len;
 } apg_v2_runtime_node_t;
