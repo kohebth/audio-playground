@@ -22,6 +22,10 @@
 
 Host/tooling-facing render, smoke, load-all, offline-chain, hall-render, and project-compile tests now read diagnostics, meters, and project transport state through `measure_v2`. The remaining `apg_v2_runtime_last_error(...)` uses are runtime-specific compatibility tests and wrapper definitions.
 
+## PB3 Progress
+
+Runtime image now records per-node atom storage sizes and state-buffer counts. Runtime initialization consumes those image layouts instead of recomputing storage sizes and buffer counts directly from atom metadata.
+
 ## Immediate Direction
 
 New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.

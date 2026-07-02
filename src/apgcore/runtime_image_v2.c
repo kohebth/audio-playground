@@ -11,6 +11,8 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     return status;
 }
 
+static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
+
 static bool parse_port_channel_count(const apg_unit_v2_port_t *port, size_t *out_count) {
     if (!port || !port->channels || !out_count || port->channels[0] == '\0')
         return false;
@@ -92,23 +94,35 @@ static uc_status fill_control_targets(uc_arena *arena, apg_v2_runtime_image_t *o
     return UC_OK;
 }
 
-static void
-count_state_buffers(const apg_v2_compiled_unit_t *plan, size_t *out_buffers_len, size_t *out_buffer_samples) {
-    *out_buffers_len    = 0u;
-    *out_buffer_samples = 0u;
-    if (!plan)
-        return;
-    for (size_t node_index = 0; node_index < plan->nodes_len; node_index++) {
-        const atom_registry_entry_t *atom = plan->nodes[node_index].atom;
+static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out, uc_error *err) {
+    out->nodes_len = out->plan->nodes_len;
+    if (out->nodes_len == 0u)
+        return UC_OK;
+
+    out->node_layouts = uc_arena_alloc(arena, out->nodes_len * sizeof(*out->node_layouts), sizeof(void *));
+    if (!out->node_layouts)
+        return set_error(err, UC_E_OOM, "v2 runtime image node layout allocation failed");
+
+    for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
+        const atom_registry_entry_t  *atom   = out->plan->nodes[node_index].atom;
+        apg_v2_runtime_node_layout_t *layout = &out->node_layouts[node_index];
         if (!atom)
-            continue;
+            return set_error(err, UC_E_MISSING, "v2 runtime image node is missing atom metadata");
+
+        layout->out_size    = atom_storage_size(atom->out_size);
+        layout->in_size     = atom_storage_size(atom->in_size);
+        layout->config_size = atom_storage_size(atom->config_size);
+        layout->state_size  = atom_storage_size(atom->state_size);
         for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
             if (atom->state_fields[field_index].type != FIELD_BUFFER)
                 continue;
-            (*out_buffers_len)++;
-            *out_buffer_samples += atom->state_fields[field_index].buffer_samples;
+            layout->state_buffers_len++;
+            layout->state_buffer_samples += atom->state_fields[field_index].buffer_samples;
         }
+        out->state_buffers_len += layout->state_buffers_len;
+        out->state_buffer_samples += layout->state_buffer_samples;
     }
+    return UC_OK;
 }
 
 uc_status apg_v2_runtime_image_build(
@@ -136,11 +150,13 @@ uc_status apg_v2_runtime_image_build(
     out->params_len        = plan->unit->params_len;
     out->input_meters_len  = audio_port_meter_count(plan->unit->input_ports, plan->unit->input_ports_len);
     out->output_meters_len = audio_port_meter_count(plan->unit->output_ports, plan->unit->output_ports_len);
-    out->nodes_len         = plan->nodes_len;
     out->schedule_len      = plan->schedule_len;
-    count_state_buffers(plan, &out->state_buffers_len, &out->state_buffer_samples);
 
-    uc_status status = fill_control_targets(arena, out, err);
+    uc_status status = fill_node_layouts(arena, out, err);
+    if (status != UC_OK)
+        return status;
+
+    status = fill_control_targets(arena, out, err);
     if (status != UC_OK)
         return status;
 

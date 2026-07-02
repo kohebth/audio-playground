@@ -553,19 +553,18 @@ refresh_node_input_scalars(const apg_v2_compiled_node_t *compiled, apg_v2_runtim
     return UC_OK;
 }
 
-static uc_status
-init_state_buffers(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_node_t *node, uc_error *err) {
-    const atom_registry_entry_t *atom         = compiled->atom;
-    size_t                       buffer_count = 0;
-    for (int i = 0; i < atom->n_state_fields; i++) {
-        if (atom->state_fields[i].type == FIELD_BUFFER)
-            buffer_count++;
-    }
-    if (buffer_count == 0u)
+static uc_status init_state_buffers(
+    const apg_v2_compiled_node_t       *compiled,
+    const apg_v2_runtime_node_layout_t *layout,
+    apg_v2_runtime_node_t              *node,
+    uc_error                           *err
+) {
+    const atom_registry_entry_t *atom = compiled->atom;
+    if (!layout || layout->state_buffers_len == 0u)
         return UC_OK;
 
-    node->state_buffers        = calloc(buffer_count, sizeof(*node->state_buffers));
-    node->state_buffer_samples = calloc(buffer_count, sizeof(*node->state_buffer_samples));
+    node->state_buffers        = calloc(layout->state_buffers_len, sizeof(*node->state_buffers));
+    node->state_buffer_samples = calloc(layout->state_buffers_len, sizeof(*node->state_buffer_samples));
     if (!node->state_buffers || !node->state_buffer_samples) {
         char msg[192];
         snprintf(
@@ -574,7 +573,7 @@ init_state_buffers(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_node_t
         );
         return set_error(err, UC_E_OOM, msg);
     }
-    node->state_buffers_len = buffer_count;
+    node->state_buffers_len = layout->state_buffers_len;
 
     size_t buffer_index = 0;
     for (int i = 0; i < atom->n_state_fields; i++) {
@@ -607,25 +606,30 @@ init_state_buffers(const apg_v2_compiled_node_t *compiled, apg_v2_runtime_node_t
     return UC_OK;
 }
 
-static uc_status init_node_calls(const apg_v2_compiled_unit_t *plan, apg_v2_runtime_t *out, uc_error *err) {
-    out->nodes_len = plan->nodes_len;
+static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
+    const apg_v2_compiled_unit_t *plan = image->plan;
+
+    out->nodes_len = image->nodes_len;
     if (out->nodes_len == 0u)
         return UC_OK;
+    if (!image->node_layouts)
+        return set_error(err, UC_E_MISSING, "v2 runtime image node layouts are missing");
 
     out->nodes = calloc(out->nodes_len, sizeof(*out->nodes));
     if (!out->nodes)
         return set_error(err, UC_E_OOM, "v2 runtime node allocation failed");
 
     for (size_t i = 0; i < out->nodes_len; i++) {
-        const atom_registry_entry_t *atom = plan->nodes[i].atom;
-        apg_v2_runtime_node_t       *node = &out->nodes[i];
+        const atom_registry_entry_t        *atom   = plan->nodes[i].atom;
+        apg_v2_runtime_node_t              *node   = &out->nodes[i];
+        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
         if (!atom)
             return set_error(err, UC_E_MISSING, "v2 runtime node is missing atom metadata");
 
-        node->out_storage    = calloc(1u, atom_storage_size(atom->out_size));
-        node->in_storage     = calloc(1u, atom_storage_size(atom->in_size));
-        node->config_storage = calloc(1u, atom_storage_size(atom->config_size));
-        node->state_storage  = calloc(1u, atom_storage_size(atom->state_size));
+        node->out_storage    = calloc(1u, layout->out_size);
+        node->in_storage     = calloc(1u, layout->in_size);
+        node->config_storage = calloc(1u, layout->config_size);
+        node->state_storage  = calloc(1u, layout->state_size);
         if (!node->out_storage || !node->in_storage || !node->config_storage || !node->state_storage)
             return set_error(err, UC_E_OOM, "v2 runtime atom call allocation failed");
 
@@ -635,7 +639,7 @@ static uc_status init_node_calls(const apg_v2_compiled_unit_t *plan, apg_v2_runt
         node->call.state  = node->state_storage;
         node->call.info   = &out->process_info;
 
-        uc_status status = init_state_buffers(&plan->nodes[i], node, err);
+        uc_status status = init_state_buffers(&plan->nodes[i], layout, node, err);
         if (status != UC_OK)
             return status;
         status = bind_signal_fields(
@@ -685,7 +689,7 @@ uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, ap
     status = init_control_targets(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_node_calls(image->plan, out, err);
+    status = init_node_calls(image, out, err);
     if (status != UC_OK)
         goto fail;
     return UC_OK;

@@ -63,6 +63,9 @@ static int test_runtime_image_layout(void) {
     if (image.input_meters_len != 1u || image.output_meters_len != 1u || image.nodes_len != 2u ||
         image.schedule_len != 2u || image.state_buffers_len != 0u || image.state_buffer_samples != 0u)
         return fail("unexpected runtime image execution layout");
+    if (!image.node_layouts || image.node_layouts[0].out_size == 0u || image.node_layouts[0].in_size == 0u ||
+        image.node_layouts[0].config_size == 0u || image.node_layouts[0].state_size == 0u)
+        return fail("unexpected runtime image node layout");
 
     apg_v2_runtime_t runtime;
     status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
