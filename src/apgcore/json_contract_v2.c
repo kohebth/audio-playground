@@ -395,33 +395,9 @@ static uc_status build_runtime_image_for_render(
 ) {
     if (!plan || !err || !image_arena || !runtime_image)
         return UC_E_TYPE;
-
-    memset(runtime_image, 0, sizeof(*runtime_image));
-
-    size_t arena_size = 4096u;
-    while (arena_size > 0u && arena_size <= (SIZE_MAX >> 1)) {
-        uc_arena local_arena;
-        if (uc_arena_init(&local_arena, arena_size) != 0) {
-            set_error(err, UC_E_OOM, "apg project render runtime image arena allocation failed");
-            return UC_E_OOM;
-        }
-
-        uc_status status = apg_v2_runtime_image_build(
-            plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, &local_arena, runtime_image, err
-        );
-        if (status == UC_OK) {
-            *image_arena = local_arena;
-            return UC_OK;
-        }
-
-        uc_arena_free(&local_arena);
-        if (status != UC_E_OOM)
-            return status;
-        arena_size *= 2u;
-    }
-
-    set_error(err, UC_E_OOM, "apg project render runtime image arena growth overflow");
-    return UC_E_OOM;
+    return apg_v2_runtime_image_build_with_growth(
+        plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, image_arena, runtime_image, err
+    );
 }
 
 static void fill_deterministic_render_input(float *input, uint32_t frames) {
