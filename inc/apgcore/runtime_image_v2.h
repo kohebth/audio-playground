@@ -18,6 +18,16 @@ typedef struct {
 
 typedef struct {
     const apg_v2_compiled_binding_t *binding;
+    size_t                           storage_offset;
+    size_t                           signal_index;
+    size_t                           signal_array_offset;
+    size_t                           signal_array_len;
+    bool                             is_input;
+    bool                             is_signal_array;
+} apg_v2_runtime_signal_binding_t;
+
+typedef struct {
+    const apg_v2_compiled_binding_t *binding;
     const char                      *node_id;
     const char                      *atom_name;
     const char                      *binding_key;
@@ -40,10 +50,17 @@ typedef struct {
     size_t                           state_buffers_len;
     size_t                           state_buffer_samples;
     size_t                           signal_array_pointer_slots;
+    size_t                           signal_bindings_len;
+    apg_v2_runtime_signal_binding_t *signal_bindings;
     apg_v2_runtime_scalar_refresh_t *config_refreshes;
     size_t                           config_refreshes_len;
     apg_v2_runtime_scalar_refresh_t *input_refreshes;
     size_t                           input_refreshes_len;
+    float                          **mix_matrix_row_pointers;
+    float                           *mix_matrix_coefficients;
+    size_t                           mix_matrix_coefficients_len;
+    size_t                           mix_matrix_num_out;
+    size_t                           mix_matrix_num_in;
 } apg_v2_runtime_node_layout_t;
 
 typedef struct {

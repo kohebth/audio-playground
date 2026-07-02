@@ -169,6 +169,28 @@ static size_t count_input_refreshes(const apg_v2_compiled_node_t *node) {
     return count;
 }
 
+static size_t count_signal_bindings(const apg_v2_compiled_binding_t *bindings, size_t bindings_len) {
+    size_t count = 0u;
+    for (size_t i = 0; i < bindings_len; i++) {
+        if (bindings[i].kind == APG_BIND_SIGNAL || bindings[i].kind == APG_BIND_SIGNAL_ARRAY)
+            count++;
+    }
+    return count;
+}
+
+static const apg_v2_compiled_binding_t *
+find_compiled_binding(const apg_v2_compiled_binding_t *bindings, size_t bindings_len, const char *key) {
+    for (size_t i = 0; i < bindings_len; i++) {
+        if (bindings[i].key && key && strcmp(bindings[i].key, key) == 0)
+            return &bindings[i];
+    }
+    return NULL;
+}
+
+static bool is_mix_matrix_node(const apg_v2_compiled_node_t *node) {
+    return node && node->atom && node->atom->name && strcmp(node->atom->name, "mix_matrix") == 0;
+}
+
 static uc_status fill_scalar_refreshes(
     uc_arena                         *arena,
     const apg_v2_compiled_node_t     *node,
@@ -214,6 +236,165 @@ static uc_status fill_scalar_refreshes(
     }
 
     *out_items = items;
+    return UC_OK;
+}
+
+static uc_status fill_signal_bindings(
+    const apg_v2_runtime_image_t    *image,
+    const apg_v2_compiled_node_t    *node,
+    const apg_v2_compiled_binding_t *bindings,
+    size_t                           bindings_len,
+    bool                             is_input,
+    size_t                          *array_cursor,
+    apg_v2_runtime_signal_binding_t *items,
+    size_t                           items_cap,
+    size_t                          *items_len,
+    apg_v2_runtime_node_layout_t    *layout,
+    uc_error                        *err
+) {
+    size_t len = 0u;
+    for (size_t i = 0; i < bindings_len; i++) {
+        if (bindings[i].kind == APG_BIND_SIGNAL || bindings[i].kind == APG_BIND_SIGNAL_ARRAY)
+            len++;
+    }
+
+    if (len == 0u)
+        return UC_OK;
+    if (!items || !items_len)
+        return set_error(err, UC_E_MISSING, "v2 runtime image signal binding output buffer is missing");
+    if (*items_len > SIZE_MAX - len || *items_len + len > items_cap)
+        return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+
+    size_t local_array_cursor = 0u;
+    size_t item_index         = 0u;
+    for (size_t i = 0; i < bindings_len; i++) {
+        const apg_v2_compiled_binding_t *binding = &bindings[i];
+        if (binding->kind != APG_BIND_SIGNAL && binding->kind != APG_BIND_SIGNAL_ARRAY)
+            continue;
+
+        apg_v2_runtime_signal_binding_t item = {0};
+        item.binding                         = binding;
+        item.is_input                        = is_input;
+        item.storage_offset                  = i * sizeof(float *);
+        item.signal_array_len                = 0u;
+
+        if (is_input) {
+            const atom_field_desc_t *field = find_input_field(node->atom, binding->key);
+            if (field) {
+                if (field->type != FIELD_SIGNAL) {
+                    if (binding->kind == APG_BIND_SIGNAL)
+                        return set_error(err, UC_E_TYPE, "v2 runtime image input binding field is not a signal");
+                    return set_error(
+                        err, UC_E_TYPE, "v2 runtime image input binding field does not support signal arrays"
+                    );
+                }
+                item.storage_offset = field->offset;
+            }
+            if (binding->kind == APG_BIND_SIGNAL) {
+                if (binding->index >= image->signals_len)
+                    return set_error(
+                        err, UC_E_MISSING, "v2 runtime image input binding references invalid signal index"
+                    );
+                item.signal_index = binding->index;
+            } else {
+                item.is_signal_array  = true;
+                item.signal_index     = SIZE_MAX;
+                item.signal_array_len = binding->indices_len;
+                if (binding->indices_len > SIZE_MAX - local_array_cursor)
+                    return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is too large");
+                if (!array_cursor)
+                    return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor is missing");
+                item.signal_array_offset = *array_cursor + local_array_cursor;
+                if (binding->indices_len == 0u)
+                    return set_error(err, UC_E_RANGE, "v2 runtime image input binding has empty signal array");
+                for (size_t j = 0; j < binding->indices_len; j++) {
+                    if (binding->indices[j] >= image->signals_len)
+                        return set_error(
+                            err, UC_E_MISSING, "v2 runtime image input binding references invalid signal index"
+                        );
+                }
+                local_array_cursor += binding->indices_len;
+            }
+        } else {
+            if (binding->kind == APG_BIND_SIGNAL) {
+                if (binding->index >= image->signals_len)
+                    return set_error(
+                        err, UC_E_MISSING, "v2 runtime image output binding references invalid signal index"
+                    );
+                item.signal_index = binding->index;
+            } else {
+                item.is_signal_array  = true;
+                item.signal_index     = SIZE_MAX;
+                item.signal_array_len = binding->indices_len;
+                if (binding->indices_len > SIZE_MAX - local_array_cursor)
+                    return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is too large");
+                if (!array_cursor)
+                    return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor is missing");
+                item.signal_array_offset = *array_cursor + local_array_cursor;
+                if (binding->indices_len == 0u)
+                    return set_error(err, UC_E_RANGE, "v2 runtime image output binding has empty signal array");
+                for (size_t j = 0; j < binding->indices_len; j++) {
+                    if (binding->indices[j] >= image->signals_len)
+                        return set_error(
+                            err, UC_E_MISSING, "v2 runtime image output binding references invalid signal index"
+                        );
+                }
+                local_array_cursor += binding->indices_len;
+            }
+        }
+
+        items[*items_len + item_index++] = item;
+    }
+
+    if (item_index != len || local_array_cursor > layout->signal_array_pointer_slots)
+        return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+    if (array_cursor) {
+        if (*array_cursor > SIZE_MAX - local_array_cursor)
+            return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor overflow");
+        if (*array_cursor + local_array_cursor > layout->signal_array_pointer_slots)
+            return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+        *array_cursor += local_array_cursor;
+    }
+    *items_len += item_index;
+    return UC_OK;
+}
+
+static uc_status fill_mix_matrix_layout(
+    uc_arena *arena, const apg_v2_compiled_node_t *node, apg_v2_runtime_node_layout_t *layout, uc_error *err
+) {
+    if (!is_mix_matrix_node(node))
+        return UC_OK;
+
+    const apg_v2_compiled_binding_t *matrix = find_compiled_binding(node->config, node->config_len, "coefficients");
+    if (!matrix || matrix->kind != APG_BIND_FLOAT_MATRIX)
+        return set_error(err, UC_E_TYPE, "v2 runtime image mix_matrix requires coefficient matrix binding");
+    if (matrix->rows == 0u || matrix->cols == 0u)
+        return set_error(err, UC_E_RANGE, "v2 runtime image mix_matrix requires non-empty coefficient matrix");
+    if (matrix->numbers == NULL)
+        return set_error(err, UC_E_MISSING, "v2 runtime image mix_matrix coefficient data is missing");
+
+    if (matrix->rows > SIZE_MAX / matrix->cols)
+        return set_error(err, UC_E_RANGE, "v2 runtime image mix_matrix matrix size overflow");
+
+    size_t coefficient_count            = matrix->rows * matrix->cols;
+    layout->mix_matrix_coefficients_len = coefficient_count;
+    layout->mix_matrix_num_out          = matrix->rows;
+    layout->mix_matrix_num_in           = matrix->cols;
+
+    layout->mix_matrix_coefficients =
+        uc_arena_alloc(arena, coefficient_count * sizeof(*layout->mix_matrix_coefficients), sizeof(float));
+    if (!layout->mix_matrix_coefficients)
+        return set_error(err, UC_E_OOM, "v2 runtime image mix_matrix coefficient allocation failed");
+    memcpy(layout->mix_matrix_coefficients, matrix->numbers, coefficient_count * sizeof(float));
+
+    layout->mix_matrix_row_pointers =
+        uc_arena_alloc(arena, matrix->rows * sizeof(*layout->mix_matrix_row_pointers), sizeof(float *));
+    if (!layout->mix_matrix_row_pointers)
+        return set_error(err, UC_E_OOM, "v2 runtime image mix_matrix row pointer allocation failed");
+
+    for (size_t row = 0u; row < matrix->rows; row++)
+        layout->mix_matrix_row_pointers[row] = &layout->mix_matrix_coefficients[row * matrix->cols];
+
     return UC_OK;
 }
 
@@ -264,6 +445,8 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         apg_v2_runtime_node_layout_t *layout = &out->node_layouts[node_index];
         if (!atom)
             return set_error(err, UC_E_MISSING, "v2 runtime image node is missing atom metadata");
+
+        memset(layout, 0, sizeof(*layout));
 
         layout->out_size    = atom_storage_size(atom->out_size);
         layout->in_size     = atom_storage_size(atom->in_size);
@@ -322,6 +505,43 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
         status = fill_scalar_refreshes(
             arena, &out->plan->nodes[node_index], &layout->input_refreshes, &layout->input_refreshes_len, false, err
         );
+        if (status != UC_OK)
+            return status;
+
+        size_t signal_bindings_len =
+            count_signal_bindings(out->plan->nodes[node_index].out, out->plan->nodes[node_index].out_len) +
+            count_signal_bindings(out->plan->nodes[node_index].in, out->plan->nodes[node_index].in_len);
+        layout->signal_bindings_len = signal_bindings_len;
+        if (signal_bindings_len > 0u) {
+            layout->signal_bindings =
+                uc_arena_alloc(arena, signal_bindings_len * sizeof(*layout->signal_bindings), sizeof(void *));
+            if (!layout->signal_bindings)
+                return set_error(err, UC_E_OOM, "v2 runtime image signal binding allocation failed");
+        }
+
+        size_t signal_binding_index = 0u;
+
+        size_t signal_array_cursor = 0u;
+
+        status = fill_signal_bindings(
+            out, &out->plan->nodes[node_index], out->plan->nodes[node_index].out, out->plan->nodes[node_index].out_len,
+            false, &signal_array_cursor, layout->signal_bindings, layout->signal_bindings_len, &signal_binding_index,
+            layout, err
+        );
+        if (status != UC_OK)
+            return status;
+
+        status = fill_signal_bindings(
+            out, &out->plan->nodes[node_index], out->plan->nodes[node_index].in, out->plan->nodes[node_index].in_len,
+            true, &signal_array_cursor, layout->signal_bindings, layout->signal_bindings_len, &signal_binding_index,
+            layout, err
+        );
+        if (status != UC_OK)
+            return status;
+        if (signal_binding_index != layout->signal_bindings_len)
+            return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+
+        status = fill_mix_matrix_layout(arena, &out->plan->nodes[node_index], layout, err);
         if (status != UC_OK)
             return status;
     }

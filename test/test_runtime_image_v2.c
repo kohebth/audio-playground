@@ -2,6 +2,7 @@
 #include <apgcore/runtime_image_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
+#include <atom/dsp_types.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -91,6 +92,9 @@ static int test_runtime_image_layout(void) {
         return fail("stateless node should not have state buffer sample layout");
     if (image.node_layouts[0].config_refreshes_len != 1u || image.node_layouts[1].config_refreshes_len != 0u)
         return fail("unexpected runtime image config refresh layout");
+    if (image.node_layouts[0].signal_bindings_len != 1u || !image.node_layouts[0].signal_bindings ||
+        image.node_layouts[1].signal_bindings_len != 3u || !image.node_layouts[1].signal_bindings)
+        return fail("unexpected runtime image signal binding layout");
 
     apg_v2_runtime_t runtime;
     status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
@@ -118,6 +122,11 @@ static int test_runtime_image_layout(void) {
     if (runtime.nodes[0].config_refreshes_len != image.node_layouts[0].config_refreshes_len ||
         runtime.nodes[1].config_refreshes_len != image.node_layouts[1].config_refreshes_len)
         return fail("runtime did not adopt config refresh plan");
+    if (runtime.nodes[0].signal_bindings != image.node_layouts[0].signal_bindings ||
+        runtime.nodes[0].signal_bindings_len != image.node_layouts[0].signal_bindings_len ||
+        runtime.nodes[1].signal_bindings != image.node_layouts[1].signal_bindings ||
+        runtime.nodes[1].signal_bindings_len != image.node_layouts[1].signal_bindings_len)
+        return fail("runtime did not adopt signal binding plan");
 
     float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
     float output[4] = {0};
@@ -328,7 +337,8 @@ static int test_runtime_image_signal_array_pool(void) {
         uc_arena_free(&arena);
         return fail("failed to build signal-array runtime image");
     }
-    if (image.nodes_len != 1u || image.node_layouts[0].signal_array_pointer_slots != 4u)
+    if (image.nodes_len != 1u || image.node_layouts[0].signal_array_pointer_slots != 4u ||
+        image.node_layouts[0].signal_bindings_len != 2u || !image.node_layouts[0].signal_bindings)
         return fail("unexpected signal-array pointer pool layout");
 
     apg_v2_runtime_t runtime;
@@ -339,8 +349,27 @@ static int test_runtime_image_signal_array_pool(void) {
         uc_arena_free(&arena);
         return fail("failed to initialize signal-array runtime");
     }
-    if (runtime.nodes[0].signal_array_pool_len != 4u || runtime.nodes[0].signal_array_pool_used != 4u)
+    if (runtime.nodes[0].signal_array_pool_len != 4u || runtime.nodes[0].signal_array_pool_used != 4u ||
+        runtime.nodes[0].signal_bindings != image.node_layouts[0].signal_bindings ||
+        runtime.nodes[0].signal_bindings_len != image.node_layouts[0].signal_bindings_len)
         return fail("runtime did not consume image signal-array pool");
+    if (!image.node_layouts[0].mix_matrix_row_pointers || !image.node_layouts[0].mix_matrix_coefficients ||
+        image.node_layouts[0].mix_matrix_coefficients_len != 4u || image.node_layouts[0].mix_matrix_num_out != 2u ||
+        image.node_layouts[0].mix_matrix_num_in != 2u || image.node_layouts[0].mix_matrix_coefficients[0] != 0.5f ||
+        image.node_layouts[0].mix_matrix_coefficients[1] != 0.5f ||
+        image.node_layouts[0].mix_matrix_coefficients[2] != 1.0f ||
+        image.node_layouts[0].mix_matrix_coefficients[3] != -1.0f)
+        return fail("unexpected mix_matrix image matrix layout");
+
+    const mix_matrix_params_t *matrix_params = (const mix_matrix_params_t *)runtime.nodes[0].config_storage;
+    if (!matrix_params->coefficients || matrix_params->num_in != 2 || matrix_params->num_out != 2)
+        return fail("runtime did not consume mix_matrix matrix layout");
+    if (matrix_params->coefficients[0] != image.node_layouts[0].mix_matrix_row_pointers[0] ||
+        matrix_params->coefficients[1] != image.node_layouts[0].mix_matrix_row_pointers[1])
+        return fail("runtime mix_matrix matrix rows did not point to image rows");
+    if (matrix_params->coefficients[0][0] != 0.5f || matrix_params->coefficients[0][1] != 0.5f ||
+        matrix_params->coefficients[1][0] != 1.0f || matrix_params->coefficients[1][1] != -1.0f)
+        return fail("runtime mix_matrix coefficients mismatch");
 
     apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&image_arena);
