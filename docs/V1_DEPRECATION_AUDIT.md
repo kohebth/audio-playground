@@ -5,7 +5,7 @@ APG v1 is legacy and should be removed only after the remaining default-build de
 ## Still Active
 
 - `src/rte/runtime.c` and `inc/rte/runtime.h`: used by `test_unit_load_all`, `test_offline_chain`, `test_hall_reverb`, `src/live.c`, and `src/test_runtime.c`.
-- `src/ctrl/ctrls.c` and `inc/ctrl/ctrls.h`: used by `test_ctrl_transition` and optional live control paths.
+- `src/ctrl/ctrls.c` and `inc/ctrl/ctrls.h`: used by optional live control paths.
 - `src/unit/*.c` and `inc/unit/*.h`: fixed-size v1 adapters still covered by adapter tests.
 - `src/yaml/loader.c` and `inc/yaml/loader.h`: v1 unit loader; the lower-level YAML lexer/parser is shared by v2 parser wrappers and must not be removed.
 - `units/*.unit.yaml`: v1 fixtures used by the legacy tests and optional live examples.
@@ -15,6 +15,7 @@ APG v1 is legacy and should be removed only after the remaining default-build de
 - v1 runtime, control, and v1 unit-loader public APIs have opt-in deprecated attributes behind `APG_ENABLE_V1_DEPRECATED_WARNINGS`.
 - v1-dependent CTest targets are labelled `legacy_v1`.
 - `test_runtime_process_frames` has been migrated to APGCore v2.
+- `test_ctrl_transition` has been migrated to APGCore v2 control-port smoothing.
 - v2 parser, validator, compiler, runtime image, runtime, and measure modules are the production path.
 
 ## Removal Blockers
