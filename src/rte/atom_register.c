@@ -1,5 +1,6 @@
 #include "atom/dsp_atoms.h"
 #include <atom_registry.h>
+#include <stddef.h>
 #include <string.h>
 
 // ─────────────────────────────────────────────
@@ -548,6 +549,16 @@ static const atom_field_desc_t delay_tap_feedback_config_fields[] = {
 
 static const atom_field_desc_t delay_tap_feedforward_config_fields[] = {
     {"coefficient", FIELD_FLOAT, offsetof(delay_tap_feedforward_params_t, coefficient)},
+};
+
+static const atom_field_desc_t delay_tap_feedback_in_fields[] = {
+    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedback_in_t,       buffer)},
+    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedback_in_t, tap_position)},
+};
+
+static const atom_field_desc_t delay_tap_feedforward_in_fields[] = {
+    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedforward_in_t,       buffer)},
+    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedforward_in_t, tap_position)},
 };
 
 static const atom_field_desc_t delay_unit_state_fields[] = {
@@ -1265,6 +1276,30 @@ static atom_registry_entry_t g_registry[] = {
 static const int g_registry_count = sizeof(g_registry) / sizeof(g_registry[0]);
 
 void atom_registry_init(void) {}
+
+static const atom_field_desc_t *registry_in_fields_for_name(const char *name, size_t *out_len) {
+    if (out_len)
+        *out_len = 0u;
+    if (!name)
+        return NULL;
+    if (strcmp(name, "delay_tap_feedback") == 0) {
+        if (out_len)
+            *out_len = sizeof(delay_tap_feedback_in_fields) / sizeof(delay_tap_feedback_in_fields[0]);
+        return delay_tap_feedback_in_fields;
+    }
+    if (strcmp(name, "delay_tap_feedforward") == 0) {
+        if (out_len)
+            *out_len = sizeof(delay_tap_feedforward_in_fields) / sizeof(delay_tap_feedforward_in_fields[0]);
+        return delay_tap_feedforward_in_fields;
+    }
+    return NULL;
+}
+
+const atom_field_desc_t *atom_registry_in_fields(const atom_registry_entry_t *atom, size_t *out_len) {
+    if (!atom)
+        return NULL;
+    return registry_in_fields_for_name(atom->name, out_len);
+}
 
 const atom_registry_entry_t *atom_registry_find(const char *name) {
     for (int i = 0; i < g_registry_count; i++) {

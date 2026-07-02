@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <atom/dsp_types.h>
-
 static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     uc_loc loc = {0, 0};
     uc_error_set(err, status, loc, "%s", msg);
@@ -98,16 +96,6 @@ static size_t signal_array_pointer_slots(const apg_v2_compiled_binding_t *bindin
     return slots;
 }
 
-static const atom_field_desc_t delay_tap_feedback_in_fields[] = {
-    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedback_in_t,       buffer)},
-    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedback_in_t, tap_position)},
-};
-
-static const atom_field_desc_t delay_tap_feedforward_in_fields[] = {
-    {      "buffer", FIELD_SIGNAL, offsetof(delay_tap_feedforward_in_t,       buffer)},
-    {"tap_position",    FIELD_INT, offsetof(delay_tap_feedforward_in_t, tap_position)},
-};
-
 static const atom_field_desc_t *
 find_field_in_list(const atom_field_desc_t *fields, size_t fields_len, const char *key) {
     if (!fields || !key)
@@ -122,17 +110,9 @@ find_field_in_list(const atom_field_desc_t *fields, size_t fields_len, const cha
 static const atom_field_desc_t *find_input_field(const atom_registry_entry_t *atom, const char *key) {
     if (!atom || !atom->name)
         return NULL;
-    if (strcmp(atom->name, "delay_tap_feedback") == 0)
-        return find_field_in_list(
-            delay_tap_feedback_in_fields,
-            sizeof(delay_tap_feedback_in_fields) / sizeof(delay_tap_feedback_in_fields[0]), key
-        );
-    if (strcmp(atom->name, "delay_tap_feedforward") == 0)
-        return find_field_in_list(
-            delay_tap_feedforward_in_fields,
-            sizeof(delay_tap_feedforward_in_fields) / sizeof(delay_tap_feedforward_in_fields[0]), key
-        );
-    return NULL;
+    size_t                   fields_len = 0u;
+    const atom_field_desc_t *fields     = atom_registry_in_fields(atom, &fields_len);
+    return find_field_in_list(fields, fields_len, key);
 }
 
 static const atom_field_desc_t *find_config_field(const atom_registry_entry_t *atom, const char *key) {

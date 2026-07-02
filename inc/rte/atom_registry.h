@@ -53,6 +53,10 @@ typedef struct {
     int                      n_config_fields;
 } atom_registry_entry_t;
 
+// Return input-field descriptors for an atom registry entry.
+// `out_len` receives the number of descriptors when available.
+const atom_field_desc_t *atom_registry_in_fields(const atom_registry_entry_t *atom, size_t *out_len);
+
 // ─────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────
