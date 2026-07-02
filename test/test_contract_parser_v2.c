@@ -1,4 +1,8 @@
 #include <apgcore/parser_v2.h>
+#include <apgcore/project_v2.h>
+#include <apgcore/project_validator_v2.h>
+#include <apgcore/unit_v2.h>
+#include <apgcore/unit_validator_v2.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -19,7 +23,7 @@ static int expect_parse_without_validation(void) {
                        "      atom: not_registered\n";
 
     uc_arena arena;
-    if (uc_arena_init(&arena, 4096) != 0)
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
 
     uc_node  *root   = NULL;
@@ -41,4 +45,53 @@ static int expect_parse_without_validation(void) {
     return 0;
 }
 
-int main(void) { return expect_parse_without_validation(); }
+static int expect_boundary_parse_then_validate(void) {
+    const char *unit_file    = "units-v2/simple_gain.unit.v2.yaml";
+    const char *project_file = "projects-v2/simple-gain-board.project.v2.yaml";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    uc_node  *unit_root = NULL;
+    uc_error  err       = {0};
+    uc_status status    = apg_unit_v2_parse_file(unit_file, &arena, &unit_root, &err);
+    if (status != UC_OK || !unit_root) {
+        fprintf(stderr, "unit parse error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("unit parser wrapper failed");
+    }
+    apg_unit_v2_t unit = {0};
+    status             = apg_unit_v2_validate_root(unit_root, &arena, &unit, &err);
+    if (status != UC_OK || unit.name == NULL || strcmp(unit.name, "simple_gain") != 0) {
+        fprintf(stderr, "unit validation error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("unit parser boundary validation failed");
+    }
+
+    uc_node *project_root = NULL;
+    err                   = (uc_error){0};
+    status                = apg_project_v2_parse_file(project_file, &arena, &project_root, &err);
+    if (status != UC_OK || !project_root) {
+        fprintf(stderr, "project parse error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("project parser wrapper failed");
+    }
+    apg_project_v2_t project = {0};
+    status                   = apg_project_v2_validate_root(project_root, &arena, &project, &err);
+    if (status != UC_OK || !project.name || strcmp(project.name, "simple-gain-board") != 0) {
+        fprintf(stderr, "project validation error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("project parser boundary validation failed");
+    }
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
+int main(void) {
+    int status = expect_parse_without_validation();
+    if (status != 0)
+        return status;
+    return expect_boundary_parse_then_validate();
+}

@@ -81,6 +81,14 @@ typedef struct {
 } apg_unit_v2_t;
 
 /*
+ * Parse a v2 unit contract YAML document into an arena-owned syntax graph.
+ * This performs parsing only; validation and model materialization are done
+ * by validator stage functions.
+ */
+uc_status apg_unit_v2_parse_string(const char *src, size_t src_len, uc_arena *arena, uc_node **out_root, uc_error *err);
+uc_status apg_unit_v2_parse_file(const char *path, uc_arena *arena, uc_node **out_root, uc_error *err);
+
+/*
  * Load a v2 unit from a YAML file into arena-owned storage.
  * The returned structure and all nested strings/arrays remain valid until the arena is freed.
  */

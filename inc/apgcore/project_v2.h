@@ -69,6 +69,14 @@ typedef struct {
     size_t                        units_len;
 } apg_project_v2_resolved_t;
 
+/*
+ * Parse a v2 project contract YAML document into an arena-owned syntax graph.
+ * Parsing is syntax-only; semantic validation is handled by validator helpers.
+ */
+uc_status
+apg_project_v2_parse_string(const char *src, size_t src_len, uc_arena *arena, uc_node **out_root, uc_error *err);
+uc_status apg_project_v2_parse_file(const char *path, uc_arena *arena, uc_node **out_root, uc_error *err);
+
 uc_status apg_project_v2_load_file(const char *path, uc_arena *arena, apg_project_v2_t *out, uc_error *err);
 uc_status
 apg_project_v2_load_string(const char *src, size_t src_len, uc_arena *arena, apg_project_v2_t *out, uc_error *err);

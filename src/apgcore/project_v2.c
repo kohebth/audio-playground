@@ -105,6 +105,15 @@ static bool resolved_unit_path_seen(const apg_project_v2_loaded_unit_t *units, s
 }
 
 uc_status
+apg_project_v2_parse_string(const char *src, size_t src_len, uc_arena *arena, uc_node **out_root, uc_error *err) {
+    return apg_v2_parse_string(src, src_len, arena, out_root, err);
+}
+
+uc_status apg_project_v2_parse_file(const char *path, uc_arena *arena, uc_node **out_root, uc_error *err) {
+    return apg_v2_parse_file(path, arena, out_root, err);
+}
+
+uc_status
 apg_project_v2_load_string(const char *src, size_t src_len, uc_arena *arena, apg_project_v2_t *out, uc_error *err) {
     if (!src || !arena || !out || !err)
         return UC_E_TYPE;
@@ -112,7 +121,7 @@ apg_project_v2_load_string(const char *src, size_t src_len, uc_arena *arena, apg
     err->status = UC_OK;
 
     uc_node  *root   = NULL;
-    uc_status status = apg_v2_parse_string(src, src_len, arena, &root, err);
+    uc_status status = apg_project_v2_parse_string(src, src_len, arena, &root, err);
     if (status != UC_OK)
         return status;
     return apg_project_v2_validate_root(root, arena, out, err);
@@ -125,7 +134,7 @@ uc_status apg_project_v2_load_file(const char *path, uc_arena *arena, apg_projec
     err->status = UC_OK;
 
     uc_node  *root   = NULL;
-    uc_status status = apg_v2_parse_file(path, arena, &root, err);
+    uc_status status = apg_project_v2_parse_file(path, arena, &root, err);
     if (status != UC_OK)
         return status;
     return apg_project_v2_validate_root(root, arena, out, err);
