@@ -17,6 +17,13 @@ typedef struct {
 } apg_v2_runtime_control_target_t;
 
 typedef struct {
+    const char *instance_id;
+    size_t      instance_id_len;
+    size_t      input_index;
+    size_t      output_index;
+} apg_v2_runtime_image_bypass_entry_t;
+
+typedef struct {
     const apg_v2_compiled_binding_t *binding;
     size_t                           storage_offset;
     size_t                           signal_index;
@@ -63,24 +70,29 @@ typedef struct {
 } apg_v2_runtime_node_layout_t;
 
 typedef struct {
-    const apg_v2_compiled_unit_t    *plan;
-    uint32_t                         frame_capacity;
-    float                            sample_rate;
-    size_t                           signals_len;
-    size_t                           signal_samples;
-    size_t                           params_len;
-    float                           *param_defaults;
-    size_t                           input_meters_len;
-    size_t                           output_meters_len;
-    apg_v2_runtime_control_target_t *control_targets;
-    size_t                           control_targets_len;
-    apg_v2_runtime_node_layout_t    *node_layouts;
-    size_t                           nodes_len;
-    size_t                           schedule_len;
-    size_t                           state_buffers_len;
-    size_t                           state_buffer_samples;
-    size_t                           atom_storage_bytes;
-    size_t                           signal_array_pointer_slots;
+    const apg_v2_compiled_unit_t        *plan;
+    uint32_t                             frame_capacity;
+    float                                sample_rate;
+    size_t                               signals_len;
+    size_t                               signal_samples;
+    size_t                               params_len;
+    float                               *param_defaults;
+    size_t                               input_meters_len;
+    size_t                               output_meters_len;
+    apg_v2_runtime_control_target_t     *control_targets;
+    size_t                               control_targets_len;
+    apg_v2_runtime_image_bypass_entry_t *bypass_instances;
+    size_t                               bypassed_instances_len;
+    size_t                              *bypass_index_by_node;
+    size_t                              *project_mute_output_indices;
+    size_t                               project_mute_output_indices_len;
+    apg_v2_runtime_node_layout_t        *node_layouts;
+    size_t                               nodes_len;
+    size_t                               schedule_len;
+    size_t                               state_buffers_len;
+    size_t                               state_buffer_samples;
+    size_t                               atom_storage_bytes;
+    size_t                               signal_array_pointer_slots;
 } apg_v2_runtime_image_t;
 
 /*

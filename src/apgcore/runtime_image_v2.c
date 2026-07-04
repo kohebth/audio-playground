@@ -16,6 +16,205 @@ static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
 
 static size_t runtime_storage_align(void) { return _Alignof(max_align_t); }
 
+static bool parse_port_channel_count(const apg_unit_v2_port_t *port, size_t *out_count);
+
+static bool node_id_has_instance_prefix_len(const char *node_id, const char *instance_id, size_t instance_len) {
+    if (!node_id || !instance_id || instance_id[0] == '\0')
+        return false;
+    return strncmp(node_id, instance_id, instance_len) == 0 &&
+           (node_id[instance_len] == '\0' || node_id[instance_len] == '.');
+}
+
+static bool node_outputs_signal(const apg_v2_compiled_node_t *node, size_t signal_index) {
+    if (!node)
+        return false;
+    for (size_t i = 0; i < node->out_len; i++) {
+        const apg_v2_compiled_binding_t *binding = &node->out[i];
+        if (binding->kind == APG_BIND_SIGNAL) {
+            if (binding->index == signal_index)
+                return true;
+        } else if (binding->kind == APG_BIND_SIGNAL_ARRAY) {
+            for (size_t j = 0; j < binding->indices_len; j++) {
+                if (binding->indices[j] == signal_index)
+                    return true;
+            }
+        }
+    }
+    return false;
+}
+
+static size_t binding_signal_count(const apg_v2_compiled_binding_t *binding) {
+    if (!binding)
+        return 0u;
+    if (binding->kind == APG_BIND_SIGNAL)
+        return 1u;
+    if (binding->kind == APG_BIND_SIGNAL_ARRAY)
+        return binding->indices_len;
+    return 0u;
+}
+
+static bool binding_signal_index(const apg_v2_compiled_binding_t *binding, size_t offset, size_t *out_index) {
+    if (!binding || !out_index)
+        return false;
+    if (binding->kind == APG_BIND_SIGNAL && offset == 0u) {
+        *out_index = binding->index;
+        return true;
+    }
+    if (binding->kind == APG_BIND_SIGNAL_ARRAY && offset < binding->indices_len) {
+        *out_index = binding->indices[offset];
+        return true;
+    }
+    return false;
+}
+
+static bool node_instance_prefix(const char *node_id, const char **out_instance_id, size_t *out_instance_len) {
+    if (!node_id || node_id[0] == '\0')
+        return false;
+    const char *dot = strchr(node_id, '.');
+    if (dot) {
+        size_t instance_len = (size_t)(dot - node_id);
+        if (instance_len == 0u)
+            return false;
+        *out_instance_id  = node_id;
+        *out_instance_len = instance_len;
+        return true;
+    }
+    *out_instance_id  = node_id;
+    *out_instance_len = strlen(node_id);
+    return true;
+}
+
+static int signal_index_by_name(const apg_unit_v2_t *unit, const char *name) {
+    if (!unit || !name)
+        return -1;
+    for (size_t i = 0; i < unit->signals_len; i++) {
+        if (unit->signals[i] && strcmp(unit->signals[i], name) == 0)
+            return (int)i;
+    }
+    return -1;
+}
+
+static bool instance_outputs_signal(
+    const apg_v2_runtime_image_t *image, const char *instance_id, size_t instance_len, size_t signal_index
+) {
+    if (!image || !image->plan)
+        return false;
+    for (size_t i = 0; i < image->plan->nodes_len; i++) {
+        const apg_v2_compiled_node_t *node = &image->plan->nodes[i];
+        if (node_id_has_instance_prefix_len(node->id, instance_id, instance_len) &&
+            node_outputs_signal(node, signal_index))
+            return true;
+    }
+    return false;
+}
+
+static bool signal_consumed_outside_instance(
+    const apg_v2_runtime_image_t *image, const char *instance_id, size_t instance_len, size_t signal_index
+) {
+    if (!image || !image->plan)
+        return false;
+    for (size_t i = 0; i < image->plan->nodes_len; i++) {
+        const apg_v2_compiled_node_t *node = &image->plan->nodes[i];
+        if (node_id_has_instance_prefix_len(node->id, instance_id, instance_len))
+            continue;
+        for (size_t j = 0; j < node->in_len; j++) {
+            const apg_v2_compiled_binding_t *binding = &node->in[j];
+            if (binding->kind == APG_BIND_SIGNAL && binding->index == signal_index)
+                return true;
+            if (binding->kind == APG_BIND_SIGNAL_ARRAY) {
+                for (size_t k = 0; k < binding->indices_len; k++) {
+                    if (binding->indices[k] == signal_index)
+                        return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+static bool signal_is_public_output(const apg_v2_runtime_image_t *image, size_t signal_index) {
+    if (!image || !image->plan || !image->plan->unit)
+        return false;
+    const apg_unit_v2_t *unit = image->plan->unit;
+    for (size_t i = 0; i < unit->output_ports_len; i++) {
+        const apg_unit_v2_port_t *port = &unit->output_ports[i];
+        if (!port || !port->type || strcmp(port->type, "audio") != 0)
+            continue;
+
+        size_t channels = 0u;
+        if (!parse_port_channel_count(port, &channels))
+            continue;
+
+        for (size_t ch = 0; ch < channels; ch++) {
+            int index = -1;
+            if (port->signals_len > 0u) {
+                if (ch < port->signals_len && port->signals[ch])
+                    index = signal_index_by_name(unit, port->signals[ch]);
+            } else if (ch == 0u && port->name) {
+                index = signal_index_by_name(unit, port->name);
+            }
+            if (index >= 0 && (size_t)index == signal_index)
+                return true;
+        }
+    }
+    return false;
+}
+
+static bool find_instance_bypass_io_by_prefix(
+    const apg_v2_runtime_image_t        *image,
+    const char                          *instance_id,
+    size_t                               instance_len,
+    apg_v2_runtime_image_bypass_entry_t *entry
+) {
+    if (!image || !image->plan || !image->plan->nodes || !entry)
+        return false;
+
+    size_t input_index  = 0u;
+    size_t output_index = 0u;
+    bool   found_input  = false;
+    bool   found_output = false;
+
+    for (size_t i = 0; i < image->plan->nodes_len; i++) {
+        const apg_v2_compiled_node_t *node = &image->plan->nodes[i];
+        if (!node_id_has_instance_prefix_len(node->id, instance_id, instance_len))
+            continue;
+
+        for (size_t b = 0; b < node->in_len && !found_input; b++) {
+            for (size_t s = 0; s < binding_signal_count(&node->in[b]); s++) {
+                size_t index = 0u;
+                if (!binding_signal_index(&node->in[b], s, &index))
+                    continue;
+                if (!instance_outputs_signal(image, instance_id, instance_len, index)) {
+                    input_index = index;
+                    found_input = true;
+                    break;
+                }
+            }
+        }
+
+        for (size_t b = 0; b < node->out_len && !found_output; b++) {
+            for (size_t s = 0; s < binding_signal_count(&node->out[b]); s++) {
+                size_t index = 0u;
+                if (!binding_signal_index(&node->out[b], s, &index))
+                    continue;
+                if (signal_consumed_outside_instance(image, instance_id, instance_len, index) ||
+                    signal_is_public_output(image, index)) {
+                    output_index = index;
+                    found_output = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!found_input || !found_output)
+        return false;
+
+    entry->input_index  = input_index;
+    entry->output_index = output_index;
+    return true;
+}
+
 static bool align_up_size(size_t value, size_t alignment, size_t *out) {
     size_t mask = alignment - 1u;
     if (alignment == 0u || (alignment & mask) != 0u)
@@ -66,6 +265,140 @@ static float parse_param_default(const apg_unit_v2_param_t *param) {
     if (param->type && strcmp(param->type, "bool") == 0)
         return strcmp(param->default_value, "true") == 0 ? 1.0f : 0.0f;
     return strtof(param->default_value, NULL);
+}
+
+static uc_status fill_bypass_metadata(uc_arena *arena, apg_v2_runtime_image_t *out, uc_error *err) {
+    if (!arena || !out || !out->plan || !out->plan->unit || !out->plan->nodes)
+        return UC_OK;
+
+    if (out->plan->nodes_len == 0u)
+        return UC_OK;
+
+    size_t total_instances = out->plan->nodes_len;
+    if (total_instances == 0u)
+        return UC_OK;
+
+    apg_v2_runtime_image_bypass_entry_t *entries =
+        uc_arena_alloc(arena, total_instances * sizeof(*entries), sizeof(void *));
+    if (!entries)
+        return set_error(err, UC_E_OOM, "v2 runtime image bypass metadata allocation failed");
+
+    size_t bypass_count = 0u;
+    for (size_t i = 0; i < out->plan->nodes_len; i++) {
+        const apg_v2_compiled_node_t *node         = &out->plan->nodes[i];
+        const char                   *instance_id  = NULL;
+        size_t                        instance_len = 0u;
+        if (!node_instance_prefix(node->id, &instance_id, &instance_len))
+            continue;
+
+        bool exists = false;
+        for (size_t j = 0; j < bypass_count; j++) {
+            const apg_v2_runtime_image_bypass_entry_t *existing = &entries[j];
+            if (existing->instance_id_len != instance_len)
+                continue;
+            if (strncmp(existing->instance_id, instance_id, instance_len) == 0) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists)
+            continue;
+
+        apg_v2_runtime_image_bypass_entry_t candidate = {0};
+        candidate.instance_id                         = instance_id;
+        candidate.instance_id_len                     = instance_len;
+        if (!find_instance_bypass_io_by_prefix(out, instance_id, instance_len, &candidate))
+            continue;
+
+        if (bypass_count >= total_instances)
+            return set_error(err, UC_E_RANGE, "v2 runtime image bypass metadata overflow");
+        entries[bypass_count++] = candidate;
+    }
+
+    out->bypassed_instances_len = bypass_count;
+    if (bypass_count == 0u)
+        return UC_OK;
+
+    out->bypass_instances = uc_arena_alloc(arena, bypass_count * sizeof(*out->bypass_instances), sizeof(void *));
+    if (!out->bypass_instances)
+        return set_error(err, UC_E_OOM, "v2 runtime image bypass entry allocation failed");
+    memcpy(out->bypass_instances, entries, bypass_count * sizeof(*out->bypass_instances));
+
+    out->bypass_index_by_node =
+        uc_arena_alloc(arena, out->nodes_len * sizeof(*out->bypass_index_by_node), sizeof(void *));
+    if (!out->bypass_index_by_node)
+        return set_error(err, UC_E_OOM, "v2 runtime image bypass index metadata allocation failed");
+
+    for (size_t i = 0; i < out->nodes_len; i++)
+        out->bypass_index_by_node[i] = (size_t)-1u;
+
+    for (size_t i = 0; i < bypass_count; i++) {
+        const char *instance_id  = out->bypass_instances[i].instance_id;
+        size_t      instance_len = out->bypass_instances[i].instance_id_len;
+        if (!instance_id || instance_len == 0u)
+            continue;
+
+        for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
+            const apg_v2_compiled_node_t *node = &out->plan->nodes[node_index];
+            if (node_id_has_instance_prefix_len(node->id, instance_id, instance_len))
+                out->bypass_index_by_node[node_index] = i;
+        }
+    }
+
+    return UC_OK;
+}
+
+static uc_status fill_project_mute_output_indices(uc_arena *arena, apg_v2_runtime_image_t *out, uc_error *err) {
+    if (!arena || !out || !out->plan || !out->plan->unit)
+        return UC_OK;
+
+    const apg_unit_v2_t *unit  = out->plan->unit;
+    size_t               count = 0u;
+    for (size_t i = 0; i < unit->output_ports_len; i++) {
+        const apg_unit_v2_port_t *port = &unit->output_ports[i];
+        if (!port || !port->type || strcmp(port->type, "audio") != 0)
+            continue;
+        size_t channels = 0u;
+        if (!parse_port_channel_count(port, &channels))
+            continue;
+        count += channels;
+    }
+    if (count == 0u)
+        return UC_OK;
+
+    out->project_mute_output_indices =
+        uc_arena_alloc(arena, count * sizeof(*out->project_mute_output_indices), sizeof(size_t));
+    if (!out->project_mute_output_indices)
+        return set_error(err, UC_E_OOM, "v2 runtime image project mute output index allocation failed");
+
+    size_t filled = 0u;
+    for (size_t i = 0; i < unit->output_ports_len; i++) {
+        const apg_unit_v2_port_t *port = &unit->output_ports[i];
+        if (!port || !port->type || strcmp(port->type, "audio") != 0)
+            continue;
+        size_t channels = 0u;
+        if (!parse_port_channel_count(port, &channels))
+            continue;
+        for (size_t ch = 0; ch < channels; ch++) {
+            const char *signal_name = NULL;
+            if (port->signals_len > 0u) {
+                if (ch < port->signals_len)
+                    signal_name = port->signals[ch];
+            } else {
+                signal_name = port->name;
+            }
+
+            if (!signal_name)
+                continue;
+            int signal_index = signal_index_by_name(unit, signal_name);
+            if (signal_index < 0)
+                continue;
+            out->project_mute_output_indices[filled++] = (size_t)signal_index;
+        }
+    }
+
+    out->project_mute_output_indices_len = filled;
+    return UC_OK;
 }
 
 static int param_index_by_name(const apg_unit_v2_t *unit, const char *name) {
@@ -563,6 +896,14 @@ uc_status apg_v2_runtime_image_build(
         return status;
 
     status = fill_control_targets(arena, out, err);
+    if (status != UC_OK)
+        return status;
+
+    status = fill_bypass_metadata(arena, out, err);
+    if (status != UC_OK)
+        return status;
+
+    status = fill_project_mute_output_indices(arena, out, err);
     if (status != UC_OK)
         return status;
 

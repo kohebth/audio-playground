@@ -106,20 +106,6 @@ static size_t audio_port_meter_count(const apg_unit_v2_port_t *ports, size_t por
     return count;
 }
 
-static bool node_id_has_instance_prefix_len(const char *node_id, const char *instance_id, size_t instance_len) {
-    if (!node_id || !instance_id || instance_id[0] == '\0')
-        return false;
-    return strncmp(node_id, instance_id, instance_len) == 0 &&
-           (node_id[instance_len] == '\0' || node_id[instance_len] == '.');
-}
-
-static bool node_id_has_instance_prefix(const char *node_id, const char *instance_id) {
-    if (!node_id || !instance_id || instance_id[0] == '\0')
-        return false;
-    size_t len = strlen(instance_id);
-    return node_id_has_instance_prefix_len(node_id, instance_id, len);
-}
-
 static bool
 runtime_bypass_entry_matches_instance_id(const apg_v2_runtime_bypass_entry_t *entry, const char *instance_id) {
     if (!entry || !entry->instance_id || !instance_id || entry->instance_id_len == 0u)
@@ -128,121 +114,6 @@ runtime_bypass_entry_matches_instance_id(const apg_v2_runtime_bypass_entry_t *en
     if (instance_len != entry->instance_id_len)
         return false;
     return strncmp(entry->instance_id, instance_id, instance_len) == 0;
-}
-
-static size_t binding_signal_count(const apg_v2_compiled_binding_t *binding) {
-    if (!binding)
-        return 0u;
-    if (binding->kind == APG_BIND_SIGNAL)
-        return 1u;
-    if (binding->kind == APG_BIND_SIGNAL_ARRAY)
-        return binding->indices_len;
-    return 0u;
-}
-
-static bool binding_signal_index(const apg_v2_compiled_binding_t *binding, size_t offset, size_t *out_index) {
-    if (!binding || !out_index)
-        return false;
-    if (binding->kind == APG_BIND_SIGNAL && offset == 0u) {
-        *out_index = binding->index;
-        return true;
-    }
-    if (binding->kind == APG_BIND_SIGNAL_ARRAY && offset < binding->indices_len) {
-        *out_index = binding->indices[offset];
-        return true;
-    }
-    return false;
-}
-
-static bool node_outputs_signal(const apg_v2_compiled_node_t *node, size_t signal_index) {
-    if (!node)
-        return false;
-    for (size_t i = 0; i < node->out_len; i++) {
-        for (size_t j = 0; j < binding_signal_count(&node->out[i]); j++) {
-            size_t index = 0;
-            if (binding_signal_index(&node->out[i], j, &index) && index == signal_index)
-                return true;
-        }
-    }
-    return false;
-}
-
-static bool node_instance_prefix(const char *node_id, const char **out_instance_id, size_t *out_instance_len) {
-    if (!node_id || node_id[0] == '\0')
-        return false;
-    const char *dot = strchr(node_id, '.');
-    if (dot) {
-        size_t instance_len = (size_t)(dot - node_id);
-        if (instance_len == 0u)
-            return false;
-        *out_instance_id  = node_id;
-        *out_instance_len = instance_len;
-        return true;
-    }
-    *out_instance_id  = node_id;
-    *out_instance_len = strlen(node_id);
-    return true;
-}
-
-static bool node_inputs_signal(const apg_v2_compiled_node_t *node, size_t signal_index) {
-    if (!node)
-        return false;
-    for (size_t i = 0; i < node->in_len; i++) {
-        for (size_t j = 0; j < binding_signal_count(&node->in[i]); j++) {
-            size_t index = 0;
-            if (binding_signal_index(&node->in[i], j, &index) && index == signal_index)
-                return true;
-        }
-    }
-    return false;
-}
-
-static bool instance_outputs_signal(
-    const apg_v2_runtime_t *runtime, const char *instance_id, size_t instance_len, size_t signal_index
-) {
-    if (!runtime || !runtime->plan)
-        return false;
-    for (size_t i = 0; i < runtime->plan->nodes_len; i++) {
-        const apg_v2_compiled_node_t *node = &runtime->plan->nodes[i];
-        if (node_id_has_instance_prefix_len(node->id, instance_id, instance_len) &&
-            node_outputs_signal(node, signal_index))
-            return true;
-    }
-    return false;
-}
-
-static bool signal_consumed_outside_instance(
-    const apg_v2_runtime_t *runtime, const char *instance_id, size_t instance_len, size_t signal_index
-) {
-    if (!runtime || !runtime->plan)
-        return false;
-    for (size_t i = 0; i < runtime->plan->nodes_len; i++) {
-        const apg_v2_compiled_node_t *node = &runtime->plan->nodes[i];
-        if (!node_id_has_instance_prefix_len(node->id, instance_id, instance_len) &&
-            node_inputs_signal(node, signal_index))
-            return true;
-    }
-    return false;
-}
-
-static bool signal_is_public_output(const apg_v2_runtime_t *runtime, size_t signal_index) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit)
-        return false;
-    const apg_unit_v2_t *unit = runtime->plan->unit;
-    for (size_t i = 0; i < unit->output_ports_len; i++) {
-        const apg_unit_v2_port_t *port = &unit->output_ports[i];
-        if (!port || !port->type || strcmp(port->type, "audio") != 0)
-            continue;
-        size_t channels = 0;
-        if (!parse_port_channel_count(port, &channels))
-            continue;
-        for (size_t ch = 0; ch < channels; ch++) {
-            int index = signal_index_by_name(unit, audio_port_channel_signal_name(port, ch));
-            if (index >= 0 && (size_t)index == signal_index)
-                return true;
-        }
-    }
-    return false;
 }
 
 static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, const apg_v2_runtime_t *runtime) {
@@ -296,199 +167,28 @@ static uc_status init_params(const apg_v2_runtime_image_t *image, apg_v2_runtime
     return UC_OK;
 }
 
-static uc_status init_control_targets(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
-    out->control_targets_len = image->control_targets_len;
-    if (out->control_targets_len == 0u)
-        return UC_OK;
-    out->control_targets = calloc(out->control_targets_len, sizeof(*out->control_targets));
-    if (!out->control_targets)
-        return set_error(err, UC_E_OOM, "v2 runtime control target allocation failed");
-    memcpy(out->control_targets, image->control_targets, out->control_targets_len * sizeof(*out->control_targets));
-    return UC_OK;
-}
-
-static bool find_instance_bypass_io_by_prefix(
-    const apg_v2_runtime_t *runtime, const char *instance_id, size_t instance_len, apg_v2_runtime_bypass_entry_t *entry
-) {
-    if (!runtime || !runtime->plan || !runtime->plan->nodes || !instance_id || instance_len == 0u || !entry)
-        return false;
-
-    size_t input_index  = 0u;
-    size_t output_index = 0u;
-    bool   found_input  = false;
-    bool   found_output = false;
-
-    for (size_t i = 0; i < runtime->plan->nodes_len; i++) {
-        const apg_v2_compiled_node_t *node = &runtime->plan->nodes[i];
-        if (!node_id_has_instance_prefix_len(node->id, instance_id, instance_len))
-            continue;
-        for (size_t b = 0; b < node->in_len && !found_input; b++) {
-            for (size_t s = 0; s < binding_signal_count(&node->in[b]); s++) {
-                size_t index = 0;
-                if (binding_signal_index(&node->in[b], s, &index) &&
-                    !instance_outputs_signal(runtime, instance_id, instance_len, index)) {
-                    input_index = index;
-                    found_input = true;
-                    break;
-                }
-            }
-        }
-        for (size_t b = 0; b < node->out_len && !found_output; b++) {
-            for (size_t s = 0; s < binding_signal_count(&node->out[b]); s++) {
-                size_t index = 0;
-                if (binding_signal_index(&node->out[b], s, &index) &&
-                    (signal_consumed_outside_instance(runtime, instance_id, instance_len, index) ||
-                     signal_is_public_output(runtime, index))) {
-                    output_index = index;
-                    found_output = true;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (!found_input || !found_output)
-        return false;
-
-    if (input_index >= runtime->signals_len || output_index >= runtime->signals_len)
-        return false;
-
-    entry->input_index  = input_index;
-    entry->output_index = output_index;
-
-    return true;
-}
-
-static uc_status init_bypass_instances(apg_v2_runtime_t *runtime, uc_error *err) {
-    if (!runtime)
+static uc_status
+init_bypass_state_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *runtime, uc_error *err) {
+    if (!image || !runtime)
         return UC_E_TYPE;
-    if (runtime->nodes_len == 0u || !runtime->plan || !runtime->plan->nodes)
+
+    runtime->bypassed_instances_len = image->bypassed_instances_len;
+    if (runtime->bypassed_instances_len == 0u)
         return UC_OK;
 
-    apg_v2_runtime_bypass_entry_t *entries = calloc(runtime->nodes_len, sizeof(*entries));
-    if (!entries)
+    runtime->bypassed_instances = calloc(runtime->bypassed_instances_len, sizeof(*runtime->bypassed_instances));
+    if (!runtime->bypassed_instances)
         return set_error(err, UC_E_OOM, "v2 runtime bypass instance allocation failed");
 
-    for (size_t i = 0; i < runtime->plan->nodes_len; i++) {
-        const apg_v2_compiled_node_t *node         = &runtime->plan->nodes[i];
-        const char                   *instance_id  = NULL;
-        size_t                        instance_len = 0u;
-        if (!node_instance_prefix(node->id, &instance_id, &instance_len))
-            continue;
-
-        bool exists = false;
-        for (size_t j = 0; j < runtime->bypassed_instances_len; j++) {
-            apg_v2_runtime_bypass_entry_t *existing = &entries[j];
-            if (existing->instance_id_len != instance_len)
-                continue;
-            if (strncmp(existing->instance_id, instance_id, instance_len) == 0) {
-                exists = true;
-                break;
-            }
-        }
-        if (exists)
-            continue;
-
-        apg_v2_runtime_bypass_entry_t candidate = {0};
-        candidate.instance_id                   = instance_id;
-        candidate.instance_id_len               = instance_len;
-        if (!find_instance_bypass_io_by_prefix(runtime, instance_id, instance_len, &candidate))
-            continue;
-
-        entries[runtime->bypassed_instances_len++] = candidate;
-    }
-
-    if (runtime->bypassed_instances_len == 0u) {
-        free(entries);
-        return UC_OK;
-    }
-
-    apg_v2_runtime_bypass_entry_t *shrunk = realloc(entries, runtime->bypassed_instances_len * sizeof(*entries));
-    runtime->bypassed_instances           = shrunk ? shrunk : entries;
-    return UC_OK;
-}
-
-static uc_status init_bypass_index_by_node(apg_v2_runtime_t *runtime, uc_error *err) {
-    if (!runtime)
-        return UC_E_TYPE;
-    if (runtime->nodes_len == 0u)
-        return UC_OK;
-    runtime->bypass_index_by_node = calloc(runtime->nodes_len, sizeof(*runtime->bypass_index_by_node));
-    if (!runtime->bypass_index_by_node)
-        return set_error(err, UC_E_OOM, "v2 runtime bypass index map allocation failed");
-    for (size_t i = 0; i < runtime->nodes_len; i++)
-        runtime->bypass_index_by_node[i] = INVALID_BYPASS_INDEX;
-
-    if (!runtime->bypassed_instances)
-        return UC_OK;
     for (size_t i = 0; i < runtime->bypassed_instances_len; i++) {
-        const char *instance_id  = runtime->bypassed_instances[i].instance_id;
-        size_t      instance_len = runtime->bypassed_instances[i].instance_id_len;
-        if (!instance_id || instance_len == 0u)
-            continue;
-        for (size_t node_index = 0; node_index < runtime->nodes_len; node_index++) {
-            const apg_v2_compiled_node_t *node = &runtime->plan->nodes[node_index];
-            if (node_id_has_instance_prefix_len(node->id, instance_id, instance_len))
-                runtime->bypass_index_by_node[node_index] = i;
-        }
+        runtime->bypassed_instances[i] = (apg_v2_runtime_bypass_entry_t){
+            .instance_id     = image->bypass_instances[i].instance_id,
+            .instance_id_len = image->bypass_instances[i].instance_id_len,
+            .input_index     = image->bypass_instances[i].input_index,
+            .output_index    = image->bypass_instances[i].output_index,
+            .enabled         = false,
+        };
     }
-    return UC_OK;
-}
-
-static uc_status init_project_mute_output_indices(apg_v2_runtime_t *runtime, uc_error *err) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit)
-        return UC_E_TYPE;
-
-    const apg_unit_v2_t *unit  = runtime->plan->unit;
-    size_t               count = 0u;
-    for (size_t i = 0; i < unit->output_ports_len; i++) {
-        const apg_unit_v2_port_t *port = &unit->output_ports[i];
-        if (!port || !port->type || strcmp(port->type, "audio") != 0)
-            continue;
-        size_t channels = 0u;
-        if (!parse_port_channel_count(port, &channels))
-            continue;
-        count += channels;
-    }
-    if (count == 0u)
-        return UC_OK;
-
-    size_t *indices = calloc(count, sizeof(*indices));
-    if (!indices)
-        return set_error(err, UC_E_OOM, "v2 runtime project mute output index allocation failed");
-
-    size_t filled = 0u;
-    for (size_t i = 0; i < unit->output_ports_len; i++) {
-        const apg_unit_v2_port_t *port = &unit->output_ports[i];
-        if (!port || !port->type || strcmp(port->type, "audio") != 0)
-            continue;
-        size_t channels = 0u;
-        if (!parse_port_channel_count(port, &channels))
-            continue;
-        for (size_t ch = 0; ch < channels; ch++) {
-            const char *signal_name = audio_port_channel_signal_name(port, ch);
-            if (!signal_name)
-                continue;
-            int signal_index = signal_index_by_name(unit, signal_name);
-            if (signal_index < 0 || (size_t)signal_index >= runtime->signals_len)
-                continue;
-            indices[filled++] = (size_t)signal_index;
-        }
-    }
-
-    if (filled == 0u) {
-        free(indices);
-        return UC_OK;
-    }
-
-    if (filled < count) {
-        size_t *shrinked = realloc(indices, filled * sizeof(*indices));
-        if (shrinked)
-            indices = shrinked;
-    }
-
-    runtime->project_mute_output_indices     = indices;
-    runtime->project_mute_output_indices_len = filled;
     return UC_OK;
 }
 
@@ -783,21 +483,21 @@ uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, ap
     status                 = init_params(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_control_targets(image, out, err);
+    out->control_targets     = image->control_targets;
+    out->control_targets_len = image->control_targets_len;
+    status                   = init_node_calls(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_node_calls(image, out, err);
+    status = init_bypass_state_from_image(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_bypass_instances(out, err);
-    if (status != UC_OK)
+    out->bypass_index_by_node            = image->bypass_index_by_node;
+    out->project_mute_output_indices     = image->project_mute_output_indices;
+    out->project_mute_output_indices_len = image->project_mute_output_indices_len;
+    if (out->nodes_len != 0u && image->bypassed_instances_len > 0u && !out->bypass_index_by_node) {
+        status = set_error(err, UC_E_MISSING, "v2 runtime bypass index map is missing from runtime image");
         goto fail;
-    status = init_bypass_index_by_node(out, err);
-    if (status != UC_OK)
-        goto fail;
-    status = init_project_mute_output_indices(out, err);
-    if (status != UC_OK)
-        goto fail;
+    }
     return UC_OK;
 
 fail:
@@ -1279,9 +979,6 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     free(runtime->atom_storage_pool);
     free(runtime->state_buffer_pool);
     free(runtime->bypassed_instances);
-    free(runtime->bypass_index_by_node);
-    free(runtime->project_mute_output_indices);
-    free(runtime->control_targets);
     free(runtime->params);
     free(runtime->param_defaults);
     free(runtime->param_targets);

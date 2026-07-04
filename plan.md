@@ -136,6 +136,7 @@ Module note: Runtime image now sizes signal-array pointer pools for runtime bind
 
 Module note: Runtime processing now refreshes scalar fields from image plans.
 Module note: Runtime now consumes precomputed signal-binding and mix-matrix config plans from runtime-image with no runtime-time descriptor resolution.
+Module note: Runtime image now owns bypass and project-mute transport metadata.
 
 ### Runtime Memory Hardening
 
