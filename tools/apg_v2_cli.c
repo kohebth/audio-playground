@@ -229,7 +229,7 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     if (!out)
         return false;
     fputs("#ifndef APG_PROJECT_M7_BUNDLE_H\n#define APG_PROJECT_M7_BUNDLE_H\n\n", out);
-    fputs("#include <stddef.h>\n#include <stdint.h>\n\n", out);
+    fputs("#include <stddef.h>\n#include <stdint.h>\n#include <atom_registry.h>\n\n", out);
     fprintf(out, "#define APG_M7_PROJECT_PARAM_COUNT %zuu\n", compiled->expanded_unit.params_len);
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_COUNT %zuu\n", compiled->expanded_unit.signals_len);
     fprintf(out, "#define APG_M7_PROJECT_NODE_COUNT %zuu\n", compiled->plan.nodes_len);
@@ -260,6 +260,7 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     fputs("extern const uint32_t apg_m7_project_schedule[APG_M7_PROJECT_SCHEDULE_COUNT];\n", out);
     fputs("extern const char *const apg_m7_project_nodes[APG_M7_PROJECT_NODE_COUNT];\n", out);
     fputs("extern const char *const apg_m7_project_atom_process_symbols[APG_M7_PROJECT_NODE_COUNT];\n", out);
+    fputs("extern const atom_thunk_fn apg_m7_project_atom_thunks[APG_M7_PROJECT_NODE_COUNT];\n", out);
     fputs("\n#endif\n", out);
     return fclose(out) == 0;
 }
@@ -283,6 +284,29 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         if (i > 0u)
             fputs(", ", out);
         write_c_string(out, compiled->plan.nodes[i].id);
+    }
+    fputs("};\n\n", out);
+    for (size_t i = 0; i < compiled->plan.nodes_len; i++) {
+        bool seen = false;
+        // ponytail: O(n^2) is fine for generated project node counts; sort/dedupe if exports grow large.
+        for (size_t j = 0; j < i; j++) {
+            if (strcmp(compiled->plan.nodes[j].atom->name, compiled->plan.nodes[i].atom->name) == 0) {
+                seen = true;
+                break;
+            }
+        }
+        if (seen)
+            continue;
+        fputs("extern void ", out);
+        fputs(compiled->plan.nodes[i].atom->name, out);
+        fputs("_thunk(atom_call_t *call);\n", out);
+    }
+    fputs("\nconst atom_thunk_fn apg_m7_project_atom_thunks[APG_M7_PROJECT_NODE_COUNT] = {", out);
+    for (size_t i = 0; i < compiled->plan.nodes_len; i++) {
+        if (i > 0u)
+            fputs(", ", out);
+        fputs(compiled->plan.nodes[i].atom->name, out);
+        fputs("_thunk", out);
     }
     fputs("};\n\n", out);
     fputs("const char *const apg_m7_project_atom_process_symbols[APG_M7_PROJECT_NODE_COUNT] = {", out);

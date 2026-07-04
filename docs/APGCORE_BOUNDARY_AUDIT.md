@@ -53,6 +53,10 @@ M7 static export now emits static atom-call workload metadata in JSON and genera
 
 M7 static export now emits per-node atom process symbol names alongside schedule and node tables, giving firmware a deterministic link-plan view before full static call binding exists.
 
+## PC7 Progress
+
+M7 static export now emits a per-node `atom_thunk_fn` table that points at exported registry thunks, so generated bundles carry schedule order and callable atom entry points.
+
 ## PD1 Progress
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.

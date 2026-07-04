@@ -116,6 +116,7 @@ Pending tests to record for PB:
 - [x] PC4: Define the board audio callback integration contract for fixed block processing, DMA ownership, and cache coherency.
 - [x] PC5: Add static M7 atom-call workload metadata to export JSON and generated headers.
 - [x] PC6: Add per-node atom process symbol metadata to generated M7 bundles.
+- [x] PC7: Emit a per-node atom thunk table in generated M7 bundles.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -127,6 +128,7 @@ Module note: STM32H7 board integration now has a fixed-block DMA/cache contract.
 
 Module note: M7 export now reports static atom-call workload metadata.
 Module note: M7 export now includes per-node atom process symbols.
+Module note: M7 export now emits a static atom thunk table.
 
 ### Runtime Image Hardening
 
