@@ -177,6 +177,8 @@ typedef struct {
     size_t param_bytes;
     size_t schedule_bytes;
     size_t atom_call_bytes;
+    size_t signal_array_pointer_count;
+    size_t signal_array_pointer_bytes;
     size_t atom_storage_bytes;
     size_t state_buffer_bytes;
     size_t static_ram_bytes;
@@ -198,14 +200,16 @@ static m7_memory_manifest_t m7_memory_manifest(const apg_v2_runtime_image_t *ima
     if (!image)
         return memory;
 
-    memory.signal_buffer_bytes = image->signal_samples * sizeof(float);
-    memory.param_bytes         = image->params_len * sizeof(float);
-    memory.schedule_bytes      = image->schedule_len * sizeof(uint32_t);
-    memory.atom_call_bytes     = image->nodes_len * sizeof(atom_call_t);
-    memory.atom_storage_bytes  = image->atom_storage_bytes;
-    memory.state_buffer_bytes  = image->state_buffer_samples * sizeof(float);
-    memory.static_ram_bytes    = memory.signal_buffer_bytes + memory.param_bytes + memory.atom_call_bytes +
-                              memory.atom_storage_bytes + memory.state_buffer_bytes;
+    memory.signal_buffer_bytes        = image->signal_samples * sizeof(float);
+    memory.param_bytes                = image->params_len * sizeof(float);
+    memory.schedule_bytes             = image->schedule_len * sizeof(uint32_t);
+    memory.atom_call_bytes            = image->nodes_len * sizeof(atom_call_t);
+    memory.signal_array_pointer_count = image->signal_array_pointer_slots;
+    memory.signal_array_pointer_bytes = image->signal_array_pointer_slots * sizeof(float *);
+    memory.atom_storage_bytes         = image->atom_storage_bytes;
+    memory.state_buffer_bytes         = image->state_buffer_samples * sizeof(float);
+    memory.static_ram_bytes           = memory.signal_buffer_bytes + memory.param_bytes + memory.atom_call_bytes +
+                              memory.signal_array_pointer_bytes + memory.atom_storage_bytes + memory.state_buffer_bytes;
     return memory;
 }
 
@@ -219,7 +223,8 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     fprintf(out, "#define APG_M7_PROJECT_PARAM_COUNT %zuu\n", compiled->expanded_unit.params_len);
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_COUNT %zuu\n", compiled->expanded_unit.signals_len);
     fprintf(out, "#define APG_M7_PROJECT_NODE_COUNT %zuu\n", compiled->plan.nodes_len);
-    fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_COUNT %zuu\n\n", compiled->plan.schedule_len);
+    fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_COUNT %zuu\n", compiled->plan.schedule_len);
+    fprintf(out, "#define APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_COUNT %zuu\n\n", memory->signal_array_pointer_count);
     fprintf(out, "#define APG_M7_PROJECT_BLOCK_FRAMES %uu\n", APG_M7_BLOCK_FRAMES);
     fprintf(out, "#define APG_M7_PROJECT_SAMPLE_RATE %uu\n", APG_M7_SAMPLE_RATE);
     fprintf(out, "#define APG_M7_PROJECT_ATOM_CALLS_PER_BLOCK %zuu\n", compiled->plan.schedule_len);
@@ -231,12 +236,14 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     fprintf(out, "#define APG_M7_PROJECT_PARAM_BYTES %zuu\n", memory->param_bytes);
     fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_BYTES %zuu\n", memory->schedule_bytes);
     fprintf(out, "#define APG_M7_PROJECT_ATOM_CALL_BYTES %zuu\n", memory->atom_call_bytes);
+    fprintf(out, "#define APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_BYTES %zuu\n", memory->signal_array_pointer_bytes);
     fprintf(out, "#define APG_M7_PROJECT_ATOM_STORAGE_BYTES %zuu\n", memory->atom_storage_bytes);
     fprintf(out, "#define APG_M7_PROJECT_STATE_BUFFER_BYTES %zuu\n", memory->state_buffer_bytes);
     fprintf(out, "#define APG_M7_PROJECT_STATIC_RAM_BYTES %zuu\n\n", memory->static_ram_bytes);
     fputs("#define APG_M7_SECTION_SIGNAL_BUFFERS \".apg_m7_signal_buffers\"\n", out);
     fputs("#define APG_M7_SECTION_PARAMS \".apg_m7_params\"\n", out);
     fputs("#define APG_M7_SECTION_ATOM_CALLS \".apg_m7_atom_calls\"\n", out);
+    fputs("#define APG_M7_SECTION_SIGNAL_ARRAYS \".apg_m7_signal_arrays\"\n", out);
     fputs("#define APG_M7_SECTION_ATOM_STORAGE \".apg_m7_atom_storage\"\n", out);
     fputs("#define APG_M7_SECTION_STATE_BUFFERS \".apg_m7_state_buffers\"\n", out);
     fputs("#if defined(__GNUC__)\n", out);
@@ -251,8 +258,31 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     fputs("extern const atom_thunk_fn apg_m7_project_atom_thunks[APG_M7_PROJECT_NODE_COUNT];\n", out);
     fputs("extern const apg_process_info_t apg_m7_project_process_info;\n", out);
     fputs("extern atom_call_t apg_m7_project_atom_calls[APG_M7_PROJECT_NODE_COUNT];\n", out);
+    fputs("void apg_m7_project_init(void);\n", out);
+    fputs("void apg_m7_project_refresh_params(void);\n", out);
     fputs("\n#endif\n", out);
     return fclose(out) == 0;
+}
+
+static void write_c_float(FILE *out, float value) {
+    char text[48];
+    snprintf(text, sizeof(text), "%.9g", (double)value);
+    fputs(text, out);
+    if (!strchr(text, '.') && !strchr(text, 'e') && !strchr(text, 'E'))
+        fputs(".0", out);
+    fputc('f', out);
+}
+
+static void write_m7_scalar_value(FILE *out, const apg_v2_compiled_binding_t *binding) {
+    if (!binding) {
+        fputs("0.0f", out);
+    } else if (binding->kind == APG_BIND_PARAM) {
+        fprintf(out, "apg_m7_param(%zuu)", binding->index);
+    } else if (binding->kind == APG_BIND_LITERAL) {
+        write_c_float(out, binding->number);
+    } else {
+        fputs("0.0f", out);
+    }
 }
 
 static bool write_m7_source(
@@ -265,6 +295,8 @@ static bool write_m7_source(
     if (!out)
         return false;
     fputs("#include \"apg_project_m7.h\"\n\n", out);
+    fputs("#include <string.h>\n\n", out);
+    fputs("#include <atom/dsp_types.h>\n\n", out);
     fputs("const char apg_m7_project_name[] = ", out);
     write_c_string(out, project->project.name);
     fputs(";\n\nconst uint32_t apg_m7_project_schedule[APG_M7_PROJECT_SCHEDULE_COUNT] = {", out);
@@ -330,10 +362,10 @@ static bool write_m7_source(
         "APG_M7_SECTION_ATTR(APG_M7_SECTION_PARAMS);\n",
         out
     );
-    fputs("#endif\n\n#if APG_M7_PROJECT_ATOM_STORAGE_BYTES > 0u\n", out);
+    fputs("#endif\n\n#if APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_BYTES > 0u\n", out);
     fputs(
-        "uint8_t apg_m7_project_atom_storage[APG_M7_PROJECT_ATOM_STORAGE_BYTES] "
-        "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_STORAGE);\n",
+        "float *apg_m7_project_signal_array_pool[APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_COUNT] "
+        "APG_M7_SECTION_ATTR(APG_M7_SECTION_SIGNAL_ARRAYS);\n",
         out
     );
     fputs("#endif\n\n#if APG_M7_PROJECT_STATE_BUFFER_BYTES > 0u\n", out);
@@ -343,24 +375,160 @@ static bool write_m7_source(
         out
     );
     fputs("#endif\n\n", out);
+    for (size_t i = 0; i < image->nodes_len; i++) {
+        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
+        if (layout->mix_matrix_coefficients_len == 0u)
+            continue;
+        fprintf(out, "static float apg_m7_node%zu_mix_coefficients[%zu] = {", i, layout->mix_matrix_coefficients_len);
+        for (size_t j = 0; j < layout->mix_matrix_coefficients_len; j++) {
+            if (j > 0u)
+                fputs(", ", out);
+            write_c_float(out, layout->mix_matrix_coefficients[j]);
+        }
+        fputs("};\n", out);
+        fprintf(out, "static float *apg_m7_node%zu_mix_rows[%zu] = {", i, layout->mix_matrix_num_out);
+        for (size_t row = 0; row < layout->mix_matrix_num_out; row++) {
+            if (row > 0u)
+                fputs(", ", out);
+            fprintf(out, "&apg_m7_node%zu_mix_coefficients[%zuu]", i, row * layout->mix_matrix_num_in);
+        }
+        fputs("};\n\n", out);
+    }
+    fputs("typedef struct {\n", out);
+    for (size_t i = 0; i < compiled->plan.nodes_len; i++) {
+        const char *atom_name = compiled->plan.nodes[i].atom->name;
+        fprintf(out, "    %s_out_t node%zu_out;\n", atom_name, i);
+        fprintf(out, "    %s_in_t node%zu_in;\n", atom_name, i);
+        fprintf(out, "    %s_params_t node%zu_config;\n", atom_name, i);
+        fprintf(out, "    %s_state_t node%zu_state;\n", atom_name, i);
+    }
+    fputs(
+        "} apg_m7_project_atom_storage_t;\n\n"
+        "apg_m7_project_atom_storage_t apg_m7_project_atom_storage "
+        "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_STORAGE);\n\n",
+        out
+    );
     fputs(
         "atom_call_t apg_m7_project_atom_calls[APG_M7_PROJECT_NODE_COUNT] "
         "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_CALLS) = {",
         out
     );
     for (size_t i = 0; i < image->nodes_len; i++) {
-        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
         if (i > 0u)
             fputs(", ", out);
         fprintf(
             out,
-            "{.out = &apg_m7_project_atom_storage[%zuu], .in = &apg_m7_project_atom_storage[%zuu], "
-            ".config = &apg_m7_project_atom_storage[%zuu], .state = &apg_m7_project_atom_storage[%zuu], "
-            ".info = &apg_m7_project_process_info}",
-            layout->out_offset, layout->in_offset, layout->config_offset, layout->state_offset
+            "{.out = &apg_m7_project_atom_storage.node%zu_out, .in = &apg_m7_project_atom_storage.node%zu_in, "
+            ".config = &apg_m7_project_atom_storage.node%zu_config, "
+            ".state = &apg_m7_project_atom_storage.node%zu_state, .info = &apg_m7_project_process_info}",
+            i, i, i, i
         );
     }
-    fputs("};\n", out);
+    fputs("};\n\n", out);
+    fputs("#if APG_M7_PROJECT_SIGNAL_BUFFER_BYTES > 0u\n", out);
+    fputs("static float *apg_m7_signal(size_t index) {\n", out);
+    fputs(
+        "    return (float *)(void *)&apg_m7_project_signal_buffers[index * APG_M7_PROJECT_BLOCK_FRAMES * "
+        "sizeof(float)];\n",
+        out
+    );
+    fputs("}\n#endif\n\n#if APG_M7_PROJECT_PARAM_BYTES > 0u\n", out);
+    fputs("static float apg_m7_param(size_t index) {\n", out);
+    fputs("    return ((float *)(void *)apg_m7_project_params)[index];\n}\n#endif\n\n", out);
+    fputs("// ?c4a91b20:start? binds generated M7 atom calls to static signal, state, and scalar storage.\n", out);
+    fputs("void apg_m7_project_refresh_params(void) {\n", out);
+    for (size_t i = 0; i < image->nodes_len; i++) {
+        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
+        for (size_t j = 0; j < layout->config_refreshes_len; j++) {
+            const apg_v2_runtime_scalar_refresh_t *item = &layout->config_refreshes[j];
+            const char                            *key  = item->binding ? item->binding->key : NULL;
+            if (!key)
+                continue;
+            fprintf(out, "    apg_m7_project_atom_storage.node%zu_config.%s = ", i, key);
+            write_m7_scalar_value(out, item->binding);
+            fputs(";\n", out);
+        }
+        for (size_t j = 0; j < layout->input_refreshes_len; j++) {
+            const apg_v2_runtime_scalar_refresh_t *item = &layout->input_refreshes[j];
+            const char                            *key  = item->binding ? item->binding->key : NULL;
+            if (!key)
+                continue;
+            fprintf(out, "    apg_m7_project_atom_storage.node%zu_in.%s = ", i, key);
+            write_m7_scalar_value(out, item->binding);
+            fputs(";\n", out);
+        }
+    }
+    fputs("}\n\nvoid apg_m7_project_init(void) {\n", out);
+    fputs("    memset(&apg_m7_project_atom_storage, 0, sizeof(apg_m7_project_atom_storage));\n", out);
+    fputs("#if APG_M7_PROJECT_SIGNAL_BUFFER_BYTES > 0u\n", out);
+    fputs("    memset(apg_m7_project_signal_buffers, 0, APG_M7_PROJECT_SIGNAL_BUFFER_BYTES);\n", out);
+    fputs("#endif\n#if APG_M7_PROJECT_PARAM_BYTES > 0u\n", out);
+    fputs("    memset(apg_m7_project_params, 0, APG_M7_PROJECT_PARAM_BYTES);\n", out);
+    fputs("#endif\n#if APG_M7_PROJECT_STATE_BUFFER_BYTES > 0u\n", out);
+    fputs("    memset(apg_m7_project_state_buffers, 0, APG_M7_PROJECT_STATE_BUFFER_BYTES);\n", out);
+    fputs("#endif\n", out);
+    for (size_t i = 0; i < image->params_len; i++) {
+        fputs("    ((float *)(void *)apg_m7_project_params)[", out);
+        fprintf(out, "%zuu] = ", i);
+        write_c_float(out, image->param_defaults ? image->param_defaults[i] : 0.0f);
+        fputs(";\n", out);
+    }
+    for (size_t i = 0; i < image->nodes_len; i++) {
+        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
+        for (size_t j = 0; j < layout->signal_bindings_len; j++) {
+            const apg_v2_runtime_signal_binding_t *binding = &layout->signal_bindings[j];
+            const char                            *side    = binding->is_input ? "in" : "out";
+            const char                            *key     = binding->binding ? binding->binding->key : NULL;
+            if (!key)
+                continue;
+            if (binding->is_signal_array) {
+                for (size_t k = 0; k < binding->signal_array_len; k++) {
+                    fprintf(
+                        out, "    apg_m7_project_signal_array_pool[%zuu] = apg_m7_signal(%zuu);\n",
+                        layout->signal_array_pool_offset + binding->signal_array_offset + k,
+                        binding->binding->indices[k]
+                    );
+                }
+                fprintf(
+                    out,
+                    "    apg_m7_project_atom_storage.node%zu_%s.%s = "
+                    "&apg_m7_project_signal_array_pool[%zuu];\n",
+                    i, side, key, layout->signal_array_pool_offset + binding->signal_array_offset
+                );
+            } else {
+                fprintf(
+                    out, "    apg_m7_project_atom_storage.node%zu_%s.%s = apg_m7_signal(%zuu);\n", i, side, key,
+                    binding->signal_index
+                );
+            }
+        }
+        size_t                       state_buffer_index = 0u;
+        const atom_registry_entry_t *atom               = compiled->plan.nodes[i].atom;
+        for (int field_index = 0; atom && field_index < atom->n_state_fields; field_index++) {
+            const atom_field_desc_t *field = &atom->state_fields[field_index];
+            if (field->type != FIELD_BUFFER)
+                continue;
+            fprintf(
+                out,
+                "    apg_m7_project_atom_storage.node%zu_state.%s = "
+                "(float *)(void *)&apg_m7_project_state_buffers[%zuu];\n",
+                i, field->name, layout->state_buffer_sample_offsets_by_index[state_buffer_index] * sizeof(float)
+            );
+            state_buffer_index++;
+        }
+        if (layout->mix_matrix_coefficients_len > 0u) {
+            fprintf(
+                out, "    apg_m7_project_atom_storage.node%zu_config.coefficients = apg_m7_node%zu_mix_rows;\n", i, i
+            );
+            fprintf(
+                out, "    apg_m7_project_atom_storage.node%zu_config.num_in = %zu;\n", i, layout->mix_matrix_num_in
+            );
+            fprintf(
+                out, "    apg_m7_project_atom_storage.node%zu_config.num_out = %zu;\n", i, layout->mix_matrix_num_out
+            );
+        }
+    }
+    fputs("    apg_m7_project_refresh_params();\n}\n// ?c4a91b20:end?\n", out);
     return fclose(out) == 0;
 }
 
@@ -453,13 +621,15 @@ export_m7_static(const char *project_path, const char *out_dir, bool has_static_
         stdout,
         ",\"files\":[\"apg_project_m7.h\",\"apg_project_m7.c\"],\"nodes\":%zu,\"schedule\":%zu,"
         "\"memory\":{\"block_frames\":%u,\"signal_buffer_bytes\":%zu,\"param_bytes\":%zu,"
-        "\"schedule_bytes\":%zu,\"atom_call_bytes\":%zu,\"atom_storage_bytes\":%zu,\"state_buffer_bytes\":%zu,"
+        "\"schedule_bytes\":%zu,\"atom_call_bytes\":%zu,\"signal_array_pointer_bytes\":%zu,"
+        "\"atom_storage_bytes\":%zu,\"state_buffer_bytes\":%zu,"
         "\"static_ram_bytes\":%zu},\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,"
         "\"atom_calls_per_block\":%zu,\"atom_calls_per_second\":%zu}}\n",
         compiled.plan.nodes_len, compiled.plan.schedule_len, APG_M7_BLOCK_FRAMES, memory.signal_buffer_bytes,
-        memory.param_bytes, memory.schedule_bytes, memory.atom_call_bytes, memory.atom_storage_bytes,
-        memory.state_buffer_bytes, memory.static_ram_bytes, APG_M7_SAMPLE_RATE, APG_M7_BLOCK_FRAMES,
-        compiled.plan.schedule_len, compiled.plan.schedule_len * APG_M7_SAMPLE_RATE / APG_M7_BLOCK_FRAMES
+        memory.param_bytes, memory.schedule_bytes, memory.atom_call_bytes, memory.signal_array_pointer_bytes,
+        memory.atom_storage_bytes, memory.state_buffer_bytes, memory.static_ram_bytes, APG_M7_SAMPLE_RATE,
+        APG_M7_BLOCK_FRAMES, compiled.plan.schedule_len,
+        compiled.plan.schedule_len * APG_M7_SAMPLE_RATE / APG_M7_BLOCK_FRAMES
     );
     uc_arena_free(&image_arena);
     uc_arena_free(&arena);

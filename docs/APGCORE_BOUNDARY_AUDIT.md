@@ -15,7 +15,7 @@
 
 - `apg_v2_runtime_init(...)` remains a compatibility wrapper that builds a temporary runtime image. Production host/export paths should prefer `apg_v2_runtime_image_build(...)` plus `apg_v2_runtime_init_from_image(...)`.
 - Project mute/solo and instance bypass remain runtime transport controls. `solo` is host/UI-visible state only until a real routing contract exists.
-- Full static M7 signal/input/config pointer binding is not generated yet; the bundle now exposes schedule, node, memory, process-symbol metadata, atom thunk tables, and `atom_call_t` records over atom storage offsets.
+- M7 static export now emits schedule, node, memory, process-symbol metadata, atom thunk tables, typed atom storage, initialized `atom_call_t` records, and init/refresh entrypoints. Board-side schedule execution and measured CPU/stack budgets remain outside the core bundle.
 
 ## PB2 Progress
 
@@ -59,7 +59,11 @@ M7 static export now emits a per-node `atom_thunk_fn` table that points at expor
 
 ## PC8 Progress
 
-M7 static export now emits section-placed `atom_call_t` records that bind each generated node to runtime-image-planned out/in/config/state storage offsets and fixed process metadata.
+M7 static export now emits section-placed `atom_call_t` records for each generated node with fixed process metadata.
+
+## PC9 Progress
+
+M7 static export now emits typed static atom storage plus init/refresh functions that bind signal pointers, signal-array pointers, state buffers, scalar params, and mix-matrix config without runtime YAML or allocation.
 
 ## PD1 Progress
 
@@ -123,4 +127,4 @@ M7 static export now emits section names and section-placed RAM buffers for sign
 
 ## Immediate Direction
 
-New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 export should next generate static signal and scalar binding data for the `atom_call_t` records.
+New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 work should next add a board-facing schedule runner contract, linked firmware smoke, and measured CPU/stack budget gates.

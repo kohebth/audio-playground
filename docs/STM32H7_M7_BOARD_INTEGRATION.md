@@ -16,7 +16,9 @@ The firmware build receives:
 - A board-local configuration that maps codec channels to exported public ports.
 - Optional board memory budgets for tightly coupled RAM, SRAM, and DMA-accessible audio buffers.
 
-The generated project must declare deterministic constants for block frames, signal count, param count, schedule count, atom call bytes, atom storage bytes, state bytes, total static RAM, and static atom-call workload. Firmware startup must reject or fail to build projects that exceed the selected board memory map.
+The generated project must declare deterministic constants for block frames, signal count, param count, schedule count, atom call bytes, signal-array pointer bytes, atom storage bytes, state bytes, total static RAM, and static atom-call workload. Firmware startup must reject or fail to build projects that exceed the selected board memory map.
+
+Firmware must call `apg_m7_project_init()` once after reset before audio starts. Control code may update exported param memory outside the audio callback and then call `apg_m7_project_refresh_params()` at a block boundary before executing the schedule.
 
 ## Audio Callback Contract
 
@@ -27,7 +29,7 @@ For each block:
 1. DMA completes or reaches the half-transfer boundary for one input/output buffer region.
 2. The board invalidates input cache lines when buffers are cacheable.
 3. The board converts or aliases interleaved codec samples into the runtime input buffers.
-4. APGCore executes the prebuilt schedule once.
+4. APGCore executes `apg_m7_project_atom_thunks[apg_m7_project_schedule[i]](&apg_m7_project_atom_calls[apg_m7_project_schedule[i]])` for each schedule item.
 5. The board converts runtime output buffers back into the DMA output region.
 6. The board cleans output cache lines when buffers are cacheable.
 

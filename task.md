@@ -103,6 +103,7 @@ Pending tests to record for PB:
 - [x] PC6: Add per-node atom process symbol metadata to generated M7 bundles.
 - [x] PC7: Emit a per-node atom thunk table in generated M7 bundles.
 - [x] PC8: Emit static atom_call_t records over runtime-image-planned atom storage.
+- [x] PC9: Emit typed static M7 atom storage with init/refresh binding for signals, state buffers, scalar params, and signal arrays.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -116,6 +117,7 @@ Module note: M7 export now reports static atom-call workload metadata.
 Module note: M7 export now includes per-node atom process symbols.
 Module note: M7 export now emits a static atom thunk table.
 Module note: M7 export now emits static atom_call records.
+Module note: M7 export now initializes typed static atom storage.
 
 ## Runtime Image Hardening Queue
 
