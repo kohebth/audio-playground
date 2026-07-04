@@ -436,50 +436,6 @@ fail:
     return status;
 }
 
-uc_status apg_v2_runtime_init(
-    const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, float sample_rate, apg_v2_runtime_t *out, uc_error *err
-) {
-    if (!plan || !plan->unit || !out || !err)
-        return UC_E_TYPE;
-
-    memset(out, 0, sizeof(*out));
-    uc_status status = apg_v2_runtime_init_from_plan(plan, frame_capacity, sample_rate, &out->image_arena, out, err);
-    if (status != UC_OK)
-        return status;
-
-    return UC_OK;
-}
-
-uc_status apg_v2_runtime_init_from_plan(
-    const apg_v2_compiled_unit_t *plan,
-    uint32_t                      frame_capacity,
-    float                         sample_rate,
-    uc_arena                     *image_arena,
-    apg_v2_runtime_t             *out,
-    uc_error                     *err
-) {
-    if (!plan || !plan->unit || !out || !err || !image_arena)
-        return UC_E_TYPE;
-
-    apg_v2_runtime_image_t image = {0};
-    uc_status              status =
-        apg_v2_runtime_image_build_with_growth(plan, frame_capacity, sample_rate, image_arena, &image, err);
-    if (status != UC_OK)
-        return status;
-
-    status = apg_v2_runtime_init_from_image(&image, out, err);
-    if (status != UC_OK) {
-        apg_v2_runtime_destroy(out);
-        uc_arena_free(image_arena);
-        *image_arena = (uc_arena){0};
-        return status;
-    }
-
-    out->image_arena       = *image_arena;
-    out->image_arena_ready = true;
-    return UC_OK;
-}
-
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
     if (!runtime || !name)
         return NULL;
@@ -899,9 +855,6 @@ bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     if (!runtime)
         return;
-
-    if (runtime->image_arena_ready)
-        uc_arena_free(&runtime->image_arena);
 
     for (size_t i = 0; i < runtime->nodes_len; i++) {
         free(runtime->nodes[i].state_buffers);

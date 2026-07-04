@@ -13,7 +13,6 @@
 
 ## Boundary Leaks To Close
 
-- `apg_v2_runtime_init(...)` remains a public compatibility wrapper that builds a temporary runtime image. Production host/export paths and runtime tests now prefer `apg_v2_runtime_image_build(...)` plus `apg_v2_runtime_init_from_image(...)`.
 - Project mute/solo and instance bypass remain runtime transport controls. `solo` is host/UI-visible state only until a real routing contract exists.
 - M7 static export now emits schedule, node, memory, process-symbol metadata, atom thunk tables, typed atom storage, initialized `atom_call_t` records, and init/refresh/process entrypoints. Measured CPU/stack budgets remain outside the core bundle.
 
@@ -135,7 +134,11 @@ Runtime no longer stores a source compiled-plan pointer. Measure snapshots repor
 
 ## PD13 Progress
 
-Runtime tests now initialize through explicit runtime-image builds instead of the `apg_v2_runtime_init(...)` compatibility wrapper.
+Runtime tests now initialize through explicit runtime-image builds instead of the former `apg_v2_runtime_init(...)` compatibility wrapper.
+
+## PD14 Progress
+
+The runtime plan-initializer compatibility API and runtime-owned image arena state have been removed; callers must build runtime images explicitly before runtime init.
 
 ## PE1 Progress
 

@@ -9,7 +9,6 @@
 #include <apgcore/process.h>
 #include <apgcore/runtime_image_v2.h>
 #include <atom_registry.h>
-#include <yaml/arena.h>
 #include <yaml/error.h>
 
 typedef struct {
@@ -78,8 +77,6 @@ typedef struct {
     size_t                             output_audio_ports_len;
     float                            **signal_array_pool;
     size_t                             signal_array_pool_len;
-    bool                               image_arena_ready;
-    uc_arena                           image_arena;
     size_t                             input_meters_len;
     size_t                             output_meters_len;
     void                              *atom_storage_pool;
@@ -92,29 +89,6 @@ typedef struct {
     size_t                             schedule_len;
     char                               last_error[160];
 } apg_v2_runtime_t;
-
-/*
- * Initialize a runtime from a compiled plan and allocate owned signal, parameter, atom-call, and state buffers.
- * The compiled plan and its source unit must outlive the runtime. Call apg_v2_runtime_destroy when done.
- */
-uc_status apg_v2_runtime_init(
-    const apg_v2_compiled_unit_t *plan, uint32_t frame_capacity, float sample_rate, apg_v2_runtime_t *out, uc_error *err
-);
-
-/*
- * Compatibility path kept for callers that compile and initialize in one step.
- * Prefer building an `apg_v2_runtime_image_t` explicitly and calling
- * `apg_v2_runtime_init_from_image` for the production pipeline.
- * This returns a runtime with all stage-specific allocation complete and image metadata owned by runtime.
- */
-uc_status apg_v2_runtime_init_from_plan(
-    const apg_v2_compiled_unit_t *plan,
-    uint32_t                      frame_capacity,
-    float                         sample_rate,
-    uc_arena                     *image_arena,
-    apg_v2_runtime_t             *out,
-    uc_error                     *err
-);
 
 /*
  * Initialize a runtime from a prebuilt runtime image descriptor.

@@ -144,6 +144,7 @@ Module note: M7 generated bundles can now be target-linked when a board linker s
 - [x] PD11: Move runtime signal and parameter name lookup onto runtime-image metadata.
 - [x] PD12: Remove the source compiled-plan pointer from runtime and measure snapshots.
 - [x] PD13: Move runtime test coverage off the compatibility initializer and onto explicit runtime-image init.
+- [x] PD14: Remove runtime plan-initializer compatibility API and runtime-owned image arena state.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
 
@@ -160,6 +161,7 @@ Module note: Runtime reset/process now operate from runtime-image metadata.
 Module note: Runtime name lookups now use runtime-image signal and parameter maps.
 Module note: Runtime no longer stores the source compiled-plan pointer.
 Module note: Runtime tests now exercise explicit runtime-image initialization.
+Module note: Runtime no longer owns runtime-image arenas or plan-init wrappers.
 Module note: Runtime image now owns public audio port channel maps.
 
 ## Runtime Memory Hardening Queue
