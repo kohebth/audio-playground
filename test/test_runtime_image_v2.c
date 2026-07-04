@@ -72,19 +72,20 @@ static int test_runtime_image_layout(void) {
         return fail("failed to build runtime image");
     }
 
-    if (image.plan != &plan || image.frame_capacity != 16u || image.sample_rate != 44100.0f)
+    if (image.frame_capacity != 16u || image.sample_rate != 44100.0f)
         return fail("unexpected runtime image identity");
     if (image.signals_len != 3u || image.signal_samples != 48u || image.params_len != 1u || !image.param_defaults ||
         image.param_defaults[0] != 1.0f || !image.param_smoothing_frames || image.param_smoothing_frames[0] != 441u)
         return fail("unexpected runtime image signal or param layout");
-    if (!image.signal_names || strcmp(image.signal_names[0], "input") != 0 || !image.param_names ||
-        strcmp(image.param_names[0], "gain") != 0)
+    if (!image.signal_names || image.signal_names == unit.signals || strcmp(image.signal_names[0], "input") != 0 ||
+        !image.param_names || strcmp(image.param_names[0], "gain") != 0)
         return fail("runtime image did not expose lookup names");
     if (image.input_meters_len != 1u || image.output_meters_len != 1u || image.nodes_len != 2u ||
         image.schedule_len != 2u || image.state_buffers_len != 0u || image.state_buffer_samples != 0u)
         return fail("unexpected runtime image execution layout");
-    if (image.schedule != plan.schedule)
-        return fail("runtime image did not adopt compiled schedule");
+    if (image.schedule == plan.schedule || image.schedule[0] != plan.schedule[0] ||
+        image.schedule[1] != plan.schedule[1])
+        return fail("runtime image did not copy compiled schedule");
     if (image.atom_storage_bytes == 0u)
         return fail("runtime image did not reserve atom storage");
     if (!image.node_layouts || image.node_layouts[0].out_size == 0u || image.node_layouts[0].in_size == 0u ||

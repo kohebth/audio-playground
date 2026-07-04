@@ -5,7 +5,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <apgcore/compiler_v2.h>
 #include <apgcore/process.h>
 #include <apgcore/runtime_image_v2.h>
 #include <atom_registry.h>
@@ -96,7 +95,7 @@ typedef struct {
 
 /*
  * Initialize a runtime from a prebuilt runtime image descriptor.
- * The image and compiled plan must outlive the runtime.
+ * The image metadata and borrowed source strings must outlive the runtime.
  */
 uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err);
 

@@ -85,7 +85,6 @@ typedef struct {
 } apg_v2_runtime_node_layout_t;
 
 typedef struct {
-    const apg_v2_compiled_unit_t        *plan;
     uint32_t                             frame_capacity;
     float                                sample_rate;
     const char                         **signal_names;

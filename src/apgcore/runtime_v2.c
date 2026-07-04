@@ -382,7 +382,7 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
 }
 
 uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
-    if (!image || !image->plan || !image->plan->unit || !out || !err)
+    if (!image || !out || !err)
         return UC_E_TYPE;
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;

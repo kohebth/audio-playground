@@ -152,6 +152,10 @@ Runtime nodes now execute image-owned atom thunks and labels instead of borrowin
 
 Runtime scalar refresh and signal-array binding plans now copy the needed binding values into runtime-image metadata instead of borrowing compiled binding structs.
 
+## PD18 Progress
+
+Runtime-image descriptors no longer store the source compiled-plan pointer. The image copies schedule/name tables it needs, and M7 export reads generated runtime artifacts from the image descriptor.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.
