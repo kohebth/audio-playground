@@ -99,6 +99,7 @@ typedef struct {
     size_t                               output_audio_ports_len;
     apg_v2_runtime_node_layout_t        *node_layouts;
     size_t                               nodes_len;
+    const uint32_t                      *schedule;
     size_t                               schedule_len;
     size_t                               state_buffers_len;
     size_t                               state_buffer_samples;

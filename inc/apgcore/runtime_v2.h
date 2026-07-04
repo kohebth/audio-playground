@@ -30,6 +30,7 @@ typedef struct {
     size_t                                 config_refreshes_len;
     const apg_v2_runtime_scalar_refresh_t *input_refreshes;
     size_t                                 input_refreshes_len;
+    const apg_v2_compiled_node_t          *compiled;
 } apg_v2_runtime_node_t;
 
 typedef struct apg_v2_runtime_bypass_entry_t {
@@ -86,6 +87,8 @@ typedef struct {
     size_t                             state_buffer_samples;
     apg_v2_runtime_node_t             *nodes;
     size_t                             nodes_len;
+    const uint32_t                    *schedule;
+    size_t                             schedule_len;
     char                               last_error[160];
 } apg_v2_runtime_t;
 

@@ -974,6 +974,8 @@ uc_status apg_v2_runtime_image_build(
         return set_error(err, UC_E_RANGE, "v2 runtime image frame capacity must be greater than zero");
     if (plan->unit->signals_len > 0u && plan->unit->signals_len > SIZE_MAX / (size_t)frame_capacity)
         return set_error(err, UC_E_RANGE, "v2 runtime image signal layout is too large");
+    if (plan->schedule_len > 0u && !plan->schedule)
+        return set_error(err, UC_E_MISSING, "v2 runtime image schedule is missing");
 
     out->plan              = plan;
     out->frame_capacity    = frame_capacity;
@@ -983,6 +985,7 @@ uc_status apg_v2_runtime_image_build(
     out->params_len        = plan->unit->params_len;
     out->input_meters_len  = audio_port_meter_count(plan->unit->input_ports, plan->unit->input_ports_len);
     out->output_meters_len = audio_port_meter_count(plan->unit->output_ports, plan->unit->output_ports_len);
+    out->schedule          = plan->schedule;
     out->schedule_len      = plan->schedule_len;
 
     uc_status status = fill_audio_port_map(

@@ -82,6 +82,10 @@ Default mono processing now uses the first image-owned audio-port map entries di
 
 Scalar refresh binding-key validation now happens during runtime-image build. Runtime processing applies image-validated offsets and field types without per-block key comparisons.
 
+## PD9 Progress
+
+Runtime image now exposes the schedule view used by runtime processing, and runtime nodes borrow compiled node metadata at init. The process loop no longer traverses `runtime->plan` for schedule iteration.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

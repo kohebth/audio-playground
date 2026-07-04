@@ -347,6 +347,7 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         node->config_refreshes_len   = layout->config_refreshes_len;
         node->input_refreshes        = layout->input_refreshes;
         node->input_refreshes_len    = layout->input_refreshes_len;
+        node->compiled               = &plan->nodes[i];
 
         node->call.out    = node->out_storage;
         node->call.in     = node->in_storage;
@@ -408,6 +409,8 @@ uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, ap
         goto fail;
     out->control_targets     = image->control_targets;
     out->control_targets_len = image->control_targets_len;
+    out->schedule            = image->schedule;
+    out->schedule_len        = image->schedule_len;
     status                   = init_node_calls(image, out, err);
     if (status != UC_OK)
         goto fail;
@@ -706,21 +709,26 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     runtime->process_info.output_frames = frames;
     advance_smoothed_params(runtime, frames);
 
+    // ?8e2f6a0b:start? executes the runtime-image schedule view over runtime node storage.
     uc_error err = {0};
-    for (size_t i = 0; i < runtime->plan->schedule_len; i++) {
-        uint32_t scheduled_index = runtime->plan->schedule[i];
+    for (size_t i = 0; i < runtime->schedule_len; i++) {
+        uint32_t scheduled_index = runtime->schedule[i];
         if (scheduled_index >= runtime->nodes_len) {
             runtime_set_error(runtime, "v2 runtime schedule index is out of range");
             return false;
         }
-        const apg_v2_compiled_node_t *compiled     = &runtime->plan->nodes[scheduled_index];
-        size_t                        bypass_index = runtime_node_bypass_index(runtime, scheduled_index);
+        apg_v2_runtime_node_t        *node     = &runtime->nodes[scheduled_index];
+        const apg_v2_compiled_node_t *compiled = node->compiled;
+        if (!compiled || !compiled->atom) {
+            runtime_set_error(runtime, "v2 runtime node metadata is missing");
+            return false;
+        }
+        size_t bypass_index = runtime_node_bypass_index(runtime, scheduled_index);
         if (bypass_index != INVALID_BYPASS_INDEX && runtime->bypassed_instances[bypass_index].enabled) {
             if (!apply_instance_bypass(runtime, &runtime->bypassed_instances[bypass_index], frames))
                 return false;
             continue;
         }
-        apg_v2_runtime_node_t *node = &runtime->nodes[scheduled_index];
         if (refresh_scalar_plan(
                 node->config_refreshes, node->config_refreshes_len, compiled, runtime, node->config_storage, &err
             ) != UC_OK) {
@@ -735,6 +743,7 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
         }
         compiled->atom->thunk(&runtime->nodes[scheduled_index].call);
     }
+    // ?8e2f6a0b:end?
     apply_project_mute(runtime, frames);
     runtime->has_processed = true;
     return true;
