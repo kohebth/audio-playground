@@ -1,6 +1,6 @@
 #include <apgcore/compiler_v2.h>
-#include <apgcore/runtime_image_builder_v2.h>
 #include <apgcore/measure_v2.h>
+#include <apgcore/runtime_image_builder_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/runtime_v2_internal.h>
 #include <apgcore/unit_v2.h>
@@ -564,6 +564,79 @@ static int test_runtime_init_from_image_ignores_plan_mutation(void) {
     return 0;
 }
 
+static int test_runtime_create_owned_lifecycle(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 4096) != 0) {
+        uc_arena_free(&arena);
+        return fail("image arena init failed");
+    }
+
+    apg_v2_runtime_image_t image;
+    uc_error               err    = {0};
+    uc_status              status = apg_v2_runtime_image_build(&plan, 16u, 48000.0f, &image_arena, &image, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime image error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to build runtime image");
+    }
+
+    apg_v2_runtime_t *runtime = NULL;
+    err                       = (uc_error){0};
+    status                    = apg_v2_runtime_create_from_image(&image, &runtime, &err);
+    if (status != UC_OK || !runtime) {
+        fprintf(stderr, "runtime create error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to create owned runtime");
+    }
+    if (runtime->frame_capacity != 16u || runtime->process_info.frames != 16u || runtime->output_meters_len != 1u) {
+        apg_v2_runtime_destroy_owned(&runtime);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("runtime from image not initialized as expected");
+    }
+
+    const float input[4]  = {0.25f, -0.5f, 1.0f, -1.0f};
+    float       output[4] = {0.0f};
+    if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, 4u)) {
+        fprintf(stderr, "runtime process failed: %s\n", apg_v2_measure_last_error(runtime));
+        apg_v2_runtime_destroy_owned(&runtime);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("runtime owned object failed to process");
+    }
+
+    for (size_t i = 0; i < 4u; i++) {
+        if (output[i] != input[i]) {
+            apg_v2_runtime_destroy_owned(&runtime);
+            uc_arena_free(&image_arena);
+            uc_arena_free(&arena);
+            return fail("owned runtime output changed unexpectedly");
+        }
+    }
+
+    apg_v2_runtime_destroy_owned(&runtime);
+    apg_v2_runtime_destroy_owned(NULL);
+    if (runtime != NULL)
+        return fail("owned destroy did not null runtime pointer");
+
+    uc_arena_free(&image_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 int main(void) {
     if (test_runtime_image_layout())
         return 1;
@@ -574,6 +647,8 @@ int main(void) {
     if (test_runtime_image_scalar_input_refresh())
         return 1;
     if (test_runtime_image_control_targets())
+        return 1;
+    if (test_runtime_create_owned_lifecycle())
         return 1;
     return test_runtime_init_from_image_ignores_plan_mutation();
 }
