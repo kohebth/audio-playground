@@ -116,8 +116,10 @@ static int test_runtime_image_layout(void) {
         runtime.output_meters_len != image.output_meters_len || runtime.nodes_len != image.nodes_len ||
         runtime.schedule != image.schedule || runtime.schedule_len != image.schedule_len)
         return fail("runtime did not adopt image layout");
-    if (runtime.nodes[0].compiled != &plan.nodes[0] || runtime.nodes[1].compiled != &plan.nodes[1])
-        return fail("runtime nodes did not adopt compiled node metadata");
+    if (runtime.nodes[0].thunk != image.node_layouts[0].thunk ||
+        strcmp(runtime.nodes[0].atom_name, image.node_layouts[0].atom_name) != 0 ||
+        strcmp(runtime.nodes[1].node_id, image.node_layouts[1].node_id) != 0)
+        return fail("runtime nodes did not adopt image execution metadata");
     if (runtime.param_smoothing_frames != image.param_smoothing_frames)
         return fail("runtime did not adopt image param smoothing layout");
     if (runtime.signal_names != image.signal_names || runtime.param_names != image.param_names)

@@ -118,7 +118,7 @@ Scalar refresh binding-key validation now happens during runtime-image build. Ru
 
 ## PD9 Progress
 
-Runtime image now exposes the schedule view used by runtime processing, and runtime nodes borrow compiled node metadata at init. The process loop no longer traverses `runtime->plan` for schedule iteration.
+Runtime image now exposes the schedule view used by runtime processing. The process loop no longer traverses `runtime->plan` for schedule iteration.
 
 ## PD10 Progress
 
@@ -143,6 +143,10 @@ The runtime plan-initializer compatibility API and runtime-owned image arena sta
 ## PD15 Progress
 
 The no-op project solo runtime state was removed; solo remains a future host/UI routing concern, not runtime DSP state.
+
+## PD16 Progress
+
+Runtime nodes now execute image-owned atom thunks and labels instead of borrowing compiled node metadata.
 
 ## PE1 Progress
 

@@ -187,12 +187,13 @@ static uc_status apply_signal_bindings(
 static uc_status refresh_scalar_plan(
     const apg_v2_runtime_scalar_refresh_t *items,
     size_t                                 items_len,
-    const apg_v2_compiled_node_t          *compiled_node,
+    const char                            *node_id,
+    const char                            *atom_name,
     apg_v2_runtime_t                      *runtime,
     void                                  *storage,
     uc_error                              *err
 ) {
-    if (!runtime || !compiled_node || !compiled_node->atom)
+    if (!runtime || !atom_name)
         return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh context is missing");
 
     for (size_t i = 0; i < items_len; i++) {
@@ -201,9 +202,8 @@ static uc_status refresh_scalar_plan(
         if (items[i].binding->kind != APG_BIND_PARAM && items[i].binding->kind != APG_BIND_LITERAL) {
             char msg[192];
             snprintf(
-                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing",
-                compiled_node->id ? compiled_node->id : "", compiled_node->atom->name ? compiled_node->atom->name : "",
-                items[i].config ? "config" : "input", items[i].binding->key ? items[i].binding->key : ""
+                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing", node_id ? node_id : "",
+                atom_name, items[i].config ? "config" : "input", items[i].binding->key ? items[i].binding->key : ""
             );
             return set_error(err, UC_E_TYPE, msg);
         }
@@ -244,13 +244,8 @@ apply_mix_matrix_config(const apg_v2_runtime_node_layout_t *layout, apg_v2_runti
 }
 
 static uc_status init_state_buffers(
-    const apg_v2_compiled_node_t       *compiled,
-    const apg_v2_runtime_node_layout_t *layout,
-    apg_v2_runtime_t                   *runtime,
-    apg_v2_runtime_node_t              *node,
-    uc_error                           *err
+    const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_t *runtime, apg_v2_runtime_node_t *node, uc_error *err
 ) {
-    const atom_registry_entry_t *atom = compiled->atom;
     if (!layout || layout->state_buffers_len == 0u)
         return UC_OK;
 
@@ -259,16 +254,16 @@ static uc_status init_state_buffers(
     if (!node->state_buffers || !node->state_buffer_samples) {
         char msg[192];
         snprintf(
-            msg, sizeof(msg), "node '%s' atom '%s' state buffer allocation failed", compiled->id ? compiled->id : "",
-            atom->name ? atom->name : ""
+            msg, sizeof(msg), "node '%s' atom '%s' state buffer allocation failed",
+            layout->node_id ? layout->node_id : "", layout->atom_name ? layout->atom_name : ""
         );
         return set_error(err, UC_E_OOM, msg);
     }
     node->state_buffers_len = layout->state_buffers_len;
 
     size_t buffer_index = 0;
-    for (int i = 0; i < atom->n_state_fields; i++) {
-        const atom_field_desc_t *field = &atom->state_fields[i];
+    for (int i = 0; i < layout->n_state_fields; i++) {
+        const atom_field_desc_t *field = &layout->state_fields[i];
         if (field->type != FIELD_BUFFER)
             continue;
         size_t buffer_samples = layout->state_buffer_samples_by_index
@@ -278,7 +273,8 @@ static uc_status init_state_buffers(
             char msg[192];
             snprintf(
                 msg, sizeof(msg), "node '%s' atom '%s' state binding key '%s' is missing buffer capacity",
-                compiled->id ? compiled->id : "", atom->name ? atom->name : "", field->name ? field->name : ""
+                layout->node_id ? layout->node_id : "", layout->atom_name ? layout->atom_name : "",
+                field->name ? field->name : ""
             );
             return set_error(err, UC_E_MISSING, msg);
         }
@@ -298,8 +294,6 @@ static uc_status init_state_buffers(
 }
 
 static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
-    const apg_v2_compiled_unit_t *plan = image->plan;
-
     out->nodes_len = image->nodes_len;
     if (out->nodes_len == 0u)
         return UC_OK;
@@ -329,10 +323,9 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
     }
 
     for (size_t i = 0; i < out->nodes_len; i++) {
-        const atom_registry_entry_t        *atom   = plan->nodes[i].atom;
         apg_v2_runtime_node_t              *node   = &out->nodes[i];
         const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
-        if (!atom)
+        if (!layout->thunk || !layout->atom_name)
             return set_error(err, UC_E_MISSING, "v2 runtime node is missing atom metadata");
 
         if (layout->out_offset + layout->out_size > out->atom_storage_bytes ||
@@ -351,7 +344,12 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         node->config_refreshes_len   = layout->config_refreshes_len;
         node->input_refreshes        = layout->input_refreshes;
         node->input_refreshes_len    = layout->input_refreshes_len;
-        node->compiled               = &plan->nodes[i];
+        node->node_id                = layout->node_id;
+        node->atom_name              = layout->atom_name;
+        node->thunk                  = layout->thunk;
+        node->state_fields           = layout->state_fields;
+        node->n_state_fields         = layout->n_state_fields;
+        node->state_size             = layout->state_size;
 
         node->call.out    = node->out_storage;
         node->call.in     = node->in_storage;
@@ -359,7 +357,7 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         node->call.state  = node->state_storage;
         node->call.info   = &out->process_info;
 
-        uc_status status = init_state_buffers(&plan->nodes[i], layout, out, node, err);
+        uc_status status = init_state_buffers(layout, out, node, err);
         if (status != UC_OK)
             return status;
         node->signal_bindings     = layout->signal_bindings;
@@ -368,12 +366,13 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         if (status != UC_OK)
             return status;
         status = refresh_scalar_plan(
-            node->config_refreshes, node->config_refreshes_len, &plan->nodes[i], out, node->config_storage, err
+            node->config_refreshes, node->config_refreshes_len, node->node_id, node->atom_name, out,
+            node->config_storage, err
         );
         if (status != UC_OK)
             return status;
         status = refresh_scalar_plan(
-            node->input_refreshes, node->input_refreshes_len, &plan->nodes[i], out, node->in_storage, err
+            node->input_refreshes, node->input_refreshes_len, node->node_id, node->atom_name, out, node->in_storage, err
         );
         if (status != UC_OK)
             return status;
@@ -613,17 +612,16 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
     runtime->has_processed = false;
 
     for (size_t i = 0; i < runtime->nodes_len; i++) {
-        apg_v2_runtime_node_t       *node = &runtime->nodes[i];
-        const atom_registry_entry_t *atom = node->compiled ? node->compiled->atom : NULL;
+        apg_v2_runtime_node_t *node = &runtime->nodes[i];
         if (!node->state_storage)
             continue;
-        if (!atom)
+        if (node->n_state_fields < 0 || (node->n_state_fields > 0 && !node->state_fields))
             return false;
-        memset(node->state_storage, 0, atom_storage_size(atom->state_size));
+        memset(node->state_storage, 0, atom_storage_size(node->state_size));
 
         size_t buffer_index = 0;
-        for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
-            const atom_field_desc_t *field = &atom->state_fields[field_index];
+        for (int field_index = 0; field_index < node->n_state_fields; field_index++) {
+            const atom_field_desc_t *field = &node->state_fields[field_index];
             if (field->type != FIELD_BUFFER)
                 continue;
             if (buffer_index >= node->state_buffers_len || !node->state_buffers[buffer_index])
@@ -671,9 +669,8 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
             runtime_set_error(runtime, "v2 runtime schedule index is out of range");
             return false;
         }
-        apg_v2_runtime_node_t        *node     = &runtime->nodes[scheduled_index];
-        const apg_v2_compiled_node_t *compiled = node->compiled;
-        if (!compiled || !compiled->atom) {
+        apg_v2_runtime_node_t *node = &runtime->nodes[scheduled_index];
+        if (!node->thunk) {
             runtime_set_error(runtime, "v2 runtime node metadata is missing");
             return false;
         }
@@ -684,18 +681,20 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
             continue;
         }
         if (refresh_scalar_plan(
-                node->config_refreshes, node->config_refreshes_len, compiled, runtime, node->config_storage, &err
+                node->config_refreshes, node->config_refreshes_len, node->node_id, node->atom_name, runtime,
+                node->config_storage, &err
             ) != UC_OK) {
             runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime config refresh failed");
             return false;
         }
         if (refresh_scalar_plan(
-                node->input_refreshes, node->input_refreshes_len, compiled, runtime, node->in_storage, &err
+                node->input_refreshes, node->input_refreshes_len, node->node_id, node->atom_name, runtime,
+                node->in_storage, &err
             ) != UC_OK) {
             runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime input refresh failed");
             return false;
         }
-        compiled->atom->thunk(&runtime->nodes[scheduled_index].call);
+        node->thunk(&node->call);
     }
     // ?8e2f6a0b:end?
     apply_project_mute(runtime, frames);

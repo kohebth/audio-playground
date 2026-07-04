@@ -146,6 +146,7 @@ Module note: M7 generated bundles can now be target-linked when a board linker s
 - [x] PD13: Move runtime test coverage off the compatibility initializer and onto explicit runtime-image init.
 - [x] PD14: Remove runtime plan-initializer compatibility API and runtime-owned image arena state.
 - [x] PD15: Remove no-op project solo state from runtime and measure snapshots.
+- [x] PD16: Move runtime process dispatch from compiled node metadata to image-owned atom thunks.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
 
@@ -164,6 +165,7 @@ Module note: Runtime no longer stores the source compiled-plan pointer.
 Module note: Runtime tests now exercise explicit runtime-image initialization.
 Module note: Runtime no longer owns runtime-image arenas or plan-init wrappers.
 Module note: Project solo no longer lives in runtime DSP state.
+Module note: Runtime nodes now execute image-owned atom thunks.
 Module note: Runtime image now owns public audio port channel maps.
 
 ## Runtime Memory Hardening Queue

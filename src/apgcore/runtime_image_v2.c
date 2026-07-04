@@ -867,11 +867,16 @@ static uc_status fill_node_layouts(uc_arena *arena, apg_v2_runtime_image_t *out,
 
         memset(layout, 0, sizeof(*layout));
 
-        layout->out_size    = atom_storage_size(atom->out_size);
-        layout->in_size     = atom_storage_size(atom->in_size);
-        layout->config_size = atom_storage_size(atom->config_size);
-        layout->state_size  = atom_storage_size(atom->state_size);
-        uc_status status    = reserve_storage(layout->out_size, &atom_storage_cursor, &layout->out_offset, err);
+        layout->node_id        = out->plan->nodes[node_index].id;
+        layout->atom_name      = atom->name;
+        layout->thunk          = atom->thunk;
+        layout->state_fields   = atom->state_fields;
+        layout->n_state_fields = atom->n_state_fields;
+        layout->out_size       = atom_storage_size(atom->out_size);
+        layout->in_size        = atom_storage_size(atom->in_size);
+        layout->config_size    = atom_storage_size(atom->config_size);
+        layout->state_size     = atom_storage_size(atom->state_size);
+        uc_status status       = reserve_storage(layout->out_size, &atom_storage_cursor, &layout->out_offset, err);
         if (status != UC_OK)
             return status;
         status = reserve_storage(layout->in_size, &atom_storage_cursor, &layout->in_offset, err);

@@ -48,6 +48,11 @@ typedef struct {
 } apg_v2_runtime_scalar_refresh_t;
 
 typedef struct {
+    const char                      *node_id;
+    const char                      *atom_name;
+    atom_thunk_fn                    thunk;
+    const atom_field_desc_t         *state_fields;
+    int                              n_state_fields;
     size_t                           out_size;
     size_t                           in_size;
     size_t                           config_size;

@@ -29,7 +29,12 @@ typedef struct {
     size_t                                 config_refreshes_len;
     const apg_v2_runtime_scalar_refresh_t *input_refreshes;
     size_t                                 input_refreshes_len;
-    const apg_v2_compiled_node_t          *compiled;
+    const char                            *node_id;
+    const char                            *atom_name;
+    atom_thunk_fn                          thunk;
+    const atom_field_desc_t               *state_fields;
+    int                                    n_state_fields;
+    size_t                                 state_size;
 } apg_v2_runtime_node_t;
 
 typedef struct apg_v2_runtime_bypass_entry_t {
