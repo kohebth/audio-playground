@@ -86,6 +86,10 @@ Scalar refresh binding-key validation now happens during runtime-image build. Ru
 
 Runtime image now exposes the schedule view used by runtime processing, and runtime nodes borrow compiled node metadata at init. The process loop no longer traverses `runtime->plan` for schedule iteration.
 
+## PD10 Progress
+
+Runtime reset and process entry checks now operate from runtime-owned buffers, image schedule metadata, and per-node compiled metadata pointers. Name-based host lookup APIs still use the source plan.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

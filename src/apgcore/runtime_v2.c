@@ -55,6 +55,11 @@ runtime_bypass_entry_matches_instance_id(const apg_v2_runtime_bypass_entry_t *en
     return strncmp(entry->instance_id, instance_id, instance_len) == 0;
 }
 
+static bool runtime_execution_metadata_ready(const apg_v2_runtime_t *runtime) {
+    return runtime && (runtime->schedule || runtime->schedule_len == 0u) &&
+           (runtime->nodes || runtime->nodes_len == 0u);
+}
+
 static uc_status init_signal_buffers(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
     out->signals_len = image->signals_len;
     if (out->signals_len == 0u)
@@ -119,10 +124,9 @@ init_bypass_state_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime
 }
 
 static void advance_smoothed_params(apg_v2_runtime_t *runtime, uint32_t frames) {
-    if (!runtime || !runtime->params || !runtime->param_targets || !runtime->param_smoothing_remaining_frames ||
-        !runtime->plan || !runtime->plan->unit)
+    if (!runtime || !runtime->params || !runtime->param_targets || !runtime->param_smoothing_remaining_frames)
         return;
-    for (size_t i = 0; i < runtime->params_len && i < runtime->plan->unit->params_len; i++) {
+    for (size_t i = 0; i < runtime->params_len; i++) {
         uint32_t remaining = runtime->param_smoothing_remaining_frames[i];
         if (remaining == 0u)
             continue;
@@ -188,7 +192,7 @@ static uc_status refresh_scalar_plan(
     void                                  *storage,
     uc_error                              *err
 ) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !compiled_node || !compiled_node->atom)
+    if (!runtime || !compiled_node || !compiled_node->atom)
         return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh context is missing");
 
     for (size_t i = 0; i < items_len; i++) {
@@ -610,7 +614,7 @@ bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port
 // ?77a8c2d5:end?
 
 bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *instance_id, bool enabled) {
-    if (!runtime || !runtime->plan || !instance_id || instance_id[0] == '\0')
+    if (!runtime || !instance_id || instance_id[0] == '\0')
         return false;
     size_t index = runtime_instance_bypass_index(runtime, instance_id);
     if (!enabled) {
@@ -642,8 +646,9 @@ bool apg_v2_runtime_set_project_solo(apg_v2_runtime_t *runtime, bool soloed) {
     return true;
 }
 
+// ?d0f1a7b3:start? resets runtime-owned buffers without traversing the compiled plan.
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit)
+    if (!runtime)
         return false;
     runtime->last_error[0] = '\0';
 
@@ -652,7 +657,7 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
             runtime->signal_pool, 0,
             runtime->signals_len * (size_t)runtime->frame_capacity * sizeof(*runtime->signal_pool)
         );
-    for (size_t i = 0; i < runtime->params_len && i < runtime->plan->unit->params_len; i++) {
+    for (size_t i = 0; i < runtime->params_len; i++) {
         runtime->params[i] = runtime->param_defaults ? runtime->param_defaults[i] : 0.0f;
         if (runtime->param_targets)
             runtime->param_targets[i] = runtime->params[i];
@@ -661,11 +666,13 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
     }
     runtime->has_processed = false;
 
-    for (size_t i = 0; i < runtime->nodes_len && i < runtime->plan->nodes_len; i++) {
+    for (size_t i = 0; i < runtime->nodes_len; i++) {
         apg_v2_runtime_node_t       *node = &runtime->nodes[i];
-        const atom_registry_entry_t *atom = runtime->plan->nodes[i].atom;
-        if (!node->state_storage || !atom)
+        const atom_registry_entry_t *atom = node->compiled ? node->compiled->atom : NULL;
+        if (!node->state_storage)
             continue;
+        if (!atom)
+            return false;
         memset(node->state_storage, 0, atom_storage_size(atom->state_size));
 
         size_t buffer_index = 0;
@@ -687,13 +694,14 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
     runtime->process_info.channels      = 1u;
     return true;
 }
+// ?d0f1a7b3:end?
 
 bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     if (!runtime)
         return false;
     runtime->last_error[0] = '\0';
-    if (!runtime->plan || !runtime->plan->unit) {
-        runtime_set_error(runtime, "v2 runtime has no compiled plan");
+    if (!runtime_execution_metadata_ready(runtime)) {
+        runtime_set_error(runtime, "v2 runtime image execution metadata is missing");
         return false;
     }
     if (frames == 0u) {
@@ -760,8 +768,8 @@ bool apg_v2_runtime_process_interleaved_ports(
     if (!runtime)
         return false;
     runtime->last_error[0] = '\0';
-    if (!runtime->plan || !runtime->plan->unit) {
-        runtime_set_error(runtime, "v2 runtime has no compiled plan");
+    if (!runtime_execution_metadata_ready(runtime)) {
+        runtime_set_error(runtime, "v2 runtime image execution metadata is missing");
         return false;
     }
     if (!input || !output) {
@@ -830,8 +838,8 @@ static bool apg_v2_runtime_process_mono_audio_ports(
     if (!runtime)
         return false;
     runtime->last_error[0] = '\0';
-    if (!runtime->plan || !runtime->plan->unit) {
-        runtime_set_error(runtime, "v2 runtime has no compiled plan");
+    if (!runtime_execution_metadata_ready(runtime)) {
+        runtime_set_error(runtime, "v2 runtime image execution metadata is missing");
         return false;
     }
     if (!input || !output) {

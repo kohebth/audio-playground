@@ -135,6 +135,10 @@ static int test_runtime_image_layout(void) {
         runtime.nodes[1].signal_bindings_len != image.node_layouts[1].signal_bindings_len)
         return fail("runtime did not adopt signal binding plan");
 
+    runtime.plan = NULL;
+    if (!apg_v2_runtime_reset(&runtime))
+        return fail("runtime image reset required compiled plan");
+
     float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
     float output[4] = {0};
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
