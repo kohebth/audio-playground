@@ -190,7 +190,6 @@ first_unsupported_unit(const apg_project_v2_resolved_t *project, const char *tar
     return NULL;
 }
 
-// ?d6b3f4a8:start? rejects compiled atoms that target metadata marks unavailable.
 static const char *first_unsupported_atom(const apg_v2_runtime_image_t *image, const char *target) {
     for (size_t i = 0; image && i < image->nodes_len; i++) {
         const char *atom_name = image->node_layouts[i].atom_name;
@@ -199,7 +198,6 @@ static const char *first_unsupported_atom(const apg_v2_runtime_image_t *image, c
     }
     return NULL;
 }
-// ?d6b3f4a8:end?
 
 static bool join_path(char *out, size_t out_size, const char *dir, const char *name) {
     size_t dir_len = dir ? strlen(dir) : 0u;
@@ -590,7 +588,6 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     fputs("}\n#endif\n\n#if APG_M7_PROJECT_PARAM_BYTES > 0u\n", out);
     fputs("static float apg_m7_param(size_t index) {\n", out);
     fputs("    return ((float *)(void *)apg_m7_project_params)[index];\n}\n#endif\n\n", out);
-    fputs("// ?c4a91b20:start? binds generated M7 atom calls to static signal, state, and scalar storage.\n", out);
     fputs("void apg_m7_project_refresh_params(void) {\n", out);
     for (size_t i = 0; i < image->nodes_len; i++) {
         const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
@@ -682,13 +679,12 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
             );
         }
     }
-    fputs("    apg_m7_project_refresh_params();\n}\n// ?c4a91b20:end?\n\n", out);
-    fputs("// ?b7e2a4c1:start? executes the generated M7 schedule over prebound atom calls.\n", out);
+    fputs("    apg_m7_project_refresh_params();\n}\n\n", out);
     fputs("void apg_m7_project_process_block(void) {\n", out);
     fputs("    for (size_t i = 0u; i < APG_M7_PROJECT_SCHEDULE_COUNT; i++) {\n", out);
     fputs("        uint32_t node = apg_m7_project_schedule[i];\n", out);
     fputs("        apg_m7_project_atom_thunks[node](&apg_m7_project_atom_calls[node]);\n", out);
-    fputs("    }\n}\n// ?b7e2a4c1:end?\n", out);
+    fputs("    }\n}\n", out);
     return fclose(out) == 0;
 }
 
