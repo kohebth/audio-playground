@@ -1,4 +1,5 @@
 #include <apgcore/project_compiler_v2.h>
+#include <apgcore/project_validator_v2.h>
 
 #include <yaml/node.h>
 
@@ -35,32 +36,6 @@ static char *arena_join_dot(uc_arena *arena, const char *left, const char *right
     return arena_strdup(arena, temp, err);
 }
 
-static bool parse_endpoint(const char *endpoint, char *node, size_t node_size, char *port, size_t port_size) {
-    if (!endpoint || !node || !port || node_size == 0u || port_size == 0u)
-        return false;
-    const char *dot = strchr(endpoint, '.');
-    if (!dot || dot == endpoint || dot[1] == '\0' || strchr(dot + 1, '.'))
-        return false;
-    size_t node_len = (size_t)(dot - endpoint);
-    size_t port_len = strlen(dot + 1);
-    if (node_len >= node_size || port_len >= port_size)
-        return false;
-    memcpy(node, endpoint, node_len);
-    node[node_len] = '\0';
-    memcpy(port, dot + 1, port_len + 1u);
-    return true;
-}
-
-static const apg_project_v2_node_t *find_project_node(const apg_project_v2_resolved_t *project, const char *id) {
-    if (!project || !id)
-        return NULL;
-    for (size_t i = 0; i < project->project.nodes_len; i++) {
-        if (project->project.nodes[i].id && strcmp(project->project.nodes[i].id, id) == 0)
-            return &project->project.nodes[i];
-    }
-    return NULL;
-}
-
 static const apg_project_v2_loaded_unit_t *find_loaded_unit(const apg_project_v2_resolved_t *project, const char *id) {
     if (!project || !id)
         return NULL;
@@ -71,162 +46,15 @@ static const apg_project_v2_loaded_unit_t *find_loaded_unit(const apg_project_v2
     return NULL;
 }
 
-static const apg_project_v2_loaded_unit_t *
-unit_for_project_node(const apg_project_v2_resolved_t *project, const apg_project_v2_node_t *node) {
-    return node ? find_loaded_unit(project, node->unit) : NULL;
-}
-
-static bool port_is_mono_audio(const apg_unit_v2_port_t *port) {
-    return port && port->type && strcmp(port->type, "audio") == 0 && port->channels &&
-           strcmp(port->channels, "1") == 0 && port->signals_len <= 1u;
-}
-
 static const char *port_signal_name(const apg_unit_v2_port_t *port) {
     if (!port)
         return NULL;
     return port->signals_len == 1u ? port->signals[0] : port->name;
 }
 
-static const apg_unit_v2_port_t *find_port(const apg_unit_v2_port_t *ports, size_t ports_len, const char *name) {
-    if (!ports || !name)
-        return NULL;
-    for (size_t i = 0; i < ports_len; i++) {
-        if (ports[i].name && strcmp(ports[i].name, name) == 0)
-            return &ports[i];
-    }
-    return NULL;
-}
-
-static uc_status validate_node_port(
-    const apg_project_v2_resolved_t *project, const char *node_id, const char *port_name, bool output, uc_error *err
-) {
-    const apg_project_v2_node_t        *node = find_project_node(project, node_id);
-    const apg_project_v2_loaded_unit_t *unit = unit_for_project_node(project, node);
-    if (!node || !unit) {
-        char msg[160];
-        snprintf(msg, sizeof(msg), "route endpoint references unknown node '%s'", node_id ? node_id : "");
-        return set_error(err, UC_E_MISSING, msg);
-    }
-
-    const apg_unit_v2_port_t *port = output ? find_port(unit->unit.output_ports, unit->unit.output_ports_len, port_name)
-                                            : find_port(unit->unit.input_ports, unit->unit.input_ports_len, port_name);
-    if (!port) {
-        char msg[192];
-        snprintf(
-            msg, sizeof(msg), "route endpoint '%s.%s' references unknown %s port", node_id ? node_id : "",
-            port_name ? port_name : "", output ? "output" : "input"
-        );
-        return set_error(err, UC_E_MISSING, msg);
-    }
-    if (!port_is_mono_audio(port)) {
-        char msg[192];
-        snprintf(
-            msg, sizeof(msg), "route endpoint '%s.%s' must be a mono audio port", node_id ? node_id : "",
-            port_name ? port_name : ""
-        );
-        return set_error(err, UC_E_TYPE, msg);
-    }
-    return UC_OK;
-}
-
-static uc_status
-validate_route_endpoint(const apg_project_v2_resolved_t *project, const char *endpoint, bool output, uc_error *err) {
-    if (output && strcmp(endpoint, APG_PROJECT_SYSTEM_INPUT) == 0)
-        return UC_OK;
-    if (!output && strcmp(endpoint, APG_PROJECT_SYSTEM_OUTPUT) == 0)
-        return UC_OK;
-    if (strcmp(endpoint, APG_PROJECT_SYSTEM_INPUT) == 0 || strcmp(endpoint, APG_PROJECT_SYSTEM_OUTPUT) == 0) {
-        char msg[160];
-        snprintf(msg, sizeof(msg), "route endpoint '%s' is not valid in this direction", endpoint ? endpoint : "");
-        return set_error(err, UC_E_TYPE, msg);
-    }
-
-    char node_id[64];
-    char port_name[64];
-    if (!parse_endpoint(endpoint, node_id, sizeof(node_id), port_name, sizeof(port_name))) {
-        char msg[160];
-        snprintf(msg, sizeof(msg), "route endpoint '%s' is invalid", endpoint ? endpoint : "");
-        return set_error(err, UC_E_TYPE, msg);
-    }
-    return validate_node_port(project, node_id, port_name, output, err);
-}
-
-static uc_status validate_project_routes(const apg_project_v2_resolved_t *project, uc_error *err) {
-    size_t system_input_routes  = 0;
-    size_t system_output_routes = 0;
-    for (size_t i = 0; i < project->project.routes_len; i++) {
-        const apg_project_v2_route_t *route  = &project->project.routes[i];
-        uc_status                     status = validate_route_endpoint(project, route->from, true, err);
-        if (status != UC_OK)
-            return status;
-        status = validate_route_endpoint(project, route->to, false, err);
-        if (status != UC_OK)
-            return status;
-        if (strcmp(route->from, APG_PROJECT_SYSTEM_INPUT) == 0)
-            system_input_routes++;
-        if (strcmp(route->to, APG_PROJECT_SYSTEM_OUTPUT) == 0)
-            system_output_routes++;
-        for (size_t j = 0; j < i; j++) {
-            if (strcmp(project->project.routes[j].to, route->to) == 0) {
-                char msg[160];
-                snprintf(msg, sizeof(msg), "route target '%s' has multiple sources", route->to ? route->to : "");
-                return set_error(err, UC_E_RANGE, msg);
-            }
-        }
-    }
-    if (system_input_routes == 0u)
-        return set_error(err, UC_E_MISSING, "project requires at least one route from system.input");
-    if (system_output_routes != 1u)
-        return set_error(err, UC_E_MISSING, "project requires exactly one route to system.output");
-    return UC_OK;
-}
-
-static bool param_exists(const apg_unit_v2_t *unit, const char *name) {
-    if (!unit || !name)
-        return false;
-    for (size_t i = 0; i < unit->params_len; i++) {
-        if (unit->params[i].name && strcmp(unit->params[i].name, name) == 0)
-            return true;
-    }
-    return false;
-}
-
-static const apg_project_v2_param_override_t *find_param_override(const apg_project_v2_node_t *node, const char *key) {
-    if (!node || !key)
-        return NULL;
-    for (size_t i = 0; i < node->params_len; i++) {
-        if (node->params[i].key && strcmp(node->params[i].key, key) == 0)
-            return &node->params[i];
-    }
-    return NULL;
-}
-
-static uc_status validate_param_overrides(const apg_project_v2_resolved_t *project, uc_error *err) {
-    for (size_t i = 0; i < project->project.nodes_len; i++) {
-        const apg_project_v2_node_t        *node = &project->project.nodes[i];
-        const apg_project_v2_loaded_unit_t *unit = unit_for_project_node(project, node);
-        if (!unit)
-            return set_error(err, UC_E_MISSING, "project node references missing loaded unit");
-        for (size_t p = 0; p < node->params_len; p++) {
-            if (!param_exists(&unit->unit, node->params[p].key)) {
-                char msg[192];
-                snprintf(
-                    msg, sizeof(msg), "project node '%s' overrides unknown param '%s'", node->id ? node->id : "",
-                    node->params[p].key ? node->params[p].key : ""
-                );
-                return set_error(err, UC_E_MISSING, msg);
-            }
-            if (node->params[p].value.kind != UC_VAL_LITERAL) {
-                char msg[192];
-                snprintf(
-                    msg, sizeof(msg), "project node '%s' param override '%s' must be literal", node->id ? node->id : "",
-                    node->params[p].key ? node->params[p].key : ""
-                );
-                return set_error(err, UC_E_TYPE, msg);
-            }
-        }
-    }
-    return UC_OK;
+static bool port_is_mono_audio(const apg_unit_v2_port_t *port) {
+    return port && port->type && strcmp(port->type, "audio") == 0 && port->channels &&
+           strcmp(port->channels, "1") == 0 && port->signals_len <= 1u;
 }
 
 static const char *endpoint_for_node_port(uc_arena *arena, const char *node_id, const char *port_name, uc_error *err) {
@@ -449,8 +277,14 @@ build_expanded_params(const apg_project_v2_resolved_t *project, uc_arena *arena,
             params[out_index].name = arena_join_dot(arena, project_node->id, loaded->unit.params[p].name, err);
             if (!params[out_index].name || err->status != UC_OK)
                 return err->status;
-            const apg_project_v2_param_override_t *override =
-                find_param_override(project_node, loaded->unit.params[p].name);
+            const apg_project_v2_param_override_t *override = NULL;
+            for (size_t k = 0; k < project_node->params_len; k++) {
+                if (project_node->params[k].key &&
+                    strcmp(project_node->params[k].key, loaded->unit.params[p].name) == 0) {
+                    override = &project_node->params[k];
+                    break;
+                }
+            }
             if (override)
                 params[out_index].default_value = override->value.text;
             out_index++;
@@ -606,10 +440,7 @@ uc_status apg_project_v2_compile(
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
 
-    uc_status status = validate_project_routes(project, err);
-    if (status != UC_OK)
-        return status;
-    status = validate_param_overrides(project, err);
+    uc_status status = apg_project_v2_validate_resolved(project, err);
     if (status != UC_OK)
         return status;
     status = build_expanded_unit(project, arena, &out->expanded_unit, err);

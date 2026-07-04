@@ -196,5 +196,10 @@ apg_project_v2_load_resolved_file(const char *path, uc_arena *arena, apg_project
 
     out->units     = items;
     out->units_len = out->project.units_len;
+
+    status = apg_project_v2_validate_resolved(out, err);
+    if (status != UC_OK)
+        return status;
+
     return UC_OK;
 }
