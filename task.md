@@ -105,6 +105,7 @@ Pending tests to record for PB:
 - [x] PC8: Emit static atom_call_t records over runtime-image-planned atom storage.
 - [x] PC9: Emit typed static M7 atom storage with init/refresh binding for signals, state buffers, scalar params, and signal arrays.
 - [x] PC10: Emit a generated M7 fixed-block schedule runner and link/run smoke coverage.
+- [x] PC11: Validate generated M7 object section placement.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -120,6 +121,7 @@ Module note: M7 export now emits a static atom thunk table.
 Module note: M7 export now emits static atom_call records.
 Module note: M7 export now initializes typed static atom storage.
 Module note: M7 export now includes a linked fixed-block runner.
+Module note: M7 object sections are now checked by CTest.
 
 ## Runtime Image Hardening Queue
 

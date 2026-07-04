@@ -64,6 +64,7 @@ Meters and diagnostics are read through the measure boundary after a completed b
 An STM32H7 integration is not production-ready until these gates pass:
 
 - generated bundle syntax-checks with an ARM/M7 compiler;
+- generated object files preserve the expected APG M7 memory sections;
 - firmware links with generated static memory placed in intended sections;
 - callback runs for sustained audio without allocation or blocking calls;
 - cache maintenance is proven for DMA input and output regions;

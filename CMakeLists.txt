@@ -216,6 +216,33 @@ set_tests_properties(test_apg_v2_cli_m7_export_source_static PROPERTIES
 )
 
 add_test(
+        NAME test_apg_v2_cli_m7_export_object
+        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7.o
+)
+set_tests_properties(test_apg_v2_cli_m7_export_object PROPERTIES
+        LABELS v2
+        DEPENDS test_apg_v2_cli_m7_export_bundle
+)
+
+if(CMAKE_OBJDUMP)
+    add_test(NAME test_apg_v2_cli_m7_export_sections COMMAND ${CMAKE_OBJDUMP} -h ${APG_M7_CLI_TEST_DIR}/apg_project_m7.o)
+    set_tests_properties(test_apg_v2_cli_m7_export_sections PROPERTIES
+            LABELS v2
+            DEPENDS test_apg_v2_cli_m7_export_object
+            PASS_REGULAR_EXPRESSION "\\.apg_m7_signal_buffers.*\\.apg_m7_params.*\\.apg_m7_atom_storage.*\\.apg_m7_atom_calls"
+    )
+else()
+    add_test(
+            NAME test_apg_v2_cli_m7_export_sections_unconfigured
+            COMMAND ${CMAKE_COMMAND} -E echo "CMAKE_OBJDUMP not configured; skipping generated M7 section gate"
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_sections_unconfigured PROPERTIES
+            LABELS v2
+            PASS_REGULAR_EXPRESSION "skipping generated M7 section gate"
+    )
+endif()
+
+add_test(
         NAME test_apg_v2_cli_m7_export_link_smoke
         COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_bundle_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static_smoke
 )
