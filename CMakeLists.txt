@@ -292,6 +292,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_static_ram_budget PROPERTIES
 )
 
 set(APG_M7_C_COMPILER "" CACHE FILEPATH "Optional ARM/M7 C compiler used to syntax-check generated m7_static bundles")
+set(APG_M7_BOARD_TIMING_COMMAND "" CACHE STRING "Optional command that measures a generated m7_static bundle on board; receives export dir as last argument")
 if(NOT APG_M7_C_COMPILER)
     find_program(APG_M7_C_COMPILER_DETECTED arm-none-eabi-gcc)
     if(APG_M7_C_COMPILER_DETECTED)
@@ -309,6 +310,15 @@ if(APG_M7_C_COMPILER)
             LABELS v2
             DEPENDS test_apg_v2_cli_m7_export_bundle
     )
+    add_test(
+            NAME test_apg_v2_cli_m7_export_arm_stack_usage
+            COMMAND /bin/sh -c "${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.su"
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_arm_stack_usage PROPERTIES
+            LABELS v2
+            DEPENDS test_apg_v2_cli_m7_export_bundle
+            PASS_REGULAR_EXPRESSION "apg_m7_project_process_block"
+    )
 else()
     add_test(
             NAME test_apg_v2_cli_m7_export_arm_syntax_unconfigured
@@ -317,5 +327,24 @@ else()
     set_tests_properties(test_apg_v2_cli_m7_export_arm_syntax_unconfigured PROPERTIES
             LABELS v2
             PASS_REGULAR_EXPRESSION "skipping ARM/M7 syntax gate"
+    )
+endif()
+
+if(APG_M7_BOARD_TIMING_COMMAND)
+    separate_arguments(APG_M7_BOARD_TIMING_COMMAND_LIST NATIVE_COMMAND "${APG_M7_BOARD_TIMING_COMMAND}")
+    add_test(NAME test_apg_v2_cli_m7_export_board_timing COMMAND ${APG_M7_BOARD_TIMING_COMMAND_LIST} ${APG_M7_CLI_TEST_DIR})
+    set_tests_properties(test_apg_v2_cli_m7_export_board_timing PROPERTIES
+            LABELS v2
+            DEPENDS test_apg_v2_cli_m7_export_bundle
+            PASS_REGULAR_EXPRESSION "m7_static_board_block_us=.*budget_us="
+    )
+else()
+    add_test(
+            NAME test_apg_v2_cli_m7_export_board_timing_unconfigured
+            COMMAND ${CMAKE_COMMAND} -E echo "APG_M7_BOARD_TIMING_COMMAND not configured; skipping board timing gate"
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_board_timing_unconfigured PROPERTIES
+            LABELS v2
+            PASS_REGULAR_EXPRESSION "skipping board timing gate"
     )
 endif()

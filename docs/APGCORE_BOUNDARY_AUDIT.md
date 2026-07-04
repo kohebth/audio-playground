@@ -77,6 +77,10 @@ CTest now compiles the generated M7 bundle to an object and verifies section pla
 
 CTest now measures generated M7 host block time in the linked smoke and checks generated runner stack usage when GCC or Clang stack-usage output is available.
 
+## PC13 Progress
+
+CMake now exposes opt-in production gates for ARM/M7 generated-runner stack usage and board timing through `APG_M7_C_COMPILER` and `APG_M7_BOARD_TIMING_COMMAND`.
+
 ## PD1 Progress
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.
@@ -139,4 +143,4 @@ M7 static export now emits section names and section-placed RAM buffers for sign
 
 ## Immediate Direction
 
-New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 work should next replace host timing smoke with board/toolchain timing and stack gates.
+New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 work should next connect a real STM32H7 BSP timing command and target linker script.

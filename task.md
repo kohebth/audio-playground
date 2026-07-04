@@ -107,6 +107,7 @@ Pending tests to record for PB:
 - [x] PC10: Emit a generated M7 fixed-block schedule runner and link/run smoke coverage.
 - [x] PC11: Validate generated M7 object section placement.
 - [x] PC12: Add host-side generated M7 timing and stack budget gates.
+- [x] PC13: Add optional ARM stack and board timing gates for generated M7 bundles.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -124,6 +125,7 @@ Module note: M7 export now initializes typed static atom storage.
 Module note: M7 export now includes a linked fixed-block runner.
 Module note: M7 object sections are now checked by CTest.
 Module note: M7 host timing and runner stack are now gated.
+Module note: M7 board/toolchain timing gates are now configurable.
 
 ## Runtime Image Hardening Queue
 
