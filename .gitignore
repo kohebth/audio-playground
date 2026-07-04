@@ -3,3 +3,15 @@ cmake-build-debugs
 build
 .idea
 .vscode
+.codex
+.opencode
+.playwright-mcp
+.opencode.*
+analysis
+samples
+audio-mcp
+search-mcp
+tmp.test.txt
+opencode.json
+unit-editor-desktop-z1-z2.png
+unit-editor-mobile-z1-z2.png
