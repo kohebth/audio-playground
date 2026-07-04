@@ -2,7 +2,7 @@
 #include <apgcore/json_contract_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/project_v2.h>
-#include <apgcore/runtime_image_v2.h>
+#include <apgcore/runtime_image_builder_v2.h>
 
 #include <stdbool.h>
 #include <stdint.h>

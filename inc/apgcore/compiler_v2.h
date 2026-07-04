@@ -4,18 +4,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <apgcore/binding_v2.h>
 #include <apgcore/unit_v2.h>
 #include <atom_registry.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
-
-typedef enum {
-    APG_BIND_SIGNAL,
-    APG_BIND_PARAM,
-    APG_BIND_LITERAL,
-    APG_BIND_SIGNAL_ARRAY,
-    APG_BIND_FLOAT_MATRIX,
-} apg_v2_binding_kind_t;
 
 typedef struct {
     const char           *key;

@@ -1,7 +1,7 @@
 #ifndef AUDIO_PLAYGROUND_TEST_RUNTIME_V2_HARNESS_H
 #define AUDIO_PLAYGROUND_TEST_RUNTIME_V2_HARNESS_H
 
-#include <apgcore/runtime_image_v2.h>
+#include <apgcore/runtime_image_builder_v2.h>
 #include <apgcore/runtime_v2.h>
 
 // ?c4f2a9b1:start? keeps runtime tests on the production image-init boundary.

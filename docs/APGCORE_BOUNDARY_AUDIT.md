@@ -156,6 +156,10 @@ Runtime scalar refresh and signal-array binding plans now copy the needed bindin
 
 Runtime-image descriptors no longer store the source compiled-plan pointer. The image copies schedule/name tables it needs, and M7 export reads generated runtime artifacts from the image descriptor.
 
+## PD19 Progress
+
+Runtime-image consumer types now live separately from the compiler-backed builder API, so runtime headers no longer pull compiler plan definitions.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

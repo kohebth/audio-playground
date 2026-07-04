@@ -5,6 +5,7 @@
 #include <apgcore/measure_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/project_v2.h>
+#include <apgcore/runtime_image_builder_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
 

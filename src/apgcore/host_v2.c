@@ -1,4 +1,5 @@
 #include <apgcore/host_v2.h>
+#include <apgcore/runtime_image_builder_v2.h>
 
 #include <limits.h>
 #include <stddef.h>
