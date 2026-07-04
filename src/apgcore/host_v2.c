@@ -4,7 +4,6 @@
 
 #include <limits.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <string.h>
 
 static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
@@ -104,8 +103,7 @@ void apg_v2_host_destroy(apg_v2_host_unit_t *host) {
     if (!host)
         return;
     if (host->runtime) {
-        apg_v2_runtime_destroy(host->runtime);
-        free(host->runtime);
+        apg_v2_runtime_destroy_owned(&host->runtime);
     }
     if (host->image_ready)
         uc_arena_free(&host->image_arena);
@@ -180,8 +178,7 @@ void apg_v2_host_project_destroy(apg_v2_host_project_t *host) {
     if (!host)
         return;
     if (host->runtime) {
-        apg_v2_runtime_destroy(host->runtime);
-        free(host->runtime);
+        apg_v2_runtime_destroy_owned(&host->runtime);
     }
     if (host->image_ready)
         uc_arena_free(&host->image_arena);

@@ -75,5 +75,7 @@ bool apg_v2_runtime_process_mono_ports(
 
 /* Free all runtime-owned allocations and zero the runtime structure. */
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime);
+/* Destroy a runtime and free the wrapper object. */
+void apg_v2_runtime_destroy_owned(apg_v2_runtime_t **runtime);
 
 #endif // AUDIO_PLAYGROUND_APGCORE_RUNTIME_V2_H

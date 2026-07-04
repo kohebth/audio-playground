@@ -13,7 +13,6 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
 static void write_json_string(FILE *out, const char *text) {
@@ -481,8 +480,7 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
         write_validation_error(out, "apg.project.render.v1", path, "$.project", &err);
 
     if (runtime_ready && runtime) {
-        apg_v2_runtime_destroy(runtime);
-        free(runtime);
+        apg_v2_runtime_destroy_owned(&runtime);
     }
     uc_arena_free(&image_arena);
     uc_arena_free(&arena);

@@ -924,3 +924,11 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     free(runtime->signal_pool);
     memset(runtime, 0, sizeof(*runtime));
 }
+
+void apg_v2_runtime_destroy_owned(apg_v2_runtime_t **runtime) {
+    if (!runtime || !*runtime)
+        return;
+    apg_v2_runtime_destroy(*runtime);
+    free(*runtime);
+    *runtime = NULL;
+}
