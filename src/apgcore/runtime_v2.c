@@ -223,6 +223,50 @@ static uc_status refresh_scalar_plan(
     return UC_OK;
 }
 
+static bool refresh_scalar_plan_runtime(
+    const apg_v2_runtime_scalar_refresh_t *items,
+    size_t                                 items_len,
+    const char                            *node_id,
+    const char                            *atom_name,
+    bool                                   is_input,
+    apg_v2_runtime_t                      *runtime,
+    void                                  *storage
+) {
+    if (!runtime || !node_id || !atom_name || !storage)
+        return runtime_set_error(runtime, "v2 runtime scalar refresh context is missing"), false;
+
+    for (size_t i = 0; i < items_len; i++) {
+        if (items[i].kind != APG_BIND_PARAM && items[i].kind != APG_BIND_LITERAL) {
+            char msg[160];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing", node_id, atom_name,
+                is_input ? "input" : "config", items[i].key ? items[i].key : ""
+            );
+            runtime_set_error(runtime, msg);
+            return false;
+        }
+        if (items[i].kind == APG_BIND_PARAM) {
+            uint32_t param_index = items[i].param_index;
+            if (param_index >= runtime->params_len) {
+                runtime_set_error(runtime, "v2 runtime scalar refresh param index is out of bounds");
+                return false;
+            }
+        }
+        void *addr  = (char *)storage + items[i].storage_offset;
+        float value = scalar_refresh_value(&items[i], runtime);
+        if (items[i].field_type == FIELD_INT)
+            *(int *)addr = (int)value;
+        else if (items[i].field_type == FIELD_FLOAT)
+            *(float *)addr = value;
+        else {
+            runtime_set_error(runtime, "v2 runtime scalar refresh field type is unsupported");
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static uc_status
 apply_mix_matrix_config(const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_node_t *node, uc_error *err) {
     if (!layout || !node)
@@ -522,6 +566,38 @@ static void apply_project_mute(apg_v2_runtime_t *runtime, uint32_t frames) {
     }
 }
 
+static bool run_node(apg_v2_runtime_t *runtime, size_t node_index, uint32_t frames) {
+    if (!runtime || node_index >= runtime->nodes_len)
+        return false;
+
+    apg_v2_runtime_node_t *node = &runtime->nodes[node_index];
+    if (!node->thunk) {
+        runtime_set_error(runtime, "v2 runtime node metadata is missing");
+        return false;
+    }
+
+    size_t bypass_index = runtime_node_bypass_index(runtime, node_index);
+    if (bypass_index != INVALID_BYPASS_INDEX && runtime->bypassed_instances[bypass_index].enabled) {
+        if (!apply_instance_bypass(runtime, &runtime->bypassed_instances[bypass_index], frames))
+            return false;
+        return true;
+    }
+
+    if (!refresh_scalar_plan_runtime(
+            node->config_refreshes, node->config_refreshes_len, node->node_id, node->atom_name, false, runtime,
+            node->config_storage
+        ))
+        return false;
+    if (!refresh_scalar_plan_runtime(
+            node->input_refreshes, node->input_refreshes_len, node->node_id, node->atom_name, true, runtime,
+            node->in_storage
+        ))
+        return false;
+
+    node->thunk(&node->call);
+    return true;
+}
+
 static bool apg_v2_runtime_set_param_index(apg_v2_runtime_t *runtime, size_t index, float value) {
     if (!runtime || index >= runtime->params_len)
         return false;
@@ -653,39 +729,15 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     runtime->process_info.output_frames = frames;
     advance_smoothed_params(runtime, frames);
 
-    uc_error err = {0};
     for (size_t i = 0; i < runtime->schedule_len; i++) {
         uint32_t scheduled_index = runtime->schedule[i];
         if (scheduled_index >= runtime->nodes_len) {
             runtime_set_error(runtime, "v2 runtime schedule index is out of range");
             return false;
         }
-        apg_v2_runtime_node_t *node = &runtime->nodes[scheduled_index];
-        if (!node->thunk) {
-            runtime_set_error(runtime, "v2 runtime node metadata is missing");
+        if (!run_node(runtime, scheduled_index, frames)) {
             return false;
         }
-        size_t bypass_index = runtime_node_bypass_index(runtime, scheduled_index);
-        if (bypass_index != INVALID_BYPASS_INDEX && runtime->bypassed_instances[bypass_index].enabled) {
-            if (!apply_instance_bypass(runtime, &runtime->bypassed_instances[bypass_index], frames))
-                return false;
-            continue;
-        }
-        if (refresh_scalar_plan(
-                node->config_refreshes, node->config_refreshes_len, node->node_id, node->atom_name, runtime,
-                node->config_storage, &err
-            ) != UC_OK) {
-            runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime config refresh failed");
-            return false;
-        }
-        if (refresh_scalar_plan(
-                node->input_refreshes, node->input_refreshes_len, node->node_id, node->atom_name, runtime,
-                node->in_storage, &err
-            ) != UC_OK) {
-            runtime_set_error(runtime, err.msg[0] ? err.msg : "v2 runtime input refresh failed");
-            return false;
-        }
-        node->thunk(&node->call);
     }
     apply_project_mute(runtime, frames);
     runtime->has_processed = true;
