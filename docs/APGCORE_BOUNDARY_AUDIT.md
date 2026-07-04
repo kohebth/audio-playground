@@ -46,6 +46,10 @@ M7 static export tests now run an ARM/M7 freestanding syntax check for generated
 
 `docs/STM32H7_M7_BOARD_INTEGRATION.md` defines the fixed-block audio callback, DMA ownership, cache maintenance, memory placement, control, and measure contract expected from a future STM32H7 board support package.
 
+## PC5 Progress
+
+M7 static export now emits static atom-call workload metadata in JSON and generated header macros. This is a schedule-derived budget input, not measured CPU timing.
+
 ## PD1 Progress
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.
