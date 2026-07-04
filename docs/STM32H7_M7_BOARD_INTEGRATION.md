@@ -16,7 +16,7 @@ The firmware build receives:
 - A board-local configuration that maps codec channels to exported public ports.
 - Optional board memory budgets for tightly coupled RAM, SRAM, and DMA-accessible audio buffers.
 
-The generated project must declare deterministic constants for block frames, signal count, param count, schedule count, atom storage bytes, state bytes, and total static RAM. Firmware startup must reject or fail to build projects that exceed the selected board memory map.
+The generated project must declare deterministic constants for block frames, signal count, param count, schedule count, atom storage bytes, state bytes, total static RAM, and static atom-call workload. Firmware startup must reject or fail to build projects that exceed the selected board memory map.
 
 ## Audio Callback Contract
 
@@ -65,5 +65,6 @@ An STM32H7 integration is not production-ready until these gates pass:
 - firmware links with generated static memory placed in intended sections;
 - callback runs for sustained audio without allocation or blocking calls;
 - cache maintenance is proven for DMA input and output regions;
+- generated atom-call workload is reviewed against the selected block period;
 - measured worst-case CPU time fits the selected sample rate and block period;
 - measured static RAM and stack usage fit the board budget with margin.

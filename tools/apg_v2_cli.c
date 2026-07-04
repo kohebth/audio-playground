@@ -167,7 +167,10 @@ static bool join_path(char *out, size_t out_size, const char *dir, const char *n
     return written >= 0 && (size_t)written < out_size;
 }
 
-enum { APG_M7_BLOCK_FRAMES = 64u };
+enum {
+    APG_M7_BLOCK_FRAMES = 64u,
+    APG_M7_SAMPLE_RATE  = 48000u,
+};
 
 typedef struct {
     size_t signal_buffer_bytes;
@@ -202,7 +205,7 @@ static m7_memory_manifest_t m7_memory_manifest(const apg_project_v2_compiled_t *
 
     apg_v2_runtime_image_t image  = {0};
     uc_status              status = apg_v2_runtime_image_build_with_growth(
-        &compiled->plan, APG_M7_BLOCK_FRAMES, 48000.0f, &image_arena, &image, err
+        &compiled->plan, APG_M7_BLOCK_FRAMES, (float)APG_M7_SAMPLE_RATE, &image_arena, &image, err
     );
     if (status != UC_OK) {
         uc_arena_free(&image_arena);
@@ -232,6 +235,12 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     fprintf(out, "#define APG_M7_PROJECT_NODE_COUNT %zuu\n", compiled->plan.nodes_len);
     fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_COUNT %zuu\n\n", compiled->plan.schedule_len);
     fprintf(out, "#define APG_M7_PROJECT_BLOCK_FRAMES %uu\n", APG_M7_BLOCK_FRAMES);
+    fprintf(out, "#define APG_M7_PROJECT_SAMPLE_RATE %uu\n", APG_M7_SAMPLE_RATE);
+    fprintf(out, "#define APG_M7_PROJECT_ATOM_CALLS_PER_BLOCK %zuu\n", compiled->plan.schedule_len);
+    fprintf(
+        out, "#define APG_M7_PROJECT_ATOM_CALLS_PER_SECOND %zuu\n",
+        compiled->plan.schedule_len * APG_M7_SAMPLE_RATE / APG_M7_BLOCK_FRAMES
+    );
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_BUFFER_BYTES %zuu\n", memory->signal_buffer_bytes);
     fprintf(out, "#define APG_M7_PROJECT_PARAM_BYTES %zuu\n", memory->param_bytes);
     fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_BYTES %zuu\n", memory->schedule_bytes);
@@ -384,10 +393,12 @@ export_m7_static(const char *project_path, const char *out_dir, bool has_static_
         ",\"files\":[\"apg_project_m7.h\",\"apg_project_m7.c\"],\"nodes\":%zu,\"schedule\":%zu,"
         "\"memory\":{\"block_frames\":%u,\"signal_buffer_bytes\":%zu,\"param_bytes\":%zu,"
         "\"schedule_bytes\":%zu,\"atom_storage_bytes\":%zu,\"state_buffer_bytes\":%zu,"
-        "\"static_ram_bytes\":%zu}}\n",
+        "\"static_ram_bytes\":%zu},\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,"
+        "\"atom_calls_per_block\":%zu,\"atom_calls_per_second\":%zu}}\n",
         compiled.plan.nodes_len, compiled.plan.schedule_len, APG_M7_BLOCK_FRAMES, memory.signal_buffer_bytes,
         memory.param_bytes, memory.schedule_bytes, memory.atom_storage_bytes, memory.state_buffer_bytes,
-        memory.static_ram_bytes
+        memory.static_ram_bytes, APG_M7_SAMPLE_RATE, APG_M7_BLOCK_FRAMES, compiled.plan.schedule_len,
+        compiled.plan.schedule_len * APG_M7_SAMPLE_RATE / APG_M7_BLOCK_FRAMES
     );
     uc_arena_free(&arena);
     return 0;

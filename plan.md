@@ -114,6 +114,7 @@ Pending tests to record for PB:
 - [x] PC2: Add configurable M7 memory budgets and reject generated bundles that exceed them.
 - [x] PC3: Add an ARM/M7 cross-compile gate for generated bundle syntax when a toolchain is configured.
 - [x] PC4: Define the board audio callback integration contract for fixed block processing, DMA ownership, and cache coherency.
+- [x] PC5: Add static M7 atom-call workload metadata to export JSON and generated headers.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -122,6 +123,8 @@ Module note: M7 export now rejects bundles that exceed an explicit static RAM bu
 Module note: M7 export syntax is now checked by an ARM/M7 compiler when configured.
 
 Module note: STM32H7 board integration now has a fixed-block DMA/cache contract.
+
+Module note: M7 export now reports static atom-call workload metadata.
 
 ### Runtime Image Hardening
 
