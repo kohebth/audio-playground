@@ -162,7 +162,7 @@ add_test(
 set_tests_properties(test_apg_v2_cli_benchmark PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.benchmark.v1\".*\"ok\":true.*\"structural\""
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.benchmark.v2\".*\"ok\":true.*\"structural\""
 )
 
 add_test(
@@ -182,7 +182,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
         DEPENDS test_apg_v2_cli_wasm_export_prepare
-        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v1\".*\"ok\":true.*\"target\":\"wasm_realtime\".*\"files\":\\[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\"\\]"
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v2\".*\"ok\":true.*\"target\":\"wasm_realtime\".*\"files\":\\[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\"\\]"
 )
 
 add_test(
@@ -192,7 +192,7 @@ add_test(
 set_tests_properties(test_apg_v2_cli_wasm_export_manifest PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.wasm_realtime.v1\".*\"project\":\"guitar-pedalboard\".*\"status\":\"generated\""
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.wasm_realtime.v2\".*\"project\":\"guitar-pedalboard\".*\"status\":\"generated\""
         DEPENDS test_apg_v2_cli_wasm_export
 )
 

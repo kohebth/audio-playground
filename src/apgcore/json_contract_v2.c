@@ -83,7 +83,7 @@ void apg_v2_json_write_validate_unit(FILE *out, const char *path) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
-        write_validation_error(out, "apg.validation.v1", path, "$.unit", &err);
+        write_validation_error(out, "apg.validation.v2", path, "$.unit", &err);
         return;
     }
 
@@ -95,9 +95,9 @@ void apg_v2_json_write_validate_unit(FILE *out, const char *path) {
         status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
     }
     if (status == UC_OK)
-        write_validation_ok(out, "apg.validation.v1", path);
+        write_validation_ok(out, "apg.validation.v2", path);
     else
-        write_validation_error(out, "apg.validation.v1", path, "$.unit", &err);
+        write_validation_error(out, "apg.validation.v2", path, "$.unit", &err);
     uc_arena_free(&arena);
 }
 
@@ -107,7 +107,7 @@ void apg_v2_json_write_validate_project(FILE *out, const char *path) {
     uc_arena arena;
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
-        write_validation_error(out, "apg.validation.v1", path, "$.project", &err);
+        write_validation_error(out, "apg.validation.v2", path, "$.project", &err);
         return;
     }
 
@@ -119,9 +119,9 @@ void apg_v2_json_write_validate_project(FILE *out, const char *path) {
         status = apg_project_v2_compile(&project, &arena, &compiled, &err);
     }
     if (status == UC_OK)
-        write_validation_ok(out, "apg.validation.v1", path);
+        write_validation_ok(out, "apg.validation.v2", path);
     else
-        write_validation_error(out, "apg.validation.v1", path, "$.project", &err);
+        write_validation_error(out, "apg.validation.v2", path, "$.project", &err);
     uc_arena_free(&arena);
 }
 
@@ -236,7 +236,7 @@ static void write_unit_nodes(FILE *out, const apg_unit_v2_t *unit) {
 }
 
 static void write_unit_inspect(FILE *out, const char *path, const apg_unit_v2_t *unit) {
-    fputs("{\"schema\":\"apg.unit.inspect.v1\",\"file\":", out);
+    fputs("{\"schema\":\"apg.unit.inspect.v2\",\"file\":", out);
     write_json_string(out, path);
     fputs(",\"name\":", out);
     write_json_string(out, unit->name);
@@ -268,7 +268,7 @@ void apg_v2_json_write_inspect_unit(FILE *out, const char *path) {
         return;
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0) {
-        fputs("{\"schema\":\"apg.unit.inspect.v1\",\"ok\":false}", out);
+        fputs("{\"schema\":\"apg.unit.inspect.v2\",\"ok\":false}", out);
         return;
     }
     apg_unit_v2_t unit;
@@ -276,7 +276,7 @@ void apg_v2_json_write_inspect_unit(FILE *out, const char *path) {
     if (apg_unit_v2_load_file(path, &arena, &unit, &err) == UC_OK)
         write_unit_inspect(out, path, &unit);
     else
-        write_validation_error(out, "apg.unit.inspect.v1", path, "$.unit", &err);
+        write_validation_error(out, "apg.unit.inspect.v2", path, "$.unit", &err);
     uc_arena_free(&arena);
 }
 
@@ -339,7 +339,7 @@ static void write_routes(FILE *out, const apg_project_v2_t *project) {
 static void write_project_inspect(
     FILE *out, const char *path, const apg_project_v2_resolved_t *project, const apg_project_v2_compiled_t *compiled
 ) {
-    fputs("{\"schema\":\"apg.project.inspect.v1\",\"file\":", out);
+    fputs("{\"schema\":\"apg.project.inspect.v2\",\"file\":", out);
     write_json_string(out, path);
     fputs(",\"name\":", out);
     write_json_string(out, project->project.name);
@@ -367,7 +367,7 @@ void apg_v2_json_write_inspect_project(FILE *out, const char *path) {
         return;
     uc_arena arena;
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
-        fputs("{\"schema\":\"apg.project.inspect.v1\",\"ok\":false}", out);
+        fputs("{\"schema\":\"apg.project.inspect.v2\",\"ok\":false}", out);
         return;
     }
     apg_project_v2_resolved_t project;
@@ -379,7 +379,7 @@ void apg_v2_json_write_inspect_project(FILE *out, const char *path) {
     if (status == UC_OK)
         write_project_inspect(out, path, &project, &compiled);
     else
-        write_validation_error(out, "apg.project.inspect.v1", path, "$.project", &err);
+        write_validation_error(out, "apg.project.inspect.v2", path, "$.project", &err);
     uc_arena_free(&arena);
 }
 
@@ -413,7 +413,7 @@ static void write_project_render(FILE *out, const char *path, const float *outpu
     }
     double rms = frames > 0u ? sqrt(sum_square / (double)frames) : 0.0;
 
-    fputs("{\"schema\":\"apg.project.render.v1\",\"ok\":true,\"file\":", out);
+    fputs("{\"schema\":\"apg.project.render.v2\",\"ok\":true,\"file\":", out);
     write_json_string(out, path);
     fputs(",\"input\":\"deterministic_mono_v1\",\"sample_rate\":", out);
     fprintf(out, "%.0f", (double)APG_RENDER_SAMPLE_RATE);
@@ -442,7 +442,7 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     apg_v2_runtime_image_t image       = {0};
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
-        write_validation_error(out, "apg.project.render.v1", path, "$.project", &err);
+        write_validation_error(out, "apg.project.render.v2", path, "$.project", &err);
         return;
     }
 
@@ -477,7 +477,7 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     if (status == UC_OK)
         write_project_render(out, path, output, APG_RENDER_FRAMES);
     else
-        write_validation_error(out, "apg.project.render.v1", path, "$.project", &err);
+        write_validation_error(out, "apg.project.render.v2", path, "$.project", &err);
 
     if (runtime_ready && runtime) {
         apg_v2_runtime_destroy_owned(&runtime);

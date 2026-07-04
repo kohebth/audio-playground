@@ -145,7 +145,7 @@ static int test_project_render_json_is_deterministic(void) {
         free(second);
         return 1;
     }
-    if (!strstr(first, "\"schema\":\"apg.project.render.v1\"") || !strstr(first, "\"ok\":true") ||
+    if (!strstr(first, "\"schema\":\"apg.project.render.v2\"") || !strstr(first, "\"ok\":true") ||
         !strstr(first, "\"input\":\"deterministic_mono_v1\"") || !strstr(first, "\"frames\":16") ||
         !strstr(first, "\"samples\":[") || strstr(first, "\"peak\":0.000000")) {
         free(first);
@@ -168,7 +168,7 @@ static int test_unit_inspect_json_contains_ui_contract(void) {
     char *json = capture_json(apg_v2_json_write_inspect_unit, "units-v2/simple_gain.unit.v2.yaml");
     if (!json)
         return fail("failed to write unit inspect json");
-    if (!strstr(json, "\"schema\":\"apg.unit.inspect.v1\"") || !strstr(json, "\"name\":\"simple_gain\"") ||
+    if (!strstr(json, "\"schema\":\"apg.unit.inspect.v2\"") || !strstr(json, "\"name\":\"simple_gain\"") ||
         !strstr(json, "\"compatibility\":{\"desktop_full\":true,\"wasm_realtime\":true") ||
         !strstr(json, "\"ui\":{\"label\":\"Gain\",\"control\":\"knob\",\"unit\":\"x\"}") ||
         !strstr(json, "\"nodes\":[{\"id\":\"gain_value\",\"atom\":\"generation_dc\"")) {
@@ -197,12 +197,12 @@ static int test_atom_inspect_json_is_available(void) {
     char *json = capture_atom_catalog();
     if (!json)
         return fail("failed to write atom catalog json");
-    if (!strstr(json, "\"schema\":\"apg.atom_catalog.v1\"") || !strstr(json, "\"name\":\"generation_dc\"") ||
+    if (!strstr(json, "\"schema\":\"apg.atom_catalog.v2\"") || !strstr(json, "\"name\":\"generation_dc\"") ||
         !strstr(json, "\"name\":\"coefficients\",\"type\":\"float_matrix\"")) {
         free(json);
         return fail("atom inspect json lacked expected catalog fields");
     }
-    if (strlen(json) != 26184u || fnv1a64(json) != UINT64_C(0xe559414d821ef839)) {
+    if (strlen(json) != 26184u || fnv1a64(json) != UINT64_C(0xe1501c05be8a87cc)) {
         free(json);
         return fail("atom inspect json changed from the frozen sample contract");
     }

@@ -46,7 +46,7 @@ const previewAdapter = read('web-tools/unit-editor/src/lib/previewAdapter.ts');
 const compatibility = read('web-tools/unit-editor/src/components/CompatibilityExportPanel.tsx');
 
 // AC: Contract-accurate web data is sourced from a frozen backend atom catalog fixture.
-assert(atomCatalog.schema === 'apg.atom_catalog.v1', 'atom catalog fixture schema changed');
+assert(atomCatalog.schema === 'apg.atom_catalog.v2', 'atom catalog fixture schema changed');
 assert(atomCatalog.atoms.length > 40, 'atom catalog fixture is not the full backend catalog');
 assert(
   atomCatalog.atoms.some(
@@ -58,7 +58,7 @@ assert(
   'atom catalog lacks generation_dc binding metadata',
 );
 assert(
-  /\"schema\"\s*:\s*\"apg.atom_catalog.v1\"/.test(read('test/golden/v2-inspect-atoms.json')),
+  /\"schema\"\s*:\s*\"apg.atom_catalog.v2\"/.test(read('test/golden/v2-inspect-atoms.json')),
   'atom catalog schema assertion should fail visibly if fixture schema drifts',
 );
 includes(

@@ -64,6 +64,6 @@ The runtime image does not store the compiled-plan pointer. It owns arena-alloca
 
 Current limits: control ports update params only, atom in/out fields are bound by compiled binding order, and state allocation currently covers `FIELD_BUFFER` descriptors with atom-declared capacities. The v1 runtime/unit/YAML paths are legacy; see `docs/V1_DEPRECATION_AUDIT.md` before removing anything.
 
-Schema names in CLI fixture outputs such as `apg.unit.inspect.v1` and `apg.project.render.v1` are protocol identifiers only; they do not indicate runtime re-use of a legacy v1 execution path.
+Schema names in CLI fixture outputs such as `apg.unit.inspect.v2` and `apg.project.render.v2` are protocol identifiers only; they do not indicate runtime re-use of a legacy v1 execution path.
 
 For STM32H7/M7 deployment boundaries, see `docs/STM32H7_M7_BOARD_INTEGRATION.md`.

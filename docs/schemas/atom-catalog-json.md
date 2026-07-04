@@ -1,12 +1,12 @@
 # Atom Catalog JSON
 
-`apg.atom_catalog.v1` is a UI-facing metadata export for the registered atom table. It is deterministic and generated from the C registry plus the v2 compiler binding contracts where those contracts exist.
+`apg.atom_catalog.v2` is a UI-facing metadata export for the registered atom table. It is deterministic and generated from the C registry plus the v2 compiler binding contracts where those contracts exist.
 
 ## Shape
 
 ```json
 {
-  "schema": "apg.atom_catalog.v1",
+  "schema": "apg.atom_catalog.v2",
   "atoms": [
     {
       "name": "generation_dc",

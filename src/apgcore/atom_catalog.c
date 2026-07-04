@@ -288,7 +288,7 @@ void apg_atom_catalog_write_json(FILE *out) {
     if (!out)
         return;
     atom_registry_init();
-    fputs("{\"schema\":\"apg.atom_catalog.v1\",\"atoms\":[", out);
+    fputs("{\"schema\":\"apg.atom_catalog.v2\",\"atoms\":[", out);
     int count = atom_registry_count();
     for (int i = 0; i < count; i++) {
         const atom_registry_entry_t  *entry    = atom_registry_get(i);

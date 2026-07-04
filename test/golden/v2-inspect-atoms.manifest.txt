@@ -1,4 +1,4 @@
-schema=apg.atom_catalog.v1
+schema=apg.atom_catalog.v2
 bytes=26184
-fnv1a64=e559414d821ef839
+fnv1a64=ff092124fee242de
 sha256=5690fe98896d84d8853508406aeb09d4adcca73afc714ece3e743844340ccf1a

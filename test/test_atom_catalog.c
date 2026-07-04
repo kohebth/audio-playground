@@ -37,7 +37,7 @@ int main(void) {
     if (!json)
         return fail("failed to write atom catalog json");
 
-    if (!strstr(json, "\"schema\":\"apg.atom_catalog.v1\""))
+    if (!strstr(json, "\"schema\":\"apg.atom_catalog.v2\""))
         return fail("catalog schema is missing");
     if (!strstr(json, "\"name\":\"generation_dc\""))
         return fail("generation_dc atom is missing");

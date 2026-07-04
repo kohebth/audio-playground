@@ -118,7 +118,7 @@ static int benchmark_project(const char *path) {
     uc_arena arena;
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
-        return write_cli_error(stdout, "apg.project.benchmark.v1", path, NULL, &err);
+        return write_cli_error(stdout, "apg.project.benchmark.v2", path, NULL, &err);
     }
 
     apg_project_v2_resolved_t project;
@@ -126,12 +126,12 @@ static int benchmark_project(const char *path) {
     uc_error                  err    = {0};
     uc_status                 status = load_compile_project(path, &arena, &project, &compiled, &err);
     if (status != UC_OK) {
-        int rc = write_cli_error(stdout, "apg.project.benchmark.v1", path, NULL, &err);
+        int rc = write_cli_error(stdout, "apg.project.benchmark.v2", path, NULL, &err);
         uc_arena_free(&arena);
         return rc;
     }
 
-    fputs("{\"schema\":\"apg.project.benchmark.v1\",\"ok\":true,\"file\":", stdout);
+    fputs("{\"schema\":\"apg.project.benchmark.v2\",\"ok\":true,\"file\":", stdout);
     write_json_string(stdout, path);
     fprintf(
         stdout,
@@ -325,7 +325,7 @@ static bool write_wasm_runtime_manifest(
     FILE *out = fopen(path, "w");
     if (!out)
         return false;
-    fputs("{\"schema\":\"apg.project.wasm_realtime.v1\",\"project\":", out);
+    fputs("{\"schema\":\"apg.project.wasm_realtime.v2\",\"project\":", out);
     write_json_string(out, project && project->project.name ? project->project.name : "unknown");
     fprintf(
         out,
@@ -692,7 +692,7 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     uc_arena arena;
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
-        return write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        return write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
     }
 
     apg_project_v2_resolved_t project;
@@ -700,7 +700,7 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     uc_error                  err    = {0};
     uc_status                 status = load_compile_project(project_path, &arena, &project, &compiled, &err);
     if (status != UC_OK) {
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&arena);
         return rc;
     }
@@ -712,7 +712,7 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
             &err, UC_E_TYPE, (uc_loc){0, 0}, "unit '%s' %s", unsupported->id,
             unit_reason ? unit_reason : "does not support target profile"
         );
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&arena);
         return rc;
     }
@@ -723,7 +723,7 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
         &compiled.plan, options->block_frames, (float)options->sample_rate, &image_arena, &image, &err
     );
     if (status != UC_OK) {
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&arena);
         return rc;
     }
@@ -731,7 +731,7 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     const char *unsupported_atom = first_unsupported_atom(&image, "wasm_realtime");
     if (unsupported_atom) {
         uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support wasm_realtime", unsupported_atom);
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&image_arena);
         uc_arena_free(&arena);
         return rc;
@@ -742,7 +742,7 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     if (!join_path(manifest_path, sizeof(manifest_path), out_dir, "apg_project_wasm.json") ||
         !join_path(js_path, sizeof(js_path), out_dir, "apg_project_wasm.mjs")) {
         uc_error_set(&err, UC_E_RANGE, (uc_loc){0, 0}, "export output path is too long");
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&image_arena);
         uc_arena_free(&arena);
         return rc;
@@ -751,13 +751,13 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     if (!write_wasm_runtime_manifest(manifest_path, &project, &image, options) ||
         !write_wasm_runtime_js(js_path, &project, &image, options)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write wasm_realtime export files");
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&image_arena);
         uc_arena_free(&arena);
         return rc;
     }
 
-    fputs("{\"schema\":\"apg.project.export.v1\",\"ok\":true,\"file\":", stdout);
+    fputs("{\"schema\":\"apg.project.export.v2\",\"ok\":true,\"file\":", stdout);
     write_json_string(stdout, project_path);
     fputs(",\"target\":\"wasm_realtime\",\"out_dir\":", stdout);
     write_json_string(stdout, out_dir);
@@ -780,7 +780,7 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
     uc_arena arena;
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
-        return write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        return write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
     }
 
     apg_project_v2_resolved_t project;
@@ -788,7 +788,7 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
     uc_error                  err    = {0};
     uc_status                 status = load_compile_project(project_path, &arena, &project, &compiled, &err);
     if (status != UC_OK) {
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&arena);
         return rc;
     }
@@ -800,7 +800,7 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
             &err, UC_E_TYPE, (uc_loc){0, 0}, "unit '%s' %s", unsupported->id,
             unit_reason ? unit_reason : "does not support m7_static"
         );
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&arena);
         return rc;
     }
@@ -811,14 +811,14 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         &compiled.plan, options->block_frames, (float)options->sample_rate, &image_arena, &image, &err
     );
     if (status != UC_OK) {
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&arena);
         return rc;
     }
     const char *unsupported_atom = first_unsupported_atom(&image, "m7_static");
     if (unsupported_atom) {
         uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support m7_static", unsupported_atom);
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&image_arena);
         uc_arena_free(&arena);
         return rc;
@@ -829,7 +829,7 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
             &err, UC_E_RANGE, (uc_loc){0, 0}, "m7_static static RAM budget exceeded: %zu > %zu bytes",
             memory.static_ram_bytes, options->static_ram_budget
         );
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&image_arena);
         uc_arena_free(&arena);
         return rc;
@@ -840,7 +840,7 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
     if (!join_path(header_path, sizeof(header_path), out_dir, "apg_project_m7.h") ||
         !join_path(source_path, sizeof(source_path), out_dir, "apg_project_m7.c")) {
         uc_error_set(&err, UC_E_RANGE, (uc_loc){0, 0}, "export output path is too long");
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&image_arena);
         uc_arena_free(&arena);
         return rc;
@@ -848,13 +848,13 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
 
     if (!write_m7_header(header_path, &image, &memory, options) || !write_m7_source(source_path, &project, &image)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write m7_static export files");
-        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&image_arena);
         uc_arena_free(&arena);
         return rc;
     }
 
-    fputs("{\"schema\":\"apg.project.export.v1\",\"ok\":true,\"file\":", stdout);
+    fputs("{\"schema\":\"apg.project.export.v2\",\"ok\":true,\"file\":", stdout);
     write_json_string(stdout, project_path);
     fputs(",\"target\":\"m7_static\",\"out_dir\":", stdout);
     write_json_string(stdout, out_dir);
@@ -989,7 +989,7 @@ int main(int argc, char **argv) {
         }
         uc_error err = {0};
         uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "unsupported export target");
-        return write_cli_error(stdout, "apg.project.export.v1", argv[4], argv[3], &err);
+        return write_cli_error(stdout, "apg.project.export.v2", argv[4], argv[3], &err);
     }
 
     return usage(argv[0]);
