@@ -522,7 +522,6 @@ static void apply_project_mute(apg_v2_runtime_t *runtime, uint32_t frames) {
     }
 }
 
-// ?77a8c2d5:start? updates runtime params and control ports using image-precomputed param metadata.
 static bool apg_v2_runtime_set_param_index(apg_v2_runtime_t *runtime, size_t index, float value) {
     if (!runtime || index >= runtime->params_len)
         return false;
@@ -559,7 +558,6 @@ bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port
     }
     return false;
 }
-// ?77a8c2d5:end?
 
 bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *instance_id, bool enabled) {
     if (!runtime || !instance_id || instance_id[0] == '\0')
@@ -587,7 +585,6 @@ bool apg_v2_runtime_set_project_mute(apg_v2_runtime_t *runtime, bool muted) {
     return true;
 }
 
-// ?d0f1a7b3:start? resets runtime-owned buffers without traversing the compiled plan.
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
     if (!runtime)
         return false;
@@ -634,7 +631,6 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
     runtime->process_info.channels      = 1u;
     return true;
 }
-// ?d0f1a7b3:end?
 
 bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     if (!runtime)
@@ -657,7 +653,6 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     runtime->process_info.output_frames = frames;
     advance_smoothed_params(runtime, frames);
 
-    // ?8e2f6a0b:start? executes the runtime-image schedule view over runtime node storage.
     uc_error err = {0};
     for (size_t i = 0; i < runtime->schedule_len; i++) {
         uint32_t scheduled_index = runtime->schedule[i];
@@ -692,7 +687,6 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
         }
         node->thunk(&node->call);
     }
-    // ?8e2f6a0b:end?
     apply_project_mute(runtime, frames);
     runtime->has_processed = true;
     return true;
@@ -767,7 +761,6 @@ bool apg_v2_runtime_process_interleaved_ports(
     return true;
 }
 
-// ?4f2c9a1e:start? processes mono buffers through precomputed runtime audio-port maps.
 static bool apg_v2_runtime_process_mono_audio_ports(
     apg_v2_runtime_t                  *runtime,
     const apg_v2_runtime_audio_port_t *input_port,
@@ -838,7 +831,6 @@ bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, 
         runtime->output_audio_ports_len > 0u ? &runtime->output_audio_ports[0] : NULL, output, frames
     );
 }
-// ?4f2c9a1e:end?
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     if (!runtime)

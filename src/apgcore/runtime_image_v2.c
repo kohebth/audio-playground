@@ -339,7 +339,6 @@ static uc_status fill_audio_port_map(
     return UC_OK;
 }
 
-// ?9c4e11a0:start? precomputes param defaults and smoothing frames for runtime image.
 static float parse_param_default(const apg_unit_v2_param_t *param) {
     if (!param || !param->default_value)
         return 0.0f;
@@ -360,7 +359,6 @@ static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, float s
     uint32_t rounded = (uint32_t)(frames + 0.999999);
     return rounded > 0u ? rounded : 1u;
 }
-// ?9c4e11a0:end?
 
 static uc_status
 fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_runtime_image_t *out, uc_error *err) {
@@ -508,7 +506,6 @@ static int param_index_by_name(const apg_unit_v2_t *unit, const char *name) {
     return -1;
 }
 
-// ?1f6b9c2d:start? borrows immutable lookup names into runtime-image metadata.
 static uc_status
 fill_signal_names(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_image_t *out, uc_error *err) {
     if (out->signals_len == 0u)
@@ -532,7 +529,6 @@ fill_param_names(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_imag
         out->param_names[i] = unit->params[i].name;
     return UC_OK;
 }
-// ?1f6b9c2d:end?
 
 static uc_status
 fill_schedule(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_runtime_image_t *out, uc_error *err) {
@@ -639,7 +635,6 @@ static bool is_mix_matrix_node(const apg_v2_compiled_node_t *node) {
     return node && node->atom && node->atom->name && strcmp(node->atom->name, "mix_matrix") == 0;
 }
 
-// ?e3a9b6c1:start? copies compiled bindings into runtime-image-owned scalar and signal plans.
 static uc_status fill_scalar_refreshes(
     uc_arena                         *arena,
     const apg_v2_compiled_node_t     *node,
@@ -824,7 +819,6 @@ static uc_status fill_signal_bindings(
     *items_len += item_index;
     return UC_OK;
 }
-// ?e3a9b6c1:end?
 
 static uc_status fill_mix_matrix_layout(
     uc_arena *arena, const apg_v2_compiled_node_t *node, apg_v2_runtime_node_layout_t *layout, uc_error *err
