@@ -139,11 +139,11 @@ static void advance_smoothed_params(apg_v2_runtime_t *runtime, uint32_t frames) 
     }
 }
 
-static float compiled_scalar_value(const apg_v2_compiled_binding_t *binding, const apg_v2_runtime_t *runtime) {
-    if (binding->kind == APG_BIND_PARAM)
-        return binding->index < runtime->params_len ? runtime->params[binding->index] : 0.0f;
-    if (binding->kind == APG_BIND_LITERAL)
-        return binding->number;
+static float scalar_refresh_value(const apg_v2_runtime_scalar_refresh_t *item, const apg_v2_runtime_t *runtime) {
+    if (item->kind == APG_BIND_PARAM)
+        return item->param_index < runtime->params_len ? runtime->params[item->param_index] : 0.0f;
+    if (item->kind == APG_BIND_LITERAL)
+        return item->number;
     return 0.0f;
 }
 
@@ -156,18 +156,18 @@ static uc_status apply_signal_bindings(
     for (size_t i = 0; i < layout->signal_bindings_len; i++) {
         const apg_v2_runtime_signal_binding_t *entry   = &layout->signal_bindings[i];
         void                                  *storage = entry->is_input ? node->in_storage : node->out_storage;
-        if (!entry->binding || !entry->binding->key)
-            return set_error(err, UC_E_MISSING, "v2 runtime signal binding metadata is missing");
 
         if (entry->is_signal_array) {
             if (entry->signal_array_len == 0u)
                 return set_error(err, UC_E_RANGE, "v2 runtime signal binding has empty signal array");
+            if (!entry->signal_array_indices)
+                return set_error(err, UC_E_MISSING, "v2 runtime signal array index metadata is missing");
             if (entry->signal_array_offset + entry->signal_array_len > node->signal_array_pool_len)
                 return set_error(err, UC_E_RANGE, "v2 runtime signal array pool is too small");
 
             float **signal_array = &node->signal_array_pool[entry->signal_array_offset];
             for (size_t j = 0; j < entry->signal_array_len; j++) {
-                size_t signal_index = entry->binding->indices[j];
+                size_t signal_index = entry->signal_array_indices[j];
                 if (signal_index >= runtime->signals_len)
                     return set_error(err, UC_E_MISSING, "v2 runtime signal binding references invalid signal index");
                 signal_array[j] = runtime->signals[signal_index];
@@ -197,24 +197,22 @@ static uc_status refresh_scalar_plan(
         return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh context is missing");
 
     for (size_t i = 0; i < items_len; i++) {
-        if (!items[i].binding)
-            return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh metadata is missing");
-        if (items[i].binding->kind != APG_BIND_PARAM && items[i].binding->kind != APG_BIND_LITERAL) {
+        if (items[i].kind != APG_BIND_PARAM && items[i].kind != APG_BIND_LITERAL) {
             char msg[192];
             snprintf(
                 msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing", node_id ? node_id : "",
-                atom_name, items[i].config ? "config" : "input", items[i].binding->key ? items[i].binding->key : ""
+                atom_name, items[i].config ? "config" : "input", items[i].key ? items[i].key : ""
             );
             return set_error(err, UC_E_TYPE, msg);
         }
-        if (items[i].binding->kind == APG_BIND_PARAM) {
-            uint32_t param_index = items[i].binding->index;
+        if (items[i].kind == APG_BIND_PARAM) {
+            uint32_t param_index = items[i].param_index;
             if (param_index >= runtime->params_len) {
                 return set_error(err, UC_E_RANGE, "v2 runtime scalar refresh param index is out of bounds");
             }
         }
         void *addr  = (char *)storage + items[i].storage_offset;
-        float value = compiled_scalar_value(items[i].binding, runtime);
+        float value = scalar_refresh_value(&items[i], runtime);
         if (items[i].field_type == FIELD_INT)
             *(int *)addr = (int)value;
         else if (items[i].field_type == FIELD_FLOAT)

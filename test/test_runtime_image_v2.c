@@ -97,6 +97,10 @@ static int test_runtime_image_layout(void) {
         return fail("stateless node should not have state buffer sample layout");
     if (image.node_layouts[0].config_refreshes_len != 1u || image.node_layouts[1].config_refreshes_len != 0u)
         return fail("unexpected runtime image config refresh layout");
+    if (strcmp(image.node_layouts[0].config_refreshes[0].key, "value") != 0 ||
+        image.node_layouts[0].config_refreshes[0].kind != APG_BIND_PARAM ||
+        image.node_layouts[0].config_refreshes[0].param_index != 0u)
+        return fail("runtime image did not copy scalar refresh metadata");
     if (image.node_layouts[0].signal_bindings_len != 1u || !image.node_layouts[0].signal_bindings ||
         image.node_layouts[1].signal_bindings_len != 3u || !image.node_layouts[1].signal_bindings)
         return fail("unexpected runtime image signal binding layout");
@@ -359,6 +363,11 @@ static int test_runtime_image_signal_array_pool(void) {
         image.node_layouts[0].signal_array_pointer_slots != 4u || image.node_layouts[0].signal_bindings_len != 2u ||
         !image.node_layouts[0].signal_bindings)
         return fail("unexpected signal-array pointer pool layout");
+    if (!image.node_layouts[0].signal_bindings[0].signal_array_indices ||
+        !image.node_layouts[0].signal_bindings[1].signal_array_indices ||
+        image.node_layouts[0].signal_bindings[0].signal_array_indices[0] != 2u ||
+        image.node_layouts[0].signal_bindings[1].signal_array_indices[1] != 1u)
+        return fail("runtime image did not copy signal-array binding indexes");
 
     apg_v2_runtime_t runtime;
     status = apg_v2_runtime_init_from_image(&image, &runtime, &err);

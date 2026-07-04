@@ -31,20 +31,24 @@ typedef struct {
 } apg_v2_runtime_audio_port_t;
 
 typedef struct {
-    const apg_v2_compiled_binding_t *binding;
-    size_t                           storage_offset;
-    size_t                           signal_index;
-    size_t                           signal_array_offset;
-    size_t                           signal_array_len;
-    bool                             is_input;
-    bool                             is_signal_array;
+    const char *key;
+    size_t      storage_offset;
+    size_t      signal_index;
+    size_t     *signal_array_indices;
+    size_t      signal_array_offset;
+    size_t      signal_array_len;
+    bool        is_input;
+    bool        is_signal_array;
 } apg_v2_runtime_signal_binding_t;
 
 typedef struct {
-    const apg_v2_compiled_binding_t *binding;
-    size_t                           storage_offset;
-    atom_field_type_t                field_type;
-    bool                             config;
+    const char           *key;
+    apg_v2_binding_kind_t kind;
+    size_t                param_index;
+    float                 number;
+    size_t                storage_offset;
+    atom_field_type_t     field_type;
+    bool                  config;
 } apg_v2_runtime_scalar_refresh_t;
 
 typedef struct {

@@ -148,6 +148,10 @@ The no-op project solo runtime state was removed; solo remains a future host/UI 
 
 Runtime nodes now execute image-owned atom thunks and labels instead of borrowing compiled node metadata.
 
+## PD17 Progress
+
+Runtime scalar refresh and signal-array binding plans now copy the needed binding values into runtime-image metadata instead of borrowing compiled binding structs.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

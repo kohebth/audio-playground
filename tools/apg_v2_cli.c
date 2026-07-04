@@ -274,13 +274,13 @@ static void write_c_float(FILE *out, float value) {
     fputc('f', out);
 }
 
-static void write_m7_scalar_value(FILE *out, const apg_v2_compiled_binding_t *binding) {
-    if (!binding) {
+static void write_m7_scalar_value(FILE *out, const apg_v2_runtime_scalar_refresh_t *item) {
+    if (!item) {
         fputs("0.0f", out);
-    } else if (binding->kind == APG_BIND_PARAM) {
-        fprintf(out, "apg_m7_param(%zuu)", binding->index);
-    } else if (binding->kind == APG_BIND_LITERAL) {
-        write_c_float(out, binding->number);
+    } else if (item->kind == APG_BIND_PARAM) {
+        fprintf(out, "apg_m7_param(%zuu)", item->param_index);
+    } else if (item->kind == APG_BIND_LITERAL) {
+        write_c_float(out, item->number);
     } else {
         fputs("0.0f", out);
     }
@@ -442,20 +442,20 @@ static bool write_m7_source(
         const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
         for (size_t j = 0; j < layout->config_refreshes_len; j++) {
             const apg_v2_runtime_scalar_refresh_t *item = &layout->config_refreshes[j];
-            const char                            *key  = item->binding ? item->binding->key : NULL;
+            const char                            *key  = item->key;
             if (!key)
                 continue;
             fprintf(out, "    apg_m7_project_atom_storage.node%zu_config.%s = ", i, key);
-            write_m7_scalar_value(out, item->binding);
+            write_m7_scalar_value(out, item);
             fputs(";\n", out);
         }
         for (size_t j = 0; j < layout->input_refreshes_len; j++) {
             const apg_v2_runtime_scalar_refresh_t *item = &layout->input_refreshes[j];
-            const char                            *key  = item->binding ? item->binding->key : NULL;
+            const char                            *key  = item->key;
             if (!key)
                 continue;
             fprintf(out, "    apg_m7_project_atom_storage.node%zu_in.%s = ", i, key);
-            write_m7_scalar_value(out, item->binding);
+            write_m7_scalar_value(out, item);
             fputs(";\n", out);
         }
     }
@@ -479,7 +479,7 @@ static bool write_m7_source(
         for (size_t j = 0; j < layout->signal_bindings_len; j++) {
             const apg_v2_runtime_signal_binding_t *binding = &layout->signal_bindings[j];
             const char                            *side    = binding->is_input ? "in" : "out";
-            const char                            *key     = binding->binding ? binding->binding->key : NULL;
+            const char                            *key     = binding->key;
             if (!key)
                 continue;
             if (binding->is_signal_array) {
@@ -487,7 +487,7 @@ static bool write_m7_source(
                     fprintf(
                         out, "    apg_m7_project_signal_array_pool[%zuu] = apg_m7_signal(%zuu);\n",
                         layout->signal_array_pool_offset + binding->signal_array_offset + k,
-                        binding->binding->indices[k]
+                        binding->signal_array_indices[k]
                     );
                 }
                 fprintf(
