@@ -331,9 +331,16 @@ static uc_status init_state_buffers(
     if (!layout || layout->state_buffers_len == 0u)
         return UC_OK;
 
-    node->state_buffers        = calloc(layout->state_buffers_len, sizeof(*node->state_buffers));
-    node->state_buffer_samples = calloc(layout->state_buffers_len, sizeof(*node->state_buffer_samples));
-    if (!node->state_buffers || !node->state_buffer_samples) {
+    if (!runtime || !runtime->state_buffer_ptrs || !runtime->state_buffer_sample_counts || !runtime->state_buffer_pool)
+        return set_error(err, UC_E_OOM, "v2 runtime state buffer table allocation failed");
+    if (layout->state_buffer_table_offset + layout->state_buffers_len > runtime->state_buffer_count)
+        return set_error(err, UC_E_RANGE, "v2 runtime state buffer table index out of range");
+
+    node->state_buffers        = runtime->state_buffer_ptrs + layout->state_buffer_table_offset;
+    node->state_buffer_samples = runtime->state_buffer_sample_counts + layout->state_buffer_table_offset;
+    node->state_buffers_len    = layout->state_buffers_len;
+
+    if (node->state_buffers_len > 0u && (!node->state_buffers || !node->state_buffer_samples)) {
         char msg[192];
         snprintf(
             msg, sizeof(msg), "node '%s' atom '%s' state buffer allocation failed",
@@ -341,7 +348,6 @@ static uc_status init_state_buffers(
         );
         return set_error(err, UC_E_OOM, msg);
     }
-    node->state_buffers_len = layout->state_buffers_len;
 
     size_t buffer_index = 0;
     for (int i = 0; i < layout->n_state_fields; i++) {
@@ -397,6 +403,15 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         out->state_buffer_pool = calloc(out->state_buffer_samples, sizeof(*out->state_buffer_pool));
         if (!out->state_buffer_pool)
             return set_error(err, UC_E_OOM, "v2 runtime state buffer pool allocation failed");
+    }
+    out->state_buffer_count = image->state_buffers_len;
+    if (out->state_buffer_count > 0u) {
+        out->state_buffer_ptrs = calloc(out->state_buffer_count, sizeof(*out->state_buffer_ptrs));
+        if (!out->state_buffer_ptrs)
+            return set_error(err, UC_E_OOM, "v2 runtime state buffer pointer table allocation failed");
+        out->state_buffer_sample_counts = calloc(out->state_buffer_count, sizeof(*out->state_buffer_sample_counts));
+        if (!out->state_buffer_sample_counts)
+            return set_error(err, UC_E_OOM, "v2 runtime state buffer sample table allocation failed");
     }
     if (image->signal_array_pointer_slots > 0u) {
         out->signal_array_pool_len = image->signal_array_pointer_slots;
@@ -1055,13 +1070,13 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     for (size_t i = 0; i < runtime->nodes_len; i++) {
         free(runtime->nodes[i].config_refreshes_runtime);
         free(runtime->nodes[i].input_refreshes_runtime);
-        free(runtime->nodes[i].state_buffers);
-        free(runtime->nodes[i].state_buffer_samples);
     }
     free(runtime->signal_array_pool);
     free(runtime->nodes);
     free(runtime->atom_storage_pool);
     free(runtime->state_buffer_pool);
+    free(runtime->state_buffer_ptrs);
+    free(runtime->state_buffer_sample_counts);
     free(runtime->bypassed_instances);
     free(runtime->params);
     free(runtime->param_defaults);

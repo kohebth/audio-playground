@@ -51,6 +51,9 @@ struct apg_v2_runtime_t {
     size_t                             atom_storage_bytes;
     float                             *state_buffer_pool;
     size_t                             state_buffer_samples;
+    float                            **state_buffer_ptrs;
+    size_t                            *state_buffer_sample_counts;
+    size_t                             state_buffer_count;
     apg_v2_runtime_node_t             *nodes;
     size_t                             nodes_len;
     const uint32_t                    *schedule;

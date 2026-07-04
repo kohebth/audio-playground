@@ -900,9 +900,10 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_ru
     if (!out->node_layouts)
         return set_error(err, UC_E_OOM, "v2 runtime image node layout allocation failed");
 
-    size_t atom_storage_cursor = 0u;
-    size_t state_buffer_cursor = 0u;
-    size_t signal_array_cursor = 0u;
+    size_t atom_storage_cursor       = 0u;
+    size_t state_buffer_cursor       = 0u;
+    size_t state_buffer_table_offset = 0u;
+    size_t signal_array_cursor       = 0u;
     for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
         const apg_v2_compiled_node_t *node   = &plan->nodes[node_index];
         const atom_registry_entry_t  *atom   = node->atom;
@@ -963,6 +964,8 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_ru
             state_buffer_cursor += atom->state_fields[field_index].buffer_samples;
             layout->state_buffer_samples += atom->state_fields[field_index].buffer_samples;
         }
+        layout->state_buffer_table_offset = state_buffer_table_offset;
+        state_buffer_table_offset += layout->state_buffers_len;
         out->state_buffers_len += layout->state_buffers_len;
         out->state_buffer_samples += layout->state_buffer_samples;
 
