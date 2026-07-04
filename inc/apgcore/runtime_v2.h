@@ -9,15 +9,8 @@
 #include <apgcore/runtime_image_v2.h>
 #include <yaml/error.h>
 
-typedef struct apg_v2_runtime_node_t apg_v2_runtime_node_t;
-
-typedef struct apg_v2_runtime_bypass_entry_t {
-    const char *instance_id;
-    size_t      instance_id_len;
-    size_t      input_index;
-    size_t      output_index;
-    bool        enabled;
-} apg_v2_runtime_bypass_entry_t;
+typedef struct apg_v2_runtime_node_t         apg_v2_runtime_node_t;
+typedef struct apg_v2_runtime_bypass_entry_t apg_v2_runtime_bypass_entry_t;
 
 typedef struct {
     apg_process_info_t                 process_info;

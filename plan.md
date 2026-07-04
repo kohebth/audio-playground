@@ -167,6 +167,7 @@ Module note: M7 generated bundles can now be target-linked when a board linker s
 - [x] PD19: Split runtime-image consumer types from the compiler-backed builder API.
 - [x] PD20: Hide per-node runtime atom-call storage behind an internal header.
 - [x] PD21: Move meter snapshot data type onto the measure API.
+- [x] PD22: Hide runtime bypass transport entries behind the internal runtime header.
 - [x] PB3b: Move signal-binding and mix-matrix structured-config plans into runtime-image descriptors consumed by runtime init.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
@@ -192,6 +193,7 @@ Module note: Runtime image no longer stores the compiled-plan pointer.
 Module note: Runtime-image consumers no longer include compiler headers.
 Module note: Runtime public headers no longer expose per-node atom calls.
 Module note: Meter snapshots now live on the measure API.
+Module note: Runtime public headers no longer expose bypass transport internals.
 Module note: Runtime now consumes precomputed signal-binding and mix-matrix config plans from runtime-image with no runtime-time descriptor resolution.
 Module note: Runtime image now owns bypass and project-mute transport metadata.
 Module note: Runtime image now owns public audio port channel maps.

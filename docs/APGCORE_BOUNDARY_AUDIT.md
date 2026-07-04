@@ -168,6 +168,10 @@ Per-node runtime atom-call storage is now declared in an internal header. Public
 
 Meter snapshot structs now live in `measure_v2.h`, keeping meter read data on the measure API instead of the runtime API.
 
+## PD22 Progress
+
+Runtime bypass transport entries are now internal runtime state. Public runtime headers expose the bypass control API without the transport entry layout.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

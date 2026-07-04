@@ -4,6 +4,14 @@
 #include <apgcore/runtime_v2.h>
 #include <atom_registry.h>
 
+struct apg_v2_runtime_bypass_entry_t {
+    const char *instance_id;
+    size_t      instance_id_len;
+    size_t      input_index;
+    size_t      output_index;
+    bool        enabled;
+};
+
 struct apg_v2_runtime_node_t {
     atom_call_t                            call;
     void                                  *out_storage;
