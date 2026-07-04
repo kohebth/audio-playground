@@ -2,6 +2,8 @@
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/runtime_v2.h>
 
+#include "test_runtime_v2_harness.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -113,7 +115,7 @@ static int test_simple_project_compiles_and_runs(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = apg_v2_runtime_init(&compiled.plan, 8u, 48000.0f, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_image(&compiled.plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -170,7 +172,7 @@ static int test_two_instance_project_compiles_and_runs(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = apg_v2_runtime_init(&compiled.plan, 8u, 48000.0f, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_image(&compiled.plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -269,7 +271,7 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = apg_v2_runtime_init(&compiled.plan, 8u, 48000.0f, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_image(&compiled.plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);

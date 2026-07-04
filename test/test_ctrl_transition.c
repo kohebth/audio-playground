@@ -2,6 +2,8 @@
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
 
+#include "test_runtime_v2_harness.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -76,7 +78,7 @@ static int load_control_runtime(uc_arena *arena, apg_v2_runtime_t *runtime) {
         return fail("failed to compile control transition unit");
     }
 
-    status = apg_v2_runtime_init(&plan, TEST_CHUNK, 48000.0f, runtime, &err);
+    status = test_apg_v2_runtime_init_image(&plan, TEST_CHUNK, 48000.0f, arena, runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         return fail("failed to initialize control transition runtime");

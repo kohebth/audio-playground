@@ -2,6 +2,8 @@
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/runtime_v2.h>
 
+#include "test_runtime_v2_harness.h"
+
 #include <math.h>
 #include <stdio.h>
 
@@ -77,7 +79,7 @@ int main(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err = {0};
-    if (apg_v2_runtime_init(&compiled.plan, CHUNK, 48000.0f, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_image(&compiled.plan, CHUNK, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize pedalboard runtime");
