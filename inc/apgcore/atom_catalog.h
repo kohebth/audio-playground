@@ -1,7 +1,10 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_ATOM_CATALOG_H
 #define AUDIO_PLAYGROUND_APGCORE_ATOM_CATALOG_H
 
+#include <stdbool.h>
 #include <stdio.h>
+
+bool apg_atom_profile_supported(const char *name, const char *profile);
 
 /*
  * Write a UI-facing JSON catalog for the registered atom table.

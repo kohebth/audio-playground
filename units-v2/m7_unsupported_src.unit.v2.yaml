@@ -1,0 +1,42 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: m7_unsupported_src
+version: 2.0.0
+
+meta:
+  title: M7 Unsupported SRC
+  category: test
+  description: Exercises target-profile rejection for compiled SRC atoms.
+
+params: {}
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - output
+
+  nodes:
+    - id: downsample
+      atom: src_downsample
+      in:
+        signal: input
+      out:
+        signal: output
+      config:
+        factor: 2
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

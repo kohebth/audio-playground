@@ -218,7 +218,9 @@ static const char *field_type_name(atom_field_type_t type) {
     return "unknown";
 }
 
-static bool atom_profile_supported(const char *name, const char *profile) {
+bool apg_atom_profile_supported(const char *name, const char *profile) {
+    if (!name || !profile)
+        return false;
     if (strcmp(profile, "desktop_full") == 0 || strcmp(profile, "offline_render") == 0)
         return true;
     if (strncmp(name, "freq_", 5) == 0)
@@ -306,13 +308,13 @@ void apg_atom_catalog_write_json(FILE *out) {
         fputs(",\"stateful\":", out);
         fputs(entry->state_size > 0u ? "true" : "false", out);
         fputs(",\"profiles\":{\"desktop_full\":", out);
-        fputs(atom_profile_supported(entry->name, "desktop_full") ? "true" : "false", out);
+        fputs(apg_atom_profile_supported(entry->name, "desktop_full") ? "true" : "false", out);
         fputs(",\"wasm_realtime\":", out);
-        fputs(atom_profile_supported(entry->name, "wasm_realtime") ? "true" : "false", out);
+        fputs(apg_atom_profile_supported(entry->name, "wasm_realtime") ? "true" : "false", out);
         fputs(",\"m7_static\":", out);
-        fputs(atom_profile_supported(entry->name, "m7_static") ? "true" : "false", out);
+        fputs(apg_atom_profile_supported(entry->name, "m7_static") ? "true" : "false", out);
         fputs(",\"offline_render\":", out);
-        fputs(atom_profile_supported(entry->name, "offline_render") ? "true" : "false", out);
+        fputs(apg_atom_profile_supported(entry->name, "offline_render") ? "true" : "false", out);
         fputc('}', out);
         fputs(",\"inputs\":", out);
         write_catalog_fields(out, contract ? contract->inputs : NULL, contract ? contract->inputs_len : 0u);

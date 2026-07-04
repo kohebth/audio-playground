@@ -92,6 +92,10 @@ M7 static export now accepts explicit board block-frame and sample-rate options.
 
 M7 static export now accepts an explicit board cache-line size. Generated memory sections align through `APG_M7_CACHE_LINE_BYTES`, and export JSON/header output records the selected alignment contract.
 
+## PC17 Progress
+
+M7 static export now checks compiled node atom profile metadata, so target-incompatible atoms are rejected even if a unit declares `m7_static` support.
+
 ## PD1 Progress
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.

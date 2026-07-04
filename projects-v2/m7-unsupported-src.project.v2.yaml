@@ -1,0 +1,24 @@
+kind: apg.project
+schema: apg.project.v2
+name: m7-unsupported-src
+version: 2.0.0
+
+units:
+  - id: src_unit
+    file: ../units-v2/m7_unsupported_src.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: src1
+      unit: src_unit
+
+  routes:
+    - from: system.input
+      to: src1.input
+    - from: src1.output
+      to: system.output
+
+targets:
+  default: desktop_full
+  export:
+    - m7_static

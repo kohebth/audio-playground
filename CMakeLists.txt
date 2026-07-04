@@ -185,6 +185,16 @@ set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported PROPERTIES
         PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*does not support m7_static"
 )
 
+add_test(
+        NAME test_apg_v2_cli_m7_export_rejects_unsupported_atom
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-src.project.v2.yaml /tmp || true"
+)
+set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported_atom PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*atom 'src_downsample' does not support m7_static"
+)
+
 set(APG_M7_CLI_TEST_DIR /tmp/audio-playground-apgcore-m7-export)
 add_test(NAME test_apg_v2_cli_m7_export_prepare COMMAND ${CMAKE_COMMAND} -E make_directory ${APG_M7_CLI_TEST_DIR})
 set_tests_properties(test_apg_v2_cli_m7_export_prepare PROPERTIES LABELS v2)

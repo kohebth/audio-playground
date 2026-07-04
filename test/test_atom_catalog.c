@@ -71,6 +71,12 @@ int main(void) {
         return fail("profile hints are missing");
     if (!strstr(json, "\"m7_static\":false"))
         return fail("restricted profile hint is missing");
+    if (!apg_atom_profile_supported("generation_dc", "m7_static"))
+        return fail("m7-supported atom profile check failed");
+    if (apg_atom_profile_supported("src_downsample", "m7_static"))
+        return fail("m7-restricted atom profile check failed");
+    if (apg_atom_profile_supported(NULL, "m7_static"))
+        return fail("missing atom profile check failed");
 
     free(json);
     return 0;

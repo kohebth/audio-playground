@@ -161,6 +161,17 @@ first_unsupported_unit(const apg_project_v2_resolved_t *project, const char *tar
     return NULL;
 }
 
+// ?d6b3f4a8:start? rejects compiled atoms that target metadata marks unavailable.
+static const char *first_unsupported_atom(const apg_v2_runtime_image_t *image, const char *target) {
+    for (size_t i = 0; image && i < image->nodes_len; i++) {
+        const char *atom_name = image->node_layouts[i].atom_name;
+        if (!apg_atom_profile_supported(atom_name, target))
+            return atom_name;
+    }
+    return NULL;
+}
+// ?d6b3f4a8:end?
+
 static bool join_path(char *out, size_t out_size, const char *dir, const char *name) {
     size_t dir_len = dir ? strlen(dir) : 0u;
     int    written =
@@ -610,6 +621,14 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
     );
     if (status != UC_OK) {
         int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        uc_arena_free(&arena);
+        return rc;
+    }
+    const char *unsupported_atom = first_unsupported_atom(&image, "m7_static");
+    if (unsupported_atom) {
+        uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support m7_static", unsupported_atom);
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        uc_arena_free(&image_arena);
         uc_arena_free(&arena);
         return rc;
     }

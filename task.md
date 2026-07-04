@@ -111,6 +111,7 @@ Pending tests to record for PB:
 - [x] PC14: Add an optional ARM linker-script gate for generated M7 bundles.
 - [x] PC15: Make M7 static export block frames and sample rate board-configurable.
 - [x] PC16: Make M7 static export section alignment board-cache configurable.
+- [x] PC17: Reject M7 static exports when compiled atom metadata is unsupported by the target profile.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -132,6 +133,7 @@ Module note: M7 board/toolchain timing gates are now configurable.
 Module note: M7 generated bundles can now be target-linked when a board linker script is configured.
 Module note: M7 export timing constants now come from explicit board export options.
 Module note: M7 generated sections now align to an explicit board cache-line contract.
+Module note: M7 export now rejects target-incompatible compiled atoms.
 
 ## Runtime Image Hardening Queue
 
@@ -426,7 +428,7 @@ Pending AG tests for Phase AI:
 
 - [ ] Matrix shows supported/unsupported target profiles.
 - [ ] Export panel blocks unavailable targets with reason.
-- [ ] M7 export path rejects unsupported atoms/features.
+- [x] M7 export path rejects unsupported atoms/features.
 
 Module note: Export UI now exposes target readiness and blocked backend gaps.
 
