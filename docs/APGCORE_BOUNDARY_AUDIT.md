@@ -66,6 +66,10 @@ Runtime image node layouts now record scalar config and scalar input refresh pla
 
 Compiler scalar bindings now store parsed numeric literals. Runtime scalar refresh reads the compiled float value instead of parsing binding text.
 
+## PD5 Progress
+
+Runtime image now precomputes parameter smoothing frame counts from unit metadata and sample rate. Runtime control updates reuse those counts without parsing text.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

@@ -75,7 +75,7 @@ static int test_runtime_image_layout(void) {
     if (image.plan != &plan || image.frame_capacity != 16u || image.sample_rate != 44100.0f)
         return fail("unexpected runtime image identity");
     if (image.signals_len != 3u || image.signal_samples != 48u || image.params_len != 1u || !image.param_defaults ||
-        image.param_defaults[0] != 1.0f)
+        image.param_defaults[0] != 1.0f || !image.param_smoothing_frames || image.param_smoothing_frames[0] != 441u)
         return fail("unexpected runtime image signal or param layout");
     if (image.input_meters_len != 1u || image.output_meters_len != 1u || image.nodes_len != 2u ||
         image.schedule_len != 2u || image.state_buffers_len != 0u || image.state_buffer_samples != 0u)
@@ -111,6 +111,8 @@ static int test_runtime_image_layout(void) {
         runtime.input_meters_len != image.input_meters_len || runtime.output_meters_len != image.output_meters_len ||
         runtime.nodes_len != image.nodes_len)
         return fail("runtime did not adopt image layout");
+    if (runtime.param_smoothing_frames != image.param_smoothing_frames)
+        return fail("runtime did not adopt image param smoothing layout");
     if (!runtime.atom_storage_pool || runtime.atom_storage_bytes != image.atom_storage_bytes)
         return fail("runtime did not allocate image atom storage pool");
     const char *pool = (const char *)runtime.atom_storage_pool;

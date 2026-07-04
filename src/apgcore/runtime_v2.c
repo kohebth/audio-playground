@@ -55,20 +55,6 @@ runtime_bypass_entry_matches_instance_id(const apg_v2_runtime_bypass_entry_t *en
     return strncmp(entry->instance_id, instance_id, instance_len) == 0;
 }
 
-static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, const apg_v2_runtime_t *runtime) {
-    if (!param || !param->smoothing_ms || !runtime)
-        return 0u;
-    float smoothing_ms = strtof(param->smoothing_ms, NULL);
-    if (smoothing_ms <= 0.0f)
-        return 0u;
-    double sample_rate = runtime->process_info.sample_rate > 0.0f ? runtime->process_info.sample_rate : 48000.0f;
-    double frames      = ((double)smoothing_ms * sample_rate) / 1000.0;
-    if (frames >= (double)UINT32_MAX)
-        return UINT32_MAX;
-    uint32_t rounded = (uint32_t)(frames + 0.999999);
-    return rounded > 0u ? rounded : 1u;
-}
-
 static uc_status init_signal_buffers(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
     out->signals_len = image->signals_len;
     if (out->signals_len == 0u)
@@ -103,6 +89,7 @@ static uc_status init_params(const apg_v2_runtime_image_t *image, apg_v2_runtime
         out->params[i]         = out->param_defaults[i];
         out->param_targets[i]  = out->params[i];
     }
+    out->param_smoothing_frames = image->param_smoothing_frames;
     return UC_OK;
 }
 
@@ -583,13 +570,15 @@ static void apply_project_mute(apg_v2_runtime_t *runtime, uint32_t frames) {
     }
 }
 
+// ?77a8c2d5:start? updates runtime params using image-precomputed smoothing frames.
 bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value) {
     if (!runtime || !runtime->plan || !runtime->plan->unit || !name)
         return false;
     const apg_unit_v2_t *unit = runtime->plan->unit;
     for (size_t i = 0; i < unit->params_len && i < runtime->params_len; i++) {
         if (unit->params[i].name && strcmp(unit->params[i].name, name) == 0) {
-            uint32_t smoothing_frames = runtime->has_processed ? param_smoothing_frames(&unit->params[i], runtime) : 0u;
+            uint32_t smoothing_frames =
+                runtime->has_processed && runtime->param_smoothing_frames ? runtime->param_smoothing_frames[i] : 0u;
             if (!runtime->param_targets || !runtime->param_smoothing_remaining_frames || smoothing_frames == 0u) {
                 runtime->params[i] = value;
                 if (runtime->param_targets)
@@ -605,6 +594,7 @@ bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float
     }
     return false;
 }
+// ?77a8c2d5:end?
 
 bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value) {
     if (!runtime || !port_name)

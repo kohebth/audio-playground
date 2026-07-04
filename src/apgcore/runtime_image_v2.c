@@ -331,6 +331,7 @@ static uc_status fill_audio_port_map(
     return UC_OK;
 }
 
+// ?9c4e11a0:start? precomputes param defaults and smoothing frames for runtime image.
 static float parse_param_default(const apg_unit_v2_param_t *param) {
     if (!param || !param->default_value)
         return 0.0f;
@@ -338,6 +339,20 @@ static float parse_param_default(const apg_unit_v2_param_t *param) {
         return strcmp(param->default_value, "true") == 0 ? 1.0f : 0.0f;
     return strtof(param->default_value, NULL);
 }
+
+static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, float sample_rate) {
+    if (!param || !param->smoothing_ms)
+        return 0u;
+    float smoothing_ms = strtof(param->smoothing_ms, NULL);
+    if (smoothing_ms <= 0.0f)
+        return 0u;
+    double frames = ((double)smoothing_ms * (double)sample_rate) / 1000.0;
+    if (frames >= (double)UINT32_MAX)
+        return UINT32_MAX;
+    uint32_t rounded = (uint32_t)(frames + 0.999999);
+    return rounded > 0u ? rounded : 1u;
+}
+// ?9c4e11a0:end?
 
 static uc_status fill_bypass_metadata(uc_arena *arena, apg_v2_runtime_image_t *out, uc_error *err) {
     if (!arena || !out || !out->plan || !out->plan->unit || !out->plan->nodes)
@@ -995,11 +1010,16 @@ uc_status apg_v2_runtime_image_build(
 
     if (out->params_len == 0u)
         return UC_OK;
-    out->param_defaults = uc_arena_alloc(arena, out->params_len * sizeof(*out->param_defaults), sizeof(float));
-    if (!out->param_defaults)
-        return set_error(err, UC_E_OOM, "v2 runtime image param defaults allocation failed");
-    for (size_t i = 0; i < out->params_len; i++)
-        out->param_defaults[i] = parse_param_default(&plan->unit->params[i]);
+    out->param_defaults         = uc_arena_alloc(arena, out->params_len * sizeof(*out->param_defaults), sizeof(float));
+    out->param_smoothing_frames = uc_arena_alloc(
+        arena, out->params_len * sizeof(*out->param_smoothing_frames), sizeof(*out->param_smoothing_frames)
+    );
+    if (!out->param_defaults || !out->param_smoothing_frames)
+        return set_error(err, UC_E_OOM, "v2 runtime image param metadata allocation failed");
+    for (size_t i = 0; i < out->params_len; i++) {
+        out->param_defaults[i]         = parse_param_default(&plan->unit->params[i]);
+        out->param_smoothing_frames[i] = param_smoothing_frames(&plan->unit->params[i], out->sample_rate);
+    }
     return UC_OK;
 }
 

@@ -57,6 +57,7 @@ typedef struct {
     float                             *params;
     float                             *param_defaults;
     float                             *param_targets;
+    const uint32_t                    *param_smoothing_frames;
     uint32_t                          *param_smoothing_remaining_frames;
     size_t                             params_len;
     bool                               has_processed;

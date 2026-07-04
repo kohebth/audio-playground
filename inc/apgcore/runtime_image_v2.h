@@ -84,6 +84,7 @@ typedef struct {
     size_t                               signal_samples;
     size_t                               params_len;
     float                               *param_defaults;
+    uint32_t                            *param_smoothing_frames;
     size_t                               input_meters_len;
     size_t                               output_meters_len;
     apg_v2_runtime_control_target_t     *control_targets;
