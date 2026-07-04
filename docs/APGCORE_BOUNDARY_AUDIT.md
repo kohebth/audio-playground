@@ -164,6 +164,10 @@ Runtime-image consumer types now live separately from the compiler-backed builde
 
 Per-node runtime atom-call storage is now declared in an internal header. Public runtime headers expose only an opaque node pointer, not atom registry call storage.
 
+## PD21 Progress
+
+Meter snapshot structs now live in `measure_v2.h`, keeping meter read data on the measure API instead of the runtime API.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

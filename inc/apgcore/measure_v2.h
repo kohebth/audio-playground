@@ -19,6 +19,13 @@ typedef struct {
     bool     project_muted;
 } apg_v2_measure_runtime_snapshot_t;
 
+typedef struct {
+    float    peak;
+    float    rms;
+    uint32_t frames;
+    bool     valid;
+} apg_v2_meter_snapshot_t;
+
 bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_measure_runtime_snapshot_t *out);
 bool apg_v2_measure_get_input_meter(
     const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out

@@ -20,13 +20,6 @@ typedef struct apg_v2_runtime_bypass_entry_t {
 } apg_v2_runtime_bypass_entry_t;
 
 typedef struct {
-    float    peak;
-    float    rms;
-    uint32_t frames;
-    bool     valid;
-} apg_v2_meter_snapshot_t;
-
-typedef struct {
     apg_process_info_t                 process_info;
     uint32_t                           frame_capacity;
     const char                       **signal_names;
