@@ -7,13 +7,13 @@
 #include <apgcore/project_v2.h>
 #include <apgcore/runtime_image_builder_v2.h>
 #include <apgcore/runtime_v2.h>
-#include <apgcore/runtime_v2_internal.h>
 #include <apgcore/unit_v2.h>
 
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void write_json_string(FILE *out, const char *text) {
@@ -449,7 +449,7 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
 
     apg_project_v2_resolved_t project;
     apg_project_v2_compiled_t compiled;
-    apg_v2_runtime_t          runtime       = {0};
+    apg_v2_runtime_t         *runtime       = NULL;
     bool                      runtime_ready = false;
     uc_error                  err           = {0};
     uc_status                 status        = apg_project_v2_load_resolved_file(path, &arena, &project, &err);
@@ -460,7 +460,7 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
             &compiled.plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, &image_arena, &image, &err
         );
         if (status == UC_OK)
-            status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+            status = apg_v2_runtime_create_from_image(&image, &runtime, &err);
         runtime_ready = status == UC_OK;
     }
 
@@ -468,8 +468,8 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     float output[APG_RENDER_FRAMES] = {0};
     if (status == UC_OK) {
         fill_deterministic_render_input(input, APG_RENDER_FRAMES);
-        if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, APG_RENDER_FRAMES)) {
-            const char *msg = apg_v2_measure_last_error(&runtime);
+        if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, APG_RENDER_FRAMES)) {
+            const char *msg = apg_v2_measure_last_error(runtime);
             uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "%s", msg ? msg : "project render failed");
             status = UC_E_TYPE;
         }
@@ -480,8 +480,10 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     else
         write_validation_error(out, "apg.project.render.v1", path, "$.project", &err);
 
-    if (runtime_ready)
-        apg_v2_runtime_destroy(&runtime);
+    if (runtime_ready && runtime) {
+        apg_v2_runtime_destroy(runtime);
+        free(runtime);
+    }
     uc_arena_free(&image_arena);
     uc_arena_free(&arena);
 }
