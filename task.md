@@ -397,9 +397,9 @@ Module note: Export UI now exposes target readiness and blocked backend gaps.
 
 Pending AH tests for Phase AI:
 
-- [ ] Benchmark JSON has stable structural fields.
+- [x] Benchmark JSON has stable structural fields.
 - [x] M7 export emits deterministic static bundle.
-- [ ] Unsupported target features produce stable diagnostics.
+- [x] Unsupported target features produce stable diagnostics.
 
 Module note: Backend CLI now exposes MVP export surfaces.
 

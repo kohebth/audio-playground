@@ -13,10 +13,9 @@
 
 ## Boundary Leaks To Close
 
-- Runtime no longer stores meter snapshots or updates meter buffers. Metering is computed on demand in `measure_v2` from latest runtime signal buffers.
 - `apg_v2_runtime_init(...)` remains a compatibility wrapper that builds a temporary runtime image. Production host/export paths should prefer `apg_v2_runtime_image_build(...)` plus `apg_v2_runtime_init_from_image(...)`.
-- Runtime node initialization consumes precomputed signal/config binding plans from runtime-image. Project mute/solo and instance bypass remain runtime transport controls for now.
-- Host/control design for mute/solo/bypass can move further toward precompiled control targets if a strict non-allocating runtime control interface is required.
+- Project mute/solo and instance bypass remain runtime transport controls. `solo` is host/UI-visible state only until a real routing contract exists.
+- Full static M7 call binding is not generated yet; the bundle exposes schedule, node, memory, and atom process-symbol metadata only.
 
 ## PB2 Progress
 
@@ -116,4 +115,4 @@ M7 static export now emits section names and section-placed RAM buffers for sign
 
 ## Immediate Direction
 
-New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`, not runtime compatibility getters. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only.
+New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 export should next turn process-symbol metadata into a real static call table.
