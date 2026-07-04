@@ -15,7 +15,7 @@
 
 - `apg_v2_runtime_init(...)` remains a compatibility wrapper that builds a temporary runtime image. Production host/export paths should prefer `apg_v2_runtime_image_build(...)` plus `apg_v2_runtime_init_from_image(...)`.
 - Project mute/solo and instance bypass remain runtime transport controls. `solo` is host/UI-visible state only until a real routing contract exists.
-- Full static M7 call binding is not generated yet; the bundle exposes schedule, node, memory, and atom process-symbol metadata only.
+- Full static M7 `atom_call_t` storage binding is not generated yet; the bundle exposes schedule, node, memory, process-symbol metadata, and atom thunk tables.
 
 ## PB2 Progress
 
@@ -119,4 +119,4 @@ M7 static export now emits section names and section-placed RAM buffers for sign
 
 ## Immediate Direction
 
-New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 export should next turn process-symbol metadata into a real static call table.
+New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 export should next generate static `atom_call_t` records that bind the thunk table to preplanned storage.
