@@ -465,6 +465,15 @@ Module note: `wasm_realtime` CLI export now emits scaffold `.json`/`.mjs` artifa
 - [x] AJ3: Confirm no unrelated local files are staged.
 - [x] AJ4: Commit final docs slice.
 
+### Phase AK: STM32H7 Production Readiness
+
+- [x] AK1: Add `m7_static` compatibility to pedalboard units (`noise_gate`, `overdrive`, `tone_stack`, `tremolo`, `delay`, `wet_dry_mix`).
+- [x] AK2: Add `m7_static` export target to `projects-v2/guitar-pedalboard.project.v2.yaml`.
+- [x] AK3: Verify M7 export succeeds for `guitar-pedalboard` and refresh frozen inspect JSON.
+- [x] AK4: Track remaining hardware-integration gaps (audio callback, cache coherency, RAM/CPU budgeting) in `problem.md`.
+
+Module note: The guitar pedalboard now reaches full M7 export compatibility through unit and project declarative compatibility flags.
+
 ## Completed Work Queue
 
 ### Batch A: Compiler Contracts

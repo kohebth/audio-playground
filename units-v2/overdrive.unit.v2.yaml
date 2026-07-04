@@ -122,4 +122,5 @@ graph:
 compatibility:
   desktop_full: true
   wasm_realtime: true
+  m7_static: true
   offline_render: true

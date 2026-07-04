@@ -88,3 +88,4 @@ targets:
   export:
     - wasm_realtime
     - offline_render
+    - m7_static

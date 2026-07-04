@@ -513,6 +513,15 @@ Module note: `wasm_realtime` CLI export now emits deterministic scaffold artifac
 - [x] AJ3: Confirm no unrelated local files are staged.
 - [x] AJ4: Commit final docs slice.
 
+### Phase AK: STM32H7 Production Readiness
+
+- [x] AK1: Declare `m7_static` compatibility for the guitar-pedalboard unit set.
+- [x] AK2: Include `m7_static` in guitar-pedalboard project export targets.
+- [x] AK3: Verify `apg-v2 export --target m7_static projects-v2/guitar-pedalboard.project.v2.yaml` succeeds and keep golden inspect snapshots in sync.
+- [x] AK4: Defer hardware integration to a separate board-integration gate plan and update `problem.md` with remaining blockers.
+
+Module note: Guitar-pedalboard compatibility is now explicit in unit/project metadata, and the bounded M7 export path confirms compile-time feasibility.
+
 ## Execution Order
 
 1. Stabilize unit UI metadata before exporting frontend-facing unit data.

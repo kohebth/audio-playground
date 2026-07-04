@@ -69,7 +69,8 @@ This file tracks known issues that should not block the current phase but need e
 
 ## STM32H7 Production Readiness
 
-- **Status:** Open
-- **Context:** The MVP has an ARM/M7-aware core and a bounded `m7_static` export path for compatible/simple projects. It does not prove that the full guitar-pedalboard project runs on STM32H7 hardware.
-- **Follow-up:** Add an STM32H7 production phase with M7-compatible product units, ARM cross-compilation of generated bundles, fixed memory placement, SAI/I2S + DMA audio callback integration, cache coherency rules, and measured CPU/RAM budgets.
-- **Related Plan Item:** Production hardening after MVP phases AC-AJ.
+- **Status:** Partially Resolved
+- **Context:** `noise_gate`, `overdrive`, `tone_stack`, `tremolo`, `delay`, and `wet_dry_mix` now declare `m7_static: true`, and `projects-v2/guitar-pedalboard.project.v2.yaml` now includes `m7_static` in `targets.export`. The project now exports as M7-compatible at toolchain level.
+- **Status update:** `apg-v2 export --target m7_static projects-v2/guitar-pedalboard.project.v2.yaml` now succeeds after enabling these compat flags, and fixture output (`test/golden/v2-inspect-project-guitar-pedalboard.json`) is updated accordingly.
+- **Remaining Work:** STM32H7 hardware production is still blocked on real board-side integration (SAI/I2S + DMA callback ownership, cache invalidation/clean, board memory-map placement, fixed block adaptation, and measured CPU/RAM budgeting).
+- **Related Plan Item:** New production pass to add concrete STM32H7 integration hardware readiness gates (targeted in `plan.md`/`task.md`).
