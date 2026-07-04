@@ -134,6 +134,7 @@ Module note: M7 export now reports static atom-call workload metadata.
 - [x] PD4: Parse scalar literal bindings in the compiler so runtime refresh does not parse text.
 - [x] PD5: Precompute parameter smoothing frames in the runtime image.
 - [x] PD6: Apply control-port updates through precomputed parameter indexes.
+- [x] PD7: Process default mono buffers through precomputed audio-port maps.
 - [x] PB3b: Move signal-binding and mix-matrix structured-config plans into runtime-image descriptors consumed by runtime init.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
@@ -144,6 +145,7 @@ Module note: Runtime processing now refreshes scalar fields from image plans.
 Module note: Compiler now parses scalar literal bindings before runtime.
 Module note: Runtime image now owns parameter smoothing frame counts.
 Module note: Control-port updates now reuse runtime-image parameter indexes.
+Module note: Default mono processing now uses image audio-port maps directly.
 Module note: Runtime now consumes precomputed signal-binding and mix-matrix config plans from runtime-image with no runtime-time descriptor resolution.
 Module note: Runtime image now owns bypass and project-mute transport metadata.
 Module note: Runtime image now owns public audio port channel maps.

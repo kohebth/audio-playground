@@ -816,13 +816,14 @@ bool apg_v2_runtime_process_interleaved_ports(
     return true;
 }
 
-bool apg_v2_runtime_process_mono_ports(
-    apg_v2_runtime_t *runtime,
-    const char       *input_port_name,
-    const float      *input,
-    const char       *output_port_name,
-    float            *output,
-    uint32_t          frames
+// ?4f2c9a1e:start? processes mono buffers through precomputed runtime audio-port maps.
+static bool apg_v2_runtime_process_mono_audio_ports(
+    apg_v2_runtime_t                  *runtime,
+    const apg_v2_runtime_audio_port_t *input_port,
+    const float                       *input,
+    const apg_v2_runtime_audio_port_t *output_port,
+    float                             *output,
+    uint32_t                           frames
 ) {
     if (!runtime)
         return false;
@@ -836,10 +837,6 @@ bool apg_v2_runtime_process_mono_ports(
         return false;
     }
 
-    const apg_v2_runtime_audio_port_t *input_port =
-        runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, input_port_name);
-    const apg_v2_runtime_audio_port_t *output_port =
-        runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, output_port_name);
     if (!input_port || input_port->channel_count == 0u || input_port->signal_indices[0] >= runtime->signals_len) {
         runtime_set_error(runtime, "v2 runtime input audio port signal lookup failed");
         return false;
@@ -862,15 +859,35 @@ bool apg_v2_runtime_process_mono_ports(
     return true;
 }
 
+bool apg_v2_runtime_process_mono_ports(
+    apg_v2_runtime_t *runtime,
+    const char       *input_port_name,
+    const float      *input,
+    const char       *output_port_name,
+    float            *output,
+    uint32_t          frames
+) {
+    const apg_v2_runtime_audio_port_t *input_port =
+        runtime
+            ? runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, input_port_name)
+            : NULL;
+    const apg_v2_runtime_audio_port_t *output_port =
+        runtime
+            ? runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, output_port_name)
+            : NULL;
+    return apg_v2_runtime_process_mono_audio_ports(runtime, input_port, input, output_port, output, frames);
+}
+
 bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
     if (!runtime)
-        return apg_v2_runtime_process_mono_ports(runtime, NULL, input, NULL, output, frames);
+        return false;
 
-    return apg_v2_runtime_process_mono_ports(
-        runtime, runtime->input_audio_ports_len > 0u ? runtime->input_audio_ports[0].port_name : NULL, input,
-        runtime->output_audio_ports_len > 0u ? runtime->output_audio_ports[0].port_name : NULL, output, frames
+    return apg_v2_runtime_process_mono_audio_ports(
+        runtime, runtime->input_audio_ports_len > 0u ? &runtime->input_audio_ports[0] : NULL, input,
+        runtime->output_audio_ports_len > 0u ? &runtime->output_audio_ports[0] : NULL, output, frames
     );
 }
+// ?4f2c9a1e:end?
 
 void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
     if (!runtime)

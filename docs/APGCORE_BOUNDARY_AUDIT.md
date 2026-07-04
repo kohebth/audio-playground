@@ -74,6 +74,10 @@ Runtime image now precomputes parameter smoothing frame counts from unit metadat
 
 Control-port updates now apply through runtime-image parameter indexes instead of doing a second parameter-name lookup.
 
+## PD7 Progress
+
+Default mono processing now uses the first image-owned audio-port map entries directly instead of converting those entries back through port-name lookup.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.
