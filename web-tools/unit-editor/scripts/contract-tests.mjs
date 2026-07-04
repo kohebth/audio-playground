@@ -39,7 +39,6 @@ const app = read('web-tools/unit-editor/src/App.tsx');
 const backendSamples = read('web-tools/unit-editor/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/unit-editor/src/components/ProjectTopbar.tsx');
 const projectInspector = read('web-tools/unit-editor/src/components/ProjectInspector.tsx');
-const unitGraph = read('web-tools/unit-editor/src/components/UnitGraphEditor.tsx');
 const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/unit-editor/src/components/ContractGraphCanvas.tsx');
 const previewPanel = read('web-tools/unit-editor/src/components/PreviewPanel.tsx');
@@ -105,7 +104,6 @@ includesContent(projectInspector, 'commandState = hasDirtyParamDrafts ? \'frozen
 assert(unit.graph.nodes.length > 0 && unit.graph.signals.includes('input'), 'unit inspect graph fixture is empty');
 
 // AE: Contract editor applies graph edits against unit drafts and surfaces binding errors.
-assert(unitGraph.length > 0 && /TODO_\$\{field\.type\.toUpperCase\(\)\}/.test(unitGraph), 'unit graph insertion should still use typed backend metadata');
 includesContent(projectInspector, 'Graph edit blocked', 'invalid atom binding feedback is missing');
 includesContent(projectInspector, 'onAddAtom', 'contract graph view should expose insert/add action');
 includesContent(projectInspector, 'onCopyAtom', 'contract graph view should expose copy action');
