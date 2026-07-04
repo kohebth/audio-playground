@@ -260,6 +260,7 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     fputs("extern atom_call_t apg_m7_project_atom_calls[APG_M7_PROJECT_NODE_COUNT];\n", out);
     fputs("void apg_m7_project_init(void);\n", out);
     fputs("void apg_m7_project_refresh_params(void);\n", out);
+    fputs("void apg_m7_project_process_block(void);\n", out);
     fputs("\n#endif\n", out);
     return fclose(out) == 0;
 }
@@ -528,7 +529,13 @@ static bool write_m7_source(
             );
         }
     }
-    fputs("    apg_m7_project_refresh_params();\n}\n// ?c4a91b20:end?\n", out);
+    fputs("    apg_m7_project_refresh_params();\n}\n// ?c4a91b20:end?\n\n", out);
+    fputs("// ?b7e2a4c1:start? executes the generated M7 schedule over prebound atom calls.\n", out);
+    fputs("void apg_m7_project_process_block(void) {\n", out);
+    fputs("    for (size_t i = 0u; i < APG_M7_PROJECT_SCHEDULE_COUNT; i++) {\n", out);
+    fputs("        uint32_t node = apg_m7_project_schedule[i];\n", out);
+    fputs("        apg_m7_project_atom_thunks[node](&apg_m7_project_atom_calls[node]);\n", out);
+    fputs("    }\n}\n// ?b7e2a4c1:end?\n", out);
     return fclose(out) == 0;
 }
 
