@@ -480,6 +480,26 @@ fail:
     return status;
 }
 
+uc_status apg_v2_runtime_create_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t **out, uc_error *err) {
+    if (!out || !err)
+        return UC_E_TYPE;
+    *out = NULL;
+    if (!image)
+        return set_error(err, UC_E_MISSING, "v2 runtime image is missing");
+
+    apg_v2_runtime_t *runtime = calloc(1, sizeof(*runtime));
+    if (!runtime)
+        return set_error(err, UC_E_OOM, "v2 runtime allocation failed");
+
+    uc_status status = apg_v2_runtime_init_from_image(image, runtime, err);
+    if (status != UC_OK) {
+        free(runtime);
+        return status;
+    }
+    *out = runtime;
+    return UC_OK;
+}
+
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
     if (!runtime || !name)
         return NULL;

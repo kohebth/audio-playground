@@ -15,6 +15,8 @@ typedef struct apg_v2_runtime_t apg_v2_runtime_t;
  * The image metadata and borrowed source strings must outlive the runtime.
  */
 uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err);
+/* Allocate and initialize a runtime from a prebuilt runtime image descriptor. */
+uc_status apg_v2_runtime_create_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t **out, uc_error *err);
 
 /* Return the mutable internal signal buffer for a graph signal name, or NULL if missing. */
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name);

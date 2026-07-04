@@ -1,7 +1,6 @@
 #include <apgcore/host_v2.h>
 #include <apgcore/measure_v2.h>
 #include <apgcore/runtime_image_builder_v2.h>
-#include <apgcore/runtime_v2_internal.h>
 
 #include <limits.h>
 #include <stddef.h>
@@ -32,15 +31,10 @@ static uc_status build_runtime_from_plan(
     if (status != UC_OK)
         return status;
 
-    apg_v2_runtime_t *created = calloc(1, sizeof(*created));
-    if (!created)
-        return set_error(err, UC_E_OOM, "v2 runtime allocation failed");
-    status = apg_v2_runtime_init_from_image(image, created, err);
+    status = apg_v2_runtime_create_from_image(image, runtime, err);
     if (status != UC_OK) {
-        free(created);
         return status;
     }
-    *runtime = created;
     return UC_OK;
 }
 
