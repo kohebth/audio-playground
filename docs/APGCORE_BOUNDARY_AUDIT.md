@@ -84,6 +84,10 @@ CMake now exposes opt-in production gates for ARM/M7 generated-runner stack usag
 
 CMake now exposes an opt-in ARM/M7 link gate through `APG_M7_LINKER_SCRIPT` so generated bundles can be linked with a target memory map when a board script exists.
 
+## PC15 Progress
+
+M7 static export now accepts explicit board block-frame and sample-rate options. Generated timing macros, runtime image sizing, and export JSON reflect the selected board contract.
+
 ## PD1 Progress
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.

@@ -22,7 +22,8 @@ static int usage(const char *argv0) {
         "  %s render project <path>\n"
         "  %s benchmark project <path>\n"
         "  %s export --target <wasm_realtime|m7_static> <project> <outdir>\n"
-        "  %s export --target m7_static --max-static-ram <bytes> <project> <outdir>\n",
+        "  %s export --target m7_static [--max-static-ram <bytes>] [--block-frames <frames>] [--sample-rate <hz>] "
+        "<project> <outdir>\n",
         argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0
     );
     return 2;
@@ -168,9 +169,16 @@ static bool join_path(char *out, size_t out_size, const char *dir, const char *n
 }
 
 enum {
-    APG_M7_BLOCK_FRAMES = 64u,
-    APG_M7_SAMPLE_RATE  = 48000u,
+    APG_M7_DEFAULT_BLOCK_FRAMES = 64u,
+    APG_M7_DEFAULT_SAMPLE_RATE  = 48000u,
 };
+
+typedef struct {
+    uint32_t block_frames;
+    uint32_t sample_rate;
+    size_t   static_ram_budget;
+    bool     has_static_ram_budget;
+} m7_export_options_t;
 
 typedef struct {
     size_t signal_buffer_bytes;
@@ -192,6 +200,14 @@ static bool parse_size_arg(const char *text, size_t *out) {
     if (!end || *end != '\0' || value > (unsigned long long)SIZE_MAX)
         return false;
     *out = (size_t)value;
+    return true;
+}
+
+static bool parse_uint32_arg(const char *text, uint32_t *out) {
+    size_t value = 0u;
+    if (!parse_size_arg(text, &value) || value == 0u || value > UINT32_MAX)
+        return false;
+    *out = (uint32_t)value;
     return true;
 }
 
@@ -224,12 +240,12 @@ static bool write_m7_header(const char *path, const apg_v2_runtime_image_t *imag
     fprintf(out, "#define APG_M7_PROJECT_NODE_COUNT %zuu\n", image->nodes_len);
     fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_COUNT %zuu\n", image->schedule_len);
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_COUNT %zuu\n\n", memory->signal_array_pointer_count);
-    fprintf(out, "#define APG_M7_PROJECT_BLOCK_FRAMES %uu\n", APG_M7_BLOCK_FRAMES);
-    fprintf(out, "#define APG_M7_PROJECT_SAMPLE_RATE %uu\n", APG_M7_SAMPLE_RATE);
+    fprintf(out, "#define APG_M7_PROJECT_BLOCK_FRAMES %uu\n", image->frame_capacity);
+    fprintf(out, "#define APG_M7_PROJECT_SAMPLE_RATE %uu\n", (unsigned)image->sample_rate);
     fprintf(out, "#define APG_M7_PROJECT_ATOM_CALLS_PER_BLOCK %zuu\n", image->schedule_len);
     fprintf(
         out, "#define APG_M7_PROJECT_ATOM_CALLS_PER_SECOND %zuu\n",
-        image->schedule_len * APG_M7_SAMPLE_RATE / APG_M7_BLOCK_FRAMES
+        image->frame_capacity ? image->schedule_len * (size_t)image->sample_rate / image->frame_capacity : 0u
     );
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_BUFFER_BYTES %zuu\n", memory->signal_buffer_bytes);
     fprintf(out, "#define APG_M7_PROJECT_PARAM_BYTES %zuu\n", memory->param_bytes);
@@ -310,8 +326,8 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     fputs("};\n\n", out);
     fputs("const apg_process_info_t apg_m7_project_process_info = {", out);
     fprintf(
-        out, ".sample_rate = %.1ff, .frames = %uu, .output_frames = %uu, .channels = 1u", (double)APG_M7_SAMPLE_RATE,
-        APG_M7_BLOCK_FRAMES, APG_M7_BLOCK_FRAMES
+        out, ".sample_rate = %.1ff, .frames = %uu, .output_frames = %uu, .channels = 1u", (double)image->sample_rate,
+        image->frame_capacity, image->frame_capacity
     );
     fputs("};\n\n", out);
     for (size_t i = 0; i < image->nodes_len; i++) {
@@ -546,8 +562,7 @@ static int export_wasm_skeleton(const char *project_path, const char *out_dir) {
     return 1;
 }
 
-static int
-export_m7_static(const char *project_path, const char *out_dir, bool has_static_ram_budget, size_t static_ram_budget) {
+static int export_m7_static(const char *project_path, const char *out_dir, const m7_export_options_t *options) {
     uc_arena arena;
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
@@ -575,7 +590,7 @@ export_m7_static(const char *project_path, const char *out_dir, bool has_static_
     uc_arena               image_arena = {0};
     apg_v2_runtime_image_t image       = {0};
     status                             = apg_v2_runtime_image_build_with_growth(
-        &compiled.plan, APG_M7_BLOCK_FRAMES, (float)APG_M7_SAMPLE_RATE, &image_arena, &image, &err
+        &compiled.plan, options->block_frames, (float)options->sample_rate, &image_arena, &image, &err
     );
     if (status != UC_OK) {
         int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
@@ -583,10 +598,10 @@ export_m7_static(const char *project_path, const char *out_dir, bool has_static_
         return rc;
     }
     m7_memory_manifest_t memory = m7_memory_manifest(&image);
-    if (has_static_ram_budget && memory.static_ram_bytes > static_ram_budget) {
+    if (options->has_static_ram_budget && memory.static_ram_bytes > options->static_ram_budget) {
         uc_error_set(
             &err, UC_E_RANGE, (uc_loc){0, 0}, "m7_static static RAM budget exceeded: %zu > %zu bytes",
-            memory.static_ram_bytes, static_ram_budget
+            memory.static_ram_bytes, options->static_ram_budget
         );
         int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
         uc_arena_free(&image_arena);
@@ -625,10 +640,10 @@ export_m7_static(const char *project_path, const char *out_dir, bool has_static_
         "\"atom_storage_bytes\":%zu,\"state_buffer_bytes\":%zu,"
         "\"static_ram_bytes\":%zu},\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,"
         "\"atom_calls_per_block\":%zu,\"atom_calls_per_second\":%zu}}\n",
-        image.nodes_len, image.schedule_len, APG_M7_BLOCK_FRAMES, memory.signal_buffer_bytes, memory.param_bytes,
+        image.nodes_len, image.schedule_len, options->block_frames, memory.signal_buffer_bytes, memory.param_bytes,
         memory.schedule_bytes, memory.atom_call_bytes, memory.signal_array_pointer_bytes, memory.atom_storage_bytes,
-        memory.state_buffer_bytes, memory.static_ram_bytes, APG_M7_SAMPLE_RATE, APG_M7_BLOCK_FRAMES, image.schedule_len,
-        image.schedule_len * APG_M7_SAMPLE_RATE / APG_M7_BLOCK_FRAMES
+        memory.state_buffer_bytes, memory.static_ram_bytes, options->sample_rate, options->block_frames,
+        image.schedule_len, image.schedule_len * options->sample_rate / options->block_frames
     );
     uc_arena_free(&image_arena);
     uc_arena_free(&arena);
@@ -692,7 +707,7 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "export") == 0) {
-        if ((argc != 6 && argc != 8) || strcmp(argv[2], "--target") != 0)
+        if (argc < 6 || strcmp(argv[2], "--target") != 0)
             return usage(argv[0]);
         if (strcmp(argv[3], "wasm_realtime") == 0) {
             if (argc != 6)
@@ -700,14 +715,30 @@ int main(int argc, char **argv) {
             return export_wasm_skeleton(argv[4], argv[5]);
         }
         if (strcmp(argv[3], "m7_static") == 0) {
-            if (argc == 6)
-                return export_m7_static(argv[4], argv[5], false, 0u);
-            if (strcmp(argv[4], "--max-static-ram") != 0)
+            m7_export_options_t options = {
+                .block_frames = APG_M7_DEFAULT_BLOCK_FRAMES,
+                .sample_rate  = APG_M7_DEFAULT_SAMPLE_RATE,
+            };
+            int index = 4;
+            while (index + 2 < argc && strncmp(argv[index], "--", 2) == 0) {
+                if (strcmp(argv[index], "--max-static-ram") == 0) {
+                    if (!parse_size_arg(argv[index + 1], &options.static_ram_budget))
+                        return usage(argv[0]);
+                    options.has_static_ram_budget = true;
+                } else if (strcmp(argv[index], "--block-frames") == 0) {
+                    if (!parse_uint32_arg(argv[index + 1], &options.block_frames))
+                        return usage(argv[0]);
+                } else if (strcmp(argv[index], "--sample-rate") == 0) {
+                    if (!parse_uint32_arg(argv[index + 1], &options.sample_rate))
+                        return usage(argv[0]);
+                } else {
+                    return usage(argv[0]);
+                }
+                index += 2;
+            }
+            if (argc - index != 2)
                 return usage(argv[0]);
-            size_t max_static_ram = 0u;
-            if (!parse_size_arg(argv[5], &max_static_ram))
-                return usage(argv[0]);
-            return export_m7_static(argv[6], argv[7], true, max_static_ram);
+            return export_m7_static(argv[index], argv[index + 1], &options);
         }
         uc_error err = {0};
         uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "unsupported export target");

@@ -291,6 +291,26 @@ set_tests_properties(test_apg_v2_cli_m7_export_static_ram_budget PROPERTIES
         PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*\"APG_RANGE_ERROR\".*static RAM budget exceeded"
 )
 
+set(APG_M7_CLI_CUSTOM_TEST_DIR /tmp/audio-playground-apgcore-m7-export-custom)
+add_test(NAME test_apg_v2_cli_m7_export_custom_prepare COMMAND ${CMAKE_COMMAND} -E make_directory ${APG_M7_CLI_CUSTOM_TEST_DIR})
+set_tests_properties(test_apg_v2_cli_m7_export_custom_prepare PROPERTIES LABELS v2)
+add_test(
+        NAME test_apg_v2_cli_m7_export_custom_timing
+        COMMAND apg-v2 export --target m7_static --block-frames 128 --sample-rate 96000 projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_CUSTOM_TEST_DIR}
+)
+set_tests_properties(test_apg_v2_cli_m7_export_custom_timing PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        DEPENDS test_apg_v2_cli_m7_export_custom_prepare
+        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*\"block_frames\":128.*\"sample_rate\":96000"
+)
+add_test(NAME test_apg_v2_cli_m7_export_custom_header COMMAND ${CMAKE_COMMAND} -E cat ${APG_M7_CLI_CUSTOM_TEST_DIR}/apg_project_m7.h)
+set_tests_properties(test_apg_v2_cli_m7_export_custom_header PROPERTIES
+        LABELS v2
+        DEPENDS test_apg_v2_cli_m7_export_custom_timing
+        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_BLOCK_FRAMES 128u.*APG_M7_PROJECT_SAMPLE_RATE 96000u"
+)
+
 set(APG_M7_C_COMPILER "" CACHE FILEPATH "Optional ARM/M7 C compiler used to syntax-check generated m7_static bundles")
 set(APG_M7_LINKER_SCRIPT "" CACHE FILEPATH "Optional STM32H7/M7 linker script used to link generated m7_static bundles")
 set(APG_M7_BOARD_TIMING_COMMAND "" CACHE STRING "Optional command that measures a generated m7_static bundle on board; receives export dir as last argument")

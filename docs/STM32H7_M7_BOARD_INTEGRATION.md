@@ -18,6 +18,8 @@ The firmware build receives:
 
 The generated project must declare deterministic constants for block frames, signal count, param count, schedule count, atom call bytes, signal-array pointer bytes, atom storage bytes, state bytes, total static RAM, and static atom-call workload. Firmware startup must reject or fail to build projects that exceed the selected board memory map.
 
+Use `--block-frames <frames>` and `--sample-rate <hz>` when exporting for a board whose DMA period or codec rate differs from the defaults. The generated `APG_M7_PROJECT_BLOCK_FRAMES` and `APG_M7_PROJECT_SAMPLE_RATE` macros are the firmware contract.
+
 Firmware must call `apg_m7_project_init()` once after reset before audio starts. Control code may update exported param memory outside the audio callback and then call `apg_m7_project_refresh_params()` at a block boundary before executing `apg_m7_project_process_block()`.
 
 ## Audio Callback Contract
