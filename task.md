@@ -102,6 +102,7 @@ Pending tests to record for PB:
 - [x] PC5: Add static M7 atom-call workload metadata to export JSON and generated headers.
 - [x] PC6: Add per-node atom process symbol metadata to generated M7 bundles.
 - [x] PC7: Emit a per-node atom thunk table in generated M7 bundles.
+- [x] PC8: Emit static atom_call_t records over runtime-image-planned atom storage.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -114,6 +115,7 @@ Module note: STM32H7 board integration now has a fixed-block DMA/cache contract.
 Module note: M7 export now reports static atom-call workload metadata.
 Module note: M7 export now includes per-node atom process symbols.
 Module note: M7 export now emits a static atom thunk table.
+Module note: M7 export now emits static atom_call records.
 
 ## Runtime Image Hardening Queue
 

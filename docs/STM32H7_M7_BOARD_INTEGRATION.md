@@ -16,7 +16,7 @@ The firmware build receives:
 - A board-local configuration that maps codec channels to exported public ports.
 - Optional board memory budgets for tightly coupled RAM, SRAM, and DMA-accessible audio buffers.
 
-The generated project must declare deterministic constants for block frames, signal count, param count, schedule count, atom storage bytes, state bytes, total static RAM, and static atom-call workload. Firmware startup must reject or fail to build projects that exceed the selected board memory map.
+The generated project must declare deterministic constants for block frames, signal count, param count, schedule count, atom call bytes, atom storage bytes, state bytes, total static RAM, and static atom-call workload. Firmware startup must reject or fail to build projects that exceed the selected board memory map.
 
 ## Audio Callback Contract
 
