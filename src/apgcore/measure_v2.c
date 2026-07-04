@@ -61,7 +61,6 @@ bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_mea
         .output_meters_len = runtime->output_meters_len,
         .has_processed     = runtime->has_processed,
         .project_muted     = runtime->project_muted,
-        .project_soloed    = runtime->project_soloed,
     };
     return true;
 }

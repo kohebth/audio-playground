@@ -592,13 +592,6 @@ bool apg_v2_runtime_set_project_mute(apg_v2_runtime_t *runtime, bool muted) {
     return true;
 }
 
-bool apg_v2_runtime_set_project_solo(apg_v2_runtime_t *runtime, bool soloed) {
-    if (!runtime)
-        return false;
-    runtime->project_soloed = soloed;
-    return true;
-}
-
 // ?d0f1a7b3:start? resets runtime-owned buffers without traversing the compiled plan.
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime) {
     if (!runtime)

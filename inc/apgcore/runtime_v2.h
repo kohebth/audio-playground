@@ -68,7 +68,6 @@ typedef struct {
     apg_v2_runtime_control_target_t   *control_targets;
     size_t                             control_targets_len;
     bool                               project_muted;
-    bool                               project_soloed;
     size_t                            *project_mute_output_indices;
     size_t                             project_mute_output_indices_len;
     const apg_v2_runtime_audio_port_t *input_audio_ports;
@@ -119,9 +118,8 @@ bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port
  */
 bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *instance_id, bool enabled);
 
-/* Store project-level UI transport states; mute silences public output ports after processing. */
+/* Mute silences public output ports after processing. */
 bool apg_v2_runtime_set_project_mute(apg_v2_runtime_t *runtime, bool muted);
-bool apg_v2_runtime_set_project_solo(apg_v2_runtime_t *runtime, bool soloed);
 
 /* Clear signal and state buffers and restore parameter defaults while preserving owned allocations. */
 bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime);

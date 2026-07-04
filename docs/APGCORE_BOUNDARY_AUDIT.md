@@ -13,7 +13,7 @@
 
 ## Boundary Leaks To Close
 
-- Project mute/solo and instance bypass remain runtime transport controls. `solo` is host/UI-visible state only until a real routing contract exists.
+- Project mute and instance bypass remain runtime transport controls because they alter output samples.
 - M7 static export now emits schedule, node, memory, process-symbol metadata, atom thunk tables, typed atom storage, initialized `atom_call_t` records, and init/refresh/process entrypoints. Measured CPU/stack budgets remain outside the core bundle.
 
 ## PB2 Progress
@@ -139,6 +139,10 @@ Runtime tests now initialize through explicit runtime-image builds instead of th
 ## PD14 Progress
 
 The runtime plan-initializer compatibility API and runtime-owned image arena state have been removed; callers must build runtime images explicitly before runtime init.
+
+## PD15 Progress
+
+The no-op project solo runtime state was removed; solo remains a future host/UI routing concern, not runtime DSP state.
 
 ## PE1 Progress
 

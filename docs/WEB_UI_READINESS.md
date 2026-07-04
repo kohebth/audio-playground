@@ -4,7 +4,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 ## Current Backend Status
 
-- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, validate/inspect JSON contracts, and runtime product controls for params, bypass, mute/solo state, and meters are implemented.
+- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, validate/inspect JSON contracts, and runtime product controls for params, bypass, mute, and meters are implemented. Solo remains a host/UI routing concern until a real routing contract exists.
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable unit fixtures exist in `units-v2/`, including product units for overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix.
 - Project/session schema, deterministic fixtures, referenced-unit resolution, mono project compilation, and `projects-v2/guitar-pedalboard.project.v2.yaml` exist.
@@ -121,7 +121,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase U:** Project compiler creates a single runtime plan. Complete for mono project routes.
 - **Phase V:** CLI tooling emits JSON inspect/validate output and deterministic project render output. Complete.
 - **Phase AH:** CLI tooling emits deterministic benchmark JSON, blocked WASM export diagnostics, and bounded C11 M7 static bundles for compatible/simple projects. Complete as an export surface, not as STM32H7 production readiness.
-- **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute/solo state, and peak/RMS meter snapshots.
+- **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute, and peak/RMS meter snapshots.
 - **Phase X:** Product unit fixtures, the guitar pedalboard project fixture, deterministic render proof, and compatibility/output capture are complete.
 - **Phase Y:** Web handoff package freezes sample contracts, documents exact fixture commands, refreshes repo guidance, and declares backend readiness. Complete.
 

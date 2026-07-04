@@ -145,6 +145,7 @@ Module note: M7 generated bundles can now be target-linked when a board linker s
 - [x] PD12: Remove the source compiled-plan pointer from runtime and measure snapshots.
 - [x] PD13: Move runtime test coverage off the compatibility initializer and onto explicit runtime-image init.
 - [x] PD14: Remove runtime plan-initializer compatibility API and runtime-owned image arena state.
+- [x] PD15: Remove no-op project solo state from runtime and measure snapshots.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
 
@@ -162,6 +163,7 @@ Module note: Runtime name lookups now use runtime-image signal and parameter map
 Module note: Runtime no longer stores the source compiled-plan pointer.
 Module note: Runtime tests now exercise explicit runtime-image initialization.
 Module note: Runtime no longer owns runtime-image arenas or plan-init wrappers.
+Module note: Project solo no longer lives in runtime DSP state.
 Module note: Runtime image now owns public audio port channel maps.
 
 ## Runtime Memory Hardening Queue
@@ -294,7 +296,7 @@ Verification policy for future work: run focused tests for the changed area. For
 ### Phase W: Runtime Product Controls
 
 - [x] W1: Implement block-boundary parameter smoothing from `smoothing_ms`.
-- [x] W2: Add unit-instance bypass and project-level mute/solo where needed for the first pedalboard workflow.
+- [x] W2: Add unit-instance bypass and project-level mute for the first pedalboard workflow; keep solo out of runtime until routing semantics exist.
 - [x] W3: Add peak/RMS meter snapshots suitable for UI polling.
 - [x] W4: Add runtime tests for live parameter changes, bypass, and meters.
 

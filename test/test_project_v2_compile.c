@@ -210,10 +210,6 @@ static int test_two_instance_project_compiles_and_runs(void) {
         expect_meter_near(&meter, 1.5f, 1.1858541f, 2u, "two-instance project bypassed output"))
         return 1;
 
-    apg_v2_measure_runtime_snapshot_t snapshot;
-    if (!apg_v2_runtime_set_project_solo(&runtime, true) || !apg_v2_measure_runtime_snapshot(&runtime, &snapshot) ||
-        !snapshot.project_soloed)
-        return fail("two-instance runtime did not store project solo state");
     if (!apg_v2_runtime_set_project_mute(&runtime, true))
         return fail("two-instance runtime did not accept project mute");
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))

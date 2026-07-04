@@ -17,7 +17,6 @@ typedef struct {
     size_t   output_meters_len;
     bool     has_processed;
     bool     project_muted;
-    bool     project_soloed;
 } apg_v2_measure_runtime_snapshot_t;
 
 bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_measure_runtime_snapshot_t *out);
