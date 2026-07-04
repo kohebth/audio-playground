@@ -150,6 +150,7 @@ Module note: M7 generated bundles can now be target-linked when a board linker s
 - [x] PD17: Copy scalar refresh and signal-array binding data into runtime-image entries.
 - [x] PD18: Remove the compiled-plan pointer from runtime-image descriptors.
 - [x] PD19: Split runtime-image consumer types from the compiler-backed builder API.
+- [x] PD20: Hide per-node runtime atom-call storage behind an internal header.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
 
@@ -172,6 +173,7 @@ Module note: Runtime nodes now execute image-owned atom thunks.
 Module note: Runtime image now owns scalar refresh values and signal-array indexes.
 Module note: Runtime image no longer stores the compiled-plan pointer.
 Module note: Runtime-image consumers no longer include compiler headers.
+Module note: Runtime public headers no longer expose per-node atom calls.
 Module note: Runtime image now owns public audio port channel maps.
 
 ## Runtime Memory Hardening Queue

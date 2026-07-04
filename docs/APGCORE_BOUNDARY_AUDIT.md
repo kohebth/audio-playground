@@ -160,6 +160,10 @@ Runtime-image descriptors no longer store the source compiled-plan pointer. The 
 
 Runtime-image consumer types now live separately from the compiler-backed builder API, so runtime headers no longer pull compiler plan definitions.
 
+## PD20 Progress
+
+Per-node runtime atom-call storage is now declared in an internal header. Public runtime headers expose only an opaque node pointer, not atom registry call storage.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

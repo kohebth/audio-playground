@@ -1,4 +1,4 @@
-#include <apgcore/runtime_v2.h>
+#include <apgcore/runtime_v2_internal.h>
 #include <atom/dsp_types.h>
 
 #include <limits.h>

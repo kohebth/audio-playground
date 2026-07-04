@@ -2,6 +2,7 @@
 #include <apgcore/host_v2.h>
 #include <apgcore/measure_v2.h>
 #include <apgcore/runtime_v2.h>
+#include <apgcore/runtime_v2_internal.h>
 #include <apgcore/unit_v2.h>
 #include <atom/dsp_types.h>
 
