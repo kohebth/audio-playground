@@ -292,6 +292,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_static_ram_budget PROPERTIES
 )
 
 set(APG_M7_C_COMPILER "" CACHE FILEPATH "Optional ARM/M7 C compiler used to syntax-check generated m7_static bundles")
+set(APG_M7_LINKER_SCRIPT "" CACHE FILEPATH "Optional STM32H7/M7 linker script used to link generated m7_static bundles")
 set(APG_M7_BOARD_TIMING_COMMAND "" CACHE STRING "Optional command that measures a generated m7_static bundle on board; receives export dir as last argument")
 if(NOT APG_M7_C_COMPILER)
     find_program(APG_M7_C_COMPILER_DETECTED arm-none-eabi-gcc)
@@ -327,6 +328,26 @@ else()
     set_tests_properties(test_apg_v2_cli_m7_export_arm_syntax_unconfigured PROPERTIES
             LABELS v2
             PASS_REGULAR_EXPRESSION "skipping ARM/M7 syntax gate"
+    )
+endif()
+
+if(APG_M7_C_COMPILER AND APG_M7_LINKER_SCRIPT)
+    add_test(
+            NAME test_apg_v2_cli_m7_export_arm_link
+            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -T ${APG_M7_LINKER_SCRIPT} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_link_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} -Wl,-Map=${APG_M7_CLI_TEST_DIR}/apg_m7_static.map -Wl,--gc-sections -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static.elf
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_arm_link PROPERTIES
+            LABELS v2
+            DEPENDS test_apg_v2_cli_m7_export_bundle
+    )
+else()
+    add_test(
+            NAME test_apg_v2_cli_m7_export_arm_link_unconfigured
+            COMMAND ${CMAKE_COMMAND} -E echo "APG_M7_C_COMPILER or APG_M7_LINKER_SCRIPT not configured; skipping ARM/M7 link gate"
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_arm_link_unconfigured PROPERTIES
+            LABELS v2
+            PASS_REGULAR_EXPRESSION "skipping ARM/M7 link gate"
     )
 endif()
 

@@ -72,4 +72,4 @@ An STM32H7 integration is not production-ready until these gates pass:
 - measured worst-case CPU time fits the selected sample rate and block period;
 - measured static RAM and stack usage fit the board budget with margin.
 
-Current repo CI provides host-side generated-bundle timing and generated-runner stack checks. Configure `APG_M7_C_COMPILER` to enable ARM/M7 stack-usage checks, and configure `APG_M7_BOARD_TIMING_COMMAND` to run a BSP timing command that prints `m7_static_board_block_us=<value> budget_us=<value>`. STM32H7 production readiness still requires board/toolchain measurements.
+Current repo CI provides host-side generated-bundle timing and generated-runner stack checks. Configure `APG_M7_C_COMPILER` to enable ARM/M7 syntax and stack-usage checks, `APG_M7_LINKER_SCRIPT` to link the generated bundle with a target memory map, and `APG_M7_BOARD_TIMING_COMMAND` to run a BSP timing command that prints `m7_static_board_block_us=<value> budget_us=<value>`. STM32H7 production readiness still requires board/toolchain measurements.
