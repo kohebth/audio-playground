@@ -147,6 +147,15 @@ static float scalar_refresh_value(const apg_v2_runtime_scalar_refresh_t *item, c
     return 0.0f;
 }
 
+static bool refresh_scalar_plan_runtime(
+    const apg_v2_runtime_scalar_refresh_t *items,
+    size_t                                 items_len,
+    const char                            *node_id,
+    const char                            *atom_name,
+    apg_v2_runtime_t                      *runtime,
+    void                                  *storage
+);
+
 static uc_status apply_signal_bindings(
     const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_t *runtime, apg_v2_runtime_node_t *node, uc_error *err
 ) {
@@ -192,34 +201,14 @@ static uc_status refresh_scalar_plan(
     void                                  *storage,
     uc_error                              *err
 ) {
-    if (!runtime || !atom_name)
+    if (!runtime || !runtime->last_error || !node_id || !atom_name || !storage) {
         return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh context is missing");
-
-    for (size_t i = 0; i < items_len; i++) {
-        if (items[i].kind != APG_BIND_PARAM && items[i].kind != APG_BIND_LITERAL) {
-            char msg[192];
-            snprintf(
-                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing", node_id ? node_id : "",
-                atom_name, items[i].config ? "config" : "input", items[i].key ? items[i].key : ""
-            );
-            return set_error(err, UC_E_TYPE, msg);
-        }
-        if (items[i].kind == APG_BIND_PARAM) {
-            uint32_t param_index = items[i].param_index;
-            if (param_index >= runtime->params_len) {
-                return set_error(err, UC_E_RANGE, "v2 runtime scalar refresh param index is out of bounds");
-            }
-        }
-        void *addr  = (char *)storage + items[i].storage_offset;
-        float value = scalar_refresh_value(&items[i], runtime);
-        if (items[i].field_type == FIELD_INT)
-            *(int *)addr = (int)value;
-        else if (items[i].field_type == FIELD_FLOAT)
-            *(float *)addr = value;
-        else {
-            return set_error(err, UC_E_TYPE, "v2 runtime scalar refresh field type is unsupported");
-        }
     }
+    runtime->last_error[0] = '\0';
+    if (!refresh_scalar_plan_runtime(items, items_len, node_id, atom_name, runtime, storage))
+        return set_error(
+            err, UC_E_TYPE, runtime->last_error[0] ? runtime->last_error : "v2 runtime scalar refresh failed"
+        );
     return UC_OK;
 }
 
@@ -228,7 +217,6 @@ static bool refresh_scalar_plan_runtime(
     size_t                                 items_len,
     const char                            *node_id,
     const char                            *atom_name,
-    bool                                   is_input,
     apg_v2_runtime_t                      *runtime,
     void                                  *storage
 ) {
@@ -240,7 +228,7 @@ static bool refresh_scalar_plan_runtime(
             char msg[160];
             snprintf(
                 msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing", node_id, atom_name,
-                is_input ? "input" : "config", items[i].key ? items[i].key : ""
+                items[i].config ? "config" : "input", items[i].key ? items[i].key : ""
             );
             runtime_set_error(runtime, msg);
             return false;
@@ -601,13 +589,12 @@ static bool run_node(apg_v2_runtime_t *runtime, size_t node_index, uint32_t fram
     }
 
     if (!refresh_scalar_plan_runtime(
-            node->config_refreshes, node->config_refreshes_len, node->node_id, node->atom_name, false, runtime,
+            node->config_refreshes, node->config_refreshes_len, node->node_id, node->atom_name, runtime,
             node->config_storage
         ))
         return false;
     if (!refresh_scalar_plan_runtime(
-            node->input_refreshes, node->input_refreshes_len, node->node_id, node->atom_name, true, runtime,
-            node->in_storage
+            node->input_refreshes, node->input_refreshes_len, node->node_id, node->atom_name, runtime, node->in_storage
         ))
         return false;
 
