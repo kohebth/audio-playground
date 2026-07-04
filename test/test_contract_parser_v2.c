@@ -126,6 +126,48 @@ static int expect_parse_only_without_semantic_checks(void) {
     return 0;
 }
 
+static int expect_project_parse_only_without_semantic_checks(void) {
+    const char *yaml = "kind: apg.project\n"
+                       "schema: apg.project.v2\n"
+                       "name: project_boundary\n"
+                       "version: 2.0.0\n"
+                       "units:\n"
+                       "  - id: unit_a\n"
+                       "    file: ../units-v2/simple_gain.unit.v2.yaml\n"
+                       "chain:\n"
+                       "  nodes:\n"
+                       "    - id: node_missing\n"
+                       "      unit: unknown\n"
+                       "  routes:\n"
+                       "    - from: system.input\n"
+                       "      to: node_missing.input\n"
+                       "targets:\n"
+                       "  default: desktop_full\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    uc_node  *root = NULL;
+    uc_error  err  = {0};
+    uc_status status = apg_project_v2_parse_string(yaml, strlen(yaml), &arena, &root, &err);
+    if (status != UC_OK || !root) {
+        fprintf(stderr, "project parser error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("semantic-invalid project contract should still parse as raw contract");
+    }
+
+    apg_project_v2_t project = {0};
+    status                  = apg_project_v2_validate_root(root, &arena, &project, &err);
+    if (status == UC_OK) {
+        uc_arena_free(&arena);
+        return fail("project validator should reject unknown unit references");
+    }
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
 int main(void) {
     int status = expect_parse_without_validation();
     if (status != 0)
@@ -133,5 +175,8 @@ int main(void) {
     status = expect_boundary_parse_then_validate();
     if (status != 0)
         return status;
-    return expect_parse_only_without_semantic_checks();
+    status = expect_parse_only_without_semantic_checks();
+    if (status != 0)
+        return status;
+    return expect_project_parse_only_without_semantic_checks();
 }
