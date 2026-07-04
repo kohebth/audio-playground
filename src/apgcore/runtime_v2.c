@@ -392,7 +392,6 @@ uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, ap
     if (image->frame_capacity == 0u)
         return set_error(err, UC_E_RANGE, "v2 runtime frame capacity must be greater than zero");
 
-    out->plan                       = image->plan;
     out->frame_capacity             = image->frame_capacity;
     out->process_info.sample_rate   = image->sample_rate;
     out->process_info.frames        = image->frame_capacity;

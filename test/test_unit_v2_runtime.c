@@ -99,7 +99,7 @@ static int test_runtime_init_simple_gain(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    if (runtime.plan != &plan || runtime.frame_capacity != 16u || runtime.process_info.frames != 16u ||
+    if (runtime.frame_capacity != 16u || runtime.process_info.frames != 16u ||
         runtime.process_info.output_frames != 16u || runtime.process_info.sample_rate != 44100.0f ||
         runtime.process_info.channels != 1u)
         return fail("unexpected runtime process metadata");

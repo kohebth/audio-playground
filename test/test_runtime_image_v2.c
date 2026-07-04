@@ -110,12 +110,11 @@ static int test_runtime_image_layout(void) {
         return fail("failed to initialize runtime from image");
     }
 
-    if (runtime.plan != &plan || runtime.frame_capacity != image.frame_capacity ||
-        runtime.process_info.sample_rate != image.sample_rate || runtime.signals_len != image.signals_len ||
-        runtime.params_len != image.params_len || runtime.params[0] != image.param_defaults[0] ||
-        runtime.input_meters_len != image.input_meters_len || runtime.output_meters_len != image.output_meters_len ||
-        runtime.nodes_len != image.nodes_len || runtime.schedule != image.schedule ||
-        runtime.schedule_len != image.schedule_len)
+    if (runtime.frame_capacity != image.frame_capacity || runtime.process_info.sample_rate != image.sample_rate ||
+        runtime.signals_len != image.signals_len || runtime.params_len != image.params_len ||
+        runtime.params[0] != image.param_defaults[0] || runtime.input_meters_len != image.input_meters_len ||
+        runtime.output_meters_len != image.output_meters_len || runtime.nodes_len != image.nodes_len ||
+        runtime.schedule != image.schedule || runtime.schedule_len != image.schedule_len)
         return fail("runtime did not adopt image layout");
     if (runtime.nodes[0].compiled != &plan.nodes[0] || runtime.nodes[1].compiled != &plan.nodes[1])
         return fail("runtime nodes did not adopt compiled node metadata");
@@ -140,11 +139,10 @@ static int test_runtime_image_layout(void) {
         runtime.nodes[1].signal_bindings_len != image.node_layouts[1].signal_bindings_len)
         return fail("runtime did not adopt signal binding plan");
 
-    runtime.plan = NULL;
     if (!apg_v2_runtime_find_signal(&runtime, "input") || !apg_v2_runtime_set_param(&runtime, "gain", 1.0f))
-        return fail("runtime image lookup required compiled plan");
+        return fail("runtime image lookup metadata failed");
     if (!apg_v2_runtime_reset(&runtime))
-        return fail("runtime image reset required compiled plan");
+        return fail("runtime image reset failed");
 
     float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
     float output[4] = {0};

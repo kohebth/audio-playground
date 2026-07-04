@@ -47,11 +47,11 @@ static bool signal_index_for_port_channel(
     return false;
 }
 
+// ?e32c0a91:start? measures runtime-owned signal buffers through image-derived audio port maps.
 bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_measure_runtime_snapshot_t *out) {
     if (!runtime || !out)
         return false;
     *out = (apg_v2_measure_runtime_snapshot_t){
-        .plan              = runtime->plan,
         .frame_capacity    = runtime->frame_capacity,
         .sample_rate       = runtime->process_info.sample_rate,
         .signals_len       = runtime->signals_len,
@@ -69,7 +69,7 @@ bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_mea
 bool apg_v2_measure_get_input_meter(
     const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
 ) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !out)
+    if (!runtime || !out)
         return false;
     size_t signal_index = 0u;
     size_t meter_index  = 0u;
@@ -92,7 +92,7 @@ bool apg_v2_measure_get_input_meter(
 bool apg_v2_measure_get_output_meter(
     const apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, apg_v2_meter_snapshot_t *out
 ) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !out)
+    if (!runtime || !out)
         return false;
     size_t signal_index = 0u;
     size_t meter_index  = 0u;
@@ -111,6 +111,7 @@ bool apg_v2_measure_get_output_meter(
     *out            = meter_snapshot_from_signal(runtime->signals[signal_index], frames);
     return true;
 }
+// ?e32c0a91:end?
 
 const char *apg_v2_measure_last_error(const apg_v2_runtime_t *runtime) {
     return runtime && runtime->last_error[0] ? runtime->last_error : NULL;

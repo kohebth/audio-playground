@@ -49,7 +49,6 @@ typedef struct {
 } apg_v2_meter_snapshot_t;
 
 typedef struct {
-    const apg_v2_compiled_unit_t      *plan;
     apg_process_info_t                 process_info;
     uint32_t                           frame_capacity;
     const char                       **signal_names;

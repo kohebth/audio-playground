@@ -49,9 +49,9 @@ static int test_measure_snapshot_and_meters(void) {
     apg_v2_measure_runtime_snapshot_t snapshot;
     if (!apg_v2_measure_runtime_snapshot(&runtime, &snapshot))
         return fail("measure snapshot failed");
-    if (snapshot.plan != &plan || snapshot.frame_capacity != 8u || snapshot.sample_rate != 48000.0f ||
-        snapshot.signals_len != 3u || snapshot.params_len != 1u || snapshot.nodes_len != 2u ||
-        snapshot.input_meters_len != 1u || snapshot.output_meters_len != 1u || snapshot.has_processed)
+    if (snapshot.frame_capacity != 8u || snapshot.sample_rate != 48000.0f || snapshot.signals_len != 3u ||
+        snapshot.params_len != 1u || snapshot.nodes_len != 2u || snapshot.input_meters_len != 1u ||
+        snapshot.output_meters_len != 1u || snapshot.has_processed)
         return fail("unexpected measure snapshot before process");
 
     apg_v2_meter_snapshot_t meter;

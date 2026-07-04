@@ -8,17 +8,16 @@
 #include <apgcore/runtime_v2.h>
 
 typedef struct {
-    const apg_v2_compiled_unit_t *plan;
-    uint32_t                      frame_capacity;
-    float                         sample_rate;
-    size_t                        signals_len;
-    size_t                        params_len;
-    size_t                        nodes_len;
-    size_t                        input_meters_len;
-    size_t                        output_meters_len;
-    bool                          has_processed;
-    bool                          project_muted;
-    bool                          project_soloed;
+    uint32_t frame_capacity;
+    float    sample_rate;
+    size_t   signals_len;
+    size_t   params_len;
+    size_t   nodes_len;
+    size_t   input_meters_len;
+    size_t   output_meters_len;
+    bool     has_processed;
+    bool     project_muted;
+    bool     project_soloed;
 } apg_v2_measure_runtime_snapshot_t;
 
 bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_measure_runtime_snapshot_t *out);

@@ -94,6 +94,10 @@ Runtime reset and process entry checks now operate from runtime-owned buffers, i
 
 Runtime image now exposes signal and parameter name maps, and runtime signal/param lookup APIs use those image-owned maps instead of traversing the source compiled plan.
 
+## PD12 Progress
+
+Runtime no longer stores a source compiled-plan pointer. Measure snapshots report runtime/image-derived counts and transport state without exposing compiled-plan identity, and meter reads use image-derived audio port maps.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.
