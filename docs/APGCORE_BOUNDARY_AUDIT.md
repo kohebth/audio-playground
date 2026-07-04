@@ -70,6 +70,10 @@ Compiler scalar bindings now store parsed numeric literals. Runtime scalar refre
 
 Runtime image now precomputes parameter smoothing frame counts from unit metadata and sample rate. Runtime control updates reuse those counts without parsing text.
 
+## PD6 Progress
+
+Control-port updates now apply through runtime-image parameter indexes instead of doing a second parameter-name lookup.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

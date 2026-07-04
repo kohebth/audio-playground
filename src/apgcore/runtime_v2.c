@@ -570,31 +570,35 @@ static void apply_project_mute(apg_v2_runtime_t *runtime, uint32_t frames) {
     }
 }
 
-// ?77a8c2d5:start? updates runtime params using image-precomputed smoothing frames.
+// ?77a8c2d5:start? updates runtime params and control ports using image-precomputed param metadata.
+static bool apg_v2_runtime_set_param_index(apg_v2_runtime_t *runtime, size_t index, float value) {
+    if (!runtime || index >= runtime->params_len)
+        return false;
+    uint32_t smoothing_frames =
+        runtime->has_processed && runtime->param_smoothing_frames ? runtime->param_smoothing_frames[index] : 0u;
+    if (!runtime->param_targets || !runtime->param_smoothing_remaining_frames || smoothing_frames == 0u) {
+        runtime->params[index] = value;
+        if (runtime->param_targets)
+            runtime->param_targets[index] = value;
+        if (runtime->param_smoothing_remaining_frames)
+            runtime->param_smoothing_remaining_frames[index] = 0u;
+        return true;
+    }
+    runtime->param_targets[index]                    = value;
+    runtime->param_smoothing_remaining_frames[index] = smoothing_frames;
+    return true;
+}
+
 bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value) {
     if (!runtime || !runtime->plan || !runtime->plan->unit || !name)
         return false;
     const apg_unit_v2_t *unit = runtime->plan->unit;
     for (size_t i = 0; i < unit->params_len && i < runtime->params_len; i++) {
-        if (unit->params[i].name && strcmp(unit->params[i].name, name) == 0) {
-            uint32_t smoothing_frames =
-                runtime->has_processed && runtime->param_smoothing_frames ? runtime->param_smoothing_frames[i] : 0u;
-            if (!runtime->param_targets || !runtime->param_smoothing_remaining_frames || smoothing_frames == 0u) {
-                runtime->params[i] = value;
-                if (runtime->param_targets)
-                    runtime->param_targets[i] = value;
-                if (runtime->param_smoothing_remaining_frames)
-                    runtime->param_smoothing_remaining_frames[i] = 0u;
-                return true;
-            }
-            runtime->param_targets[i]                    = value;
-            runtime->param_smoothing_remaining_frames[i] = smoothing_frames;
-            return true;
-        }
+        if (unit->params[i].name && strcmp(unit->params[i].name, name) == 0)
+            return apg_v2_runtime_set_param_index(runtime, i, value);
     }
     return false;
 }
-// ?77a8c2d5:end?
 
 bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value) {
     if (!runtime || !port_name)
@@ -603,12 +607,11 @@ bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port
         const apg_v2_runtime_control_target_t *target = &runtime->control_targets[i];
         if (!target->port_name || strcmp(target->port_name, port_name) != 0)
             continue;
-        if (target->param_index >= runtime->params_len)
-            return false;
-        return apg_v2_runtime_set_param(runtime, target->param_name, value);
+        return apg_v2_runtime_set_param_index(runtime, target->param_index, value);
     }
     return false;
 }
+// ?77a8c2d5:end?
 
 bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *instance_id, bool enabled) {
     if (!runtime || !runtime->plan || !instance_id || instance_id[0] == '\0')
