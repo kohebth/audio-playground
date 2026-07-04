@@ -138,6 +138,7 @@ Module note: M7 export now reports static atom-call workload metadata.
 - [x] PD8: Move scalar refresh binding-key validation fully into runtime-image build.
 - [x] PD9: Execute runtime from runtime-image schedule and node metadata views.
 - [x] PD10: Remove compiled-plan traversal from runtime reset and process entry checks.
+- [x] PD11: Move runtime signal and parameter name lookup onto runtime-image metadata.
 - [x] PB3b: Move signal-binding and mix-matrix structured-config plans into runtime-image descriptors consumed by runtime init.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
@@ -152,6 +153,7 @@ Module note: Default mono processing now uses image audio-port maps directly.
 Module note: Scalar refresh key validation now stops at runtime-image build.
 Module note: Runtime execution now uses image schedule and node metadata views.
 Module note: Runtime reset/process now operate from runtime-image metadata.
+Module note: Runtime name lookups now use runtime-image signal and parameter maps.
 Module note: Runtime now consumes precomputed signal-binding and mix-matrix config plans from runtime-image with no runtime-time descriptor resolution.
 Module note: Runtime image now owns bypass and project-mute transport metadata.
 Module note: Runtime image now owns public audio port channel maps.

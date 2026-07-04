@@ -79,8 +79,10 @@ typedef struct {
     const apg_v2_compiled_unit_t        *plan;
     uint32_t                             frame_capacity;
     float                                sample_rate;
+    const char                         **signal_names;
     size_t                               signals_len;
     size_t                               signal_samples;
+    const char                         **param_names;
     size_t                               params_len;
     float                               *param_defaults;
     uint32_t                            *param_smoothing_frames;

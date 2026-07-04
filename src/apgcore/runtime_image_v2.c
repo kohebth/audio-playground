@@ -499,6 +499,20 @@ static int param_index_by_name(const apg_unit_v2_t *unit, const char *name) {
     return -1;
 }
 
+// ?1f6b9c2d:start? borrows immutable lookup names into runtime-image metadata.
+static uc_status
+fill_param_names(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_image_t *out, uc_error *err) {
+    if (out->params_len == 0u)
+        return UC_OK;
+    out->param_names = uc_arena_alloc(arena, out->params_len * sizeof(*out->param_names), sizeof(void *));
+    if (!out->param_names)
+        return set_error(err, UC_E_OOM, "v2 runtime image param name allocation failed");
+    for (size_t i = 0; i < out->params_len; i++)
+        out->param_names[i] = unit->params[i].name;
+    return UC_OK;
+}
+// ?1f6b9c2d:end?
+
 static size_t control_port_count(const apg_unit_v2_port_t *ports, size_t ports_len) {
     size_t count = 0u;
     for (size_t i = 0; i < ports_len; i++) {
@@ -980,6 +994,7 @@ uc_status apg_v2_runtime_image_build(
     out->plan              = plan;
     out->frame_capacity    = frame_capacity;
     out->sample_rate       = sample_rate > 0.0f ? sample_rate : 48000.0f;
+    out->signal_names      = plan->unit->signals;
     out->signals_len       = plan->unit->signals_len;
     out->signal_samples    = plan->unit->signals_len * (size_t)frame_capacity;
     out->params_len        = plan->unit->params_len;
@@ -1015,6 +1030,10 @@ uc_status apg_v2_runtime_image_build(
         return status;
 
     status = fill_project_mute_output_indices(arena, out, err);
+    if (status != UC_OK)
+        return status;
+
+    status = fill_param_names(arena, plan->unit, out, err);
     if (status != UC_OK)
         return status;
 

@@ -24,11 +24,11 @@ static void runtime_set_error(apg_v2_runtime_t *runtime, const char *msg) {
     snprintf(runtime->last_error, sizeof(runtime->last_error), "%s", msg);
 }
 
-static int signal_index_by_name(const apg_unit_v2_t *unit, const char *name) {
-    if (!unit || !name)
+static int name_index(const char *const *names, size_t names_len, const char *name) {
+    if (!names || !name)
         return -1;
-    for (size_t i = 0; i < unit->signals_len; i++) {
-        if (unit->signals[i] && strcmp(unit->signals[i], name) == 0)
+    for (size_t i = 0; i < names_len; i++) {
+        if (names[i] && strcmp(names[i], name) == 0)
             return (int)i;
     }
     return -1;
@@ -402,6 +402,7 @@ uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, ap
     uc_status status = init_signal_buffers(image, out, err);
     if (status != UC_OK)
         goto fail;
+    out->signal_names           = image->signal_names;
     out->input_meters_len       = image->input_meters_len;
     out->output_meters_len      = image->output_meters_len;
     out->input_audio_ports      = image->input_audio_ports;
@@ -411,6 +412,7 @@ uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, ap
     status                      = init_params(image, out, err);
     if (status != UC_OK)
         goto fail;
+    out->param_names         = image->param_names;
     out->control_targets     = image->control_targets;
     out->control_targets_len = image->control_targets_len;
     out->schedule            = image->schedule;
@@ -480,9 +482,9 @@ uc_status apg_v2_runtime_init_from_plan(
 }
 
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !name)
+    if (!runtime || !name)
         return NULL;
-    int index = signal_index_by_name(runtime->plan->unit, name);
+    int index = name_index(runtime->signal_names, runtime->signals_len, name);
     if (index < 0 || (size_t)index >= runtime->signals_len)
         return NULL;
     return runtime->signals[index];
@@ -590,14 +592,10 @@ static bool apg_v2_runtime_set_param_index(apg_v2_runtime_t *runtime, size_t ind
 }
 
 bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value) {
-    if (!runtime || !runtime->plan || !runtime->plan->unit || !name)
+    if (!runtime || !name)
         return false;
-    const apg_unit_v2_t *unit = runtime->plan->unit;
-    for (size_t i = 0; i < unit->params_len && i < runtime->params_len; i++) {
-        if (unit->params[i].name && strcmp(unit->params[i].name, name) == 0)
-            return apg_v2_runtime_set_param_index(runtime, i, value);
-    }
-    return false;
+    int index = name_index(runtime->param_names, runtime->params_len, name);
+    return index >= 0 ? apg_v2_runtime_set_param_index(runtime, (size_t)index, value) : false;
 }
 
 bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value) {

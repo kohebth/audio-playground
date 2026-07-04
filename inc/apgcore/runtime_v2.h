@@ -52,9 +52,11 @@ typedef struct {
     const apg_v2_compiled_unit_t      *plan;
     apg_process_info_t                 process_info;
     uint32_t                           frame_capacity;
+    const char                       **signal_names;
     float                             *signal_pool;
     float                            **signals;
     size_t                             signals_len;
+    const char                       **param_names;
     float                             *params;
     float                             *param_defaults;
     float                             *param_targets;

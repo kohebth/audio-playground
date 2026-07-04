@@ -88,7 +88,11 @@ Runtime image now exposes the schedule view used by runtime processing, and runt
 
 ## PD10 Progress
 
-Runtime reset and process entry checks now operate from runtime-owned buffers, image schedule metadata, and per-node compiled metadata pointers. Name-based host lookup APIs still use the source plan.
+Runtime reset and process entry checks now operate from runtime-owned buffers, image schedule metadata, and per-node compiled metadata pointers.
+
+## PD11 Progress
+
+Runtime image now exposes signal and parameter name maps, and runtime signal/param lookup APIs use those image-owned maps instead of traversing the source compiled plan.
 
 ## PE1 Progress
 
