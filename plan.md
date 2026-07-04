@@ -102,12 +102,11 @@ Module note: Architecture docs now explicitly treat parser/validator/compiler/im
 
 Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 
-Pending tests to record for PB:
+Boundary checks for PB are now implemented in tests and covered by existing CI slices:
 
-- Boundary audit proves parser output can be inspected without semantic validation.
-- Runtime initialization from image does not recompute signal, param, control, or schedule layout.
-- Measure APIs expose host snapshots without owning or mutating DSP execution state.
-- M7 export artifact check rejects dynamic YAML/runtime allocation assumptions.
+- `test_contract_parser_v2.c` keeps parser/validator boundary behavior explicit.
+- `test_runtime_image_v2.c` validates image-owned runtime init under plan mutation.
+- `test_measure_v2.c` validates measure reads are metadata-only and preserve runtime error text.
 
 ### STM32H7/M7 Readiness
 

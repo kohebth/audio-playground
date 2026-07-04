@@ -109,9 +109,9 @@ function buildContractFlow(
         target,
         targetHandle: `in-${port}`,
         label: signal,
-        style: { stroke: '#94a3b8', strokeWidth: 1.5 },
-        labelStyle: { fill: '#d6c6af', fontSize: 10, fontWeight: 600 },
-        labelBgStyle: { fill: '#14110e', fillOpacity: 0.9 },
+        style: { stroke: 'var(--text-muted)', strokeWidth: 1.5 },
+        labelStyle: { fill: '#e2e8f0', fontSize: 10, fontWeight: 600 },
+        labelBgStyle: { fill: '#111827', fillOpacity: 0.9 },
       });
     }
   }
@@ -230,9 +230,9 @@ export function ContractGraphCanvas({
               maxZoom={1.6}
               nodesDraggable
             >
-              <Background color="#35312b" gap={24} />
+              <Background color="#1e293b" gap={24} />
               <Controls />
-              <MiniMap nodeColor={node => (node.data as ContractNodeData).color} pannable zoomable style={{ background: '#171512' }} />
+              <MiniMap nodeColor={node => (node.data as ContractNodeData).color} pannable zoomable style={{ background: '#111827' }} />
             </ReactFlow>
           </ReactFlowProvider>
         </div>

@@ -20,7 +20,7 @@ export type ProjectNodeData =
 
 const NODE_WIDTH = 210;
 const NODE_HEIGHT = 112;
-const UNIT_COLORS = ['#d97706', '#059669', '#2563eb', '#db2777', '#7c3aed', '#dc2626'];
+const UNIT_COLORS = ['#3b82f6', '#059669', '#2563eb', '#db2777', '#7c3aed', '#dc2626'];
 
 function endpointNodeId(endpoint: string): string {
   if (endpoint === 'system.input') return 'system-input';
@@ -52,9 +52,9 @@ function createRouteEdge(route: ProjectRoute, index: number): Edge {
     sourceHandle: 'out',
     targetHandle: 'in',
     label: `${endpointPort(route.from)} -> ${endpointPort(route.to)}`,
-    style: { stroke: '#94a3b8', strokeWidth: 1.6 },
-    labelStyle: { fill: '#94a3b8', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: { fill: '#0f172a', fillOpacity: 0.9 },
+    style: { stroke: '#64748b', strokeWidth: 1.6 },
+    labelStyle: { fill: '#e2e8f0', fontSize: 11, fontWeight: 500 },
+    labelBgStyle: { fill: '#111827', fillOpacity: 0.9 },
   };
 }
 

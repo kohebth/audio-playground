@@ -86,12 +86,12 @@ Module note: `apg_v2_host_project_*` now exposes production project orchestratio
 
 Module note: M7 export tests now reject generated dynamic allocation, YAML, loader, and runtime-init dependencies.
 
-Pending tests to record for PB:
+Boundary verification now includes regression checks in:
 
-- Boundary audit proves parser output can be inspected without semantic validation.
-- Runtime initialization from image does not recompute signal, param, control, or schedule layout.
-- Measure APIs expose host snapshots without owning or mutating DSP execution state.
-- M7 export artifact check rejects dynamic YAML/runtime allocation assumptions.
+- `test_runtime_image_v2` for runtime init from built image after compiled-plan mutation.
+- `test_measure_v2` for snapshot/meter reads preserving runtime diagnostics and layout metadata.
+
+Module note: PB runtime-boundary tests now assert image-owned init behavior and non-mutating measure reads.
 
 ## STM32H7/M7 Readiness Queue
 

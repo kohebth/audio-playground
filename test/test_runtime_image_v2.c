@@ -492,6 +492,77 @@ static int test_runtime_image_scalar_input_refresh(void) {
     return 0;
 }
 
+static int test_runtime_init_from_image_ignores_plan_mutation(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 4096) != 0) {
+        uc_arena_free(&arena);
+        return fail("image arena init failed");
+    }
+
+    apg_v2_runtime_image_t image;
+    uc_error               err    = {0};
+    uc_status              status = apg_v2_runtime_image_build(&plan, 16u, 44100.0f, &image_arena, &image, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime image error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to build runtime image");
+    }
+
+    plan.nodes_len            = 0;
+    plan.schedule_len         = 0;
+    plan.signal_producers     = NULL;
+    plan.signal_producers_len = 0;
+    if (plan.nodes) {
+        plan.nodes[0].atom = NULL;
+    }
+
+    apg_v2_runtime_t runtime;
+    err    = (uc_error){0};
+    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error after plan mutation: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("runtime should initialize from built image regardless of plan mutation");
+    }
+
+    float input[4]  = {0.25f, -0.5f, 1.0f, -1.0f};
+    float output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
+        fprintf(stderr, "runtime process error: %s\n", apg_v2_measure_last_error(&runtime));
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("runtime should still process from image schedule after plan mutation");
+    }
+
+    for (size_t i = 0; i < 4u; i++) {
+        if (output[i] != input[i]) {
+            apg_v2_runtime_destroy(&runtime);
+            uc_arena_free(&image_arena);
+            uc_arena_free(&arena);
+            return fail("runtime output changed after plan mutation");
+        }
+    }
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&image_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 int main(void) {
     if (test_runtime_image_layout())
         return 1;
@@ -501,5 +572,7 @@ int main(void) {
         return 1;
     if (test_runtime_image_scalar_input_refresh())
         return 1;
-    return test_runtime_image_control_targets();
+    if (test_runtime_image_control_targets())
+        return 1;
+    return test_runtime_init_from_image_ignores_plan_mutation();
 }

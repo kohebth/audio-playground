@@ -12,17 +12,17 @@ type Props = {
 
 const theme = EditorView.theme({
   '&': { height: '100%', fontSize: '13px' },
-  '.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', padding: '8px 0', caretColor: '#fbbf24' },
+  '.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', padding: '8px 0', caretColor: 'var(--accent)' },
   '.cm-line': { padding: '0 8px' },
-  '.cm-gutters': { backgroundColor: '#1e293b', borderRight: '1px solid #334155', color: '#64748b' },
-  '.cm-activeLineGutter': { backgroundColor: '#334155' },
-  '.cm-activeLine': { backgroundColor: '#1e293b50' },
-  '.cm-selectionMatch': { backgroundColor: '#f59e0b30' },
-  '.cm-cursor': { borderLeftColor: '#fbbf24', borderLeftWidth: '2px' },
-  '&.cm-focused .cm-cursor': { borderLeftColor: '#fbbf24', borderLeftWidth: '2px' },
+  '.cm-gutters': { backgroundColor: 'var(--bg-elevated)', borderRight: '1px solid var(--border)', color: 'var(--text-muted)' },
+  '.cm-activeLineGutter': { backgroundColor: 'var(--bg-hover)' },
+  '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--bg-elevated) 65%, transparent)' },
+  '.cm-selectionMatch': { backgroundColor: 'color-mix(in srgb, var(--accent) 24%, transparent)' },
+  '.cm-cursor': { borderLeftColor: 'var(--accent)', borderLeftWidth: '2px' },
+  '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--accent)', borderLeftWidth: '2px' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { backgroundColor: '#3b82f640' },
-  '.cm-searchMatch': { backgroundColor: '#f59e0b40', outline: '1px solid #f59e0b' },
-  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: '#f59e0b80' },
+  '.cm-searchMatch': { backgroundColor: 'color-mix(in srgb, var(--accent) 32%, transparent)', outline: '1px solid var(--accent)' },
+  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'color-mix(in srgb, var(--accent) 56%, transparent)' },
   '.cm-scroller': { overflow: 'auto' },
 });
 

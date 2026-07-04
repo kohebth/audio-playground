@@ -104,8 +104,84 @@ static int test_measure_last_error(void) {
     return 0;
 }
 
+static int test_measure_snapshot_is_non_mutating(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_v2_compiled_unit_t plan;
+    apg_unit_v2_t          unit;
+    apg_v2_runtime_t       runtime;
+    if (load_compile_runtime(&arena, &unit, &plan, &runtime)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_measure_runtime_snapshot_t snapshot_before;
+    if (!apg_v2_measure_runtime_snapshot(&runtime, &snapshot_before)) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("initial snapshot failed");
+    }
+
+    float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
+    float output[4] = {0};
+    if (apg_v2_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 4u)) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("runtime accepted missing input port");
+    }
+
+    const char *runtime_error = apg_v2_measure_last_error(&runtime);
+    if (!runtime_error || !strstr(runtime_error, "input audio port")) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("runtime error message not set");
+    }
+
+    apg_v2_measure_runtime_snapshot_t snapshot_after_error;
+    if (!apg_v2_measure_runtime_snapshot(&runtime, &snapshot_after_error)) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("snapshot failed after runtime error");
+    }
+
+    apg_v2_meter_snapshot_t meter;
+    if (!apg_v2_measure_get_output_meter(&runtime, "output", 0u, &meter) || meter.valid) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("measure should report invalid output meter");
+    }
+
+    const char *metric = apg_v2_measure_last_error(&runtime);
+    if (!metric || strcmp(metric, runtime_error) != 0) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("measure path changed runtime error text");
+    }
+
+    if (snapshot_before.frame_capacity != snapshot_after_error.frame_capacity ||
+        snapshot_before.sample_rate != snapshot_after_error.sample_rate ||
+        snapshot_before.signals_len != snapshot_after_error.signals_len ||
+        snapshot_before.params_len != snapshot_after_error.params_len ||
+        snapshot_before.nodes_len != snapshot_after_error.nodes_len ||
+        snapshot_before.input_meters_len != snapshot_after_error.input_meters_len ||
+        snapshot_before.output_meters_len != snapshot_after_error.output_meters_len ||
+        snapshot_before.project_muted != snapshot_after_error.project_muted) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("snapshot metadata changed across non-mutating reads");
+    }
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 int main(void) {
     if (test_measure_snapshot_and_meters())
         return 1;
-    return test_measure_last_error();
+    if (test_measure_last_error())
+        return 1;
+    return test_measure_snapshot_is_non_mutating();
 }

@@ -49,7 +49,7 @@ export function ProjectCanvas({
       animated: selected,
       style: {
         ...edge.style,
-        stroke: selected ? '#fbbf24' : '#94a3b8',
+        stroke: selected ? 'var(--accent)' : 'var(--text-muted)',
         strokeWidth: selected ? 2.6 : 1.6,
       },
     };
@@ -76,13 +76,13 @@ export function ProjectCanvas({
             minZoom={0.35}
             maxZoom={1.5}
           >
-            <Background color="#35312b" gap={24} />
+            <Background color="#1e293b" gap={24} />
             <Controls />
             <MiniMap
               nodeColor={node => (node.data as ProjectNodeData).color}
               pannable
               zoomable
-              style={{ background: '#171512' }}
+              style={{ background: '#111827' }}
             />
           </ReactFlow>
         </ReactFlowProvider>
