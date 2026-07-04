@@ -259,6 +259,7 @@ write_m7_header(const char *path, const apg_project_v2_compiled_t *compiled, con
     fputs("extern const char apg_m7_project_name[];\n", out);
     fputs("extern const uint32_t apg_m7_project_schedule[APG_M7_PROJECT_SCHEDULE_COUNT];\n", out);
     fputs("extern const char *const apg_m7_project_nodes[APG_M7_PROJECT_NODE_COUNT];\n", out);
+    fputs("extern const char *const apg_m7_project_atom_process_symbols[APG_M7_PROJECT_NODE_COUNT];\n", out);
     fputs("\n#endif\n", out);
     return fclose(out) == 0;
 }
@@ -282,6 +283,15 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         if (i > 0u)
             fputs(", ", out);
         write_c_string(out, compiled->plan.nodes[i].id);
+    }
+    fputs("};\n\n", out);
+    fputs("const char *const apg_m7_project_atom_process_symbols[APG_M7_PROJECT_NODE_COUNT] = {", out);
+    for (size_t i = 0; i < compiled->plan.nodes_len; i++) {
+        if (i > 0u)
+            fputs(", ", out);
+        fputc('"', out);
+        fputs(compiled->plan.nodes[i].atom->name, out);
+        fputs("_process\"", out);
     }
     fputs("};\n\n", out);
     fputs("#if APG_M7_PROJECT_SIGNAL_BUFFER_BYTES > 0u\n", out);

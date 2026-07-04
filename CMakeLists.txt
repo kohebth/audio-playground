@@ -211,7 +211,7 @@ add_test(NAME test_apg_v2_cli_m7_export_source_static COMMAND ${CMAKE_COMMAND} -
 set_tests_properties(test_apg_v2_cli_m7_export_source_static PROPERTIES
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_bundle
-        PASS_REGULAR_EXPRESSION "const uint32_t apg_m7_project_schedule\\[APG_M7_PROJECT_SCHEDULE_COUNT\\].*const char \\*const apg_m7_project_nodes\\[APG_M7_PROJECT_NODE_COUNT\\].*apg_m7_project_signal_buffers\\[APG_M7_PROJECT_SIGNAL_BUFFER_BYTES\\].*apg_m7_project_params\\[APG_M7_PROJECT_PARAM_BYTES\\].*apg_m7_project_atom_storage\\[APG_M7_PROJECT_ATOM_STORAGE_BYTES\\]"
+        PASS_REGULAR_EXPRESSION "const uint32_t apg_m7_project_schedule\\[APG_M7_PROJECT_SCHEDULE_COUNT\\].*const char \\*const apg_m7_project_nodes\\[APG_M7_PROJECT_NODE_COUNT\\].*apg_m7_project_atom_process_symbols\\[APG_M7_PROJECT_NODE_COUNT\\].*generation_dc_process.*amplitude_multiply_process.*apg_m7_project_signal_buffers\\[APG_M7_PROJECT_SIGNAL_BUFFER_BYTES\\].*apg_m7_project_params\\[APG_M7_PROJECT_PARAM_BYTES\\].*apg_m7_project_atom_storage\\[APG_M7_PROJECT_ATOM_STORAGE_BYTES\\]"
         FAIL_REGULAR_EXPRESSION "malloc|calloc|realloc|free|uc_arena|yaml|load_resolved|runtime_init"
 )
 

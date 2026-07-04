@@ -115,6 +115,7 @@ Pending tests to record for PB:
 - [x] PC3: Add an ARM/M7 cross-compile gate for generated bundle syntax when a toolchain is configured.
 - [x] PC4: Define the board audio callback integration contract for fixed block processing, DMA ownership, and cache coherency.
 - [x] PC5: Add static M7 atom-call workload metadata to export JSON and generated headers.
+- [x] PC6: Add per-node atom process symbol metadata to generated M7 bundles.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -125,6 +126,7 @@ Module note: M7 export syntax is now checked by an ARM/M7 compiler when configur
 Module note: STM32H7 board integration now has a fixed-block DMA/cache contract.
 
 Module note: M7 export now reports static atom-call workload metadata.
+Module note: M7 export now includes per-node atom process symbols.
 
 ### Runtime Image Hardening
 
@@ -446,7 +448,7 @@ Module note: Export UI now exposes target readiness and blocked backend gaps.
 Pending AH tests for Phase AI:
 
 - [ ] Benchmark JSON has stable structural fields.
-- [ ] M7 export emits deterministic static bundle.
+- [x] M7 export emits deterministic static bundle.
 - [ ] Unsupported target features produce stable diagnostics.
 
 Module note: Backend CLI now exposes MVP export surfaces.

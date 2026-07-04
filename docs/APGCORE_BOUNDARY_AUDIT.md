@@ -50,6 +50,10 @@ M7 static export tests now run an ARM/M7 freestanding syntax check for generated
 
 M7 static export now emits static atom-call workload metadata in JSON and generated header macros. This is a schedule-derived budget input, not measured CPU timing.
 
+## PC6 Progress
+
+M7 static export now emits per-node atom process symbol names alongside schedule and node tables, giving firmware a deterministic link-plan view before full static call binding exists.
+
 ## PD1 Progress
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.
