@@ -204,7 +204,7 @@ add_test(NAME test_apg_v2_cli_m7_export_header COMMAND ${CMAKE_COMMAND} -E cat $
 set_tests_properties(test_apg_v2_cli_m7_export_header PROPERTIES
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_bundle
-        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_NODE_COUNT 4u.*APG_M7_PROJECT_BLOCK_FRAMES 64u.*APG_M7_PROJECT_SAMPLE_RATE 48000u.*APG_M7_PROJECT_ATOM_CALLS_PER_BLOCK [0-9]+u.*APG_M7_PROJECT_ATOM_CALL_BYTES [0-9]+u.*APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_BYTES [0-9]+u.*APG_M7_PROJECT_STATIC_RAM_BYTES [0-9]+u.*APG_M7_SECTION_SIGNAL_BUFFERS.*APG_M7_SECTION_PARAMS.*APG_M7_SECTION_ATOM_CALLS.*APG_M7_SECTION_SIGNAL_ARRAYS.*APG_M7_SECTION_ATOM_STORAGE.*APG_M7_SECTION_STATE_BUFFERS.*APG_M7_PROJECT_USES_RUNTIME_YAML 0u.*APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u.*apg_m7_project_init.*apg_m7_project_refresh_params.*apg_m7_project_process_block"
+        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_NODE_COUNT 4u.*APG_M7_PROJECT_BLOCK_FRAMES 64u.*APG_M7_PROJECT_SAMPLE_RATE 48000u.*APG_M7_PROJECT_ATOM_CALLS_PER_BLOCK [0-9]+u.*APG_M7_PROJECT_ATOM_CALL_BYTES [0-9]+u.*APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_BYTES [0-9]+u.*APG_M7_PROJECT_STATIC_RAM_BYTES [0-9]+u.*APG_M7_CACHE_LINE_BYTES 32u.*APG_M7_SECTION_SIGNAL_BUFFERS.*APG_M7_SECTION_PARAMS.*APG_M7_SECTION_ATOM_CALLS.*APG_M7_SECTION_SIGNAL_ARRAYS.*APG_M7_SECTION_ATOM_STORAGE.*APG_M7_SECTION_STATE_BUFFERS.*aligned\\(APG_M7_CACHE_LINE_BYTES\\).*APG_M7_PROJECT_USES_RUNTIME_YAML 0u.*APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u.*apg_m7_project_init.*apg_m7_project_refresh_params.*apg_m7_project_process_block"
 )
 
 add_test(NAME test_apg_v2_cli_m7_export_source_static COMMAND ${CMAKE_COMMAND} -E cat ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c)
@@ -296,19 +296,19 @@ add_test(NAME test_apg_v2_cli_m7_export_custom_prepare COMMAND ${CMAKE_COMMAND} 
 set_tests_properties(test_apg_v2_cli_m7_export_custom_prepare PROPERTIES LABELS v2)
 add_test(
         NAME test_apg_v2_cli_m7_export_custom_timing
-        COMMAND apg-v2 export --target m7_static --block-frames 128 --sample-rate 96000 projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_CUSTOM_TEST_DIR}
+        COMMAND apg-v2 export --target m7_static --block-frames 128 --sample-rate 96000 --cache-line-bytes 64 projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_CUSTOM_TEST_DIR}
 )
 set_tests_properties(test_apg_v2_cli_m7_export_custom_timing PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_custom_prepare
-        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*\"block_frames\":128.*\"sample_rate\":96000"
+        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*\"block_frames\":128.*\"cache_line_bytes\":64.*\"sample_rate\":96000"
 )
 add_test(NAME test_apg_v2_cli_m7_export_custom_header COMMAND ${CMAKE_COMMAND} -E cat ${APG_M7_CLI_CUSTOM_TEST_DIR}/apg_project_m7.h)
 set_tests_properties(test_apg_v2_cli_m7_export_custom_header PROPERTIES
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_custom_timing
-        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_BLOCK_FRAMES 128u.*APG_M7_PROJECT_SAMPLE_RATE 96000u"
+        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_BLOCK_FRAMES 128u.*APG_M7_PROJECT_SAMPLE_RATE 96000u.*APG_M7_CACHE_LINE_BYTES 64u"
 )
 
 set(APG_M7_C_COMPILER "" CACHE FILEPATH "Optional ARM/M7 C compiler used to syntax-check generated m7_static bundles")

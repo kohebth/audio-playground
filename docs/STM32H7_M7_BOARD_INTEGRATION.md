@@ -18,7 +18,7 @@ The firmware build receives:
 
 The generated project must declare deterministic constants for block frames, signal count, param count, schedule count, atom call bytes, signal-array pointer bytes, atom storage bytes, state bytes, total static RAM, and static atom-call workload. Firmware startup must reject or fail to build projects that exceed the selected board memory map.
 
-Use `--block-frames <frames>` and `--sample-rate <hz>` when exporting for a board whose DMA period or codec rate differs from the defaults. The generated `APG_M7_PROJECT_BLOCK_FRAMES` and `APG_M7_PROJECT_SAMPLE_RATE` macros are the firmware contract.
+Use `--block-frames <frames>`, `--sample-rate <hz>`, and `--cache-line-bytes <bytes>` when exporting for a board whose DMA period, codec rate, or cache-line size differs from the defaults. The generated `APG_M7_PROJECT_BLOCK_FRAMES`, `APG_M7_PROJECT_SAMPLE_RATE`, and `APG_M7_CACHE_LINE_BYTES` macros are the firmware contract.
 
 Firmware must call `apg_m7_project_init()` once after reset before audio starts. Control code may update exported param memory outside the audio callback and then call `apg_m7_project_refresh_params()` at a block boundary before executing `apg_m7_project_process_block()`.
 
@@ -45,7 +45,7 @@ Runtime signal, param, state, and schedule memory should not be used directly as
 
 ## Cache And Alignment
 
-DMA buffers must be aligned to the board cache-line size. On STM32H7 this is typically 32 bytes. Cache maintenance must cover whole cache lines, including any padding required by the HAL or linker script.
+DMA buffers must be aligned to the board cache-line size. On STM32H7 this is typically 32 bytes. The generated static runtime sections use `APG_M7_CACHE_LINE_BYTES` alignment. Cache maintenance must cover whole cache lines, including any padding required by the HAL or linker script.
 
 Runtime memory should be placed in deterministic sections chosen by the board:
 

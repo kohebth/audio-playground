@@ -23,7 +23,7 @@ static int usage(const char *argv0) {
         "  %s benchmark project <path>\n"
         "  %s export --target <wasm_realtime|m7_static> <project> <outdir>\n"
         "  %s export --target m7_static [--max-static-ram <bytes>] [--block-frames <frames>] [--sample-rate <hz>] "
-        "<project> <outdir>\n",
+        "[--cache-line-bytes <bytes>] <project> <outdir>\n",
         argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0
     );
     return 2;
@@ -171,11 +171,13 @@ static bool join_path(char *out, size_t out_size, const char *dir, const char *n
 enum {
     APG_M7_DEFAULT_BLOCK_FRAMES = 64u,
     APG_M7_DEFAULT_SAMPLE_RATE  = 48000u,
+    APG_M7_DEFAULT_CACHE_LINE   = 32u,
 };
 
 typedef struct {
     uint32_t block_frames;
     uint32_t sample_rate;
+    uint32_t cache_line_bytes;
     size_t   static_ram_budget;
     bool     has_static_ram_budget;
 } m7_export_options_t;
@@ -211,6 +213,14 @@ static bool parse_uint32_arg(const char *text, uint32_t *out) {
     return true;
 }
 
+static bool parse_alignment_arg(const char *text, uint32_t *out) {
+    uint32_t value = 0u;
+    if (!parse_uint32_arg(text, &value) || (value & (value - 1u)) != 0u)
+        return false;
+    *out = value;
+    return true;
+}
+
 static m7_memory_manifest_t m7_memory_manifest(const apg_v2_runtime_image_t *image) {
     m7_memory_manifest_t memory = {0};
     if (!image)
@@ -229,7 +239,12 @@ static m7_memory_manifest_t m7_memory_manifest(const apg_v2_runtime_image_t *ima
     return memory;
 }
 
-static bool write_m7_header(const char *path, const apg_v2_runtime_image_t *image, const m7_memory_manifest_t *memory) {
+static bool write_m7_header(
+    const char                   *path,
+    const apg_v2_runtime_image_t *image,
+    const m7_memory_manifest_t   *memory,
+    const m7_export_options_t    *options
+) {
     FILE *out = fopen(path, "w");
     if (!out)
         return false;
@@ -255,6 +270,7 @@ static bool write_m7_header(const char *path, const apg_v2_runtime_image_t *imag
     fprintf(out, "#define APG_M7_PROJECT_ATOM_STORAGE_BYTES %zuu\n", memory->atom_storage_bytes);
     fprintf(out, "#define APG_M7_PROJECT_STATE_BUFFER_BYTES %zuu\n", memory->state_buffer_bytes);
     fprintf(out, "#define APG_M7_PROJECT_STATIC_RAM_BYTES %zuu\n\n", memory->static_ram_bytes);
+    fprintf(out, "#define APG_M7_CACHE_LINE_BYTES %uu\n\n", options->cache_line_bytes);
     fputs("#define APG_M7_SECTION_SIGNAL_BUFFERS \".apg_m7_signal_buffers\"\n", out);
     fputs("#define APG_M7_SECTION_PARAMS \".apg_m7_params\"\n", out);
     fputs("#define APG_M7_SECTION_ATOM_CALLS \".apg_m7_atom_calls\"\n", out);
@@ -262,7 +278,7 @@ static bool write_m7_header(const char *path, const apg_v2_runtime_image_t *imag
     fputs("#define APG_M7_SECTION_ATOM_STORAGE \".apg_m7_atom_storage\"\n", out);
     fputs("#define APG_M7_SECTION_STATE_BUFFERS \".apg_m7_state_buffers\"\n", out);
     fputs("#if defined(__GNUC__)\n", out);
-    fputs("#define APG_M7_SECTION_ATTR(name) __attribute__((section(name), aligned(4)))\n", out);
+    fputs("#define APG_M7_SECTION_ATTR(name) __attribute__((section(name), aligned(APG_M7_CACHE_LINE_BYTES)))\n", out);
     fputs("#else\n#define APG_M7_SECTION_ATTR(name)\n#endif\n\n", out);
     fputs("#define APG_M7_PROJECT_USES_RUNTIME_YAML 0u\n", out);
     fputs("#define APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u\n\n", out);
@@ -620,7 +636,7 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         return rc;
     }
 
-    if (!write_m7_header(header_path, &image, &memory) || !write_m7_source(source_path, &project, &image)) {
+    if (!write_m7_header(header_path, &image, &memory, options) || !write_m7_source(source_path, &project, &image)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write m7_static export files");
         int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
         uc_arena_free(&image_arena);
@@ -638,12 +654,12 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         "\"memory\":{\"block_frames\":%u,\"signal_buffer_bytes\":%zu,\"param_bytes\":%zu,"
         "\"schedule_bytes\":%zu,\"atom_call_bytes\":%zu,\"signal_array_pointer_bytes\":%zu,"
         "\"atom_storage_bytes\":%zu,\"state_buffer_bytes\":%zu,"
-        "\"static_ram_bytes\":%zu},\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,"
+        "\"static_ram_bytes\":%zu,\"cache_line_bytes\":%u},\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,"
         "\"atom_calls_per_block\":%zu,\"atom_calls_per_second\":%zu}}\n",
         image.nodes_len, image.schedule_len, options->block_frames, memory.signal_buffer_bytes, memory.param_bytes,
         memory.schedule_bytes, memory.atom_call_bytes, memory.signal_array_pointer_bytes, memory.atom_storage_bytes,
-        memory.state_buffer_bytes, memory.static_ram_bytes, options->sample_rate, options->block_frames,
-        image.schedule_len, image.schedule_len * options->sample_rate / options->block_frames
+        memory.state_buffer_bytes, memory.static_ram_bytes, options->cache_line_bytes, options->sample_rate,
+        options->block_frames, image.schedule_len, image.schedule_len * options->sample_rate / options->block_frames
     );
     uc_arena_free(&image_arena);
     uc_arena_free(&arena);
@@ -716,8 +732,9 @@ int main(int argc, char **argv) {
         }
         if (strcmp(argv[3], "m7_static") == 0) {
             m7_export_options_t options = {
-                .block_frames = APG_M7_DEFAULT_BLOCK_FRAMES,
-                .sample_rate  = APG_M7_DEFAULT_SAMPLE_RATE,
+                .block_frames     = APG_M7_DEFAULT_BLOCK_FRAMES,
+                .sample_rate      = APG_M7_DEFAULT_SAMPLE_RATE,
+                .cache_line_bytes = APG_M7_DEFAULT_CACHE_LINE,
             };
             int index = 4;
             while (index + 2 < argc && strncmp(argv[index], "--", 2) == 0) {
@@ -730,6 +747,9 @@ int main(int argc, char **argv) {
                         return usage(argv[0]);
                 } else if (strcmp(argv[index], "--sample-rate") == 0) {
                     if (!parse_uint32_arg(argv[index + 1], &options.sample_rate))
+                        return usage(argv[0]);
+                } else if (strcmp(argv[index], "--cache-line-bytes") == 0) {
+                    if (!parse_alignment_arg(argv[index + 1], &options.cache_line_bytes))
                         return usage(argv[0]);
                 } else {
                     return usage(argv[0]);

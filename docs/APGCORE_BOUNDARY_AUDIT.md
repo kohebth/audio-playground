@@ -88,6 +88,10 @@ CMake now exposes an opt-in ARM/M7 link gate through `APG_M7_LINKER_SCRIPT` so g
 
 M7 static export now accepts explicit board block-frame and sample-rate options. Generated timing macros, runtime image sizing, and export JSON reflect the selected board contract.
 
+## PC16 Progress
+
+M7 static export now accepts an explicit board cache-line size. Generated memory sections align through `APG_M7_CACHE_LINE_BYTES`, and export JSON/header output records the selected alignment contract.
+
 ## PD1 Progress
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.

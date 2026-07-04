@@ -125,6 +125,7 @@ Pending tests to record for PB:
 - [x] PC13: Add optional ARM stack and board timing gates for generated M7 bundles.
 - [x] PC14: Add an optional ARM linker-script gate for generated M7 bundles.
 - [x] PC15: Make M7 static export block frames and sample rate board-configurable.
+- [x] PC16: Make M7 static export section alignment board-cache configurable.
 
 Module note: M7 export now reports deterministic static RAM byte counts for generated bundles.
 
@@ -145,6 +146,7 @@ Module note: M7 host timing and runner stack are now gated.
 Module note: M7 board/toolchain timing gates are now configurable.
 Module note: M7 generated bundles can now be target-linked when a board linker script is configured.
 Module note: M7 export timing constants now come from explicit board export options.
+Module note: M7 generated sections now align to an explicit board cache-line contract.
 
 ### Runtime Image Hardening
 
