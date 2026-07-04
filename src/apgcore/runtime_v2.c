@@ -179,6 +179,7 @@ static uc_status apply_signal_bindings(
     return UC_OK;
 }
 
+// ?5d8f0c3a:start? applies image-validated scalar refresh offsets without binding-key lookups.
 static uc_status refresh_scalar_plan(
     const apg_v2_runtime_scalar_refresh_t *items,
     size_t                                 items_len,
@@ -193,15 +194,6 @@ static uc_status refresh_scalar_plan(
     for (size_t i = 0; i < items_len; i++) {
         if (!items[i].binding)
             return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh metadata is missing");
-        if (items[i].binding_key && items[i].binding->key && strcmp(items[i].binding_key, items[i].binding->key) != 0) {
-            char msg[192];
-            snprintf(
-                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing",
-                compiled_node->id ? compiled_node->id : "", compiled_node->atom->name ? compiled_node->atom->name : "",
-                items[i].config ? "config" : "input", items[i].binding->key
-            );
-            return set_error(err, UC_E_MISSING, msg);
-        }
         if (items[i].binding->kind != APG_BIND_PARAM && items[i].binding->kind != APG_BIND_LITERAL) {
             char msg[192];
             snprintf(
@@ -229,6 +221,7 @@ static uc_status refresh_scalar_plan(
     }
     return UC_OK;
 }
+// ?5d8f0c3a:end?
 
 static uc_status
 apply_mix_matrix_config(const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_node_t *node, uc_error *err) {

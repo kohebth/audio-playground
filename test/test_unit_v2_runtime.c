@@ -178,24 +178,19 @@ static int test_runtime_config_error_names_node_atom_and_binding(void) {
         return 1;
     }
 
+    plan.nodes[0].config[0].key = "missing_value";
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
     uc_status        status = apg_v2_runtime_init(&plan, 8u, 48000.0f, &runtime, &err);
-    if (status != UC_OK) {
-        fprintf(stderr, "runtime init error: %s\n", err.msg);
+    if (status == UC_OK) {
+        apg_v2_runtime_destroy(&runtime);
         uc_arena_free(&arena);
-        return fail("failed to initialize v2 runtime");
+        return fail("runtime image accepted missing config field metadata");
     }
+    if (!strstr(err.msg, "gain_value") || !strstr(err.msg, "generation_dc") || !strstr(err.msg, "config binding key") ||
+        !strstr(err.msg, "missing_value"))
+        return fail("runtime image config error did not include node, atom, and binding context");
 
-    plan.nodes[0].config[0].key = "missing_value";
-    if (apg_v2_runtime_process(&runtime, 2u))
-        return fail("runtime accepted missing config field metadata");
-    const char *last_error = apg_v2_measure_last_error(&runtime);
-    if (!last_error || !strstr(last_error, "gain_value") || !strstr(last_error, "generation_dc") ||
-        !strstr(last_error, "config binding key") || !strstr(last_error, "missing_value"))
-        return fail("runtime config error did not include node, atom, and binding context");
-
-    apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);
     return 0;
 }

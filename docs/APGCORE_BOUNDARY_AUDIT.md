@@ -78,6 +78,10 @@ Control-port updates now apply through runtime-image parameter indexes instead o
 
 Default mono processing now uses the first image-owned audio-port map entries directly instead of converting those entries back through port-name lookup.
 
+## PD8 Progress
+
+Scalar refresh binding-key validation now happens during runtime-image build. Runtime processing applies image-validated offsets and field types without per-block key comparisons.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.

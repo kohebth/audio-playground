@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -621,12 +622,18 @@ static uc_status fill_scalar_refreshes(
             continue;
         if (!config && !scalar_refresh_field(field))
             continue;
-        if (!field)
-            return set_error(err, UC_E_MISSING, "v2 runtime image config refresh metadata is missing");
+        if (!field) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing",
+                node->id ? node->id : "", node->atom && node->atom->name ? node->atom->name : "",
+                config ? "config" : "input", bindings[i].key ? bindings[i].key : ""
+            );
+            return set_error(err, UC_E_MISSING, msg);
+        }
         if (!scalar_refresh_field(field))
             return set_error(err, UC_E_TYPE, "v2 runtime image scalar refresh field type is unsupported");
         items[item_index].binding        = &bindings[i];
-        items[item_index].binding_key    = bindings[i].key;
         items[item_index].storage_offset = field->offset;
         items[item_index].field_type     = field->type;
         items[item_index].config         = config;
