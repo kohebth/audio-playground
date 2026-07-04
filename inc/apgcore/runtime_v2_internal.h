@@ -74,8 +74,12 @@ struct apg_v2_runtime_node_t {
     size_t                                 signal_bindings_len;
     const apg_v2_runtime_scalar_refresh_t *config_refreshes;
     size_t                                 config_refreshes_len;
+    apg_v2_runtime_scalar_refresh_t       *config_refreshes_runtime;
+    size_t                                 config_refreshes_runtime_len;
     const apg_v2_runtime_scalar_refresh_t *input_refreshes;
     size_t                                 input_refreshes_len;
+    apg_v2_runtime_scalar_refresh_t       *input_refreshes_runtime;
+    size_t                                 input_refreshes_runtime_len;
     const char                            *node_id;
     const char                            *atom_name;
     atom_thunk_fn                          thunk;

@@ -212,6 +212,48 @@ static uc_status refresh_scalar_plan(
     return UC_OK;
 }
 
+static size_t count_param_scalar_refreshes(const apg_v2_runtime_scalar_refresh_t *items, size_t items_len) {
+    size_t count = 0u;
+    for (size_t i = 0; i < items_len; i++) {
+        if (items[i].kind == APG_BIND_PARAM)
+            count++;
+    }
+    return count;
+}
+
+static uc_status copy_param_scalar_refreshes(
+    const apg_v2_runtime_scalar_refresh_t *all_items,
+    size_t                                 all_items_len,
+    apg_v2_runtime_scalar_refresh_t      **out_items,
+    size_t                                *out_len,
+    uc_error                              *err
+) {
+    if (!out_items || !out_len)
+        return UC_E_TYPE;
+    *out_items = NULL;
+    *out_len   = 0u;
+    if (!all_items || all_items_len == 0u)
+        return UC_OK;
+
+    size_t count = count_param_scalar_refreshes(all_items, all_items_len);
+    if (count == 0u)
+        return UC_OK;
+
+    apg_v2_runtime_scalar_refresh_t *param_items = calloc(count, sizeof(*param_items));
+    if (!param_items)
+        return set_error(err, UC_E_OOM, "v2 runtime scalar refresh allocation failed");
+
+    size_t cursor = 0u;
+    for (size_t i = 0; i < all_items_len; i++) {
+        if (all_items[i].kind != APG_BIND_PARAM)
+            continue;
+        param_items[cursor++] = all_items[i];
+    }
+    *out_items = param_items;
+    *out_len   = cursor;
+    return UC_OK;
+}
+
 static bool refresh_scalar_plan_runtime(
     const apg_v2_runtime_scalar_refresh_t *items,
     size_t                                 items_len,
@@ -412,8 +454,20 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         );
         if (status != UC_OK)
             return status;
+        status = copy_param_scalar_refreshes(
+            node->config_refreshes, node->config_refreshes_len, &node->config_refreshes_runtime,
+            &node->config_refreshes_runtime_len, err
+        );
+        if (status != UC_OK)
+            return status;
         status = refresh_scalar_plan(
             node->input_refreshes, node->input_refreshes_len, node->node_id, node->atom_name, out, node->in_storage, err
+        );
+        if (status != UC_OK)
+            return status;
+        status = copy_param_scalar_refreshes(
+            node->input_refreshes, node->input_refreshes_len, &node->input_refreshes_runtime,
+            &node->input_refreshes_runtime_len, err
         );
         if (status != UC_OK)
             return status;
@@ -699,12 +753,13 @@ static bool run_node(apg_v2_runtime_t *runtime, size_t node_index, uint32_t fram
     }
 
     if (!refresh_scalar_plan_runtime(
-            node->config_refreshes, node->config_refreshes_len, node->node_id, node->atom_name, runtime,
+            node->config_refreshes_runtime, node->config_refreshes_runtime_len, node->node_id, node->atom_name, runtime,
             node->config_storage
         ))
         return false;
     if (!refresh_scalar_plan_runtime(
-            node->input_refreshes, node->input_refreshes_len, node->node_id, node->atom_name, runtime, node->in_storage
+            node->input_refreshes_runtime, node->input_refreshes_runtime_len, node->node_id, node->atom_name, runtime,
+            node->in_storage
         ))
         return false;
 
@@ -998,6 +1053,8 @@ void apg_v2_runtime_destroy(apg_v2_runtime_t *runtime) {
         return;
 
     for (size_t i = 0; i < runtime->nodes_len; i++) {
+        free(runtime->nodes[i].config_refreshes_runtime);
+        free(runtime->nodes[i].input_refreshes_runtime);
         free(runtime->nodes[i].state_buffers);
         free(runtime->nodes[i].state_buffer_samples);
     }
