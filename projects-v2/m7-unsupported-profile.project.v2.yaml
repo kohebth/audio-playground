@@ -1,0 +1,24 @@
+kind: apg.project
+schema: apg.project.v2
+name: m7-unsupported-profile
+version: 2.0.0
+
+units:
+  - id: unsupported_profile_unit
+    file: ../units-v2/m7_unsupported_profile.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: unit1
+      unit: unsupported_profile_unit
+
+  routes:
+    - from: system.input
+      to: unit1.input
+    - from: unit1.output
+      to: system.output
+
+targets:
+  default: desktop_full
+  export:
+    - m7_static

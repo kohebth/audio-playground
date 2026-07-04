@@ -1,0 +1,49 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: m7_unsupported_profile
+version: 2.0.0
+
+meta:
+  title: M7 Unsupported Profile Flag
+  category: test
+  description: Exercises M7 export rejection when target compatibility is explicitly false.
+
+params: {}
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - gain
+    - output
+
+  nodes:
+    - id: gain_source
+      atom: generation_dc
+      out:
+        signal: gain
+      config:
+        value: 1.0
+
+    - id: multiply
+      atom: amplitude_multiply
+      in:
+        signal_a: input
+        signal_b: gain
+      out:
+        signal: output
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: false
+  offline_render: true

@@ -144,19 +144,34 @@ static int benchmark_project(const char *path) {
     return 0;
 }
 
-static bool unit_supports_target(const apg_unit_v2_t *unit, const char *target) {
+typedef enum {
+    APG_TARGET_SUPPORT_SUPPORTED,
+    APG_TARGET_SUPPORT_UNSUPPORTED,
+    APG_TARGET_SUPPORT_UNDECLARED,
+} apg_target_support_t;
+
+static apg_target_support_t unit_profile_support(const apg_unit_v2_t *unit, const char *target) {
     for (size_t i = 0; unit && i < unit->compatibility_len; i++) {
-        if (unit->compatibility[i].target && strcmp(unit->compatibility[i].target, target) == 0)
-            return unit->compatibility[i].supported && strcmp(unit->compatibility[i].supported, "true") == 0;
+        if (!unit->compatibility[i].target || strcmp(unit->compatibility[i].target, target) != 0)
+            continue;
+        if (unit->compatibility[i].supported && strcmp(unit->compatibility[i].supported, "true") == 0)
+            return APG_TARGET_SUPPORT_SUPPORTED;
+        return APG_TARGET_SUPPORT_UNSUPPORTED;
     }
-    return false;
+    return APG_TARGET_SUPPORT_UNDECLARED;
 }
 
 static const apg_project_v2_loaded_unit_t *
-first_unsupported_unit(const apg_project_v2_resolved_t *project, const char *target) {
+first_unsupported_unit(const apg_project_v2_resolved_t *project, const char *target, const char **reason) {
     for (size_t i = 0; i < project->units_len; i++) {
-        if (!unit_supports_target(&project->units[i].unit, target))
-            return &project->units[i];
+        apg_target_support_t support = unit_profile_support(&project->units[i].unit, target);
+        if (support == APG_TARGET_SUPPORT_SUPPORTED)
+            continue;
+        if (reason) {
+            *reason = (support == APG_TARGET_SUPPORT_UNSUPPORTED) ? "does not support m7_static"
+                                                                  : "does not declare m7_static compatibility";
+        }
+        return &project->units[i];
     }
     return NULL;
 }
@@ -606,9 +621,13 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         return rc;
     }
 
-    const apg_project_v2_loaded_unit_t *unsupported = first_unsupported_unit(&project, "m7_static");
+    const char                         *unit_reason = NULL;
+    const apg_project_v2_loaded_unit_t *unsupported = first_unsupported_unit(&project, "m7_static", &unit_reason);
     if (unsupported) {
-        uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "unit '%s' does not support m7_static", unsupported->id);
+        uc_error_set(
+            &err, UC_E_TYPE, (uc_loc){0, 0}, "unit '%s' %s", unsupported->id,
+            unit_reason ? unit_reason : "does not support m7_static"
+        );
         int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
         uc_arena_free(&arena);
         return rc;

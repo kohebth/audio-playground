@@ -177,12 +177,12 @@ set_tests_properties(test_apg_v2_cli_wasm_export_blocked PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_m7_export_rejects_unsupported
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/guitar-pedalboard.project.v2.yaml /tmp || true"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-profile.project.v2.yaml /tmp || true"
 )
 set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*does not support m7_static"
+        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*unit 'unsupported_profile_unit' does not support m7_static"
 )
 
 add_test(
@@ -193,6 +193,16 @@ set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported_atom PROPERTI
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
         PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*atom 'src_downsample' does not support m7_static"
+)
+
+add_test(
+        NAME test_apg_v2_cli_m7_export_rejects_undeclared_compat
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-compat.project.v2.yaml /tmp || true"
+)
+set_tests_properties(test_apg_v2_cli_m7_export_rejects_undeclared_compat PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*does not declare m7_static compatibility"
 )
 
 set(APG_M7_CLI_TEST_DIR /tmp/audio-playground-apgcore-m7-export)
