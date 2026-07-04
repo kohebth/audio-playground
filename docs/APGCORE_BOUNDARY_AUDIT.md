@@ -172,6 +172,10 @@ Meter snapshot structs now live in `measure_v2.h`, keeping meter read data on th
 
 Runtime bypass transport entries are now internal runtime state. Public runtime headers expose the bypass control API without the transport entry layout.
 
+## PD23 Progress
+
+`apg_v2_runtime_t` is now an opaque public handle. Runtime layout lives in `runtime_v2_internal.h`; host structs keep runtime ownership behind pointers and expose diagnostics through host helper APIs.
+
 ## PE1 Progress
 
 Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.
@@ -186,4 +190,4 @@ M7 static export now emits section names and section-placed RAM buffers for sign
 
 ## Immediate Direction
 
-New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 work should next connect a real STM32H7 BSP timing command and production board linker script.
+New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2` or host helpers, not public runtime fields. M7 work should next connect a real STM32H7 BSP timing command and production board linker script.

@@ -1,5 +1,4 @@
 #include <apgcore/host_v2.h>
-#include <apgcore/measure_v2.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -40,7 +39,7 @@ int main(void) {
     float       gain_updated[TEST_FRAMES] = {0.5015625f, -1.003125f, 2.00625f};
 
     if (!apg_v2_host_project_process_mono_ports(&host, "input", input, "output", output, TEST_FRAMES)) {
-        fprintf(stderr, "project host process failed: %s\n", apg_v2_measure_last_error(&host.runtime));
+        fprintf(stderr, "project host process failed: %s\n", apg_v2_host_project_last_error(&host));
         apg_v2_host_project_destroy(&host);
         return fail("project host process failed");
     }
@@ -58,9 +57,7 @@ int main(void) {
         return fail("project host accepted ambiguous param name");
     }
     if (!apg_v2_host_project_process_mono_ports(&host, "input", input, "output", output, TEST_FRAMES)) {
-        fprintf(
-            stderr, "project host process failed after param update: %s\n", apg_v2_measure_last_error(&host.runtime)
-        );
+        fprintf(stderr, "project host process failed after param update: %s\n", apg_v2_host_project_last_error(&host));
         apg_v2_host_project_destroy(&host);
         return fail("project host process after update failed");
     }

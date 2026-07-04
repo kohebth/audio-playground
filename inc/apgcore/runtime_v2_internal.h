@@ -1,8 +1,12 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_RUNTIME_V2_INTERNAL_H
 #define AUDIO_PLAYGROUND_APGCORE_RUNTIME_V2_INTERNAL_H
 
+#include <apgcore/process.h>
 #include <apgcore/runtime_v2.h>
 #include <atom_registry.h>
+
+typedef struct apg_v2_runtime_node_t         apg_v2_runtime_node_t;
+typedef struct apg_v2_runtime_bypass_entry_t apg_v2_runtime_bypass_entry_t;
 
 struct apg_v2_runtime_bypass_entry_t {
     const char *instance_id;
@@ -10,6 +14,48 @@ struct apg_v2_runtime_bypass_entry_t {
     size_t      input_index;
     size_t      output_index;
     bool        enabled;
+};
+
+struct apg_v2_runtime_t {
+    apg_process_info_t                 process_info;
+    uint32_t                           frame_capacity;
+    const char                       **signal_names;
+    float                             *signal_pool;
+    float                            **signals;
+    size_t                             signals_len;
+    const char                       **param_names;
+    float                             *params;
+    float                             *param_defaults;
+    float                             *param_targets;
+    const uint32_t                    *param_smoothing_frames;
+    uint32_t                          *param_smoothing_remaining_frames;
+    size_t                             params_len;
+    bool                               has_processed;
+    apg_v2_runtime_bypass_entry_t     *bypassed_instances;
+    size_t                             bypassed_instances_len;
+    size_t                            *bypass_index_by_node;
+    apg_v2_runtime_control_target_t   *control_targets;
+    size_t                             control_targets_len;
+    bool                               project_muted;
+    size_t                            *project_mute_output_indices;
+    size_t                             project_mute_output_indices_len;
+    const apg_v2_runtime_audio_port_t *input_audio_ports;
+    size_t                             input_audio_ports_len;
+    const apg_v2_runtime_audio_port_t *output_audio_ports;
+    size_t                             output_audio_ports_len;
+    float                            **signal_array_pool;
+    size_t                             signal_array_pool_len;
+    size_t                             input_meters_len;
+    size_t                             output_meters_len;
+    void                              *atom_storage_pool;
+    size_t                             atom_storage_bytes;
+    float                             *state_buffer_pool;
+    size_t                             state_buffer_samples;
+    apg_v2_runtime_node_t             *nodes;
+    size_t                             nodes_len;
+    const uint32_t                    *schedule;
+    size_t                             schedule_len;
+    char                               last_error[160];
 };
 
 struct apg_v2_runtime_node_t {

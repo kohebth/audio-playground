@@ -1,8 +1,11 @@
 #include <apgcore/host_v2.h>
+#include <apgcore/measure_v2.h>
 #include <apgcore/runtime_image_builder_v2.h>
+#include <apgcore/runtime_v2_internal.h>
 
 #include <limits.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
@@ -17,18 +20,28 @@ static uc_status build_runtime_from_plan(
     float                         sample_rate,
     uc_arena                     *image_arena,
     apg_v2_runtime_image_t       *image,
-    apg_v2_runtime_t             *runtime,
+    apg_v2_runtime_t            **runtime,
     uc_error                     *err
 ) {
     if (!plan || !image_arena || !image || !runtime || !err)
         return UC_E_TYPE;
+    *runtime = NULL;
 
     uc_status status =
         apg_v2_runtime_image_build_with_growth(plan, frame_capacity, sample_rate, image_arena, image, err);
     if (status != UC_OK)
         return status;
 
-    return apg_v2_runtime_init_from_image(image, runtime, err);
+    apg_v2_runtime_t *created = calloc(1, sizeof(*created));
+    if (!created)
+        return set_error(err, UC_E_OOM, "v2 runtime allocation failed");
+    status = apg_v2_runtime_init_from_image(image, created, err);
+    if (status != UC_OK) {
+        free(created);
+        return status;
+    }
+    *runtime = created;
+    return UC_OK;
 }
 
 uc_status apg_v2_host_load_file(
@@ -73,7 +86,11 @@ fail:
 bool apg_v2_host_set_param(apg_v2_host_unit_t *host, const char *name, float value) {
     if (!host || !host->runtime_ready)
         return false;
-    return apg_v2_runtime_set_param(&host->runtime, name, value);
+    return apg_v2_runtime_set_param(host->runtime, name, value);
+}
+
+const char *apg_v2_host_last_error(const apg_v2_host_unit_t *host) {
+    return host ? apg_v2_measure_last_error(host->runtime) : NULL;
 }
 
 bool apg_v2_host_process_mono_ports(
@@ -86,14 +103,16 @@ bool apg_v2_host_process_mono_ports(
 ) {
     if (!host || !host->runtime_ready)
         return false;
-    return apg_v2_runtime_process_mono_ports(&host->runtime, input_port_name, input, output_port_name, output, frames);
+    return apg_v2_runtime_process_mono_ports(host->runtime, input_port_name, input, output_port_name, output, frames);
 }
 
 void apg_v2_host_destroy(apg_v2_host_unit_t *host) {
     if (!host)
         return;
-    if (host->runtime_ready)
-        apg_v2_runtime_destroy(&host->runtime);
+    if (host->runtime) {
+        apg_v2_runtime_destroy(host->runtime);
+        free(host->runtime);
+    }
     if (host->image_ready)
         uc_arena_free(&host->image_arena);
     if (host->arena_ready)
@@ -143,7 +162,11 @@ fail:
 bool apg_v2_host_project_set_param(apg_v2_host_project_t *host, const char *name, float value) {
     if (!host || !host->runtime_ready)
         return false;
-    return apg_v2_runtime_set_param(&host->runtime, name, value);
+    return apg_v2_runtime_set_param(host->runtime, name, value);
+}
+
+const char *apg_v2_host_project_last_error(const apg_v2_host_project_t *host) {
+    return host ? apg_v2_measure_last_error(host->runtime) : NULL;
 }
 
 bool apg_v2_host_project_process_mono_ports(
@@ -156,14 +179,16 @@ bool apg_v2_host_project_process_mono_ports(
 ) {
     if (!host || !host->runtime_ready)
         return false;
-    return apg_v2_runtime_process_mono_ports(&host->runtime, input_port_name, input, output_port_name, output, frames);
+    return apg_v2_runtime_process_mono_ports(host->runtime, input_port_name, input, output_port_name, output, frames);
 }
 
 void apg_v2_host_project_destroy(apg_v2_host_project_t *host) {
     if (!host)
         return;
-    if (host->runtime_ready)
-        apg_v2_runtime_destroy(&host->runtime);
+    if (host->runtime) {
+        apg_v2_runtime_destroy(host->runtime);
+        free(host->runtime);
+    }
     if (host->image_ready)
         uc_arena_free(&host->image_arena);
     if (host->arena_ready)

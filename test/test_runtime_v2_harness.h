@@ -3,6 +3,7 @@
 
 #include <apgcore/runtime_image_builder_v2.h>
 #include <apgcore/runtime_v2.h>
+#include <apgcore/runtime_v2_internal.h>
 
 // ?c4f2a9b1:start? keeps runtime tests on the production image-init boundary.
 static uc_status test_apg_v2_runtime_init_image(

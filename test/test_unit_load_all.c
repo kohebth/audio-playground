@@ -1,5 +1,4 @@
 #include <apgcore/host_v2.h>
-#include <apgcore/measure_v2.h>
 
 #include <dirent.h>
 #include <math.h>
@@ -81,9 +80,7 @@ static int test_unit_file(const char *path, int *processed) {
         fill_input(input, mode);
         memset(output, 0, sizeof(output));
         if (!apg_v2_host_process_mono_ports(&host, input_port, input, output_port, output, TEST_CHUNK)) {
-            fprintf(
-                stderr, "%s mode %d failed runtime process: %s\n", path, mode, apg_v2_measure_last_error(&host.runtime)
-            );
+            fprintf(stderr, "%s mode %d failed runtime process: %s\n", path, mode, apg_v2_host_last_error(&host));
             apg_v2_host_destroy(&host);
             return 1;
         }
