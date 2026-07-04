@@ -2,6 +2,7 @@
 #include <apgcore/json_contract_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/project_v2.h>
+#include <apgcore/runtime_image_v2.h>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -177,8 +178,6 @@ typedef struct {
     size_t static_ram_bytes;
 } m7_memory_manifest_t;
 
-static size_t storage_size(size_t size) { return size > 0u ? size : 1u; }
-
 static bool parse_size_arg(const char *text, size_t *out) {
     if (!text || !out || text[0] == '\0')
         return false;
@@ -190,29 +189,34 @@ static bool parse_size_arg(const char *text, size_t *out) {
     return true;
 }
 
-static m7_memory_manifest_t m7_memory_manifest(const apg_project_v2_compiled_t *compiled) {
+static m7_memory_manifest_t m7_memory_manifest(const apg_project_v2_compiled_t *compiled, uc_error *err) {
     m7_memory_manifest_t memory = {0};
-    if (!compiled)
+    if (!compiled || !err)
         return memory;
 
-    memory.signal_buffer_bytes = compiled->expanded_unit.signals_len * APG_M7_BLOCK_FRAMES * sizeof(float);
-    memory.param_bytes         = compiled->expanded_unit.params_len * sizeof(float);
-    memory.schedule_bytes      = compiled->plan.schedule_len * sizeof(uint32_t);
-
-    for (size_t i = 0; i < compiled->plan.nodes_len; i++) {
-        const atom_registry_entry_t *atom = compiled->plan.nodes[i].atom;
-        if (!atom)
-            continue;
-        memory.atom_storage_bytes += storage_size(atom->out_size) + storage_size(atom->in_size) +
-                                     storage_size(atom->config_size) + storage_size(atom->state_size);
-        for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
-            if (atom->state_fields[field_index].type == FIELD_BUFFER)
-                memory.state_buffer_bytes += atom->state_fields[field_index].buffer_samples * sizeof(float);
-        }
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 1024 * 1024) != 0) {
+        uc_error_set(err, UC_E_OOM, (uc_loc){0, 0}, "m7_static runtime image allocation failed");
+        return memory;
     }
 
+    apg_v2_runtime_image_t image  = {0};
+    uc_status              status = apg_v2_runtime_image_build_with_growth(
+        &compiled->plan, APG_M7_BLOCK_FRAMES, 48000.0f, &image_arena, &image, err
+    );
+    if (status != UC_OK) {
+        uc_arena_free(&image_arena);
+        return memory;
+    }
+
+    memory.signal_buffer_bytes = image.signal_samples * sizeof(float);
+    memory.param_bytes         = image.params_len * sizeof(float);
+    memory.schedule_bytes      = image.schedule_len * sizeof(uint32_t);
+    memory.atom_storage_bytes  = image.atom_storage_bytes;
+    memory.state_buffer_bytes  = image.state_buffer_samples * sizeof(float);
     memory.static_ram_bytes =
         memory.signal_buffer_bytes + memory.param_bytes + memory.atom_storage_bytes + memory.state_buffer_bytes;
+    uc_arena_free(&image_arena);
     return memory;
 }
 
@@ -338,7 +342,12 @@ export_m7_static(const char *project_path, const char *out_dir, bool has_static_
         return rc;
     }
 
-    m7_memory_manifest_t memory = m7_memory_manifest(&compiled);
+    m7_memory_manifest_t memory = m7_memory_manifest(&compiled, &err);
+    if (err.status != UC_OK) {
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "m7_static", &err);
+        uc_arena_free(&arena);
+        return rc;
+    }
     if (has_static_ram_budget && memory.static_ram_bytes > static_ram_budget) {
         uc_error_set(
             &err, UC_E_RANGE, (uc_loc){0, 0}, "m7_static static RAM budget exceeded: %zu > %zu bytes",

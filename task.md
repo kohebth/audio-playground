@@ -132,6 +132,7 @@ Module note: Runtime atom call storage now uses one image-planned contiguous poo
 Module note: Runtime state buffers now use one image-planned contiguous pool.
 
 Module note: M7 export now declares section-placed runtime memory buffers.
+Module note: M7 export memory manifests now come from runtime-image layout metadata.
 
 Implementation lifecycle for production phases:
 
