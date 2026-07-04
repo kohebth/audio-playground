@@ -89,9 +89,49 @@ static int expect_boundary_parse_then_validate(void) {
     return 0;
 }
 
+static int expect_parse_only_without_semantic_checks(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "version: 2.0.0\n"
+                       "name: boundary_contract\n"
+                       "graph:\n"
+                       "  signals:\n"
+                       "    - in\n"
+                       "    - out\n"
+                       "  nodes: []\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n"
+                       "  m7_static: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    uc_node  *root = NULL;
+    uc_error  err  = {0};
+    uc_status status = apg_unit_v2_parse_string(yaml, strlen(yaml), &arena, &root, &err);
+    if (status != UC_OK || !root) {
+        fprintf(stderr, "parser error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("semantic-invalid unit contract should still parse as raw contract");
+    }
+
+    apg_unit_v2_t unit = {0};
+    status             = apg_unit_v2_validate_root(root, &arena, &unit, &err);
+    if (status == UC_OK) {
+        uc_arena_free(&arena);
+        return fail("validate should fail when semantic requirements are missing");
+    }
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
 int main(void) {
     int status = expect_parse_without_validation();
     if (status != 0)
         return status;
-    return expect_boundary_parse_then_validate();
+    status = expect_boundary_parse_then_validate();
+    if (status != 0)
+        return status;
+    return expect_parse_only_without_semantic_checks();
 }
