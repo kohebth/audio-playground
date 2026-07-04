@@ -625,36 +625,6 @@ apg_v2_runtime_find_output_port_channel_signal(apg_v2_runtime_t *runtime, const 
     return runtime->signals[port->signal_indices[channel_index]];
 }
 
-size_t apg_v2_runtime_signal_count(const apg_v2_runtime_t *runtime) { return runtime ? runtime->signals_len : 0u; }
-
-size_t apg_v2_runtime_param_count(const apg_v2_runtime_t *runtime) { return runtime ? runtime->params_len : 0u; }
-
-size_t apg_v2_runtime_node_count(const apg_v2_runtime_t *runtime) { return runtime ? runtime->nodes_len : 0u; }
-
-size_t apg_v2_runtime_input_meters_len(const apg_v2_runtime_t *runtime) {
-    return runtime ? runtime->input_meters_len : 0u;
-}
-
-size_t apg_v2_runtime_output_meters_len(const apg_v2_runtime_t *runtime) {
-    return runtime ? runtime->output_meters_len : 0u;
-}
-
-uint32_t apg_v2_runtime_frame_capacity(const apg_v2_runtime_t *runtime) {
-    return runtime ? runtime->frame_capacity : 0u;
-}
-
-float apg_v2_runtime_sample_rate(const apg_v2_runtime_t *runtime) {
-    return runtime ? runtime->process_info.sample_rate : 0.0f;
-}
-
-uint32_t apg_v2_runtime_output_frames(const apg_v2_runtime_t *runtime) {
-    return runtime ? runtime->process_info.output_frames : 0u;
-}
-
-bool apg_v2_runtime_has_processed(const apg_v2_runtime_t *runtime) { return runtime ? runtime->has_processed : false; }
-
-bool apg_v2_runtime_project_muted(const apg_v2_runtime_t *runtime) { return runtime ? runtime->project_muted : false; }
-
 bool apg_v2_runtime_resolve_input_port_channel_signal(
     const apg_v2_runtime_t *runtime,
     const char             *port_name,
@@ -709,10 +679,6 @@ const float *apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, si
     if (!runtime || signal_index >= runtime->signals_len || !runtime->signals)
         return NULL;
     return runtime->signals[signal_index];
-}
-
-const char *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime) {
-    return runtime && runtime->last_error[0] ? runtime->last_error : NULL;
 }
 
 static size_t runtime_instance_bypass_index(const apg_v2_runtime_t *runtime, const char *instance_id) {
