@@ -416,9 +416,9 @@ Module note: M7 export memory manifests now come from runtime-image layout metad
 
 Pending AC tests for Phase AI:
 
-- [ ] Atom palette renders from backend JSON.
-- [ ] Local fallback is unused by the project workbench palette.
-- [ ] Backend catalog schema mismatch shows a visible failure.
+- [x] Atom palette renders from backend JSON.
+- [x] Local fallback is unused by the project workbench palette.
+- [x] Backend catalog schema mismatch shows a visible failure.
 
 Module note: Web atom data now comes from frozen backend catalog JSON.
 
@@ -431,9 +431,9 @@ Module note: Web atom data now comes from frozen backend catalog JSON.
 
 Pending AD tests for Phase AI:
 
-- [ ] Autosave restores project and unit drafts.
-- [ ] Export includes all workspace files.
-- [ ] Dirty drafts mark validation/render as stale.
+- [x] Autosave restores project and unit drafts.
+- [x] Export includes all workspace files.
+- [x] Dirty drafts mark validation/render as stale.
 
 Module note: Project drafts now preserve multi-file workspace state locally.
 
@@ -446,9 +446,9 @@ Module note: Project drafts now preserve multi-file workspace state locally.
 
 Pending AE tests for Phase AI:
 
-- [ ] Unit graph renders from unit inspect data.
-- [ ] Atom config edits update draft YAML.
-- [ ] Invalid binding shows inspector feedback.
+- [x] Unit graph renders from unit inspect data.
+- [x] Atom config edits update draft YAML.
+- [x] Invalid binding shows inspector feedback.
 
 Module note: Unit graph edits now flow through draft workspace YAML.
 
@@ -461,9 +461,9 @@ Module note: Unit graph edits now flow through draft workspace YAML.
 
 Pending AF tests for Phase AI:
 
-- [ ] Preview panel transitions through idle/ready/running/error.
-- [ ] Param and bypass controls call stable runtime names.
-- [ ] Meter display handles missing preview backend.
+- [x] Preview panel transitions through idle/ready/running/error.
+- [x] Param and bypass controls call stable runtime names.
+- [x] Meter display handles missing preview backend.
 
 Module note: Preview controls now target the runtime adapter contract.
 
@@ -476,8 +476,8 @@ Module note: Preview controls now target the runtime adapter contract.
 
 Pending AG tests for Phase AI:
 
-- [ ] Matrix shows supported/unsupported target profiles.
-- [ ] Export panel blocks unavailable targets with reason.
+- [x] Matrix shows supported/unsupported target profiles.
+- [x] Export panel blocks unavailable targets with reason.
 - [ ] M7 export path rejects unsupported atoms/features.
 
 Module note: Export UI now exposes target readiness and blocked backend gaps.

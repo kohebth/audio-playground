@@ -19,9 +19,9 @@ export type PreviewAdapter = {
 
 export function createDeterministicPreviewAdapter(render: RenderResult): PreviewAdapter {
   return {
-    compile: () => 'ready',
-    start: () => 'running',
-    stop: () => 'ready',
+    compile: () => (render.ok ? 'ready' : 'error'),
+    start: () => (render.ok ? 'running' : 'error'),
+    stop: () => (render.ok ? 'ready' : 'error'),
     setParam: (path, value) => `setParam ${path}=${value}`,
     setBypass: (instanceId, enabled) => `setBypass ${instanceId}=${enabled}`,
     getMeters: () => ({

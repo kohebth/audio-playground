@@ -12,6 +12,7 @@ function profileSupported(project: ProjectInspect, profile: string): boolean {
 }
 
 export function CompatibilityExportPanel({ project, commands }: Props) {
+  const blockedReason = 'Blocked: command backend not wired in this web build.';
   return (
     <section className="inspector-block">
       <div className="inspector-block__label">Compatibility</div>
@@ -37,21 +38,25 @@ export function CompatibilityExportPanel({ project, commands }: Props) {
           <span>Desktop</span>
           <strong>{profileSupported(project, 'desktop_full') ? 'ready' : 'blocked'}</strong>
           <code>{commands.renderProject}</code>
+          {profileSupported(project, 'desktop_full') ? null : <small>{blockedReason}</small>}
         </div>
         <div>
           <span>Web/WASM</span>
           <strong>blocked</strong>
           <code>{commands.exportWasm}</code>
+          <small>{blockedReason}</small>
         </div>
         <div>
           <span>M7 Static</span>
           <strong>blocked</strong>
           <code>{commands.exportM7}</code>
+          <small>{blockedReason}</small>
         </div>
         <div>
           <span>Benchmark</span>
           <strong>blocked</strong>
           <code>{commands.benchmarkProject}</code>
+          <small>{blockedReason}</small>
         </div>
       </div>
     </section>
