@@ -183,7 +183,6 @@ static uc_status apply_signal_bindings(
     return UC_OK;
 }
 
-// ?5d8f0c3a:start? applies image-validated scalar refresh offsets without binding-key lookups.
 static uc_status refresh_scalar_plan(
     const apg_v2_runtime_scalar_refresh_t *items,
     size_t                                 items_len,
@@ -223,7 +222,6 @@ static uc_status refresh_scalar_plan(
     }
     return UC_OK;
 }
-// ?5d8f0c3a:end?
 
 static uc_status
 apply_mix_matrix_config(const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_node_t *node, uc_error *err) {
