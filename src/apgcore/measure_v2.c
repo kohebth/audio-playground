@@ -1,8 +1,7 @@
 #include <apgcore/measure_v2.h>
-#include <apgcore/runtime_v2_internal.h>
+#include <apgcore/runtime_v2.h>
 
 #include <math.h>
-#include <string.h>
 
 static apg_v2_meter_snapshot_t meter_snapshot_from_signal(const float *signal, uint32_t frames) {
     apg_v2_meter_snapshot_t snapshot = {0};
@@ -25,42 +24,19 @@ static apg_v2_meter_snapshot_t meter_snapshot_from_signal(const float *signal, u
     return snapshot;
 }
 
-static bool signal_index_for_port_channel(
-    const apg_v2_runtime_audio_port_t *ports,
-    size_t                             ports_len,
-    const char                        *port_name,
-    size_t                             channel_index,
-    size_t                            *out_signal_index,
-    size_t                            *out_meter_index
-) {
-    if (!ports || !port_name || !out_signal_index || !out_meter_index)
-        return false;
-    for (size_t i = 0; i < ports_len; i++) {
-        const apg_v2_runtime_audio_port_t *port = &ports[i];
-        if (port->port_name && strcmp(port->port_name, port_name) == 0) {
-            if (channel_index >= port->channel_count)
-                return false;
-            *out_signal_index = port->signal_indices[channel_index];
-            *out_meter_index  = port->meter_index + channel_index;
-            return true;
-        }
-    }
-    return false;
-}
-
 bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_measure_runtime_snapshot_t *out) {
     if (!runtime || !out)
         return false;
     *out = (apg_v2_measure_runtime_snapshot_t){
-        .frame_capacity    = runtime->frame_capacity,
-        .sample_rate       = runtime->process_info.sample_rate,
-        .signals_len       = runtime->signals_len,
-        .params_len        = runtime->params_len,
-        .nodes_len         = runtime->nodes_len,
-        .input_meters_len  = runtime->input_meters_len,
-        .output_meters_len = runtime->output_meters_len,
-        .has_processed     = runtime->has_processed,
-        .project_muted     = runtime->project_muted,
+        .frame_capacity    = apg_v2_runtime_frame_capacity(runtime),
+        .sample_rate       = apg_v2_runtime_sample_rate(runtime),
+        .signals_len       = apg_v2_runtime_signal_count(runtime),
+        .params_len        = apg_v2_runtime_param_count(runtime),
+        .nodes_len         = apg_v2_runtime_node_count(runtime),
+        .input_meters_len  = apg_v2_runtime_input_meters_len(runtime),
+        .output_meters_len = apg_v2_runtime_output_meters_len(runtime),
+        .has_processed     = apg_v2_runtime_has_processed(runtime),
+        .project_muted     = apg_v2_runtime_project_muted(runtime),
     };
     return true;
 }
@@ -72,19 +48,18 @@ bool apg_v2_measure_get_input_meter(
         return false;
     size_t signal_index = 0u;
     size_t meter_index  = 0u;
-    if (!signal_index_for_port_channel(
-            runtime->input_audio_ports, runtime->input_audio_ports_len, port_name, channel_index, &signal_index,
-            &meter_index
+    if (!apg_v2_runtime_resolve_input_port_channel_signal(
+            runtime, port_name, channel_index, &signal_index, &meter_index
         ) ||
-        meter_index >= runtime->input_meters_len)
+        meter_index >= apg_v2_runtime_input_meters_len(runtime))
         return false;
-    if (!runtime->has_processed || signal_index >= runtime->signals_len || !runtime->signals ||
-        !runtime->signals[signal_index]) {
+    const float *signal = apg_v2_runtime_signal_buffer_at(runtime, signal_index);
+    if (!apg_v2_runtime_has_processed(runtime) || !signal) {
         *out = (apg_v2_meter_snapshot_t){0};
         return true;
     }
-    uint32_t frames = runtime->process_info.output_frames;
-    *out            = meter_snapshot_from_signal(runtime->signals[signal_index], frames);
+    uint32_t frames = apg_v2_runtime_output_frames(runtime);
+    *out            = meter_snapshot_from_signal(signal, frames);
     return true;
 }
 
@@ -95,22 +70,19 @@ bool apg_v2_measure_get_output_meter(
         return false;
     size_t signal_index = 0u;
     size_t meter_index  = 0u;
-    if (!signal_index_for_port_channel(
-            runtime->output_audio_ports, runtime->output_audio_ports_len, port_name, channel_index, &signal_index,
-            &meter_index
+    if (!apg_v2_runtime_resolve_output_port_channel_signal(
+            runtime, port_name, channel_index, &signal_index, &meter_index
         ) ||
-        meter_index >= runtime->output_meters_len)
+        meter_index >= apg_v2_runtime_output_meters_len(runtime))
         return false;
-    if (!runtime->has_processed || signal_index >= runtime->signals_len || !runtime->signals ||
-        !runtime->signals[signal_index]) {
+    const float *signal = apg_v2_runtime_signal_buffer_at(runtime, signal_index);
+    if (!apg_v2_runtime_has_processed(runtime) || !signal) {
         *out = (apg_v2_meter_snapshot_t){0};
         return true;
     }
-    uint32_t frames = runtime->process_info.output_frames;
-    *out            = meter_snapshot_from_signal(runtime->signals[signal_index], frames);
+    uint32_t frames = apg_v2_runtime_output_frames(runtime);
+    *out            = meter_snapshot_from_signal(signal, frames);
     return true;
 }
 
-const char *apg_v2_measure_last_error(const apg_v2_runtime_t *runtime) {
-    return runtime && runtime->last_error[0] ? runtime->last_error : NULL;
-}
+const char *apg_v2_measure_last_error(const apg_v2_runtime_t *runtime) { return apg_v2_runtime_last_error(runtime); }

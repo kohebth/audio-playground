@@ -31,6 +31,35 @@ apg_v2_runtime_find_input_port_channel_signal(apg_v2_runtime_t *runtime, const c
 float *
 apg_v2_runtime_find_output_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index);
 
+/* Runtime introspection for host/tooling reads. */
+size_t   apg_v2_runtime_signal_count(const apg_v2_runtime_t *runtime);
+size_t   apg_v2_runtime_param_count(const apg_v2_runtime_t *runtime);
+size_t   apg_v2_runtime_node_count(const apg_v2_runtime_t *runtime);
+size_t   apg_v2_runtime_input_meters_len(const apg_v2_runtime_t *runtime);
+size_t   apg_v2_runtime_output_meters_len(const apg_v2_runtime_t *runtime);
+uint32_t apg_v2_runtime_frame_capacity(const apg_v2_runtime_t *runtime);
+float    apg_v2_runtime_sample_rate(const apg_v2_runtime_t *runtime);
+uint32_t apg_v2_runtime_output_frames(const apg_v2_runtime_t *runtime);
+bool     apg_v2_runtime_has_processed(const apg_v2_runtime_t *runtime);
+bool     apg_v2_runtime_project_muted(const apg_v2_runtime_t *runtime);
+
+bool apg_v2_runtime_resolve_input_port_channel_signal(
+    const apg_v2_runtime_t *runtime,
+    const char             *port_name,
+    size_t                  channel_index,
+    size_t                 *out_signal_index,
+    size_t                 *out_meter_index
+);
+bool apg_v2_runtime_resolve_output_port_channel_signal(
+    const apg_v2_runtime_t *runtime,
+    const char             *port_name,
+    size_t                  channel_index,
+    size_t                 *out_signal_index,
+    size_t                 *out_meter_index
+);
+const float *apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, size_t signal_index);
+const char  *apg_v2_runtime_last_error(const apg_v2_runtime_t *runtime);
+
 /* Update a compiled parameter value used by config bindings on the next process call. */
 bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value);
 
