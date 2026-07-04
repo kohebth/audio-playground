@@ -964,8 +964,12 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_ru
             state_buffer_cursor += atom->state_fields[field_index].buffer_samples;
             layout->state_buffer_samples += atom->state_fields[field_index].buffer_samples;
         }
+        if (state_buffer_table_offset > SIZE_MAX - layout->state_buffers_len)
+            return set_error(err, UC_E_RANGE, "v2 runtime image state-buffer table is too large");
         layout->state_buffer_table_offset = state_buffer_table_offset;
         state_buffer_table_offset += layout->state_buffers_len;
+        if (layout->state_buffer_samples > SIZE_MAX - out->state_buffer_samples)
+            return set_error(err, UC_E_RANGE, "v2 runtime image state-buffer samples is too large");
         out->state_buffers_len += layout->state_buffers_len;
         out->state_buffer_samples += layout->state_buffer_samples;
 

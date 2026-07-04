@@ -369,7 +369,8 @@ static uc_status init_state_buffers(
         size_t offset = layout->state_buffer_sample_offsets_by_index
                             ? layout->state_buffer_sample_offsets_by_index[buffer_index]
                             : 0u;
-        if (!runtime || !runtime->state_buffer_pool || offset + buffer_samples > runtime->state_buffer_samples)
+        if (!runtime || !runtime->state_buffer_pool || buffer_samples > SIZE_MAX - offset ||
+            offset + buffer_samples > runtime->state_buffer_samples)
             return set_error(err, UC_E_RANGE, "v2 runtime state buffer layout exceeds pool");
         float *buffer                            = &runtime->state_buffer_pool[offset];
         node->state_buffers[buffer_index]        = buffer;
@@ -406,9 +407,13 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
     }
     out->state_buffer_count = image->state_buffers_len;
     if (out->state_buffer_count > 0u) {
+        if (out->state_buffer_count > SIZE_MAX / sizeof(*out->state_buffer_ptrs))
+            return set_error(err, UC_E_RANGE, "v2 runtime state buffer table is too large");
         out->state_buffer_ptrs = calloc(out->state_buffer_count, sizeof(*out->state_buffer_ptrs));
         if (!out->state_buffer_ptrs)
             return set_error(err, UC_E_OOM, "v2 runtime state buffer pointer table allocation failed");
+        if (out->state_buffer_count > SIZE_MAX / sizeof(*out->state_buffer_sample_counts))
+            return set_error(err, UC_E_RANGE, "v2 runtime state buffer sample-table is too large");
         out->state_buffer_sample_counts = calloc(out->state_buffer_count, sizeof(*out->state_buffer_sample_counts));
         if (!out->state_buffer_sample_counts)
             return set_error(err, UC_E_OOM, "v2 runtime state buffer sample table allocation failed");

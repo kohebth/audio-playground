@@ -1,6 +1,8 @@
 #include <apgcore/measure_v2.h>
 #include <apgcore/project_compiler_v2.h>
+#include <apgcore/runtime_image_builder_v2.h>
 #include <apgcore/runtime_v2.h>
+#include <apgcore/runtime_v2_internal.h>
 
 #include "test_runtime_v2_harness.h"
 
@@ -291,6 +293,92 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
     return 0;
 }
 
+static int test_guitar_project_state_buffer_table_layout(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t project;
+    if (load_resolved_project("projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &project)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_project_v2_compiled_t compiled;
+    if (compile_resolved_project(&project, &arena, &compiled)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 8192) != 0) {
+        uc_arena_free(&arena);
+        return fail("image arena init failed");
+    }
+
+    apg_v2_runtime_image_t image;
+    uc_error               err = {0};
+    uc_status status = apg_v2_runtime_image_build_with_growth(&compiled.plan, 8u, 48000.0f, &image_arena, &image, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime image build error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to build guitar pedalboard runtime image");
+    }
+
+    if (image.state_buffers_len == 0u)
+        return fail("guitar pedalboard image should contain stateful nodes");
+
+    size_t expected_table_offset = 0u;
+    for (size_t i = 0; i < image.nodes_len; i++) {
+        const apg_v2_runtime_node_layout_t *layout = &image.node_layouts[i];
+        if (layout->state_buffer_table_offset != expected_table_offset)
+            return fail("state-buffer table offset was not compacted across nodes");
+        for (size_t buffer_index = 0; buffer_index < layout->state_buffers_len; buffer_index++) {
+            if (layout->state_buffer_samples_by_index[buffer_index] == 0u)
+                return fail("state-buffer metadata is missing sample size");
+            size_t sample_offset = layout->state_buffer_sample_offsets_by_index[buffer_index];
+            size_t sample_count  = layout->state_buffer_samples_by_index[buffer_index];
+            if (sample_offset + sample_count > image.state_buffer_samples)
+                return fail("state-buffer sample offset is outside image pool");
+            expected_table_offset++;
+        }
+    }
+    if (expected_table_offset != image.state_buffers_len)
+        return fail("state-buffer table is not fully consumed by node layouts");
+
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime init error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to initialize runtime from guitar pedalboard image");
+    }
+
+    for (size_t i = 0; i < runtime.nodes_len; i++) {
+        const apg_v2_runtime_node_t        *node   = &runtime.nodes[i];
+        const apg_v2_runtime_node_layout_t *layout = &image.node_layouts[i];
+        for (size_t buffer_index = 0; buffer_index < layout->state_buffers_len; buffer_index++) {
+            size_t       image_slot = layout->state_buffer_table_offset + buffer_index;
+            const float *expected_ptr =
+                runtime.state_buffer_pool + layout->state_buffer_sample_offsets_by_index[buffer_index];
+            if (runtime.state_buffer_ptrs[image_slot] != expected_ptr)
+                return fail("state-buffer runtime pointer table does not match image offsets");
+            if (runtime.state_buffer_sample_counts[image_slot] != layout->state_buffer_samples_by_index[buffer_index])
+                return fail("state-buffer sample-count table does not match image metadata");
+            if (node->state_buffers[buffer_index] != expected_ptr ||
+                node->state_buffer_samples[buffer_index] != layout->state_buffer_samples_by_index[buffer_index])
+                return fail("node state-buffer tables are not projected from runtime image");
+        }
+    }
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&image_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int expect_compile_error_contains(const char *yaml, const char *label, const char *must_contain) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -386,6 +474,8 @@ int main(void) {
     if (test_two_instance_project_compiles_and_runs())
         return 1;
     if (test_guitar_pedalboard_project_compiles_and_runs())
+        return 1;
+    if (test_guitar_project_state_buffer_table_layout())
         return 1;
     if (test_compile_rejects_unknown_instance_param())
         return 1;
