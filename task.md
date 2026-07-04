@@ -6,7 +6,7 @@ APGCore v2 MVP implementation work tracked in `plan.md` is complete through phas
 
 Current production focus: move beyond MVP surfaces toward a hardware-ready multi-effect core. The target architecture in `core-design.md` isolates `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` so parsing, validation, graph expansion, resource registration, and measurement stay out of the real-time execution path.
 
-Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through AJ, and the MVP web/backend handoff are complete. The project is not ready for STM32H7/M7 production yet. Next work should first make the core boundaries production-shaped, then continue STM32H7/M7 export validation, cross-compilation, audio callback integration, memory/CPU budgeting, and real WASM AudioWorklet preview/export.
+Status: Phase 0 atom migration, Phase 1 explicit-frame adapters, APGCore v2 phases H through AJ, and the MVP web/backend handoff are complete. The project is not ready for STM32H7/M7 production yet. Next work should first make the core boundaries production-shaped, then continue STM32H7/M7 export validation, cross-compilation, audio callback integration, memory/CPU budgeting, and full WASM AudioWorklet preview/export integration.
 
 ## Production Core Refactor Queue
 
@@ -424,7 +424,7 @@ Module note: Preview controls now target the runtime adapter contract.
 - [x] AG3: Surface benchmark/export command gaps from `problem.md` as blocked export actions.
 - [x] AG4: Add backend CLI/export tasks when the UI needs real generated bundles.
 
-Pending AG tests for Phase AI:
+Completed AG tests for Phase AI:
 
 - [x] Matrix shows supported/unsupported target profiles.
 - [x] Export panel blocks unavailable targets with reason.
@@ -432,10 +432,12 @@ Pending AG tests for Phase AI:
 
 Module note: Export UI now exposes target readiness and blocked backend gaps.
 
+Module note: M7 export now rejects unit profiles missing `m7_static` compatibility in addition to unsupported atoms.
+
 ### Phase AH: Backend CLI and Export Gaps
 
 - [x] AH1: Add deterministic benchmark JSON only if needed by export/readiness UI.
-- [x] AH2: Add export command skeletons for `wasm_realtime` and `m7_static`.
+- [x] AH2: Add export command surfaces for `wasm_realtime` and `m7_static`; `wasm_realtime` now emits scaffold artifacts.
 - [x] AH3: Keep `apgcore` independent from platform APIs while adding export surfaces.
 - [x] AH4: For M7 static output, generate C11-compatible tables with bounded memory and no runtime YAML parser.
 
@@ -445,7 +447,7 @@ Pending AH tests for Phase AI:
 - [x] M7 export emits deterministic static bundle.
 - [x] Unsupported target features produce stable diagnostics.
 
-Module note: Backend CLI now exposes MVP export surfaces.
+Module note: `wasm_realtime` CLI export now emits scaffold `.json`/`.mjs` artifacts, while `m7_static` remains the deterministic bounded C11 export path.
 
 ### Phase AI: Deferred Test Implementation
 

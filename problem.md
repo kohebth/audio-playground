@@ -54,16 +54,17 @@ This file tracks known issues that should not block the current phase but need e
 
 ## Browser WASM AudioWorklet Preview
 
-- **Status:** Open
+- **Status:** Partially Resolved
 - **Context:** Phase AF defines the web preview adapter boundary and UI state machine, but the browser runtime still uses deterministic render JSON rather than a real WASM AudioWorklet backend.
-- **Follow-up:** Add the WASM/AudioWorklet adapter that implements compile, start, stop, setParam, setBypass, and meter polling without sending audio buffers through main-thread JavaScript.
+- **Status update:** `apg-v2 export --target wasm_realtime` now emits a deterministic scaffold manifest (`apg_project_wasm.json`) and a stub adapter (`apg_project_wasm.mjs`), enabling adapter wiring and deployment tests.
+- **Follow-up:** Replace the scaffold with a real WASM AudioWorklet runtime that performs compile/start/stop, param/bypass commands, and meter polling in audio thread.
 - **Related Plan Item:** `plan.md` Phase AF.
 
 ## Export CLI Surface
 
 - **Status:** Partially Resolved
 - **Context:** Phase AH added deterministic benchmark JSON plus `wasm_realtime` and `m7_static` export command surfaces. M7 emits bounded C11 tables for compatible projects and rejects unsupported units.
-- **Follow-up:** Implement real WASM AudioWorklet bundle generation beyond the current blocked `wasm_realtime` skeleton.
+- **Follow-up:** Extend `wasm_realtime` export from the current deterministic scaffold to a runnable AudioWorklet bundle and document exact runtime artifact requirements.
 - **Related Plan Item:** `plan.md` Phase AG/AH.
 
 ## STM32H7 Production Readiness

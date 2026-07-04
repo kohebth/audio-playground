@@ -21,10 +21,11 @@ static int usage(const char *argv0) {
         "  %s inspect project <path>\n"
         "  %s render project <path>\n"
         "  %s benchmark project <path>\n"
-        "  %s export --target <wasm_realtime|m7_static> <project> <outdir>\n"
+        "  %s export --target wasm_realtime [--block-frames <frames>] [--sample-rate <hz>] <project> <outdir>\n"
+        "  %s export --target m7_static <project> <outdir>\n"
         "  %s export --target m7_static [--max-static-ram <bytes>] [--block-frames <frames>] [--sample-rate <hz>] "
         "[--cache-line-bytes <bytes>] <project> <outdir>\n",
-        argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0
+        argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0
     );
     return 2;
 }
@@ -168,8 +169,21 @@ first_unsupported_unit(const apg_project_v2_resolved_t *project, const char *tar
         if (support == APG_TARGET_SUPPORT_SUPPORTED)
             continue;
         if (reason) {
-            *reason = (support == APG_TARGET_SUPPORT_UNSUPPORTED) ? "does not support m7_static"
-                                                                  : "does not declare m7_static compatibility";
+            if (support == APG_TARGET_SUPPORT_UNSUPPORTED) {
+                if (strcmp(target, "wasm_realtime") == 0)
+                    *reason = "does not support wasm_realtime";
+                else if (strcmp(target, "m7_static") == 0)
+                    *reason = "does not support m7_static";
+                else
+                    *reason = "does not support target profile";
+            } else {
+                if (strcmp(target, "m7_static") == 0)
+                    *reason = "does not declare m7_static compatibility";
+                else if (strcmp(target, "wasm_realtime") == 0)
+                    *reason = "does not declare wasm_realtime compatibility";
+                else
+                    *reason = "does not declare target profile compatibility";
+            }
         }
         return &project->units[i];
     }
@@ -200,6 +214,11 @@ enum {
     APG_M7_DEFAULT_CACHE_LINE   = 32u,
 };
 
+enum {
+    APG_WASM_DEFAULT_BLOCK_FRAMES = 64u,
+    APG_WASM_DEFAULT_SAMPLE_RATE  = 48000u,
+};
+
 typedef struct {
     uint32_t block_frames;
     uint32_t sample_rate;
@@ -220,6 +239,11 @@ typedef struct {
     size_t static_ram_bytes;
 } m7_memory_manifest_t;
 
+typedef struct {
+    uint32_t block_frames;
+    uint32_t sample_rate;
+} wasm_export_options_t;
+
 static bool parse_size_arg(const char *text, size_t *out) {
     if (!text || !out || text[0] == '\0')
         return false;
@@ -237,6 +261,83 @@ static bool parse_uint32_arg(const char *text, uint32_t *out) {
         return false;
     *out = (uint32_t)value;
     return true;
+}
+
+static bool write_wasm_runtime_js(
+    const char                      *path,
+    const apg_project_v2_resolved_t *project,
+    const apg_v2_runtime_image_t    *image,
+    const wasm_export_options_t     *options
+) {
+    FILE *out = fopen(path, "w");
+    if (!out)
+        return false;
+    fputs("export const profile = \"wasm_realtime\";\n", out);
+    fputs("export const command = \"audio-worklet-stub\";\n", out);
+    if (project && project->project.name)
+        fprintf(out, "export const projectName = \"%s\";\n", project->project.name);
+    else
+        fputs("export const projectName = \"unknown\";\n", out);
+    fputs("export const runtime = {\n", out);
+    fprintf(out, "  blockFrames: %uu,\n", options ? options->block_frames : APG_WASM_DEFAULT_BLOCK_FRAMES);
+    fprintf(out, "  sampleRate: %uu,\n", options ? options->sample_rate : APG_WASM_DEFAULT_SAMPLE_RATE);
+    if (project && project->project.name)
+        fprintf(out, "  project: \"%s\",\n", project->project.name);
+    else
+        fputs("  project: \"unknown\",\n", out);
+    if (project)
+        fprintf(out, "  units: %zu,\n", project->units_len);
+    if (image)
+        fprintf(out, "  nodes: %zu,\n  schedule: %zu,\n", image->nodes_len, image->schedule_len);
+    fputs("};\n", out);
+    fputs(
+        "export function createRuntime() {\n"
+        "  return {\n"
+        "    compile() {\n"
+        "      return Promise.resolve({ok: true, message: \"stub compile complete\"});\n"
+        "    },\n"
+        "    start() {\n"
+        "      return Promise.reject(new Error(\"WASM AudioWorklet runtime execution not yet implemented\"));\n"
+        "    },\n"
+        "    stop() {\n"
+        "      return Promise.resolve({ok: true});\n"
+        "    },\n"
+        "    setParam() {\n"
+        "      return Promise.resolve({ok: true});\n"
+        "    },\n"
+        "    setBypass() {\n"
+        "      return Promise.resolve({ok: true});\n"
+        "    },\n"
+        "    pollMeters() {\n"
+        "      return Promise.resolve({peak: [], rms: []});\n"
+        "    }\n"
+        "  };\n"
+        "}\n",
+        out
+    );
+    return fclose(out) == 0;
+}
+
+static bool write_wasm_runtime_manifest(
+    const char                      *path,
+    const apg_project_v2_resolved_t *project,
+    const apg_v2_runtime_image_t    *image,
+    const wasm_export_options_t     *options
+) {
+    FILE *out = fopen(path, "w");
+    if (!out)
+        return false;
+    fputs("{\"schema\":\"apg.project.wasm_realtime.v1\",\"project\":", out);
+    write_json_string(out, project && project->project.name ? project->project.name : "unknown");
+    fprintf(
+        out,
+        ",\"sample_rate\":%u,\"block_frames\":%u,\"runtime\":\"audio_worklet_stub\","
+        "\"layout\":{\"params\":%zu,\"signals\":%zu,\"nodes\":%zu,\"schedule\":%zu},\"status\":\"generated\"}\n",
+        options ? options->sample_rate : APG_WASM_DEFAULT_SAMPLE_RATE,
+        options ? options->block_frames : APG_WASM_DEFAULT_BLOCK_FRAMES, image ? image->params_len : 0u,
+        image ? image->signals_len : 0u, image ? image->nodes_len : 0u, image ? image->schedule_len : 0u
+    );
+    return fclose(out) == 0;
 }
 
 static bool parse_alignment_arg(const char *text, uint32_t *out) {
@@ -591,17 +692,92 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     return fclose(out) == 0;
 }
 
-static int export_wasm_skeleton(const char *project_path, const char *out_dir) {
-    fputs("{\"schema\":\"apg.project.export.v1\",\"ok\":false,\"file\":", stdout);
+static int export_wasm_realtime(const char *project_path, const char *out_dir, const wasm_export_options_t *options) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
+        uc_error err = {.status = UC_E_OOM};
+        return write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+    }
+
+    apg_project_v2_resolved_t project;
+    apg_project_v2_compiled_t compiled;
+    uc_error                  err    = {0};
+    uc_status                 status = load_compile_project(project_path, &arena, &project, &compiled, &err);
+    if (status != UC_OK) {
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
+    const char                         *unit_reason = NULL;
+    const apg_project_v2_loaded_unit_t *unsupported = first_unsupported_unit(&project, "wasm_realtime", &unit_reason);
+    if (unsupported) {
+        uc_error_set(
+            &err, UC_E_TYPE, (uc_loc){0, 0}, "unit '%s' %s", unsupported->id,
+            unit_reason ? unit_reason : "does not support target profile"
+        );
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
+    uc_arena               image_arena = {0};
+    apg_v2_runtime_image_t image       = {0};
+    status                             = apg_v2_runtime_image_build_with_growth(
+        &compiled.plan, options->block_frames, (float)options->sample_rate, &image_arena, &image, &err
+    );
+    if (status != UC_OK) {
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
+    const char *unsupported_atom = first_unsupported_atom(&image, "wasm_realtime");
+    if (unsupported_atom) {
+        uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support wasm_realtime", unsupported_atom);
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
+    char manifest_path[512];
+    char js_path[512];
+    if (!join_path(manifest_path, sizeof(manifest_path), out_dir, "apg_project_wasm.json") ||
+        !join_path(js_path, sizeof(js_path), out_dir, "apg_project_wasm.mjs")) {
+        uc_error_set(&err, UC_E_RANGE, (uc_loc){0, 0}, "export output path is too long");
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
+    if (!write_wasm_runtime_manifest(manifest_path, &project, &image, options) ||
+        !write_wasm_runtime_js(js_path, &project, &image, options)) {
+        uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write wasm_realtime export files");
+        int rc = write_cli_error(stdout, "apg.project.export.v1", project_path, "wasm_realtime", &err);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
+    fputs("{\"schema\":\"apg.project.export.v1\",\"ok\":true,\"file\":", stdout);
     write_json_string(stdout, project_path);
     fputs(",\"target\":\"wasm_realtime\",\"out_dir\":", stdout);
     write_json_string(stdout, out_dir);
-    fputs(
-        ",\"diagnostics\":[{\"code\":\"APG_EXPORT_BLOCKED\",\"message\":\"wasm_realtime export command is reserved; "
-        "WASM AudioWorklet bundle generation is not implemented yet\"}]}\n",
-        stdout
+    fputs(",\"status\":\"stub\",\"files\":[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\"],\"nodes\":", stdout);
+    fprintf(stdout, "%zu,\"schedule\":%zu", image.nodes_len, image.schedule_len);
+    fprintf(
+        stdout, ",\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,\"atom_calls_per_block\":%zu,",
+        options->sample_rate, options->block_frames, image.schedule_len
     );
-    return 1;
+    fprintf(
+        stdout, "\"atom_calls_per_second\":%zu}}\n", image.schedule_len * options->sample_rate / options->block_frames
+    );
+
+    uc_arena_free(&image_arena);
+    uc_arena_free(&arena);
+    return 0;
 }
 
 static int export_m7_static(const char *project_path, const char *out_dir, const m7_export_options_t *options) {
@@ -764,9 +940,26 @@ int main(int argc, char **argv) {
         if (argc < 6 || strcmp(argv[2], "--target") != 0)
             return usage(argv[0]);
         if (strcmp(argv[3], "wasm_realtime") == 0) {
-            if (argc != 6)
+            wasm_export_options_t options = {
+                .block_frames = APG_WASM_DEFAULT_BLOCK_FRAMES,
+                .sample_rate  = APG_WASM_DEFAULT_SAMPLE_RATE,
+            };
+            int index = 4;
+            while (index + 2 < argc && strncmp(argv[index], "--", 2) == 0) {
+                if (strcmp(argv[index], "--block-frames") == 0) {
+                    if (!parse_uint32_arg(argv[index + 1], &options.block_frames))
+                        return usage(argv[0]);
+                } else if (strcmp(argv[index], "--sample-rate") == 0) {
+                    if (!parse_uint32_arg(argv[index + 1], &options.sample_rate))
+                        return usage(argv[0]);
+                } else {
+                    return usage(argv[0]);
+                }
+                index += 2;
+            }
+            if (argc - index != 2)
                 return usage(argv[0]);
-            return export_wasm_skeleton(argv[4], argv[5]);
+            return export_wasm_realtime(argv[index], argv[index + 1], &options);
         }
         if (strcmp(argv[3], "m7_static") == 0) {
             m7_export_options_t options = {

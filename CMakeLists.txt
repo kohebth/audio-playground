@@ -166,13 +166,45 @@ set_tests_properties(test_apg_v2_cli_benchmark PROPERTIES
 )
 
 add_test(
-        NAME test_apg_v2_cli_wasm_export_blocked
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml /tmp/apg-wasm-export || true"
+        NAME test_apg_v2_cli_wasm_export_prepare
+        COMMAND ${CMAKE_COMMAND} -E make_directory /tmp/apg-wasm-export
 )
-set_tests_properties(test_apg_v2_cli_wasm_export_blocked PROPERTIES
+set_tests_properties(test_apg_v2_cli_wasm_export_prepare PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v1\".*\"target\":\"wasm_realtime\".*\"APG_EXPORT_BLOCKED\""
+)
+
+add_test(
+        NAME test_apg_v2_cli_wasm_export
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml /tmp/apg-wasm-export"
+)
+set_tests_properties(test_apg_v2_cli_wasm_export PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        DEPENDS test_apg_v2_cli_wasm_export_prepare
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v1\".*\"ok\":true.*\"target\":\"wasm_realtime\".*\"files\":\\[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\"\\]"
+)
+
+add_test(
+        NAME test_apg_v2_cli_wasm_export_manifest
+        COMMAND ${CMAKE_COMMAND} -E cat /tmp/apg-wasm-export/apg_project_wasm.json
+)
+set_tests_properties(test_apg_v2_cli_wasm_export_manifest PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.wasm_realtime.v1\".*\"project\":\"guitar-pedalboard\".*\"status\":\"generated\""
+        DEPENDS test_apg_v2_cli_wasm_export
+)
+
+add_test(
+        NAME test_apg_v2_cli_wasm_export_js
+        COMMAND ${CMAKE_COMMAND} -E cat /tmp/apg-wasm-export/apg_project_wasm.mjs
+)
+set_tests_properties(test_apg_v2_cli_wasm_export_js PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "audio-worklet-stub"
+        DEPENDS test_apg_v2_cli_wasm_export
 )
 
 add_test(

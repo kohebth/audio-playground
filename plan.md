@@ -8,9 +8,10 @@ This plan tracks completed work and the remaining phase-by-phase path for the AP
 - Phase 1 explicit-frame runtime/control/unit adapter work is complete.
 - The v2 loader, schema fixtures, compiler contracts, topological scheduler, runtime MVP, host bridge, control routing, atom catalog export, project validation, project compilation, JSON contracts, runtime controls, product fixtures, web handoff package, and MVP phases AC-AJ are implemented.
 - The Audio Playground v2 MVP now supports project-level visual build/edit/save/validate/preview/export workflows from frozen backend contracts while `apgcore` remains portable C11 and ARM/M7-aware.
+- `apg-v2 export --target wasm_realtime` now emits a deterministic scaffold bundle instead of a blocked diagnostic; real-time runtime integration is still pending.
 - Production readiness is not achieved yet. STM32H7/M7 deployment still needs target export validation, cross-compilation, board audio integration, and measured memory/CPU budgets.
 - Final verification passed with `npm run test`, `npm run build`, and `npm run lint` in `web-tools/unit-editor`, plus `./build-and-test.sh` across 20 CTest targets.
-- Remaining work is production hardening, primarily STM32H7/M7 readiness and real WASM AudioWorklet preview/export beyond the deterministic preview and blocked export skeleton.
+- Remaining work is production hardening, primarily STM32H7/M7 readiness and real WASM AudioWorklet preview/export beyond the deterministic preview and scaffolded export flow.
 - Current production architecture target: isolate `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` as described in `core-design.md`, so the real-time path only executes a compact prebuilt schedule over registered memory.
 
 ## Production Implementation Lifecycle
@@ -474,18 +475,18 @@ Module note: Preview controls now target the runtime adapter contract.
 - [x] AG3: Surface benchmark/export command gaps from `problem.md` as blocked export actions.
 - [x] AG4: Add backend CLI/export tasks when the UI needs real generated bundles.
 
-Pending AG tests for Phase AI:
+AG tests for Phase AI:
 
 - [x] Matrix shows supported/unsupported target profiles.
 - [x] Export panel blocks unavailable targets with reason.
-- [ ] M7 export path rejects unsupported atoms/features.
+- [x] M7 export path rejects unsupported atoms/features.
 
 Module note: Export UI now exposes target readiness and blocked backend gaps.
 
 ### Phase AH: Backend CLI and Export Gaps
 
 - [x] AH1: Add deterministic benchmark JSON only if needed by export/readiness UI.
-- [x] AH2: Add export command skeletons for `wasm_realtime` and `m7_static`.
+- [x] AH2: Add export command surfaces for `wasm_realtime` and `m7_static`; `wasm_realtime` now outputs scaffold artifacts.
 - [x] AH3: Keep `apgcore` independent from platform APIs while adding export surfaces.
 - [x] AH4: For M7 static output, generate C11-compatible tables with bounded memory and no runtime YAML parser.
 
@@ -495,7 +496,7 @@ Pending AH tests for Phase AI:
 - [x] M7 export emits deterministic static bundle.
 - [x] Unsupported target features produce stable diagnostics.
 
-Module note: Backend CLI now exposes MVP export surfaces.
+Module note: `wasm_realtime` CLI export now emits deterministic scaffold artifacts (`apg_project_wasm.json` + `apg_project_wasm.mjs`) and `m7_static` exports remain deterministic C11 bundles.
 
 ### Phase AI: Deferred Test Implementation
 
