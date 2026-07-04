@@ -73,6 +73,10 @@ M7 static export now emits `apg_m7_project_process_block()` and CTest links/runs
 
 CTest now compiles the generated M7 bundle to an object and verifies section placement for signal buffers, params, typed atom storage, and atom calls.
 
+## PC12 Progress
+
+CTest now measures generated M7 host block time in the linked smoke and checks generated runner stack usage when GCC or Clang stack-usage output is available.
+
 ## PD1 Progress
 
 Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.
@@ -135,4 +139,4 @@ M7 static export now emits section names and section-placed RAM buffers for sign
 
 ## Immediate Direction
 
-New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 work should next add measured CPU/stack budget gates.
+New tests and host/tooling code should read meters, snapshots, and diagnostics through `measure_v2`. Runtime should continue shrinking toward execution over prebuilt image metadata and atom call pointers only; M7 work should next replace host timing smoke with board/toolchain timing and stack gates.

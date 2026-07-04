@@ -242,6 +242,27 @@ else()
     )
 endif()
 
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    add_test(
+            NAME test_apg_v2_cli_m7_export_stack_usage
+            COMMAND /bin/sh -c "${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.su"
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_stack_usage PROPERTIES
+            LABELS v2
+            DEPENDS test_apg_v2_cli_m7_export_bundle
+            PASS_REGULAR_EXPRESSION "apg_m7_project_process_block"
+    )
+else()
+    add_test(
+            NAME test_apg_v2_cli_m7_export_stack_usage_unconfigured
+            COMMAND ${CMAKE_COMMAND} -E echo "stack usage gate requires GCC or Clang; skipping generated M7 stack gate"
+    )
+    set_tests_properties(test_apg_v2_cli_m7_export_stack_usage_unconfigured PROPERTIES
+            LABELS v2
+            PASS_REGULAR_EXPRESSION "skipping generated M7 stack gate"
+    )
+endif()
+
 add_test(
         NAME test_apg_v2_cli_m7_export_link_smoke
         COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_bundle_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static_smoke
@@ -256,6 +277,7 @@ add_test(NAME test_apg_v2_cli_m7_export_run_smoke COMMAND ${APG_M7_CLI_TEST_DIR}
 set_tests_properties(test_apg_v2_cli_m7_export_run_smoke PROPERTIES
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_link_smoke
+        PASS_REGULAR_EXPRESSION "m7_static_host_block_us=.*budget_us=1000.000"
 )
 
 add_test(

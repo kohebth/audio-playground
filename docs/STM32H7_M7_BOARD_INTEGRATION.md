@@ -71,3 +71,5 @@ An STM32H7 integration is not production-ready until these gates pass:
 - generated atom-call workload is reviewed against the selected block period;
 - measured worst-case CPU time fits the selected sample rate and block period;
 - measured static RAM and stack usage fit the board budget with margin.
+
+Current repo CI provides host-side generated-bundle timing and generated-runner stack checks. STM32H7 production readiness still requires replacing those with board/toolchain measurements.
