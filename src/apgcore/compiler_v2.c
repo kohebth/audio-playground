@@ -482,6 +482,28 @@ static int parse_float_literal(const char *text, float *out_value) {
     return 1;
 }
 
+static uc_status compile_scalar_literal(
+    const char                  *node_id,
+    apg_bind_section_t           section,
+    apg_v2_compiled_binding_t   *out,
+    const apg_unit_v2_binding_t *binding,
+    uc_error                    *err
+) {
+    float value = 0.0f;
+    if (!parse_float_literal(binding ? binding->value.text : NULL, &value)) {
+        char msg[192];
+        snprintf(
+            msg, sizeof(msg), "node '%s' %s binding key '%s' must be a numeric literal", node_id ? node_id : "",
+            bind_section_name(section), binding && binding->key ? binding->key : ""
+        );
+        return set_error(err, UC_E_TYPE, msg);
+    }
+    out->kind    = APG_BIND_LITERAL;
+    out->literal = binding->value.text;
+    out->number  = value;
+    return UC_OK;
+}
+
 static size_t matrix_row_count(const uc_node *node) {
     if (!node)
         return 0u;
@@ -655,8 +677,9 @@ static uc_status compile_signal_bindings(
                 compiled[i].kind  = APG_BIND_PARAM;
                 compiled[i].index = (size_t)param_index;
             } else {
-                compiled[i].kind    = APG_BIND_LITERAL;
-                compiled[i].literal = bindings[i].value.text;
+                status = compile_scalar_literal(node_id, section, &compiled[i], &bindings[i], err);
+                if (status != UC_OK)
+                    return status;
             }
             continue;
         }
@@ -742,8 +765,9 @@ static uc_status compile_config_bindings(
             compiled[i].kind  = APG_BIND_PARAM;
             compiled[i].index = (size_t)param_index;
         } else {
-            compiled[i].kind    = APG_BIND_LITERAL;
-            compiled[i].literal = bindings[i].value.text;
+            status = compile_scalar_literal(node_id, APG_BIND_SECTION_CONFIG, &compiled[i], &bindings[i], err);
+            if (status != UC_OK)
+                return status;
         }
     }
 

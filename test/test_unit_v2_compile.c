@@ -1719,6 +1719,37 @@ static int test_signal_dependencies_rejected(void) {
     return expect_compile_invalid(unproduced_output, "unproduced output signal");
 }
 
+static int test_scalar_literals_must_be_numeric(void) {
+    const char *bad_literal = "kind: apg.unit\n"
+                              "schema: apg.unit.v2\n"
+                              "name: bad_scalar_literal\n"
+                              "version: 2.0.0\n"
+                              "params: {}\n"
+                              "ports:\n"
+                              "  inputs:\n"
+                              "    - name: input\n"
+                              "      type: audio\n"
+                              "      channels: 1\n"
+                              "  outputs:\n"
+                              "    - name: output\n"
+                              "      type: audio\n"
+                              "      channels: 1\n"
+                              "graph:\n"
+                              "  signals:\n"
+                              "    - input\n"
+                              "    - output\n"
+                              "  nodes:\n"
+                              "    - id: value\n"
+                              "      atom: generation_dc\n"
+                              "      out:\n"
+                              "        signal: output\n"
+                              "      config:\n"
+                              "        value: nope\n"
+                              "compatibility:\n"
+                              "  desktop_full: true\n";
+    return expect_compile_invalid_contains(bad_literal, "bad scalar literal", "value", "config", "numeric literal");
+}
+
 int main(void) {
     if (test_simple_gain_compile())
         return 1;
@@ -1743,6 +1774,8 @@ int main(void) {
     if (test_forward_references_scheduled())
         return 1;
     if (test_signal_dependencies_rejected())
+        return 1;
+    if (test_scalar_literals_must_be_numeric())
         return 1;
     if (test_compile_all_unit_v2_fixtures())
         return 1;

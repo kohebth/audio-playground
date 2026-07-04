@@ -22,6 +22,7 @@ typedef struct {
     apg_v2_binding_kind_t kind;
     size_t                index;
     const char           *literal;
+    float                 number;
     size_t               *indices;
     size_t                indices_len;
     float                *numbers;

@@ -152,7 +152,7 @@ static float compiled_scalar_value(const apg_v2_compiled_binding_t *binding, con
     if (binding->kind == APG_BIND_PARAM)
         return binding->index < runtime->params_len ? runtime->params[binding->index] : 0.0f;
     if (binding->kind == APG_BIND_LITERAL)
-        return binding->literal ? strtof(binding->literal, NULL) : 0.0f;
+        return binding->number;
     return 0.0f;
 }
 

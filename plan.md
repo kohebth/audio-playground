@@ -131,6 +131,7 @@ Module note: M7 export now reports static atom-call workload metadata.
 - [x] PD1: Move per-node state-buffer sample capacities into runtime image metadata.
 - [x] PD2: Move signal-array auxiliary allocation sizing into runtime image metadata.
 - [x] PD3: Precompute scalar config/input refresh plans so runtime processing does not scan binding keys.
+- [x] PD4: Parse scalar literal bindings in the compiler so runtime refresh does not parse text.
 - [x] PB3b: Move signal-binding and mix-matrix structured-config plans into runtime-image descriptors consumed by runtime init.
 
 Module note: Runtime image now owns state-buffer capacity layout for runtime allocation.
@@ -138,6 +139,7 @@ Module note: Runtime image now owns state-buffer capacity layout for runtime all
 Module note: Runtime image now sizes signal-array pointer pools for runtime binding.
 
 Module note: Runtime processing now refreshes scalar fields from image plans.
+Module note: Compiler now parses scalar literal bindings before runtime.
 Module note: Runtime now consumes precomputed signal-binding and mix-matrix config plans from runtime-image with no runtime-time descriptor resolution.
 Module note: Runtime image now owns bypass and project-mute transport metadata.
 Module note: Runtime image now owns public audio port channel maps.
