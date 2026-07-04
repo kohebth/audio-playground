@@ -267,6 +267,18 @@ static bool refresh_scalar_plan_runtime(
     return true;
 }
 
+static uc_status validate_schedule(const apg_v2_runtime_image_t *image, uc_error *err) {
+    if (image->schedule_len == 0u)
+        return UC_OK;
+    if (!image->schedule)
+        return set_error(err, UC_E_MISSING, "v2 runtime image schedule is missing");
+    for (size_t i = 0; i < image->schedule_len; i++) {
+        if (image->schedule[i] >= image->nodes_len)
+            return set_error(err, UC_E_RANGE, "v2 runtime schedule index is out of range");
+    }
+    return UC_OK;
+}
+
 static uc_status
 apply_mix_matrix_config(const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_node_t *node, uc_error *err) {
     if (!layout || !node)
@@ -334,7 +346,8 @@ static uc_status init_state_buffers(
 }
 
 static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
-    out->nodes_len = image->nodes_len;
+    uc_status status = UC_OK;
+    out->nodes_len   = image->nodes_len;
     if (out->nodes_len == 0u)
         return UC_OK;
     if (!image->node_layouts)
@@ -397,7 +410,7 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         node->call.state  = node->state_storage;
         node->call.info   = &out->process_info;
 
-        uc_status status = init_state_buffers(layout, out, node, err);
+        status = init_state_buffers(layout, out, node, err);
         if (status != UC_OK)
             return status;
         node->signal_bindings     = layout->signal_bindings;
@@ -420,6 +433,10 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         if (status != UC_OK)
             return status;
     }
+
+    if ((status = validate_schedule(image, err)) != UC_OK)
+        return status;
+
     return UC_OK;
 }
 
@@ -453,12 +470,12 @@ uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, ap
     out->param_names         = image->param_names;
     out->control_targets     = image->control_targets;
     out->control_targets_len = image->control_targets_len;
-    out->schedule            = image->schedule;
-    out->schedule_len        = image->schedule_len;
     status                   = init_node_calls(image, out, err);
     if (status != UC_OK)
         goto fail;
-    status = init_bypass_state_from_image(image, out, err);
+    out->schedule     = image->schedule;
+    out->schedule_len = image->schedule_len;
+    status            = init_bypass_state_from_image(image, out, err);
     if (status != UC_OK)
         goto fail;
     out->bypass_index_by_node            = image->bypass_index_by_node;
@@ -567,7 +584,7 @@ static void apply_project_mute(apg_v2_runtime_t *runtime, uint32_t frames) {
 }
 
 static bool run_node(apg_v2_runtime_t *runtime, size_t node_index, uint32_t frames) {
-    if (!runtime || node_index >= runtime->nodes_len)
+    if (!runtime)
         return false;
 
     apg_v2_runtime_node_t *node = &runtime->nodes[node_index];
@@ -730,12 +747,7 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     advance_smoothed_params(runtime, frames);
 
     for (size_t i = 0; i < runtime->schedule_len; i++) {
-        uint32_t scheduled_index = runtime->schedule[i];
-        if (scheduled_index >= runtime->nodes_len) {
-            runtime_set_error(runtime, "v2 runtime schedule index is out of range");
-            return false;
-        }
-        if (!run_node(runtime, scheduled_index, frames)) {
+        if (!run_node(runtime, runtime->schedule[i], frames)) {
             return false;
         }
     }
