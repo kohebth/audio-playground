@@ -24,6 +24,13 @@ typedef struct {
 } apg_v2_runtime_image_bypass_entry_t;
 
 typedef struct {
+    const char *port_name;
+    size_t      channel_count;
+    size_t      meter_index;
+    size_t     *signal_indices;
+} apg_v2_runtime_audio_port_t;
+
+typedef struct {
     const apg_v2_compiled_binding_t *binding;
     size_t                           storage_offset;
     size_t                           signal_index;
@@ -86,6 +93,10 @@ typedef struct {
     size_t                              *bypass_index_by_node;
     size_t                              *project_mute_output_indices;
     size_t                               project_mute_output_indices_len;
+    apg_v2_runtime_audio_port_t         *input_audio_ports;
+    size_t                               input_audio_ports_len;
+    apg_v2_runtime_audio_port_t         *output_audio_ports;
+    size_t                               output_audio_ports_len;
     apg_v2_runtime_node_layout_t        *node_layouts;
     size_t                               nodes_len;
     size_t                               schedule_len;

@@ -259,6 +259,78 @@ static size_t audio_port_meter_count(const apg_unit_v2_port_t *ports, size_t por
     return count;
 }
 
+static size_t audio_port_count(const apg_unit_v2_port_t *ports, size_t ports_len) {
+    size_t count = 0u;
+    for (size_t i = 0; i < ports_len; i++) {
+        if (ports[i].type && strcmp(ports[i].type, "audio") == 0)
+            count++;
+    }
+    return count;
+}
+
+static const char *audio_port_channel_signal_name(const apg_unit_v2_port_t *port, size_t channel_index) {
+    if (!port)
+        return NULL;
+    if (port->signals_len > 0u)
+        return channel_index < port->signals_len ? port->signals[channel_index] : NULL;
+    return channel_index == 0u ? port->name : NULL;
+}
+
+static uc_status fill_audio_port_map(
+    uc_arena                     *arena,
+    const apg_unit_v2_t          *unit,
+    const apg_unit_v2_port_t     *ports,
+    size_t                        ports_len,
+    apg_v2_runtime_audio_port_t **out_ports,
+    size_t                       *out_ports_len,
+    uc_error                     *err
+) {
+    size_t port_count = audio_port_count(ports, ports_len);
+    *out_ports        = NULL;
+    *out_ports_len    = 0u;
+    if (port_count == 0u)
+        return UC_OK;
+
+    apg_v2_runtime_audio_port_t *items = uc_arena_alloc(arena, port_count * sizeof(*items), sizeof(void *));
+    if (!items)
+        return set_error(err, UC_E_OOM, "v2 runtime image audio port map allocation failed");
+
+    size_t port_index  = 0u;
+    size_t meter_index = 0u;
+    for (size_t i = 0; i < ports_len; i++) {
+        const apg_unit_v2_port_t *port = &ports[i];
+        if (!port->type || strcmp(port->type, "audio") != 0)
+            continue;
+
+        size_t channels = 0u;
+        if (!parse_port_channel_count(port, &channels))
+            return set_error(err, UC_E_RANGE, "v2 runtime image audio port channel count is invalid");
+
+        size_t *indices = uc_arena_alloc(arena, channels * sizeof(*indices), sizeof(size_t));
+        if (!indices)
+            return set_error(err, UC_E_OOM, "v2 runtime image audio port signal map allocation failed");
+
+        for (size_t ch = 0; ch < channels; ch++) {
+            int signal_index = signal_index_by_name(unit, audio_port_channel_signal_name(port, ch));
+            if (signal_index < 0)
+                return set_error(err, UC_E_MISSING, "v2 runtime image audio port signal is missing");
+            indices[ch] = (size_t)signal_index;
+        }
+
+        items[port_index++] = (apg_v2_runtime_audio_port_t){
+            .port_name      = port->name,
+            .channel_count  = channels,
+            .meter_index    = meter_index,
+            .signal_indices = indices,
+        };
+        meter_index += channels;
+    }
+
+    *out_ports     = items;
+    *out_ports_len = port_index;
+    return UC_OK;
+}
+
 static float parse_param_default(const apg_unit_v2_param_t *param) {
     if (!param || !param->default_value)
         return 0.0f;
@@ -891,7 +963,21 @@ uc_status apg_v2_runtime_image_build(
     out->output_meters_len = audio_port_meter_count(plan->unit->output_ports, plan->unit->output_ports_len);
     out->schedule_len      = plan->schedule_len;
 
-    uc_status status = fill_node_layouts(arena, out, err);
+    uc_status status = fill_audio_port_map(
+        arena, plan->unit, plan->unit->input_ports, plan->unit->input_ports_len, &out->input_audio_ports,
+        &out->input_audio_ports_len, err
+    );
+    if (status != UC_OK)
+        return status;
+
+    status = fill_audio_port_map(
+        arena, plan->unit, plan->unit->output_ports, plan->unit->output_ports_len, &out->output_audio_ports,
+        &out->output_audio_ports_len, err
+    );
+    if (status != UC_OK)
+        return status;
+
+    status = fill_node_layouts(arena, out, err);
     if (status != UC_OK)
         return status;
 

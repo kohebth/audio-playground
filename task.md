@@ -119,6 +119,7 @@ Module note: Runtime image now owns state-buffer capacity layout for runtime all
 Module note: Runtime image now sizes signal-array pointer pools for runtime binding.
 
 Module note: Runtime processing now refreshes scalar fields from image plans.
+Module note: Runtime image now owns public audio port channel maps.
 
 ## Runtime Memory Hardening Queue
 
