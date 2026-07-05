@@ -103,93 +103,100 @@ LEGACY_ATOMS(LEGACY_THUNK)
 // Registry table
 // ─────────────────────────────────────────────
 
-#define REG_F(fields)      fields, sizeof(fields) / sizeof((fields)[0])
-#define REGISTRY_NO_FIELDS NULL, 0
+#define REGISTRY_FIELDS(atom_name, kind, count)        REGISTRY_FIELDS_EXPAND(atom_name, kind, count)
+#define REGISTRY_FIELDS_EXPAND(atom_name, kind, count) REGISTRY_FIELDS_##count(atom_name, kind)
+#define REGISTRY_FIELDS_0(atom_name, kind)             .kind##_fields = NULL, .n_##kind##_fields = 0
+#define REGISTRY_FIELDS_1(atom_name, kind)             .kind##_fields = atom_name##_##kind##_fields, .n_##kind##_fields = 1
+#define REGISTRY_FIELDS_2(atom_name, kind)             .kind##_fields = atom_name##_##kind##_fields, .n_##kind##_fields = 2
+#define REGISTRY_FIELDS_3(atom_name, kind)             .kind##_fields = atom_name##_##kind##_fields, .n_##kind##_fields = 3
+#define REGISTRY_FIELDS_4(atom_name, kind)             .kind##_fields = atom_name##_##kind##_fields, .n_##kind##_fields = 4
+#define REGISTRY_FIELDS_5(atom_name, kind)             .kind##_fields = atom_name##_##kind##_fields, .n_##kind##_fields = 5
 
-#define REG_A(atom_name, config_fields, state_fields) REGISTRY_ATOM_EXPAND(atom_name, config_fields, state_fields)
+#define REGISTRY_ATOMS(_)           \
+    _(amplitude_accumulate, 0, 1)   \
+    _(amplitude_latch, 1, 2)        \
+    _(amplitude_add, 0, 0)          \
+    _(amplitude_clip_hard, 1, 0)    \
+    _(amplitude_clip_soft, 2, 0)    \
+    _(amplitude_divide, 1, 0)       \
+    _(amplitude_multiply, 0, 0)     \
+    _(amplitude_normalize, 2, 1)    \
+    _(amplitude_smooth, 3, 1)       \
+    _(amplitude_subtract, 0, 0)     \
+    _(delay_fractional, 2, 2)       \
+    _(delay_line, 1, 2)             \
+    _(delay_tap_feedback, 1, 0)     \
+    _(delay_tap_feedforward, 1, 0)  \
+    _(delay_unit, 0, 1)             \
+    _(detect_autocorrelate, 1, 2)   \
+    _(detect_pitch, 2, 2)           \
+    _(detect_envelope, 3, 1)        \
+    _(detect_peak, 3, 1)            \
+    _(detect_rms, 1, 3)             \
+    _(detect_slope, 0, 1)           \
+    _(detect_threshold, 1, 0)       \
+    _(detect_zero_crossing, 0, 1)   \
+    _(filter_allpass, 2, 2)         \
+    _(filter_biquad, 5, 2)          \
+    _(filter_comb_fb, 2, 2)         \
+    _(filter_comb_ff, 2, 2)         \
+    _(filter_dc_block, 1, 2)        \
+    _(filter_differentiate, 0, 1)   \
+    _(filter_fir, 2, 2)             \
+    _(filter_integrate, 0, 1)       \
+    _(freq_fft, 1, 0)               \
+    _(freq_ifft, 1, 0)              \
+    _(freq_multiply, 1, 0)          \
+    _(freq_overlap_add, 2, 1)       \
+    _(freq_overlap_save, 2, 2)      \
+    _(freq_overlap_add, 2, 1)       \
+    _(freq_overlap_save, 2, 2)      \
+    _(freq_window, 2, 0)            \
+    _(freq_shift, 1, 5)             \
+    _(generation_dc, 1, 0)          \
+    _(generation_envelope, 5, 2)    \
+    _(generation_impulse, 2, 1)     \
+    _(generation_lfo, 4, 1)         \
+    _(generation_noise, 2, 2)       \
+    _(generation_oscillator, 4, 1)  \
+    _(interpolation_cubic, 0, 0)    \
+    _(interpolation_lagrange, 1, 2) \
+    _(interpolation_linear, 0, 0)   \
+    _(interpolation_sinc, 1, 1)     \
+    _(mix_crossfade, 1, 0)          \
+    _(mix_decode_ms, 0, 0)          \
+    _(mix_encode_ms, 0, 0)          \
+    _(mix_matrix, 2, 0)             \
+    _(mix_pan_stereo, 1, 0)         \
+    _(mix_wet_dry, 1, 0)            \
+    _(modulation_amplitude, 1, 0)   \
+    _(modulation_frequency, 1, 3)   \
+    _(modulation_phase, 1, 2)       \
+    _(modulation_ring, 0, 0)        \
+    _(modulation_scrub, 1, 0)       \
+    _(nonlinear_bitcrush, 1, 0)     \
+    _(nonlinear_sample_hold, 1, 2)  \
+    _(nonlinear_waveshape, 2, 0)    \
+    _(src_antialias, 2, 2)          \
+    _(src_antiimage, 2, 2)          \
+    _(src_convert_format, 2, 0)     \
+    _(src_downsample, 1, 0)         \
+    _(src_upsample, 1, 0)           \
+    _(freq_quantize, 0, 0)
 
-#define REGISTRY_ATOM_EXPAND(atom_name, c_fields, n_cfg, s_fields, n_st)                                \
-    {                                                                                                   \
-        .name = #atom_name, .thunk = atom_name##_thunk, .out_size = sizeof(atom_name##_out_t),          \
-        .in_size = sizeof(atom_name##_in_t), .config_size = sizeof(atom_name##_params_t),               \
-        .state_size = sizeof(atom_name##_state_t), .config_fields = c_fields, .n_config_fields = n_cfg, \
-        .state_fields = s_fields, .n_state_fields = n_st,                                               \
-    }
+#define REGISTRY_ATOM(atom_name, config_count, state_count) \
+    {                                                       \
+        .name        = #atom_name,                          \
+        .thunk       = atom_name##_thunk,                   \
+        .out_size    = sizeof(atom_name##_out_t),           \
+        .in_size     = sizeof(atom_name##_in_t),            \
+        .config_size = sizeof(atom_name##_params_t),        \
+        .state_size  = sizeof(atom_name##_state_t),         \
+        REGISTRY_FIELDS(atom_name, config, config_count),   \
+        REGISTRY_FIELDS(atom_name, state, state_count),     \
+    },
 
-static atom_registry_entry_t g_registry[] = {
-    REG_A(amplitude_accumulate, REGISTRY_NO_FIELDS, REG_F(amplitude_accumulate_state_fields)),
-    REG_A(amplitude_latch, REG_F(amplitude_latch_config_fields), REG_F(amplitude_latch_state_fields)),
-    REG_A(amplitude_add, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-    REG_A(amplitude_clip_hard, REG_F(amplitude_clip_hard_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(amplitude_clip_soft, REG_F(amplitude_clip_soft_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(amplitude_divide, REG_F(amplitude_divide_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(amplitude_multiply, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-    REG_A(amplitude_normalize, REG_F(amplitude_normalize_config_fields), REG_F(amplitude_normalize_state_fields)),
-    REG_A(amplitude_smooth, REG_F(amplitude_smooth_config_fields), REG_F(amplitude_smooth_state_fields)),
-    REG_A(amplitude_subtract, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-    REG_A(delay_fractional, REG_F(delay_fractional_config_fields), REG_F(delay_fractional_state_fields)),
-    REG_A(delay_line, REG_F(delay_line_config_fields), REG_F(delay_line_state_fields)),
-    REG_A(delay_tap_feedback, REG_F(delay_tap_feedback_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(delay_tap_feedforward, REG_F(delay_tap_feedforward_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(delay_unit, REGISTRY_NO_FIELDS, REG_F(delay_unit_state_fields)),
-    REG_A(detect_autocorrelate, REG_F(detect_autocorrelate_config_fields), REG_F(detect_autocorrelate_state_fields)),
-    REG_A(detect_pitch, REG_F(detect_pitch_config_fields), REG_F(detect_pitch_state_fields)),
-    REG_A(detect_envelope, REG_F(detect_envelope_config_fields), REG_F(detect_envelope_state_fields)),
-    REG_A(detect_peak, REG_F(detect_peak_config_fields), REG_F(detect_peak_state_fields)),
-    REG_A(detect_rms, REG_F(detect_rms_config_fields), REG_F(detect_rms_state_fields)),
-    REG_A(detect_slope, REGISTRY_NO_FIELDS, REG_F(detect_slope_state_fields)),
-    REG_A(detect_threshold, REG_F(detect_threshold_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(detect_zero_crossing, REGISTRY_NO_FIELDS, REG_F(detect_zero_crossing_state_fields)),
-    REG_A(filter_allpass, REG_F(filter_allpass_config_fields), REG_F(filter_allpass_state_fields)),
-    REG_A(filter_biquad, REG_F(filter_biquad_config_fields), REG_F(filter_biquad_state_fields)),
-    REG_A(filter_comb_fb, REG_F(filter_comb_fb_config_fields), REG_F(filter_comb_fb_state_fields)),
-    REG_A(filter_comb_ff, REG_F(filter_comb_ff_config_fields), REG_F(filter_comb_ff_state_fields)),
-    REG_A(filter_dc_block, REG_F(filter_dc_block_config_fields), REG_F(filter_dc_block_state_fields)),
-    REG_A(filter_differentiate, REGISTRY_NO_FIELDS, REG_F(filter_differentiate_state_fields)),
-    REG_A(filter_fir, REG_F(filter_fir_config_fields), REG_F(filter_fir_state_fields)),
-    REG_A(filter_integrate, REGISTRY_NO_FIELDS, REG_F(filter_integrate_state_fields)),
-    REG_A(freq_fft, REG_F(freq_fft_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(freq_ifft, REG_F(freq_ifft_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(freq_multiply, REG_F(freq_multiply_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(freq_overlap_add, REG_F(freq_overlap_add_config_fields), REG_F(freq_overlap_add_state_fields)),
-    REG_A(freq_overlap_save, REG_F(freq_overlap_save_config_fields), REG_F(freq_overlap_save_state_fields)),
-    REG_A(freq_overlap_add, REG_F(freq_overlap_add_config_fields), REG_F(freq_overlap_add_state_fields)),
-    REG_A(freq_overlap_save, REG_F(freq_overlap_save_config_fields), REG_F(freq_overlap_save_state_fields)),
-    REG_A(freq_window, REG_F(freq_window_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(freq_shift, REG_F(freq_shift_config_fields), REG_F(freq_shift_state_fields)),
-    REG_A(generation_dc, REG_F(generation_dc_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(generation_envelope, REG_F(generation_envelope_config_fields), REG_F(generation_envelope_state_fields)),
-    REG_A(generation_impulse, REG_F(generation_impulse_config_fields), REG_F(generation_impulse_state_fields)),
-    REG_A(generation_lfo, REG_F(generation_lfo_config_fields), REG_F(generation_lfo_state_fields)),
-    REG_A(generation_noise, REG_F(generation_noise_config_fields), REG_F(generation_noise_state_fields)),
-    REG_A(generation_oscillator, REG_F(generation_oscillator_config_fields), REG_F(generation_oscillator_state_fields)),
-    REG_A(interpolation_cubic, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-    REG_A(
-        interpolation_lagrange, REG_F(interpolation_lagrange_config_fields), REG_F(interpolation_lagrange_state_fields)
-    ),
-    REG_A(interpolation_linear, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-    REG_A(interpolation_sinc, REG_F(interpolation_sinc_config_fields), REG_F(interpolation_sinc_state_fields)),
-    REG_A(mix_crossfade, REG_F(mix_crossfade_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(mix_decode_ms, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-    REG_A(mix_encode_ms, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-    REG_A(mix_matrix, REG_F(mix_matrix_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(mix_pan_stereo, REG_F(mix_pan_stereo_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(mix_wet_dry, REG_F(mix_wet_dry_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(modulation_amplitude, REG_F(modulation_amplitude_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(modulation_frequency, REG_F(modulation_frequency_config_fields), REG_F(modulation_frequency_state_fields)),
-    REG_A(modulation_phase, REG_F(modulation_phase_config_fields), REG_F(modulation_phase_state_fields)),
-    REG_A(modulation_ring, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-    REG_A(modulation_scrub, REG_F(modulation_scrub_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(nonlinear_bitcrush, REG_F(nonlinear_bitcrush_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(nonlinear_sample_hold, REG_F(nonlinear_sample_hold_config_fields), REG_F(nonlinear_sample_hold_state_fields)),
-    REG_A(nonlinear_waveshape, REG_F(nonlinear_waveshape_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(src_antialias, REG_F(src_antialias_config_fields), REG_F(src_antialias_state_fields)),
-    REG_A(src_antiimage, REG_F(src_antiimage_config_fields), REG_F(src_antiimage_state_fields)),
-    REG_A(src_convert_format, REG_F(src_convert_format_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(src_downsample, REG_F(src_downsample_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(src_upsample, REG_F(src_upsample_config_fields), REGISTRY_NO_FIELDS),
-    REG_A(freq_quantize, REGISTRY_NO_FIELDS, REGISTRY_NO_FIELDS),
-};
+static atom_registry_entry_t g_registry[] = {REGISTRY_ATOMS(REGISTRY_ATOM)};
 
 static const int g_registry_count = sizeof(g_registry) / sizeof(g_registry[0]);
 

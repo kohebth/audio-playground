@@ -97,10 +97,24 @@
     _(src_downsample_config_fields, 1)              \
     _(src_upsample_config_fields, 1)
 
-#define APG_DECLARE_ATOM_FIELD_TABLE(name, count) extern const atom_field_desc_t name[count];
+#define APG_DECLARE_ATOM_FIELD_TABLE(name, count)        APG_DECLARE_ATOM_FIELD_TABLE_EXPAND(name, count)
+#define APG_DECLARE_ATOM_FIELD_TABLE_EXPAND(name, count) APG_DECLARE_ATOM_FIELD_TABLE_##count(name)
+#define APG_DECLARE_ATOM_FIELD_TABLE_0(name)
+#define APG_DECLARE_ATOM_FIELD_TABLE_1(name) extern const atom_field_desc_t name[1];
+#define APG_DECLARE_ATOM_FIELD_TABLE_2(name) extern const atom_field_desc_t name[2];
+#define APG_DECLARE_ATOM_FIELD_TABLE_3(name) extern const atom_field_desc_t name[3];
+#define APG_DECLARE_ATOM_FIELD_TABLE_4(name) extern const atom_field_desc_t name[4];
+#define APG_DECLARE_ATOM_FIELD_TABLE_5(name) extern const atom_field_desc_t name[5];
 
 APG_ATOM_FIELD_TABLES(APG_DECLARE_ATOM_FIELD_TABLE)
 
 #undef APG_DECLARE_ATOM_FIELD_TABLE
+#undef APG_DECLARE_ATOM_FIELD_TABLE_EXPAND
+#undef APG_DECLARE_ATOM_FIELD_TABLE_0
+#undef APG_DECLARE_ATOM_FIELD_TABLE_1
+#undef APG_DECLARE_ATOM_FIELD_TABLE_2
+#undef APG_DECLARE_ATOM_FIELD_TABLE_3
+#undef APG_DECLARE_ATOM_FIELD_TABLE_4
+#undef APG_DECLARE_ATOM_FIELD_TABLE_5
 
 #endif // ATOM_FIELD_DESCRIPTORS_H
