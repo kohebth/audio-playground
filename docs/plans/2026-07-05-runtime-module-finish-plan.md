@@ -17,10 +17,10 @@ Done:
 
 ## Remaining Implementation
 
-- [ ] Audit all functions called by `apg_v2_runtime_process*` for allocation, file I/O, YAML/parser use, compiler use, string parsing, metadata lookup, locks, and platform calls.
-- [ ] Keep bypass and mute in runtime because they alter output samples.
-- [ ] If the audit finds a real-time-path lookup or allocation bug, fix that root cause and add one focused regression test.
-- [ ] Keep multi-channel helpers thin over registry-owned audio-port maps.
+- [x] Audit all functions called by `apg_v2_runtime_process*` for allocation, file I/O, YAML/parser use, compiler use, string parsing, metadata lookup, locks, and platform calls.
+- [x] Keep bypass and mute in runtime because they alter output samples.
+- [x] If the audit finds a real-time-path lookup or allocation bug, fix that root cause and add one focused regression test.
+- [x] Keep multi-channel helpers thin over registry-owned audio-port maps.
 
 ## Tests
 

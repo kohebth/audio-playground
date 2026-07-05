@@ -1,6 +1,6 @@
-#include <apgcore/compiler_v2.h>
-#include <apgcore/runtime_v2.h>
-#include <apgcore/unit_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
+#include <apgcore/runtime/runtime_v2.h>
+#include <apgcore/validator/unit_v2.h>
 
 #include "test_runtime_v2_harness.h"
 

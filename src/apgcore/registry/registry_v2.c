@@ -357,24 +357,6 @@ find_field_in_list(const atom_field_desc_t *fields, size_t fields_len, const cha
     return NULL;
 }
 
-static const atom_field_desc_t *find_input_field(const atom_registry_entry_t *atom, const char *key) {
-    if (!atom || !atom->name)
-        return NULL;
-    size_t                   fields_len = 0u;
-    const atom_field_desc_t *fields     = atom_registry_in_fields(atom, &fields_len);
-    return find_field_in_list(fields, fields_len, key);
-}
-
-static const atom_field_desc_t *find_config_field(const atom_registry_entry_t *atom, const char *key) {
-    if (!atom || !key)
-        return NULL;
-    for (int i = 0; i < atom->n_config_fields; i++) {
-        if (atom->config_fields[i].name && strcmp(atom->config_fields[i].name, key) == 0)
-            return &atom->config_fields[i];
-    }
-    return NULL;
-}
-
 static bool scalar_refresh_field(const atom_field_desc_t *field) {
     return field && (field->type == FIELD_INT || field->type == FIELD_FLOAT);
 }
@@ -392,7 +374,8 @@ static size_t count_config_refreshes(const apg_v2_compiled_node_t *node) {
 static size_t count_input_refreshes(const apg_v2_compiled_node_t *node) {
     size_t count = 0u;
     for (size_t i = 0; node && i < node->in_len; i++) {
-        const atom_field_desc_t *field = find_input_field(node->atom, node->in[i].key);
+        const atom_field_desc_t *field =
+            find_field_in_list(node->input_fields, node->input_fields_len, node->in[i].key);
         if (scalar_refresh_field(field))
             count++;
     }
@@ -418,7 +401,7 @@ find_compiled_binding(const apg_v2_compiled_binding_t *bindings, size_t bindings
 }
 
 static bool is_mix_matrix_node(const apg_v2_compiled_node_t *node) {
-    return node && node->atom && node->atom->name && strcmp(node->atom->name, "mix_matrix") == 0;
+    return node && node->atom_name && strcmp(node->atom_name, "mix_matrix") == 0;
 }
 
 static uc_status fill_scalar_refreshes(
@@ -446,7 +429,8 @@ static uc_status fill_scalar_refreshes(
         if (config && bindings[i].kind == APG_BIND_FLOAT_MATRIX)
             continue;
         const atom_field_desc_t *field =
-            config ? find_config_field(node->atom, bindings[i].key) : find_input_field(node->atom, bindings[i].key);
+            config ? find_field_in_list(node->config_fields, node->config_fields_len, bindings[i].key)
+                   : find_field_in_list(node->input_fields, node->input_fields_len, bindings[i].key);
         if (!field && !config)
             continue;
         if (!config && !scalar_refresh_field(field))
@@ -455,8 +439,8 @@ static uc_status fill_scalar_refreshes(
             char msg[192];
             snprintf(
                 msg, sizeof(msg), "node '%s' atom '%s' %s binding key '%s' metadata is missing",
-                node->id ? node->id : "", node->atom && node->atom->name ? node->atom->name : "",
-                config ? "config" : "input", bindings[i].key ? bindings[i].key : ""
+                node->id ? node->id : "", node->atom_name ? node->atom_name : "", config ? "config" : "input",
+                bindings[i].key ? bindings[i].key : ""
             );
             return set_error(err, UC_E_MISSING, msg);
         }
@@ -522,7 +506,8 @@ static uc_status fill_signal_bindings(
         item.signal_array_len                 = 0u;
 
         if (is_input) {
-            const atom_field_desc_t *field = find_input_field(node->atom, binding->key);
+            const atom_field_desc_t *field =
+                find_field_in_list(node->input_fields, node->input_fields_len, binding->key);
             if (field) {
                 if (field->type != FIELD_SIGNAL) {
                     if (binding->kind == APG_BIND_SIGNAL)
@@ -686,22 +671,21 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
     size_t signal_array_cursor       = 0u;
     for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
         const apg_v2_compiled_node_t  *node   = &plan->nodes[node_index];
-        const atom_registry_entry_t   *atom   = node->atom;
         apg_v2_registry_node_layout_t *layout = &out->node_layouts[node_index];
-        if (!atom)
-            return set_error(err, UC_E_MISSING, "v2 registry node is missing atom metadata");
+        if (!node->atom_name || !node->thunk)
+            return set_error(err, UC_E_MISSING, "v2 registry node is missing compiled atom layout");
 
         memset(layout, 0, sizeof(*layout));
 
         layout->node_id        = node->id;
-        layout->atom_name      = atom->name;
-        layout->thunk          = atom->thunk;
-        layout->state_fields   = atom->state_fields;
-        layout->n_state_fields = atom->n_state_fields;
-        layout->out_size       = atom_storage_size(atom->out_size);
-        layout->in_size        = atom_storage_size(atom->in_size);
-        layout->config_size    = atom_storage_size(atom->config_size);
-        layout->state_size     = atom_storage_size(atom->state_size);
+        layout->atom_name      = node->atom_name;
+        layout->thunk          = node->thunk;
+        layout->state_fields   = node->state_fields;
+        layout->n_state_fields = node->state_fields_len > (size_t)INT_MAX ? INT_MAX : (int)node->state_fields_len;
+        layout->out_size       = atom_storage_size(node->out_size);
+        layout->in_size        = atom_storage_size(node->in_size);
+        layout->config_size    = atom_storage_size(node->config_size);
+        layout->state_size     = atom_storage_size(node->state_size);
         uc_status status       = reserve_storage(layout->out_size, &atom_storage_cursor, &layout->out_offset, err);
         if (status != UC_OK)
             return status;
@@ -718,8 +702,8 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
             signal_array_pointer_slots(node->in, node->in_len) + signal_array_pointer_slots(node->out, node->out_len);
         layout->signal_array_pool_offset = signal_array_cursor;
 
-        for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
-            if (atom->state_fields[field_index].type == FIELD_BUFFER)
+        for (size_t field_index = 0; field_index < node->state_fields_len; field_index++) {
+            if (node->state_fields[field_index].type == FIELD_BUFFER)
                 layout->state_buffers_len++;
         }
         if (layout->state_buffers_len > 0u) {
@@ -734,15 +718,15 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
         }
 
         size_t buffer_index = 0u;
-        for (int field_index = 0; field_index < atom->n_state_fields; field_index++) {
-            if (atom->state_fields[field_index].type != FIELD_BUFFER)
+        for (size_t field_index = 0; field_index < node->state_fields_len; field_index++) {
+            if (node->state_fields[field_index].type != FIELD_BUFFER)
                 continue;
-            layout->state_buffer_samples_by_index[buffer_index++] = atom->state_fields[field_index].buffer_samples;
+            layout->state_buffer_samples_by_index[buffer_index++] = node->state_fields[field_index].buffer_samples;
             layout->state_buffer_sample_offsets_by_index[buffer_index - 1u] = state_buffer_cursor;
-            if (atom->state_fields[field_index].buffer_samples > SIZE_MAX - state_buffer_cursor)
+            if (node->state_fields[field_index].buffer_samples > SIZE_MAX - state_buffer_cursor)
                 return set_error(err, UC_E_RANGE, "v2 registry state buffer layout is too large");
-            state_buffer_cursor += atom->state_fields[field_index].buffer_samples;
-            layout->state_buffer_samples += atom->state_fields[field_index].buffer_samples;
+            state_buffer_cursor += node->state_fields[field_index].buffer_samples;
+            layout->state_buffer_samples += node->state_fields[field_index].buffer_samples;
         }
         if (state_buffer_table_offset > SIZE_MAX - layout->state_buffers_len)
             return set_error(err, UC_E_RANGE, "v2 registry state-buffer table is too large");

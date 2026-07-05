@@ -1,4 +1,4 @@
-#include <apgcore/atom_catalog.h>
+#include <apgcore/metadata/atom_catalog.h>
 
 #include <atom_registry.h>
 

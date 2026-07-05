@@ -1,6 +1,6 @@
-#include <apgcore/parser_v2.h>
-#include <apgcore/project_validator_v2.h>
-#include <apgcore/unit_validator_v2.h>
+#include <apgcore/parser/parser_v2.h>
+#include <apgcore/validator/project_validator_v2.h>
+#include <apgcore/validator/unit_validator_v2.h>
 
 #include <stdio.h>
 #include <string.h>

@@ -1,4 +1,4 @@
-#include <apgcore/host_v2.h>
+#include <apgcore/host/host_v2.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -21,7 +21,8 @@ static void fill_input(float *input, int chunk) {
 int main(void) {
     apg_v2_host_unit_t host;
     uc_error           err = {0};
-    uc_status status = apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err);
+    uc_status          status =
+        apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err);
     if (status != UC_OK) {
         fprintf(stderr, "load error: %s\n", err.msg);
         return fail("failed to load v2 runtime smoke unit");

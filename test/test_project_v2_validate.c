@@ -1,4 +1,4 @@
-#include <apgcore/project_v2.h>
+#include <apgcore/validator/project_v2.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -56,9 +56,10 @@ static int expect_valid_resolved_fixture(void) {
         return fail("arena init failed");
 
     apg_project_v2_resolved_t resolved;
-    uc_error                  err = {0};
-    uc_status                 status =
-        apg_project_v2_load_resolved_file("test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &arena, &resolved, &err);
+    uc_error                  err    = {0};
+    uc_status                 status = apg_project_v2_load_resolved_file(
+        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &arena, &resolved, &err
+    );
     if (status != UC_OK) {
         fprintf(stderr, "resolved project error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -83,9 +84,10 @@ static int expect_valid_pedalboard_fixture(void) {
         return fail("arena init failed");
 
     apg_project_v2_resolved_t resolved;
-    uc_error                  err = {0};
-    uc_status                 status =
-        apg_project_v2_load_resolved_file("test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &resolved, &err);
+    uc_error                  err    = {0};
+    uc_status                 status = apg_project_v2_load_resolved_file(
+        "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &resolved, &err
+    );
     if (status != UC_OK) {
         fprintf(stderr, "pedalboard project error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -152,15 +154,18 @@ int main(void) {
     if (expect_valid_pedalboard_fixture())
         return 1;
     if (expect_invalid_resolved_file_contains(
-            "test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml", "missing unit file", "cannot resolve unit file"
+            "test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml", "missing unit file",
+            "cannot resolve unit file"
         ))
         return 1;
     if (expect_invalid_resolved_file_contains(
-            "test/fixtures/projects-v2/invalid-absolute-unit.project.v2.yaml", "absolute unit file", "absolute unit file paths"
+            "test/fixtures/projects-v2/invalid-absolute-unit.project.v2.yaml", "absolute unit file",
+            "absolute unit file paths"
         ))
         return 1;
     if (expect_invalid_resolved_file_contains(
-            "test/fixtures/projects-v2/invalid-escaping-unit.project.v2.yaml", "escaping unit file", "escapes workspace root"
+            "test/fixtures/projects-v2/invalid-escaping-unit.project.v2.yaml", "escaping unit file",
+            "escapes workspace root"
         ))
         return 1;
     if (expect_invalid_resolved_file_contains(

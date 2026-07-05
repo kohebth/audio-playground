@@ -6,7 +6,7 @@ Compiler receives validated contracts plus metadata, expands projects/units, res
 
 ## Current Status
 
-One remaining boundary slice.
+Complete for the compiler/registry atom-layout boundary slice.
 
 Done:
 
@@ -17,15 +17,15 @@ Done:
 
 ## Remaining Implementation
 
-- [ ] Add compiled atom-layout facts to each compiled node:
+- [x] Add compiled atom-layout facts to each compiled node:
   - atom name
   - thunk
   - out/in/config/state storage sizes
   - input/config/state fields and field counts
-- [ ] Populate atom layout in `apg_v2_compile_unit(...)` from atom registry metadata.
-- [ ] Make registry consume compiled atom-layout facts instead of dereferencing `compiled_node.atom`.
-- [ ] Keep `compiled_node.atom` as temporary compatibility only; do not remove it in this slice.
-- [ ] Add tests proving registry still builds after `compiled_node.atom` is nulled on a normal compiled plan.
+- [x] Populate atom layout in `apg_v2_compile_unit(...)` from atom registry metadata.
+- [x] Make registry consume compiled atom-layout facts instead of dereferencing `compiled_node.atom`.
+- [x] Keep `compiled_node.atom` as temporary compatibility only; do not remove it in this slice.
+- [x] Add tests proving registry still builds after `compiled_node.atom` is nulled on a normal compiled plan.
 
 ## Tests
 

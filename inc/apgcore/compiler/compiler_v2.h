@@ -5,8 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <apgcore/binding_v2.h>
-#include <apgcore/unit_v2.h>
+#include <apgcore/compiler/binding_v2.h>
+#include <apgcore/validator/unit_v2.h>
 #include <atom_registry.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
@@ -27,6 +27,18 @@ typedef struct {
 typedef struct {
     const char                  *id;
     const atom_registry_entry_t *atom;
+    const char                  *atom_name;
+    atom_thunk_fn                thunk;
+    size_t                       out_size;
+    size_t                       in_size;
+    size_t                       config_size;
+    size_t                       state_size;
+    const atom_field_desc_t     *input_fields;
+    size_t                       input_fields_len;
+    const atom_field_desc_t     *config_fields;
+    size_t                       config_fields_len;
+    const atom_field_desc_t     *state_fields;
+    size_t                       state_fields_len;
     apg_v2_compiled_binding_t   *in;
     size_t                       in_len;
     apg_v2_compiled_binding_t   *out;

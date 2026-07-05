@@ -1,4 +1,4 @@
-#include <apgcore/unit_v2.h>
+#include <apgcore/validator/unit_v2.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -14,8 +14,8 @@ static int expect_valid_fixture(void) {
         return fail("arena init failed");
 
     apg_unit_v2_t unit;
-    uc_error      err    = {0};
-    uc_status     status = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &err);
+    uc_error      err = {0};
+    uc_status status  = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &err);
     if (status != UC_OK) {
         fprintf(stderr, "validator error: %s\n", err.msg);
         uc_arena_free(&arena);

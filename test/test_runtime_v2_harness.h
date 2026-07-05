@@ -2,8 +2,8 @@
 #define AUDIO_PLAYGROUND_TEST_RUNTIME_V2_HARNESS_H
 
 #include <apgcore/registry/registry_builder_v2.h>
-#include <apgcore/runtime_v2.h>
-#include <apgcore/runtime_v2_internal.h>
+#include <apgcore/runtime/runtime_v2.h>
+#include <apgcore/runtime/runtime_v2_internal.h>
 
 // Keep runtime tests on the production registry-init boundary.
 static uc_status test_apg_v2_runtime_init_registry(

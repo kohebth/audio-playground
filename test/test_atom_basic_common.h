@@ -1,7 +1,7 @@
 #ifndef TEST_ATOM_BASIC_COMMON_H
 #define TEST_ATOM_BASIC_COMMON_H
 
-#include <apgcore/process.h>
+#include <apgcore/runtime/process.h>
 #include <atom/dsp_atoms.h>
 
 #include <math.h>

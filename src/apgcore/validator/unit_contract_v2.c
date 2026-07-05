@@ -1,7 +1,7 @@
-#include <apgcore/unit_v2.h>
+#include <apgcore/validator/unit_v2.h>
 
-#include <apgcore/parser_v2.h>
-#include <apgcore/unit_validator_v2.h>
+#include <apgcore/parser/parser_v2.h>
+#include <apgcore/validator/unit_validator_v2.h>
 
 #include <string.h>
 

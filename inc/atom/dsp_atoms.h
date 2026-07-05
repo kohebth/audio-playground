@@ -1,7 +1,7 @@
 #ifndef DSP_ATOMS_H
 #define DSP_ATOMS_H
 
-#include <apgcore/process.h>
+#include <apgcore/runtime/process.h>
 
 #include "dsp_types.h"
 

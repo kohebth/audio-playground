@@ -1,9 +1,9 @@
-#include <apgcore/compiler_v2.h>
-#include <apgcore/measure_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
+#include <apgcore/measure/measure_v2.h>
 #include <apgcore/registry/registry_builder_v2.h>
-#include <apgcore/runtime_v2.h>
-#include <apgcore/runtime_v2_internal.h>
-#include <apgcore/unit_v2.h>
+#include <apgcore/runtime/runtime_v2.h>
+#include <apgcore/runtime/runtime_v2_internal.h>
+#include <apgcore/validator/unit_v2.h>
 #include <atom/dsp_types.h>
 
 #include <stdio.h>
@@ -610,6 +610,48 @@ static int test_runtime_init_from_registry_ignores_plan_mutation(void) {
     return 0;
 }
 
+static int test_registry_builds_from_compiled_atom_layout_without_raw_atom(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    for (size_t i = 0; i < plan.nodes_len; i++)
+        plan.nodes[i].atom = NULL;
+
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
+        uc_arena_free(&arena);
+        return fail("registry arena init failed");
+    }
+
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 16u, 44100.0f, &registry_arena, &registry, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "registry error without raw atom pointer: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("registry should build from compiled atom layout");
+    }
+
+    if (registry.nodes_len != 2u || !registry.node_layouts || !registry.node_layouts[0].thunk ||
+        strcmp(registry.node_layouts[0].atom_name, "generation_dc") != 0 ||
+        strcmp(registry.node_layouts[1].atom_name, "amplitude_multiply") != 0 ||
+        registry.node_layouts[0].config_refreshes_len != 1u || registry.node_layouts[1].signal_bindings_len != 3u)
+        return fail("registry did not consume compiled atom layout facts");
+
+    uc_arena_free(&registry_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_create_owned_lifecycle(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -695,6 +737,8 @@ int main(void) {
     if (test_registry_control_targets())
         return 1;
     if (test_registry_uses_compiler_instance_metadata())
+        return 1;
+    if (test_registry_builds_from_compiled_atom_layout_without_raw_atom())
         return 1;
     if (test_runtime_create_owned_lifecycle())
         return 1;

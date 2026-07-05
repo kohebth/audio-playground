@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <apgcore/binding_v2.h>
+#include <apgcore/compiler/binding_v2.h>
 #include <atom_registry.h>
 
 typedef struct {

@@ -1,6 +1,6 @@
-#include <apgcore/compiler_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
 
-#include <apgcore/atom_catalog.h>
+#include <apgcore/metadata/atom_catalog.h>
 
 #include <yaml/node.h>
 
@@ -671,7 +671,7 @@ find_compiled_binding(const apg_v2_compiled_binding_t *bindings, size_t bindings
 }
 
 static uc_status validate_mix_matrix_shape(const apg_v2_compiled_node_t *node, uc_error *err) {
-    if (!node || !node->atom || !node->atom->name || strcmp(node->atom->name, "mix_matrix") != 0)
+    if (!node || !node->atom_name || strcmp(node->atom_name, "mix_matrix") != 0)
         return UC_OK;
 
     const apg_v2_compiled_binding_t *in     = find_compiled_binding(node->in, node->in_len, "signals");
@@ -689,6 +689,24 @@ static uc_status validate_mix_matrix_shape(const apg_v2_compiled_node_t *node, u
         return set_error(err, UC_E_RANGE, msg);
     }
     return UC_OK;
+}
+
+static void populate_atom_layout(apg_v2_compiled_node_t *node, const atom_registry_entry_t *atom) {
+    size_t input_fields_len = 0u;
+
+    node->atom              = atom;
+    node->atom_name         = atom->name;
+    node->thunk             = atom->thunk;
+    node->out_size          = atom->out_size;
+    node->in_size           = atom->in_size;
+    node->config_size       = atom->config_size;
+    node->state_size        = atom->state_size;
+    node->input_fields      = atom_registry_in_fields(atom, &input_fields_len);
+    node->input_fields_len  = input_fields_len;
+    node->config_fields     = atom->config_fields;
+    node->config_fields_len = atom->n_config_fields > 0 ? (size_t)atom->n_config_fields : 0u;
+    node->state_fields      = atom->state_fields;
+    node->state_fields_len  = atom->n_state_fields > 0 ? (size_t)atom->n_state_fields : 0u;
 }
 
 static uc_status compile_signal_bindings(
@@ -881,8 +899,8 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
             return set_error(err, UC_E_MISSING, msg);
         }
 
-        nodes[i].id   = src->id;
-        nodes[i].atom = atom;
+        nodes[i].id = src->id;
+        populate_atom_layout(&nodes[i], atom);
 
         status = compile_signal_bindings(
             unit, src->id, src->atom, APG_BIND_SECTION_IN, src->in, src->in_len, arena, &nodes[i].in, &nodes[i].in_len,

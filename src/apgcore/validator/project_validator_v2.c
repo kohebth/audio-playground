@@ -1,6 +1,6 @@
-#include <apgcore/project_validator_v2.h>
+#include <apgcore/validator/project_validator_v2.h>
 
-#include <apgcore/atom_catalog.h>
+#include <apgcore/metadata/atom_catalog.h>
 #include <yaml/node.h>
 
 #include <errno.h>

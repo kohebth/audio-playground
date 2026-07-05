@@ -1,5 +1,5 @@
-#include <apgcore/atom_catalog.h>
-#include <apgcore/json_contract_v2.h>
+#include <apgcore/host/json_contract_v2.h>
+#include <apgcore/metadata/atom_catalog.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -132,8 +132,10 @@ static int test_pedalboard_fixture_golden_outputs(void) {
 }
 
 static int test_project_render_json_is_deterministic(void) {
-    char *first  = capture_json(apg_v2_json_write_render_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml");
-    char *second = capture_json(apg_v2_json_write_render_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml");
+    char *first =
+        capture_json(apg_v2_json_write_render_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml");
+    char *second =
+        capture_json(apg_v2_json_write_render_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml");
     if (!first || !second) {
         free(first);
         free(second);
@@ -180,7 +182,9 @@ static int test_unit_inspect_json_contains_ui_contract(void) {
 }
 
 static int test_invalid_validation_json_contains_diagnostic_fields(void) {
-    char *json = capture_json(apg_v2_json_write_validate_project, "test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml");
+    char *json = capture_json(
+        apg_v2_json_write_validate_project, "test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml"
+    );
     if (!json)
         return fail("failed to write invalid validation json");
     if (!strstr(json, "\"ok\":false") || !strstr(json, "\"errors\":[{") || !strstr(json, "\"code\":\"APG_IO_ERROR\"") ||

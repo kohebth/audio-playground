@@ -1,5 +1,5 @@
-#include <apgcore/compiler_v2.h>
-#include <apgcore/unit_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
+#include <apgcore/validator/unit_v2.h>
 
 #include <dirent.h>
 #include <stdint.h>
@@ -17,8 +17,8 @@ static int test_simple_gain_compile(void) {
         return fail("arena init failed");
 
     apg_unit_v2_t unit;
-    uc_error      err    = {0};
-    uc_status     status = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &err);
+    uc_error      err = {0};
+    uc_status status  = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &err);
     if (status != UC_OK) {
         fprintf(stderr, "load error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -53,6 +53,10 @@ static int test_simple_gain_compile(void) {
     const apg_v2_compiled_node_t *dc = &plan.nodes[0];
     if (strcmp(dc->id, "gain_value") != 0 || !dc->atom || strcmp(dc->atom->name, "generation_dc") != 0)
         return fail("unexpected compiled dc node");
+    if (!dc->atom_name || strcmp(dc->atom_name, "generation_dc") != 0 || !dc->thunk || dc->out_size == 0u ||
+        dc->config_size == 0u || !dc->config_fields || dc->config_fields_len != 1u ||
+        strcmp(dc->config_fields[0].name, "value") != 0)
+        return fail("compiled dc node did not materialize atom layout");
     if (dc->out_len != 1u || dc->out[0].kind != APG_BIND_SIGNAL || dc->out[0].index != 2u)
         return fail("unexpected compiled dc output binding");
     if (dc->config_len != 1u || dc->config[0].kind != APG_BIND_PARAM || dc->config[0].index != 0u)
@@ -61,6 +65,9 @@ static int test_simple_gain_compile(void) {
     const apg_v2_compiled_node_t *mul = &plan.nodes[1];
     if (strcmp(mul->id, "apply_gain") != 0 || !mul->atom || strcmp(mul->atom->name, "amplitude_multiply") != 0)
         return fail("unexpected compiled multiply node");
+    if (!mul->atom_name || strcmp(mul->atom_name, "amplitude_multiply") != 0 || !mul->thunk ||
+        mul->config_fields_len != 0u || mul->state_fields_len != 0u)
+        return fail("compiled multiply node did not materialize atom layout");
     if (mul->in_len != 2u || strcmp(mul->in[0].key, "signal_a") != 0 || mul->in[0].index != 0u)
         return fail("unexpected compiled multiply first input");
     if (strcmp(mul->in[1].key, "signal_b") != 0 || mul->in[1].index != 2u)

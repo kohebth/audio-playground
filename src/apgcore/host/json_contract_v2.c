@@ -1,13 +1,13 @@
-#include <apgcore/json_contract_v2.h>
+#include <apgcore/host/json_contract_v2.h>
 
-#include <apgcore/atom_catalog.h>
-#include <apgcore/compiler_v2.h>
-#include <apgcore/measure_v2.h>
-#include <apgcore/project_compiler_v2.h>
-#include <apgcore/project_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
+#include <apgcore/compiler/project_compiler_v2.h>
+#include <apgcore/measure/measure_v2.h>
+#include <apgcore/metadata/atom_catalog.h>
 #include <apgcore/registry/registry_builder_v2.h>
-#include <apgcore/runtime_v2.h>
-#include <apgcore/unit_v2.h>
+#include <apgcore/runtime/runtime_v2.h>
+#include <apgcore/validator/project_v2.h>
+#include <apgcore/validator/unit_v2.h>
 
 #include <limits.h>
 #include <math.h>

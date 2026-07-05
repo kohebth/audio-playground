@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <apgcore/compiler_v2.h>
-#include <apgcore/project_compiler_v2.h>
-#include <apgcore/project_v2.h>
-#include <apgcore/runtime_v2.h>
-#include <apgcore/unit_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
+#include <apgcore/compiler/project_compiler_v2.h>
+#include <apgcore/runtime/runtime_v2.h>
+#include <apgcore/validator/project_v2.h>
+#include <apgcore/validator/unit_v2.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
 

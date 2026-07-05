@@ -1,5 +1,5 @@
-#include <apgcore/project_compiler_v2.h>
-#include <apgcore/project_validator_v2.h>
+#include <apgcore/compiler/project_compiler_v2.h>
+#include <apgcore/validator/project_validator_v2.h>
 
 #include <yaml/node.h>
 

@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <apgcore/runtime_v2.h>
+#include <apgcore/runtime/runtime_v2.h>
 
 typedef struct {
     uint32_t frame_capacity;

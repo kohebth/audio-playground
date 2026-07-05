@@ -1,9 +1,9 @@
-#include <apgcore/compiler_v2.h>
-#include <apgcore/host_v2.h>
-#include <apgcore/measure_v2.h>
-#include <apgcore/runtime_v2.h>
-#include <apgcore/runtime_v2_internal.h>
-#include <apgcore/unit_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
+#include <apgcore/host/host_v2.h>
+#include <apgcore/measure/measure_v2.h>
+#include <apgcore/runtime/runtime_v2.h>
+#include <apgcore/runtime/runtime_v2_internal.h>
+#include <apgcore/validator/unit_v2.h>
 #include <atom/dsp_types.h>
 
 #include "test_runtime_v2_harness.h"
@@ -1541,7 +1541,7 @@ static int test_runtime_init_failure_cleans_partial_allocations(void) {
         uc_arena_free(&arena);
         return fail("runtime init failure did not clean partial allocations");
     }
-    if (!strstr(err.msg, "atom metadata")) {
+    if (!strstr(err.msg, "compiled atom layout")) {
         uc_arena_free(&arena);
         return fail("runtime init failure did not report useful error");
     }

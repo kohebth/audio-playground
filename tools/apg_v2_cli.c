@@ -1,8 +1,8 @@
-#include <apgcore/atom_catalog.h>
-#include <apgcore/json_contract_v2.h>
-#include <apgcore/project_compiler_v2.h>
-#include <apgcore/project_v2.h>
+#include <apgcore/compiler/project_compiler_v2.h>
+#include <apgcore/host/json_contract_v2.h>
+#include <apgcore/metadata/atom_catalog.h>
 #include <apgcore/registry/registry_builder_v2.h>
+#include <apgcore/validator/project_v2.h>
 
 #include <stdbool.h>
 #include <stdint.h>

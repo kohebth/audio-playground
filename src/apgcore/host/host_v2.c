@@ -1,5 +1,5 @@
-#include <apgcore/host_v2.h>
-#include <apgcore/measure_v2.h>
+#include <apgcore/host/host_v2.h>
+#include <apgcore/measure/measure_v2.h>
 #include <apgcore/registry/registry_builder_v2.h>
 
 #include <limits.h>

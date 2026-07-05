@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <apgcore/process.h>
+#include <apgcore/runtime/process.h>
 
 typedef struct {
     void                     *out;

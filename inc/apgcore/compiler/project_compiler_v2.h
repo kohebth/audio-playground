@@ -1,8 +1,8 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_PROJECT_COMPILER_V2_H
 #define AUDIO_PLAYGROUND_APGCORE_PROJECT_COMPILER_V2_H
 
-#include <apgcore/compiler_v2.h>
-#include <apgcore/project_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
+#include <apgcore/validator/project_v2.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
 

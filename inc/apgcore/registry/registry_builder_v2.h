@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include <apgcore/compiler_v2.h>
+#include <apgcore/compiler/compiler_v2.h>
 #include <apgcore/registry/registry_v2.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>

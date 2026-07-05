@@ -1,7 +1,7 @@
-#include <apgcore/project_v2.h>
+#include <apgcore/validator/project_v2.h>
 
-#include <apgcore/parser_v2.h>
-#include <apgcore/project_validator_v2.h>
+#include <apgcore/parser/parser_v2.h>
+#include <apgcore/validator/project_validator_v2.h>
 
 #include <limits.h>
 #include <stdbool.h>

@@ -1,8 +1,8 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_RUNTIME_V2_INTERNAL_H
 #define AUDIO_PLAYGROUND_APGCORE_RUNTIME_V2_INTERNAL_H
 
-#include <apgcore/process.h>
-#include <apgcore/runtime_v2.h>
+#include <apgcore/runtime/process.h>
+#include <apgcore/runtime/runtime_v2.h>
 #include <atom_registry.h>
 
 typedef struct apg_v2_runtime_node_t         apg_v2_runtime_node_t;

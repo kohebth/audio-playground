@@ -1,6 +1,6 @@
-#include <apgcore/unit_validator_v2.h>
+#include <apgcore/validator/unit_validator_v2.h>
 
-#include <apgcore/atom_catalog.h>
+#include <apgcore/metadata/atom_catalog.h>
 #include <atom_registry.h>
 #include <yaml/node.h>
 
