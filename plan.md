@@ -150,6 +150,13 @@ Module note: M7 export timing constants now come from explicit board export opti
 Module note: M7 generated sections now align to an explicit board cache-line contract.
 Module note: M7 export now rejects target-incompatible compiled atoms.
 
+### Metadata Isolation
+
+- [x] PM1: Move atom binding field shape and required/optional flags into typed atom catalog metadata queries.
+- [x] PM2: Make compiler binding validation consume atom catalog metadata instead of compiler-local binding schema tables.
+
+Module note: Atom contract metadata now owns binding field shape, and compiler validation reads that metadata directly.
+
 ### Runtime Image Hardening
 
 - [x] PD1: Move per-node state-buffer sample capacities into runtime image metadata.

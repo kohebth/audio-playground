@@ -8,131 +8,127 @@
 #include <string.h>
 
 typedef struct {
-    const char *name;
-    const char *type;
-} apg_catalog_field_t;
-
-typedef struct {
-    const char                *atom;
-    const apg_catalog_field_t *inputs;
-    size_t                     inputs_len;
-    const apg_catalog_field_t *outputs;
-    size_t                     outputs_len;
-    const apg_catalog_field_t *config;
-    size_t                     config_len;
+    const char                      *atom;
+    const apg_atom_contract_field_t *inputs;
+    size_t                           inputs_len;
+    const apg_atom_contract_field_t *outputs;
+    size_t                           outputs_len;
+    const apg_atom_contract_field_t *config;
+    size_t                           config_len;
 } apg_catalog_contract_t;
 
 #define FIELD_COUNT(fields) (sizeof(fields) / sizeof((fields)[0]))
+#define FIELD(name, type) \
+    { name, type, true }
+#define FIELD_OPT(name, type) \
+    { name, type, false }
 
-static const apg_catalog_field_t field_signal[] = {
-    {"signal", "signal"}
+static const apg_atom_contract_field_t field_signal[] = {
+    FIELD("signal", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_pair[] = {
-    {"signal_a", "signal"},
-    {"signal_b", "signal"}
+static const apg_atom_contract_field_t field_pair[] = {
+    FIELD("signal_a", APG_ATOM_FIELD_SIGNAL),
+    FIELD("signal_b", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_generation_dc_config[] = {
-    {"value", "scalar"}
+static const apg_atom_contract_field_t field_generation_dc_config[] = {
+    FIELD("value", APG_ATOM_FIELD_SCALAR),
 };
-static const apg_catalog_field_t field_generation_lfo_config[] = {
-    {   "frequency", "float"},
-    {    "waveform",   "int"},
-    {"phase_offset", "float"},
-    { "sample_rate", "float"}
+static const apg_atom_contract_field_t field_generation_lfo_config[] = {
+    FIELD("frequency", APG_ATOM_FIELD_FLOAT),
+    FIELD("waveform", APG_ATOM_FIELD_INT),
+    FIELD("phase_offset", APG_ATOM_FIELD_FLOAT),
+    FIELD("sample_rate", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_gate[] = {
-    {"gate", "signal"}
+static const apg_atom_contract_field_t field_gate[] = {
+    FIELD("gate", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_threshold_config[] = {
-    {"threshold", "float"}
+static const apg_atom_contract_field_t field_threshold_config[] = {
+    FIELD("threshold", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_clip_hard_config[] = {
-    {"threshold", "float"}
+static const apg_atom_contract_field_t field_clip_hard_config[] = {
+    FIELD("threshold", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_clip_soft_config[] = {
-    {"threshold", "float"},
-    {    "curve",   "int"}
+static const apg_atom_contract_field_t field_clip_soft_config[] = {
+    FIELD("threshold", APG_ATOM_FIELD_FLOAT),
+    FIELD("curve", APG_ATOM_FIELD_INT),
 };
-static const apg_catalog_field_t field_delay_line_config[] = {
-    {"length", "int"}
+static const apg_atom_contract_field_t field_delay_line_config[] = {
+    FIELD("length", APG_ATOM_FIELD_INT),
 };
-static const apg_catalog_field_t field_delay_fractional_config[] = {
-    {"delay_samples", "float"},
-    {"interpolation",   "int"}
+static const apg_atom_contract_field_t field_delay_fractional_config[] = {
+    FIELD("delay_samples", APG_ATOM_FIELD_FLOAT),
+    FIELD("interpolation", APG_ATOM_FIELD_INT),
 };
-static const apg_catalog_field_t field_delay_tap_input[] = {
-    {      "buffer", "buffer"},
-    {"tap_position", "scalar"}
+static const apg_atom_contract_field_t field_delay_tap_input[] = {
+    FIELD("buffer", APG_ATOM_FIELD_BUFFER),
+    FIELD("tap_position", APG_ATOM_FIELD_SCALAR),
 };
-static const apg_catalog_field_t field_delay_tap_config[] = {
-    {"coefficient", "float"}
+static const apg_atom_contract_field_t field_delay_tap_config[] = {
+    FIELD("coefficient", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_filter_biquad_config[] = {
-    {"b0", "float"},
-    {"b1", "float"},
-    {"b2", "float"},
-    {"a1", "float"},
-    {"a2", "float"}
+static const apg_atom_contract_field_t field_filter_biquad_config[] = {
+    FIELD("b0", APG_ATOM_FIELD_FLOAT), FIELD("b1", APG_ATOM_FIELD_FLOAT), FIELD("b2", APG_ATOM_FIELD_FLOAT),
+    FIELD("a1", APG_ATOM_FIELD_FLOAT), FIELD("a2", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_filter_delay_config[] = {
-    {"delay_samples",   "int"},
-    {  "coefficient", "float"}
+static const apg_atom_contract_field_t field_filter_delay_config[] = {
+    FIELD("delay_samples", APG_ATOM_FIELD_INT),
+    FIELD("coefficient", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_filter_comb_fb_input[] = {
-    {"signal",          "signal"},
-    { "delay", "signal_optional"}
+static const apg_atom_contract_field_t field_filter_comb_fb_input[] = {
+    FIELD("signal", APG_ATOM_FIELD_SIGNAL),
+    FIELD_OPT("delay", APG_ATOM_FIELD_SIGNAL_OPTIONAL),
 };
-static const apg_catalog_field_t field_filter_dc_block_config[] = {
-    {"coefficient", "float"}
+static const apg_atom_contract_field_t field_filter_dc_block_config[] = {
+    FIELD("coefficient", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_signal_modulator[] = {
-    {   "signal", "signal"},
-    {"modulator", "signal"}
+static const apg_atom_contract_field_t field_signal_modulator[] = {
+    FIELD("signal", APG_ATOM_FIELD_SIGNAL),
+    FIELD("modulator", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_scrub_input[] = {
-    {  "buffer", "buffer"},
-    {"position", "signal"}
+static const apg_atom_contract_field_t field_scrub_input[] = {
+    FIELD("buffer", APG_ATOM_FIELD_BUFFER),
+    FIELD("position", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_depth_config[] = {
-    {"depth", "float"}
+static const apg_atom_contract_field_t field_depth_config[] = {
+    FIELD("depth", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_scrub_config[] = {
-    {"buffer_size", "int"}
+static const apg_atom_contract_field_t field_scrub_config[] = {
+    FIELD("buffer_size", APG_ATOM_FIELD_INT),
 };
-static const apg_catalog_field_t field_wet_dry_input[] = {
-    {"dry", "signal"},
-    {"wet", "signal"}
+static const apg_atom_contract_field_t field_wet_dry_input[] = {
+    FIELD("dry", APG_ATOM_FIELD_SIGNAL),
+    FIELD("wet", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_wet_dry_config[] = {
-    {"mix", "float"}
+static const apg_atom_contract_field_t field_wet_dry_config[] = {
+    FIELD("mix", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_mix_matrix_io[] = {
-    {"signals", "signal_array"}
+static const apg_atom_contract_field_t field_mix_matrix_io[] = {
+    FIELD("signals", APG_ATOM_FIELD_SIGNAL_ARRAY),
 };
-static const apg_catalog_field_t field_mix_matrix_config[] = {
-    {"coefficients", "float_matrix"}
+static const apg_atom_contract_field_t field_mix_matrix_config[] = {
+    FIELD("coefficients", APG_ATOM_FIELD_FLOAT_MATRIX),
 };
-static const apg_catalog_field_t field_crossfade_config[] = {
-    {"t", "float"}
+static const apg_atom_contract_field_t field_crossfade_config[] = {
+    FIELD("t", APG_ATOM_FIELD_FLOAT),
 };
-static const apg_catalog_field_t field_stereo_input[] = {
-    { "left", "signal"},
-    {"right", "signal"}
+static const apg_atom_contract_field_t field_stereo_input[] = {
+    FIELD("left", APG_ATOM_FIELD_SIGNAL),
+    FIELD("right", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_stereo_output[] = {
-    { "left", "signal"},
-    {"right", "signal"}
+static const apg_atom_contract_field_t field_stereo_output[] = {
+    FIELD("left", APG_ATOM_FIELD_SIGNAL),
+    FIELD("right", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_ms_input[] = {
-    { "mid", "signal"},
-    {"side", "signal"}
+static const apg_atom_contract_field_t field_ms_input[] = {
+    FIELD("mid", APG_ATOM_FIELD_SIGNAL),
+    FIELD("side", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_ms_output[] = {
-    { "mid", "signal"},
-    {"side", "signal"}
+static const apg_atom_contract_field_t field_ms_output[] = {
+    FIELD("mid", APG_ATOM_FIELD_SIGNAL),
+    FIELD("side", APG_ATOM_FIELD_SIGNAL),
 };
-static const apg_catalog_field_t field_pan_config[] = {
-    {"position", "float"}
+static const apg_atom_contract_field_t field_pan_config[] = {
+    FIELD("position", APG_ATOM_FIELD_FLOAT),
 };
 
 static const apg_catalog_contract_t catalog_contracts[] = {
@@ -200,6 +196,74 @@ static const apg_catalog_contract_t *find_contract(const char *atom_name) {
     return NULL;
 }
 
+static const apg_atom_contract_field_t *
+contract_fields(const apg_catalog_contract_t *contract, apg_atom_contract_section_t section, size_t *out_len) {
+    if (out_len)
+        *out_len = 0u;
+    if (!contract)
+        return NULL;
+
+    switch (section) {
+    case APG_ATOM_CONTRACT_IN:
+        if (out_len)
+            *out_len = contract->inputs_len;
+        return contract->inputs;
+    case APG_ATOM_CONTRACT_OUT:
+        if (out_len)
+            *out_len = contract->outputs_len;
+        return contract->outputs;
+    case APG_ATOM_CONTRACT_CONFIG:
+        if (out_len)
+            *out_len = contract->config_len;
+        return contract->config;
+    case APG_ATOM_CONTRACT_STATE:
+        return NULL;
+    }
+    return NULL;
+}
+
+static const char *contract_field_type_name(apg_atom_contract_field_type_t type) {
+    switch (type) {
+    case APG_ATOM_FIELD_SIGNAL:
+        return "signal";
+    case APG_ATOM_FIELD_SIGNAL_OPTIONAL:
+        return "signal_optional";
+    case APG_ATOM_FIELD_SIGNAL_ARRAY:
+        return "signal_array";
+    case APG_ATOM_FIELD_SCALAR:
+        return "scalar";
+    case APG_ATOM_FIELD_FLOAT:
+        return "float";
+    case APG_ATOM_FIELD_INT:
+        return "int";
+    case APG_ATOM_FIELD_BUFFER:
+        return "buffer";
+    case APG_ATOM_FIELD_FLOAT_MATRIX:
+        return "float_matrix";
+    case APG_ATOM_FIELD_UNKNOWN:
+        break;
+    }
+    return "unknown";
+}
+
+static apg_atom_contract_field_type_t registry_field_type(atom_field_type_t type) {
+    switch (type) {
+    case FIELD_FLOAT:
+        return APG_ATOM_FIELD_FLOAT;
+    case FIELD_INT:
+        return APG_ATOM_FIELD_INT;
+    case FIELD_SIGNAL:
+        return APG_ATOM_FIELD_SIGNAL;
+    case FIELD_BUFFER:
+        return APG_ATOM_FIELD_BUFFER;
+    case FIELD_FLOAT_PTR:
+        return APG_ATOM_FIELD_SIGNAL;
+    case FIELD_FLOAT_PP:
+        return APG_ATOM_FIELD_SIGNAL_ARRAY;
+    }
+    return APG_ATOM_FIELD_UNKNOWN;
+}
+
 static const char *field_type_name(atom_field_type_t type) {
     switch (type) {
     case FIELD_FLOAT:
@@ -230,6 +294,76 @@ bool apg_atom_profile_supported(const char *name, const char *profile) {
     return true;
 }
 
+size_t apg_atom_contract_field_count(const char *atom, apg_atom_contract_section_t section) {
+    if (!atom)
+        return 0u;
+    if (section == APG_ATOM_CONTRACT_STATE) {
+        atom_registry_init();
+        const atom_registry_entry_t *entry = atom_registry_find(atom);
+        return entry && entry->n_state_fields > 0 ? (size_t)entry->n_state_fields : 0u;
+    }
+
+    size_t fields_len = 0u;
+    contract_fields(find_contract(atom), section, &fields_len);
+    return fields_len;
+}
+
+bool apg_atom_contract_field(
+    const char *atom, apg_atom_contract_section_t section, size_t index, apg_atom_contract_field_t *out
+) {
+    if (!atom || !out)
+        return false;
+    memset(out, 0, sizeof(*out));
+
+    if (section == APG_ATOM_CONTRACT_STATE) {
+        atom_registry_init();
+        const atom_registry_entry_t *entry = atom_registry_find(atom);
+        if (!entry || index >= (size_t)entry->n_state_fields)
+            return false;
+        out->name     = entry->state_fields[index].name;
+        out->type     = registry_field_type(entry->state_fields[index].type);
+        out->required = true;
+        return true;
+    }
+
+    size_t                           fields_len = 0u;
+    const apg_atom_contract_field_t *fields     = contract_fields(find_contract(atom), section, &fields_len);
+    if (!fields || index >= fields_len)
+        return false;
+    *out = fields[index];
+    return true;
+}
+
+bool apg_atom_contract_find_field(
+    const char *atom, apg_atom_contract_section_t section, const char *key, apg_atom_contract_field_t *out
+) {
+    if (!key)
+        return false;
+    size_t fields_len = apg_atom_contract_field_count(atom, section);
+    for (size_t i = 0u; i < fields_len; i++) {
+        apg_atom_contract_field_t field;
+        if (apg_atom_contract_field(atom, section, i, &field) && field.name && strcmp(field.name, key) == 0) {
+            if (out)
+                *out = field;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool apg_atom_contract_field_required(const char *atom, apg_atom_contract_section_t section, const char *key) {
+    apg_atom_contract_field_t field;
+    return apg_atom_contract_find_field(atom, section, key, &field) && field.required;
+}
+
+apg_atom_contract_field_type_t
+apg_atom_contract_field_type(const char *atom, apg_atom_contract_section_t section, const char *key) {
+    apg_atom_contract_field_t field;
+    if (!apg_atom_contract_find_field(atom, section, key, &field))
+        return APG_ATOM_FIELD_UNKNOWN;
+    return field.type;
+}
+
 static void write_json_string(FILE *out, const char *text) {
     fputc('"', out);
     if (text) {
@@ -253,7 +387,7 @@ static void write_category(FILE *out, const char *name) {
     fputc('"', out);
 }
 
-static void write_catalog_fields(FILE *out, const apg_catalog_field_t *fields, size_t fields_len) {
+static void write_catalog_fields(FILE *out, const apg_atom_contract_field_t *fields, size_t fields_len) {
     fputc('[', out);
     for (size_t i = 0; i < fields_len; i++) {
         if (i > 0u)
@@ -261,7 +395,7 @@ static void write_catalog_fields(FILE *out, const apg_catalog_field_t *fields, s
         fputs("{\"name\":", out);
         write_json_string(out, fields[i].name);
         fputs(",\"type\":", out);
-        write_json_string(out, fields[i].type);
+        write_json_string(out, contract_field_type_name(fields[i].type));
         fputc('}', out);
     }
     fputc(']', out);

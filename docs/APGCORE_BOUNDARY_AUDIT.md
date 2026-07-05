@@ -4,7 +4,8 @@
 
 ## Current Alignment
 
-- `metadata`: `atom_catalog` and `atom_register` remain isolated reference data and atom call metadata.
+- `metadata`: `atom_catalog` and `atom_register` remain isolated reference data for atom call metadata, target
+  compatibility, and typed contract fields consumed by compiler binding validation.
 - `parser`: `apg_v2_parse_string(...)` and `apg_v2_parse_file(...)` return raw YAML contract graphs without semantic checks.
 - `validator`: unit and project validators own schema, metadata-reference, binding-key, compatibility, and route checks.
 - `compiler`: unit and project compilers expand contracts, bind params/signals, and emit topological plans.

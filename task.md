@@ -93,6 +93,13 @@ Boundary verification now includes regression checks in:
 
 Module note: PB runtime-boundary tests now assert image-owned init behavior and non-mutating measure reads.
 
+## Metadata Isolation
+
+- [x] PM1: Move atom binding field shape and required/optional flags into typed atom catalog metadata queries.
+- [x] PM2: Make compiler binding validation consume atom catalog metadata instead of compiler-local binding schema tables.
+
+Module note: Atom contract metadata now owns binding field shape, and compiler validation reads that metadata directly.
+
 ## STM32H7/M7 Readiness Queue
 
 - [x] PC1: Add deterministic M7 static memory manifest fields to export JSON and generated headers.

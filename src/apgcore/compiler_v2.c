@@ -1,5 +1,7 @@
 #include <apgcore/compiler_v2.h>
 
+#include <apgcore/atom_catalog.h>
+
 #include <yaml/node.h>
 
 #include <stdio.h>
@@ -176,198 +178,50 @@ static uc_status build_schedule(
     return UC_OK;
 }
 
-static int key_in_list(const char *key, const char *const *keys, size_t keys_len) {
-    for (size_t i = 0; i < keys_len; i++) {
-        if (strcmp(key, keys[i]) == 0)
-            return 1;
+static apg_atom_contract_section_t contract_section(apg_bind_section_t section) {
+    switch (section) {
+    case APG_BIND_SECTION_IN:
+        return APG_ATOM_CONTRACT_IN;
+    case APG_BIND_SECTION_OUT:
+        return APG_ATOM_CONTRACT_OUT;
+    case APG_BIND_SECTION_CONFIG:
+        return APG_ATOM_CONTRACT_CONFIG;
     }
-    return 0;
+    return APG_ATOM_CONTRACT_IN;
 }
 
-typedef struct {
-    const char        *atom;
-    apg_bind_section_t section;
-    const char *const *keys;
-    size_t             keys_len;
-} apg_atom_binding_schema_t;
-
-static const apg_atom_binding_schema_t *find_binding_schema(const char *atom, apg_bind_section_t section) {
-    static const char *const generation_dc_out[]       = {"signal"};
-    static const char *const generation_dc_config[]    = {"value"};
-    static const char *const generation_lfo_config[]   = {"frequency", "waveform", "phase_offset", "sample_rate"};
-    static const char *const pair_in[]                 = {"signal_a", "signal_b"};
-    static const char *const mono_in[]                 = {"signal"};
-    static const char *const mono_out[]                = {"signal"};
-    static const char *const clip_hard_config[]        = {"threshold"};
-    static const char *const clip_soft_config[]        = {"threshold", "curve"};
-    static const char *const delay_line_config[]       = {"length"};
-    static const char *const delay_fractional_config[] = {"delay_samples", "interpolation"};
-    static const char *const delay_tap_in[]            = {"buffer", "tap_position"};
-    static const char *const delay_tap_config[]        = {"coefficient"};
-    static const char *const filter_biquad_config[]    = {"b0", "b1", "b2", "a1", "a2"};
-    static const char *const filter_delay_config[]     = {"delay_samples", "coefficient"};
-    static const char *const filter_comb_fb_in[]       = {"signal", "delay"};
-    static const char *const filter_dc_block_config[]  = {"coefficient"};
-    static const char *const gate_out[]                = {"gate"};
-    static const char *const threshold_config[]        = {"threshold"};
-    static const char *const signal_modulator_in[]     = {"signal", "modulator"};
-    static const char *const scrub_in[]                = {"buffer", "position"};
-    static const char *const depth_config[]            = {"depth"};
-    static const char *const scrub_config[]            = {"buffer_size"};
-    static const char *const mix_wet_dry_in[]          = {"dry", "wet"};
-    static const char *const mix_wet_dry_config[]      = {"mix"};
-    static const char *const mix_matrix_io[]           = {"signals"};
-    static const char *const mix_matrix_config[]       = {"coefficients"};
-    static const char *const crossfade_config[]        = {"t"};
-    static const char *const stereo_in[]               = {"left", "right"};
-    static const char *const stereo_out[]              = {"left", "right"};
-    static const char *const ms_in[]                   = {"mid", "side"};
-    static const char *const ms_out[]                  = {"mid", "side"};
-    static const char *const pan_config[]              = {"position"};
-    static const apg_atom_binding_schema_t schemas[]   = {
-        {        "generation_dc",    APG_BIND_SECTION_OUT,       generation_dc_out,
-         sizeof(generation_dc_out) / sizeof(generation_dc_out[0])                                                                     },
-        {        "generation_dc", APG_BIND_SECTION_CONFIG,    generation_dc_config,
-         sizeof(generation_dc_config) / sizeof(generation_dc_config[0])                                                               },
-        {       "generation_lfo",    APG_BIND_SECTION_OUT,       generation_dc_out,
-         sizeof(generation_dc_out) / sizeof(generation_dc_out[0])                                                                     },
-        {       "generation_lfo", APG_BIND_SECTION_CONFIG,   generation_lfo_config,
-         sizeof(generation_lfo_config) / sizeof(generation_lfo_config[0])                                                             },
-        {   "amplitude_multiply",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
-        {   "amplitude_multiply",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {        "amplitude_add",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
-        {        "amplitude_add",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {   "amplitude_subtract",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
-        {   "amplitude_subtract",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {  "amplitude_clip_hard",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {  "amplitude_clip_hard",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {  "amplitude_clip_hard", APG_BIND_SECTION_CONFIG,        clip_hard_config,
-         sizeof(clip_hard_config) / sizeof(clip_hard_config[0])                                                                       },
-        {  "amplitude_clip_soft",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {  "amplitude_clip_soft",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {  "amplitude_clip_soft", APG_BIND_SECTION_CONFIG,        clip_soft_config,
-         sizeof(clip_soft_config) / sizeof(clip_soft_config[0])                                                                       },
-        {           "delay_unit",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {           "delay_unit",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {           "delay_line",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {           "delay_line",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {           "delay_line", APG_BIND_SECTION_CONFIG,       delay_line_config,
-         sizeof(delay_line_config) / sizeof(delay_line_config[0])                                                                     },
-        {     "delay_fractional",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {     "delay_fractional",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {     "delay_fractional", APG_BIND_SECTION_CONFIG, delay_fractional_config,
-         sizeof(delay_fractional_config) / sizeof(delay_fractional_config[0])                                                         },
-        {   "delay_tap_feedback",     APG_BIND_SECTION_IN,            delay_tap_in,     sizeof(delay_tap_in) / sizeof(delay_tap_in[0])},
-        {   "delay_tap_feedback",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {   "delay_tap_feedback", APG_BIND_SECTION_CONFIG,        delay_tap_config,
-         sizeof(delay_tap_config) / sizeof(delay_tap_config[0])                                                                       },
-        {"delay_tap_feedforward",     APG_BIND_SECTION_IN,            delay_tap_in,     sizeof(delay_tap_in) / sizeof(delay_tap_in[0])},
-        {"delay_tap_feedforward",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {"delay_tap_feedforward", APG_BIND_SECTION_CONFIG,        delay_tap_config,
-         sizeof(delay_tap_config) / sizeof(delay_tap_config[0])                                                                       },
-        {        "filter_biquad",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {        "filter_biquad",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {        "filter_biquad", APG_BIND_SECTION_CONFIG,    filter_biquad_config,
-         sizeof(filter_biquad_config) / sizeof(filter_biquad_config[0])                                                               },
-        {       "filter_allpass",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {       "filter_allpass",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {       "filter_allpass", APG_BIND_SECTION_CONFIG,     filter_delay_config,
-         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                 },
-        {       "filter_comb_ff",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {       "filter_comb_ff",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {       "filter_comb_ff", APG_BIND_SECTION_CONFIG,     filter_delay_config,
-         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                 },
-        {       "filter_comb_fb",     APG_BIND_SECTION_IN,       filter_comb_fb_in,
-         sizeof(filter_comb_fb_in) / sizeof(filter_comb_fb_in[0])                                                                     },
-        {       "filter_comb_fb",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {       "filter_comb_fb", APG_BIND_SECTION_CONFIG,     filter_delay_config,
-         sizeof(filter_delay_config) / sizeof(filter_delay_config[0])                                                                 },
-        {      "filter_dc_block",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {      "filter_dc_block",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {      "filter_dc_block", APG_BIND_SECTION_CONFIG,  filter_dc_block_config,
-         sizeof(filter_dc_block_config) / sizeof(filter_dc_block_config[0])                                                           },
-        {     "detect_threshold",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {     "detect_threshold",    APG_BIND_SECTION_OUT,                gate_out,             sizeof(gate_out) / sizeof(gate_out[0])},
-        {     "detect_threshold", APG_BIND_SECTION_CONFIG,        threshold_config,
-         sizeof(threshold_config) / sizeof(threshold_config[0])                                                                       },
-        { "modulation_amplitude",     APG_BIND_SECTION_IN,     signal_modulator_in,
-         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
-        { "modulation_amplitude",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        { "modulation_amplitude", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
-        {      "modulation_ring",     APG_BIND_SECTION_IN,     signal_modulator_in,
-         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
-        {      "modulation_ring",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        { "modulation_frequency",     APG_BIND_SECTION_IN,     signal_modulator_in,
-         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
-        { "modulation_frequency",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        { "modulation_frequency", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
-        {     "modulation_phase",     APG_BIND_SECTION_IN,     signal_modulator_in,
-         sizeof(signal_modulator_in) / sizeof(signal_modulator_in[0])                                                                 },
-        {     "modulation_phase",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {     "modulation_phase", APG_BIND_SECTION_CONFIG,            depth_config,     sizeof(depth_config) / sizeof(depth_config[0])},
-        {     "modulation_scrub",     APG_BIND_SECTION_IN,                scrub_in,             sizeof(scrub_in) / sizeof(scrub_in[0])},
-        {     "modulation_scrub",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {     "modulation_scrub", APG_BIND_SECTION_CONFIG,            scrub_config,     sizeof(scrub_config) / sizeof(scrub_config[0])},
-        {        "mix_crossfade",     APG_BIND_SECTION_IN,                 pair_in,               sizeof(pair_in) / sizeof(pair_in[0])},
-        {        "mix_crossfade",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {        "mix_crossfade", APG_BIND_SECTION_CONFIG,        crossfade_config,
-         sizeof(crossfade_config) / sizeof(crossfade_config[0])                                                                       },
-        {       "mix_pan_stereo",     APG_BIND_SECTION_IN,                 mono_in,               sizeof(mono_in) / sizeof(mono_in[0])},
-        {       "mix_pan_stereo",    APG_BIND_SECTION_OUT,              stereo_out,         sizeof(stereo_out) / sizeof(stereo_out[0])},
-        {       "mix_pan_stereo", APG_BIND_SECTION_CONFIG,              pan_config,         sizeof(pan_config) / sizeof(pan_config[0])},
-        {        "mix_encode_ms",     APG_BIND_SECTION_IN,               stereo_in,           sizeof(stereo_in) / sizeof(stereo_in[0])},
-        {        "mix_encode_ms",    APG_BIND_SECTION_OUT,                  ms_out,                 sizeof(ms_out) / sizeof(ms_out[0])},
-        {        "mix_decode_ms",     APG_BIND_SECTION_IN,                   ms_in,                   sizeof(ms_in) / sizeof(ms_in[0])},
-        {        "mix_decode_ms",    APG_BIND_SECTION_OUT,              stereo_out,         sizeof(stereo_out) / sizeof(stereo_out[0])},
-        {          "mix_wet_dry",     APG_BIND_SECTION_IN,          mix_wet_dry_in, sizeof(mix_wet_dry_in) / sizeof(mix_wet_dry_in[0])},
-        {          "mix_wet_dry",    APG_BIND_SECTION_OUT,                mono_out,             sizeof(mono_out) / sizeof(mono_out[0])},
-        {          "mix_wet_dry", APG_BIND_SECTION_CONFIG,      mix_wet_dry_config,
-         sizeof(mix_wet_dry_config) / sizeof(mix_wet_dry_config[0])                                                                   },
-        {           "mix_matrix",     APG_BIND_SECTION_IN,           mix_matrix_io,   sizeof(mix_matrix_io) / sizeof(mix_matrix_io[0])},
-        {           "mix_matrix",    APG_BIND_SECTION_OUT,           mix_matrix_io,   sizeof(mix_matrix_io) / sizeof(mix_matrix_io[0])},
-        {           "mix_matrix", APG_BIND_SECTION_CONFIG,       mix_matrix_config,
-         sizeof(mix_matrix_config) / sizeof(mix_matrix_config[0])                                                                     },
-    };
-
-    if (!atom)
-        return NULL;
-    for (size_t i = 0; i < sizeof(schemas) / sizeof(schemas[0]); i++) {
-        if (schemas[i].section == section && strcmp(schemas[i].atom, atom) == 0)
-            return &schemas[i];
-    }
-    return NULL;
-}
-
-static int atom_has_schema(const char *atom) {
-    return find_binding_schema(atom, APG_BIND_SECTION_IN) || find_binding_schema(atom, APG_BIND_SECTION_OUT) ||
-           find_binding_schema(atom, APG_BIND_SECTION_CONFIG);
+static int atom_has_contract(const char *atom) {
+    return apg_atom_contract_field_count(atom, APG_ATOM_CONTRACT_IN) > 0u ||
+           apg_atom_contract_field_count(atom, APG_ATOM_CONTRACT_OUT) > 0u ||
+           apg_atom_contract_field_count(atom, APG_ATOM_CONTRACT_CONFIG) > 0u;
 }
 
 static int atom_binding_key_allowed(const char *atom, apg_bind_section_t section, const char *key) {
-    const apg_atom_binding_schema_t *schema = find_binding_schema(atom, section);
-    if (schema)
-        return key && key_in_list(key, schema->keys, schema->keys_len);
-    return !atom_has_schema(atom);
+    if (!atom_has_contract(atom))
+        return 1;
+    return apg_atom_contract_find_field(atom, contract_section(section), key, NULL);
 }
 
-static int atom_binding_key_optional(const char *atom, apg_bind_section_t section, const char *key) {
-    return atom && key && section == APG_BIND_SECTION_IN && strcmp(atom, "filter_comb_fb") == 0 &&
-           strcmp(key, "delay") == 0;
+static int atom_binding_key_required(const char *atom, apg_bind_section_t section, const char *key) {
+    return apg_atom_contract_field_required(atom, contract_section(section), key);
+}
+
+static int atom_binding_key_is_type(
+    const char *atom, apg_bind_section_t section, const char *key, apg_atom_contract_field_type_t type
+) {
+    return apg_atom_contract_field_type(atom, contract_section(section), key) == type;
 }
 
 static int atom_input_key_is_scalar(const char *atom, const char *key) {
-    if (!atom || !key)
-        return 0;
-    return (strcmp(atom, "delay_tap_feedback") == 0 || strcmp(atom, "delay_tap_feedforward") == 0) &&
-           strcmp(key, "tap_position") == 0;
+    return atom_binding_key_is_type(atom, APG_BIND_SECTION_IN, key, APG_ATOM_FIELD_SCALAR);
 }
 
-static int atom_signal_key_is_array(const char *atom, const char *key) {
-    return atom && key && strcmp(atom, "mix_matrix") == 0 && strcmp(key, "signals") == 0;
+static int atom_signal_key_is_array(const char *atom, apg_bind_section_t section, const char *key) {
+    return atom_binding_key_is_type(atom, section, key, APG_ATOM_FIELD_SIGNAL_ARRAY);
 }
 
 static int atom_config_key_is_float_matrix(const char *atom, const char *key) {
-    return atom && key && strcmp(atom, "mix_matrix") == 0 && strcmp(key, "coefficients") == 0;
+    return atom_binding_key_is_type(atom, APG_BIND_SECTION_CONFIG, key, APG_ATOM_FIELD_FLOAT_MATRIX);
 }
 
 static void init_compiled_binding(apg_v2_compiled_binding_t *binding, const char *key) {
@@ -405,18 +259,20 @@ static uc_status validate_required_binding_keys(
     size_t                       bindings_len,
     uc_error                    *err
 ) {
-    const apg_atom_binding_schema_t *schema = find_binding_schema(atom, section);
-    if (!schema)
+    apg_atom_contract_section_t contract   = contract_section(section);
+    size_t                      fields_len = apg_atom_contract_field_count(atom, contract);
+    if (fields_len == 0u)
         return UC_OK;
 
-    for (size_t i = 0; i < schema->keys_len; i++) {
-        if (atom_binding_key_optional(atom, section, schema->keys[i]))
+    for (size_t i = 0; i < fields_len; i++) {
+        apg_atom_contract_field_t field;
+        if (!apg_atom_contract_field(atom, contract, i, &field) || !field.required)
             continue;
-        if (!binding_key_present(bindings, bindings_len, schema->keys[i])) {
+        if (!binding_key_present(bindings, bindings_len, field.name)) {
             char msg[192];
             snprintf(
                 msg, sizeof(msg), "node '%s' atom '%s' is missing required %s binding key '%s'", node_id ? node_id : "",
-                atom ? atom : "", bind_section_name(section), schema->keys[i]
+                atom ? atom : "", bind_section_name(section), field.name ? field.name : ""
             );
             return set_error(err, UC_E_MISSING, msg);
         }
@@ -654,7 +510,7 @@ static uc_status compile_signal_bindings(
             return status;
         init_compiled_binding(&compiled[i], bindings[i].key);
 
-        if (atom_signal_key_is_array(atom, bindings[i].key)) {
+        if (atom_signal_key_is_array(atom, section, bindings[i].key)) {
             status = compile_signal_array_binding(unit, node_id, section, &bindings[i], arena, &compiled[i], err);
             if (status != UC_OK)
                 return status;

@@ -32,6 +32,27 @@ static char *read_catalog_json(void) {
     return buffer;
 }
 
+static int expect_field(
+    const char                    *atom,
+    apg_atom_contract_section_t    section,
+    const char                    *key,
+    apg_atom_contract_field_type_t type,
+    bool                           required
+) {
+    apg_atom_contract_field_t field;
+    if (!apg_atom_contract_find_field(atom, section, key, &field))
+        return fail("metadata contract field is missing");
+    if (field.type != type)
+        return fail("metadata contract field type is wrong");
+    if (field.required != required)
+        return fail("metadata contract field required flag is wrong");
+    if (apg_atom_contract_field_required(atom, section, key) != required)
+        return fail("metadata required query is wrong");
+    if (apg_atom_contract_field_type(atom, section, key) != type)
+        return fail("metadata type query is wrong");
+    return 0;
+}
+
 int main(void) {
     char *json = read_catalog_json();
     if (!json)
@@ -77,6 +98,21 @@ int main(void) {
         return fail("m7-restricted atom profile check failed");
     if (apg_atom_profile_supported(NULL, "m7_static"))
         return fail("missing atom profile check failed");
+
+    if (apg_atom_contract_field_count("generation_dc", APG_ATOM_CONTRACT_CONFIG) != 1u)
+        return fail("generation_dc metadata field count failed");
+    if (expect_field("generation_dc", APG_ATOM_CONTRACT_CONFIG, "value", APG_ATOM_FIELD_SCALAR, true))
+        return 1;
+    if (expect_field("mix_matrix", APG_ATOM_CONTRACT_IN, "signals", APG_ATOM_FIELD_SIGNAL_ARRAY, true))
+        return 1;
+    if (expect_field("mix_matrix", APG_ATOM_CONTRACT_CONFIG, "coefficients", APG_ATOM_FIELD_FLOAT_MATRIX, true))
+        return 1;
+    if (expect_field("filter_comb_fb", APG_ATOM_CONTRACT_IN, "delay", APG_ATOM_FIELD_SIGNAL_OPTIONAL, false))
+        return 1;
+    if (apg_atom_contract_find_field("generation_dc", APG_ATOM_CONTRACT_CONFIG, "missing", NULL))
+        return fail("unknown metadata field lookup succeeded");
+    if (apg_atom_contract_field_type("missing_atom", APG_ATOM_CONTRACT_IN, "signal") != APG_ATOM_FIELD_UNKNOWN)
+        return fail("unknown atom metadata type lookup failed");
 
     free(json);
     return 0;
