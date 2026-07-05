@@ -26,11 +26,13 @@ include_directories(
 file(GLOB_RECURSE APGCORE_SOURCES CONFIGURE_DEPENDS src/apgcore/*.c)
 file(GLOB_RECURSE ATOM_SOURCES CONFIGURE_DEPENDS src/atom/*.c)
 set(ATOM_REGISTRY_SOURCE src/rte/atom_register.c)
+set(ATOM_THUNK_SOURCE src/rte/atom_thunk.c)
 file(GLOB UTIL_SOURCES src/util/*.c)
 file(GLOB YAML_SOURCES src/yaml/*.c)
 list(APPEND UTIL_SOURCES ${APGCORE_SOURCES})
 list(APPEND UTIL_SOURCES ${ATOM_SOURCES})
 list(APPEND UTIL_SOURCES ${ATOM_REGISTRY_SOURCE})
+list(APPEND UTIL_SOURCES ${ATOM_THUNK_SOURCE})
 list(APPEND UTIL_SOURCES ${YAML_SOURCES})
 
 add_executable(test_runtime
@@ -278,7 +280,7 @@ endif()
 
 add_test(
         NAME test_apg_v2_cli_m7_export_link_smoke
-        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_bundle_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static_smoke
+        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_bundle_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static_smoke
 )
 set_tests_properties(test_apg_v2_cli_m7_export_link_smoke PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
