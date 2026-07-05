@@ -27,7 +27,7 @@ include_directories(
         ${PIPEWIRE_INCLUDE_DIRS}
 )
 
-file(GLOB APGCORE_SOURCES src/apgcore/*.c)
+file(GLOB_RECURSE APGCORE_SOURCES CONFIGURE_DEPENDS src/apgcore/*.c)
 file(GLOB ATOM_SOURCES src/atom/*.c)
 set(ATOM_REGISTRY_SOURCE src/rte/atom_register.c)
 file(GLOB UTIL_SOURCES src/util/*.c)

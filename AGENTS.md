@@ -4,7 +4,7 @@
 
 This repository contains several independent project areas:
 
-- `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, metadata registry, YAML parser helpers, APGCore v2 parser/validator/compiler/runtime-image/runtime/measure modules, and CTest targets.
+- `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, metadata registry, YAML parser helpers, APGCore v2 modules, and CTest targets. APGCore code is grouped by module under `src/apgcore/<module>/` and `inc/apgcore/<module>/`.
 - `core-design.md`: current production architecture target. Keep new core work aligned with the `metadata -> parser -> validator -> compiler -> runtime image -> runtime -> measure -> host` boundary.
 - `units/`: legacy local v1 YAML drafts only. They are not loaded by the default production build; do not stage modified files here unless the user explicitly decides to port or delete them.
 - `units-v2/` and `projects-v2/`: v2 compiler/runtime fixtures, including product units and guitar pedalboard project examples.
@@ -52,7 +52,7 @@ C uses LLVM `clang-format` with 4-space indentation and a 120-column limit. The 
 clang-format -i src/**/*.c inc/**/*.h test/**/*.c
 ```
 
-Name C tests `test_<feature>.c`. Name v2 fixtures `<name>.unit.v2.yaml` and `<name>.project.v2.yaml`. Treat v1 `*.unit.yaml` files as legacy drafts only. Keep v2 atom binding keys aligned with `src/apgcore/compiler_v2.c` metadata.
+Name C tests `test_<feature>.c`. Name v2 fixtures `<name>.unit.v2.yaml` and `<name>.project.v2.yaml`. Treat v1 `*.unit.yaml` files as legacy drafts only. Keep v2 atom binding keys aligned with `src/apgcore/compiler/unit_compiler_v2.c` metadata.
 
 ## Testing Guidelines
 
