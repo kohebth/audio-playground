@@ -53,7 +53,7 @@ static int test_runtime_image_layout(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -175,7 +175,7 @@ static int test_runtime_image_state_buffer_samples(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_compile_fixture("units-v2/delay_line_state.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_compile_fixture("test/fixtures/units-v2/delay_line_state.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -246,7 +246,7 @@ static int test_runtime_image_control_targets(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_compile_fixture("units-v2/control_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_compile_fixture("test/fixtures/units-v2/control_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -500,7 +500,7 @@ static int test_runtime_image_uses_compiler_instance_metadata(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -542,7 +542,7 @@ static int test_runtime_init_from_image_ignores_plan_mutation(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -613,7 +613,7 @@ static int test_runtime_create_owned_lifecycle(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }

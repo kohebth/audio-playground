@@ -16,7 +16,7 @@ static int expect_valid_fixture(void) {
     apg_project_v2_t project;
     uc_error         err = {0};
     uc_status        status =
-        apg_project_v2_load_file("projects-v2/simple-gain-board.project.v2.yaml", &arena, &project, &err);
+        apg_project_v2_load_file("test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &arena, &project, &err);
     if (status != UC_OK) {
         fprintf(stderr, "project validation error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -58,7 +58,7 @@ static int expect_valid_resolved_fixture(void) {
     apg_project_v2_resolved_t resolved;
     uc_error                  err = {0};
     uc_status                 status =
-        apg_project_v2_load_resolved_file("projects-v2/simple-gain-board.project.v2.yaml", &arena, &resolved, &err);
+        apg_project_v2_load_resolved_file("test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &arena, &resolved, &err);
     if (status != UC_OK) {
         fprintf(stderr, "resolved project error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -68,7 +68,7 @@ static int expect_valid_resolved_fixture(void) {
     if (resolved.units_len != 1u || strcmp(resolved.units[0].id, "gain_unit") != 0)
         return fail("unexpected resolved unit ref");
     if (!resolved.units[0].resolved_path ||
-        !strstr(resolved.units[0].resolved_path, "/units-v2/simple_gain.unit.v2.yaml"))
+        !strstr(resolved.units[0].resolved_path, "/test/fixtures/units-v2/simple_gain.unit.v2.yaml"))
         return fail("unexpected resolved unit path");
     if (!resolved.units[0].unit.name || strcmp(resolved.units[0].unit.name, "simple_gain") != 0)
         return fail("resolved unit was not loaded");
@@ -85,7 +85,7 @@ static int expect_valid_pedalboard_fixture(void) {
     apg_project_v2_resolved_t resolved;
     uc_error                  err = {0};
     uc_status                 status =
-        apg_project_v2_load_resolved_file("projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &resolved, &err);
+        apg_project_v2_load_resolved_file("test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &resolved, &err);
     if (status != UC_OK) {
         fprintf(stderr, "pedalboard project error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -152,19 +152,19 @@ int main(void) {
     if (expect_valid_pedalboard_fixture())
         return 1;
     if (expect_invalid_resolved_file_contains(
-            "projects-v2/invalid-missing-unit.project.v2.yaml", "missing unit file", "cannot resolve unit file"
+            "test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml", "missing unit file", "cannot resolve unit file"
         ))
         return 1;
     if (expect_invalid_resolved_file_contains(
-            "projects-v2/invalid-absolute-unit.project.v2.yaml", "absolute unit file", "absolute unit file paths"
+            "test/fixtures/projects-v2/invalid-absolute-unit.project.v2.yaml", "absolute unit file", "absolute unit file paths"
         ))
         return 1;
     if (expect_invalid_resolved_file_contains(
-            "projects-v2/invalid-escaping-unit.project.v2.yaml", "escaping unit file", "escapes workspace root"
+            "test/fixtures/projects-v2/invalid-escaping-unit.project.v2.yaml", "escaping unit file", "escapes workspace root"
         ))
         return 1;
     if (expect_invalid_resolved_file_contains(
-            "projects-v2/invalid-duplicate-resolved-unit.project.v2.yaml", "duplicate resolved unit file",
+            "test/fixtures/projects-v2/invalid-duplicate-resolved-unit.project.v2.yaml", "duplicate resolved unit file",
             "duplicate resolved unit file"
         ))
         return 1;

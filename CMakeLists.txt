@@ -120,7 +120,7 @@ add_custom_target(check_v2
 
 add_test(
         NAME test_apg_v2_cli_benchmark
-        COMMAND apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml
+        COMMAND apg-v2 benchmark project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml
 )
 set_tests_properties(test_apg_v2_cli_benchmark PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -139,7 +139,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export_prepare PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_wasm_export
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export"
 )
 set_tests_properties(test_apg_v2_cli_wasm_export PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -172,7 +172,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export_js PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_m7_export_rejects_unsupported
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-profile.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static test/fixtures/projects-v2/m7-unsupported-profile.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
 )
 set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -182,7 +182,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_m7_export_rejects_unsupported_atom
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-src.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static test/fixtures/projects-v2/m7-unsupported-src.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
 )
 set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported_atom PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -192,7 +192,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported_atom PROPERTI
 
 add_test(
         NAME test_apg_v2_cli_m7_export_rejects_undeclared_compat
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-compat.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static test/fixtures/projects-v2/m7-unsupported-compat.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
 )
 set_tests_properties(test_apg_v2_cli_m7_export_rejects_undeclared_compat PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -206,7 +206,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_prepare PROPERTIES LABELS v2)
 
 add_test(
         NAME test_apg_v2_cli_m7_export_bundle
-        COMMAND apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_TEST_DIR}
+        COMMAND apg-v2 export --target m7_static test/fixtures/projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_TEST_DIR}
 )
 set_tests_properties(test_apg_v2_cli_m7_export_bundle PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -297,7 +297,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_run_smoke PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_m7_export_static_ram_budget
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static --max-static-ram 100 projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_TEST_DIR} || true"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static --max-static-ram 100 test/fixtures/projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_TEST_DIR} || true"
 )
 set_tests_properties(test_apg_v2_cli_m7_export_static_ram_budget PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -311,7 +311,7 @@ add_test(NAME test_apg_v2_cli_m7_export_custom_prepare COMMAND ${CMAKE_COMMAND} 
 set_tests_properties(test_apg_v2_cli_m7_export_custom_prepare PROPERTIES LABELS v2)
 add_test(
         NAME test_apg_v2_cli_m7_export_custom_timing
-        COMMAND apg-v2 export --target m7_static --block-frames 128 --sample-rate 96000 --cache-line-bytes 64 projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_CUSTOM_TEST_DIR}
+        COMMAND apg-v2 export --target m7_static --block-frames 128 --sample-rate 96000 --cache-line-bytes 64 test/fixtures/projects-v2/two-gain-chain.project.v2.yaml ${APG_M7_CLI_CUSTOM_TEST_DIR}
 )
 set_tests_properties(test_apg_v2_cli_m7_export_custom_timing PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}

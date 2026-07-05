@@ -59,7 +59,7 @@
 | # | Step | Expected Output | Depends On |
 |---|------|-----------------|------------|
 | S1 | Define `project.v2.yaml` / `chain.v2.yaml` schema | Schema docs | Phase R |
-| S2 | Add project fixtures | `projects-v2/` examples | S1 |
+| S2 | Add project fixtures | `test/fixtures/projects-v2/` examples | S1 |
 | S3 | Validate unit refs, chain nodes, routes, scenes, and targets | Loader tests | S2 |
 
 ### Phase T: Project Loader and Resolver
@@ -99,7 +99,7 @@
 | # | Step | Expected Output | Depends On |
 |---|------|-----------------|------------|
 | X1 | Add or migrate guitar units | Done: overdrive, delay, tremolo, EQ/tone stack, noise gate, wet/dry mix | Phase W |
-| X2 | Add guitar pedalboard project fixture | Done: `projects-v2/guitar-pedalboard.project.v2.yaml` | X1 |
+| X2 | Add guitar pedalboard project fixture | Done: `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml` | X1 |
 | X3 | Validate, compile, run, and render fixture | Done: deterministic JSON via `apg-v2 render project <path>` | X2 |
 | X4 | Capture compatibility and validation outputs | Done: pedalboard validate, inspect, and render goldens | X3 |
 

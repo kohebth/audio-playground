@@ -4,7 +4,7 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 
 ## Still Active
 
-- Legacy `units/*.unit.yaml` files were removed after migration to `units-v2/*.unit.v2.yaml` fixtures.
+- Legacy `units/*.unit.yaml` files were removed after migration to `test/fixtures/units-v2/*.unit.v2.yaml` fixtures.
 
 ## Current Deprecation Fence
 

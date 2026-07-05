@@ -95,12 +95,12 @@ static int expect_golden(json_writer_fn writer, const char *input_path, const ch
 
 static int test_validate_json_golden_outputs(void) {
     if (expect_golden(
-            apg_v2_json_write_validate_unit, "units-v2/simple_gain.unit.v2.yaml",
+            apg_v2_json_write_validate_unit, "test/fixtures/units-v2/simple_gain.unit.v2.yaml",
             "test/golden/v2-validate-unit-simple_gain.json", "unit validation"
         ))
         return 1;
     if (expect_golden(
-            apg_v2_json_write_validate_project, "projects-v2/two-gain-chain.project.v2.yaml",
+            apg_v2_json_write_validate_project, "test/fixtures/projects-v2/two-gain-chain.project.v2.yaml",
             "test/golden/v2-validate-project-two-gain-chain.json", "project validation"
         ))
         return 1;
@@ -109,31 +109,31 @@ static int test_validate_json_golden_outputs(void) {
 
 static int test_project_inspect_json_golden_output(void) {
     return expect_golden(
-        apg_v2_json_write_inspect_project, "projects-v2/two-gain-chain.project.v2.yaml",
+        apg_v2_json_write_inspect_project, "test/fixtures/projects-v2/two-gain-chain.project.v2.yaml",
         "test/golden/v2-inspect-project-two-gain-chain.json", "project inspect"
     );
 }
 
 static int test_pedalboard_fixture_golden_outputs(void) {
     if (expect_golden(
-            apg_v2_json_write_validate_project, "projects-v2/guitar-pedalboard.project.v2.yaml",
+            apg_v2_json_write_validate_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml",
             "test/golden/v2-validate-project-guitar-pedalboard.json", "pedalboard project validation"
         ))
         return 1;
     if (expect_golden(
-            apg_v2_json_write_inspect_project, "projects-v2/guitar-pedalboard.project.v2.yaml",
+            apg_v2_json_write_inspect_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml",
             "test/golden/v2-inspect-project-guitar-pedalboard.json", "pedalboard project inspect"
         ))
         return 1;
     return expect_golden(
-        apg_v2_json_write_render_project, "projects-v2/guitar-pedalboard.project.v2.yaml",
+        apg_v2_json_write_render_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml",
         "test/golden/v2-render-project-guitar-pedalboard.json", "pedalboard project render"
     );
 }
 
 static int test_project_render_json_is_deterministic(void) {
-    char *first  = capture_json(apg_v2_json_write_render_project, "projects-v2/guitar-pedalboard.project.v2.yaml");
-    char *second = capture_json(apg_v2_json_write_render_project, "projects-v2/guitar-pedalboard.project.v2.yaml");
+    char *first  = capture_json(apg_v2_json_write_render_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml");
+    char *second = capture_json(apg_v2_json_write_render_project, "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml");
     if (!first || !second) {
         free(first);
         free(second);
@@ -159,13 +159,13 @@ static int test_project_render_json_is_deterministic(void) {
 
 static int test_unit_inspect_json_golden_output(void) {
     return expect_golden(
-        apg_v2_json_write_inspect_unit, "units-v2/simple_gain.unit.v2.yaml",
+        apg_v2_json_write_inspect_unit, "test/fixtures/units-v2/simple_gain.unit.v2.yaml",
         "test/golden/v2-inspect-unit-simple_gain.json", "unit inspect"
     );
 }
 
 static int test_unit_inspect_json_contains_ui_contract(void) {
-    char *json = capture_json(apg_v2_json_write_inspect_unit, "units-v2/simple_gain.unit.v2.yaml");
+    char *json = capture_json(apg_v2_json_write_inspect_unit, "test/fixtures/units-v2/simple_gain.unit.v2.yaml");
     if (!json)
         return fail("failed to write unit inspect json");
     if (!strstr(json, "\"schema\":\"apg.unit.inspect.v2\"") || !strstr(json, "\"name\":\"simple_gain\"") ||
@@ -180,11 +180,11 @@ static int test_unit_inspect_json_contains_ui_contract(void) {
 }
 
 static int test_invalid_validation_json_contains_diagnostic_fields(void) {
-    char *json = capture_json(apg_v2_json_write_validate_project, "projects-v2/invalid-missing-unit.project.v2.yaml");
+    char *json = capture_json(apg_v2_json_write_validate_project, "test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml");
     if (!json)
         return fail("failed to write invalid validation json");
     if (!strstr(json, "\"ok\":false") || !strstr(json, "\"errors\":[{") || !strstr(json, "\"code\":\"APG_IO_ERROR\"") ||
-        !strstr(json, "\"file\":\"projects-v2/invalid-missing-unit.project.v2.yaml\"") ||
+        !strstr(json, "\"file\":\"test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml\"") ||
         !strstr(json, "\"path\":\"$.project\"") || !strstr(json, "cannot resolve unit file")) {
         free(json);
         return fail("invalid validation json lacked stable diagnostic fields");

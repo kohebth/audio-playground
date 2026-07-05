@@ -18,7 +18,7 @@ static int test_simple_gain_compile(void) {
 
     apg_unit_v2_t unit;
     uc_error      err    = {0};
-    uc_status     status = apg_unit_v2_load_file("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &err);
+    uc_status     status = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &err);
     if (status != UC_OK) {
         fprintf(stderr, "load error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -1618,9 +1618,9 @@ static int has_unit_v2_yaml_suffix(const char *name) {
 }
 
 static int test_compile_all_unit_v2_fixtures(void) {
-    DIR *dir = opendir("units-v2");
+    DIR *dir = opendir("test/fixtures/units-v2");
     if (!dir)
-        return fail("failed to open units-v2 fixture directory");
+        return fail("failed to open test/fixtures/units-v2 fixture directory");
 
     size_t fixture_count = 0;
     for (struct dirent *entry = readdir(dir); entry; entry = readdir(dir)) {
@@ -1628,7 +1628,7 @@ static int test_compile_all_unit_v2_fixtures(void) {
             continue;
 
         char path[256];
-        snprintf(path, sizeof(path), "units-v2/%s", entry->d_name);
+        snprintf(path, sizeof(path), "test/fixtures/units-v2/%s", entry->d_name);
 
         uc_arena arena;
         if (uc_arena_init(&arena, 1024 * 1024) != 0) {

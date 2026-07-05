@@ -5,15 +5,15 @@
 ## Commands
 
 ```sh
-apg-v2 validate unit units-v2/simple_gain.unit.v2.yaml
-apg-v2 validate project projects-v2/two-gain-chain.project.v2.yaml
+apg-v2 validate unit test/fixtures/units-v2/simple_gain.unit.v2.yaml
+apg-v2 validate project test/fixtures/projects-v2/two-gain-chain.project.v2.yaml
 apg-v2 inspect atoms
-apg-v2 inspect unit units-v2/simple_gain.unit.v2.yaml
-apg-v2 inspect project projects-v2/two-gain-chain.project.v2.yaml
-apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml
-apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml
-apg-v2 export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml dist/web/
-apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml build/m7/
+apg-v2 inspect unit test/fixtures/units-v2/simple_gain.unit.v2.yaml
+apg-v2 inspect project test/fixtures/projects-v2/two-gain-chain.project.v2.yaml
+apg-v2 render project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml
+apg-v2 benchmark project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml
+apg-v2 export --target wasm_realtime test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml dist/web/
+apg-v2 export --target m7_static test/fixtures/projects-v2/two-gain-chain.project.v2.yaml build/m7/
 ```
 
 ## Validation
@@ -21,7 +21,7 @@ apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml buil
 Validation output uses `apg.validation.v2` and always includes stable `ok`, `file`, `errors`, and `warnings` fields.
 
 ```json
-{"schema":"apg.validation.v2","ok":true,"file":"units-v2/simple_gain.unit.v2.yaml","errors":[],"warnings":[]}
+{"schema":"apg.validation.v2","ok":true,"file":"test/fixtures/units-v2/simple_gain.unit.v2.yaml","errors":[],"warnings":[]}
 ```
 
 Errors use this shape:
@@ -29,7 +29,7 @@ Errors use this shape:
 ```json
 {
   "code": "APG_IO_ERROR",
-  "file": "projects-v2/example.project.v2.yaml",
+  "file": "test/fixtures/projects-v2/example.project.v2.yaml",
   "path": "$.project",
   "message": "cannot resolve unit file 'missing.unit.v2.yaml'"
 }

@@ -7,7 +7,7 @@ This repository contains several independent project areas:
 - `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, metadata registry, YAML parser helpers, APGCore v2 modules, and CTest targets. APGCore code is grouped by module under `src/apgcore/<module>/` and `inc/apgcore/<module>/`; atom implementations are grouped by family under `src/atom/<family>/`.
 - `core-design.md`: current production architecture target. Keep new core work aligned with the `metadata -> parser -> validator -> compiler -> runtime image -> runtime -> measure -> host` boundary.
 - `units/`: legacy local v1 YAML drafts only. They are not loaded by the default production build; do not stage modified files here unless the user explicitly decides to port or delete them.
-- `units-v2/` and `projects-v2/`: v2 test metadata fixtures for parser/validator/compiler/runtime and UI contract checks. These are not APGCore source paths or production module roots.
+- `test/fixtures/units-v2/` and `test/fixtures/projects-v2/`: v2 test metadata fixtures for parser/validator/compiler/runtime and UI contract checks. These are not APGCore source paths or production module roots.
 - `test/golden/`: frozen JSON samples for frontend contract tests and mock data.
 - `docs/schemas/unit-v2.md`, `docs/schemas/project-v2.md`, `docs/UNIT_V2_ARCHITECTURE.md`, and `docs/WEB_UI_READINESS.md`: current v2 schemas, compiler/runtime design notes, and web handoff context.
 - `web-tools/unit-editor/`, `audio-mcp/`, `search-mcp/`: separate frontend and MCP packages with their own dependencies.
@@ -55,7 +55,7 @@ Name C tests `test_<feature>.c`. Name v2 fixture metadata `<name>.unit.v2.yaml` 
 
 ## Testing Guidelines
 
-C tests are CTest targets. Add focused tests under `test/` for atom behavior, parser boundaries, validator contracts, compiler plans, runtime-image layout, runtime execution, and measure/host reads. V2 fixture coverage should load/compile all `units-v2/*.unit.v2.yaml`, and runtime tests should exercise named signal buffers, params, schedule execution, state buffers, and failure messages.
+C tests are CTest targets. Add focused tests under `test/` for atom behavior, parser boundaries, validator contracts, compiler plans, runtime-image layout, runtime execution, and measure/host reads. V2 fixture coverage should load/compile all `test/fixtures/units-v2/*.unit.v2.yaml`, and runtime tests should exercise named signal buffers, params, schedule execution, state buffers, and failure messages.
 
 ## Commit & Pull Request Guidelines
 
@@ -77,6 +77,6 @@ For future phased implementation, keep the AC-AJ lifecycle pattern: implement mo
 
 Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documents aligned as work advances. If a task is blocked by missing design context, record it in `problem.md`, update the trackers, and move to the next actionable item.
 
-For web UI work, start from `docs/WEB_UI_READINESS.md`, fixture metadata such as `projects-v2/guitar-pedalboard.project.v2.yaml`, and the frozen files in `test/golden/`. Treat those samples as frontend data contracts only, not source paths. Build the project-level pedalboard workflow before unit-internals editing, and avoid changing backend JSON contracts unless a tracked UI requirement needs it.
+For web UI work, start from `docs/WEB_UI_READINESS.md`, fixture metadata such as `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml`, and the frozen files in `test/golden/`. Treat those samples as frontend data contracts only, not source paths. Build the project-level pedalboard workflow before unit-internals editing, and avoid changing backend JSON contracts unless a tracked UI requirement needs it.
 
 After each slice, stage only the files that belong to that slice and commit with `git commit -m "<which tasks are done>"`. Docs-only tracker updates do not require `./build-and-test.sh`. Web implementation slices require `npm run build` inside `web-tools/unit-editor`; backend implementation slices require `./build-and-test.sh` when compile confidence is needed. Before ending a turn, report the phase, committed slice, verification run, and next planned task.

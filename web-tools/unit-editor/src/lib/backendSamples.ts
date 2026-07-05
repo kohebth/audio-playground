@@ -1,16 +1,16 @@
 import atomCatalogRaw from '../../../../test/golden/v2-inspect-atoms.json?raw';
 import atomCatalogManifestRaw from '../../../../test/golden/v2-inspect-atoms.manifest.txt?raw';
-import delayUnitYaml from '../../../../units-v2/delay.unit.v2.yaml?raw';
-import noiseGateUnitYaml from '../../../../units-v2/noise_gate.unit.v2.yaml?raw';
-import overdriveUnitYaml from '../../../../units-v2/overdrive.unit.v2.yaml?raw';
-import projectYaml from '../../../../projects-v2/guitar-pedalboard.project.v2.yaml?raw';
+import delayUnitYaml from '../../../../test/fixtures/units-v2/delay.unit.v2.yaml?raw';
+import noiseGateUnitYaml from '../../../../test/fixtures/units-v2/noise_gate.unit.v2.yaml?raw';
+import overdriveUnitYaml from '../../../../test/fixtures/units-v2/overdrive.unit.v2.yaml?raw';
+import projectYaml from '../../../../test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml?raw';
 import projectInspectRaw from '../../../../test/golden/v2-inspect-project-guitar-pedalboard.json?raw';
 import projectRenderRaw from '../../../../test/golden/v2-render-project-guitar-pedalboard.json?raw';
 import projectValidationRaw from '../../../../test/golden/v2-validate-project-guitar-pedalboard.json?raw';
-import toneStackUnitYaml from '../../../../units-v2/tone_stack.unit.v2.yaml?raw';
-import tremoloUnitYaml from '../../../../units-v2/tremolo.unit.v2.yaml?raw';
+import toneStackUnitYaml from '../../../../test/fixtures/units-v2/tone_stack.unit.v2.yaml?raw';
+import tremoloUnitYaml from '../../../../test/fixtures/units-v2/tremolo.unit.v2.yaml?raw';
 import unitInspectRaw from '../../../../test/golden/v2-inspect-unit-simple_gain.json?raw';
-import wetDryMixUnitYaml from '../../../../units-v2/wet_dry_mix.unit.v2.yaml?raw';
+import wetDryMixUnitYaml from '../../../../test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml?raw';
 
 export type Compatibility = Record<string, boolean>;
 
@@ -198,15 +198,15 @@ export const backendSamples: BackendFixtureBundle = {
 
 export const backendCommands: BackendCommands = {
   validateProject:
-    '/tmp/audio-playground-apgcore-build/apg-v2 validate project projects-v2/guitar-pedalboard.project.v2.yaml',
+    './build/apg-v2 validate project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml',
   renderProject:
-    '/tmp/audio-playground-apgcore-build/apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml',
+    './build/apg-v2 render project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml',
   benchmarkProject:
-    '/tmp/audio-playground-apgcore-build/apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml',
+    './build/apg-v2 benchmark project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml',
   exportWasm:
-    '/tmp/audio-playground-apgcore-build/apg-v2 export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml dist/web/',
+    './build/apg-v2 export --target wasm_realtime test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml dist/web/',
   exportM7:
-    '/tmp/audio-playground-apgcore-build/apg-v2 export --target m7_static projects-v2/guitar-pedalboard.project.v2.yaml build/m7/',
+    './build/apg-v2 export --target m7_static test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml build/m7/',
 };
 
 export const sampleSources = {
@@ -220,43 +220,43 @@ export const sampleSources = {
 
 export const initialWorkspaceFiles: WorkspaceFile[] = [
   {
-    path: 'projects-v2/guitar-pedalboard.project.v2.yaml',
+    path: 'test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml',
     role: 'project',
     content: projectYaml,
     originalContent: projectYaml,
   },
   {
-    path: 'units-v2/noise_gate.unit.v2.yaml',
+    path: 'test/fixtures/units-v2/noise_gate.unit.v2.yaml',
     role: 'unit',
     content: noiseGateUnitYaml,
     originalContent: noiseGateUnitYaml,
   },
   {
-    path: 'units-v2/overdrive.unit.v2.yaml',
+    path: 'test/fixtures/units-v2/overdrive.unit.v2.yaml',
     role: 'unit',
     content: overdriveUnitYaml,
     originalContent: overdriveUnitYaml,
   },
   {
-    path: 'units-v2/tone_stack.unit.v2.yaml',
+    path: 'test/fixtures/units-v2/tone_stack.unit.v2.yaml',
     role: 'unit',
     content: toneStackUnitYaml,
     originalContent: toneStackUnitYaml,
   },
   {
-    path: 'units-v2/tremolo.unit.v2.yaml',
+    path: 'test/fixtures/units-v2/tremolo.unit.v2.yaml',
     role: 'unit',
     content: tremoloUnitYaml,
     originalContent: tremoloUnitYaml,
   },
   {
-    path: 'units-v2/delay.unit.v2.yaml',
+    path: 'test/fixtures/units-v2/delay.unit.v2.yaml',
     role: 'unit',
     content: delayUnitYaml,
     originalContent: delayUnitYaml,
   },
   {
-    path: 'units-v2/wet_dry_mix.unit.v2.yaml',
+    path: 'test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml',
     role: 'unit',
     content: wetDryMixUnitYaml,
     originalContent: wetDryMixUnitYaml,

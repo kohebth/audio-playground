@@ -95,7 +95,7 @@ static int test_simple_project_compiles_and_runs(void) {
         return fail("arena init failed");
 
     apg_project_v2_resolved_t project;
-    if (load_resolved_project("projects-v2/simple-gain-board.project.v2.yaml", &arena, &project)) {
+    if (load_resolved_project("test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &arena, &project)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -162,7 +162,7 @@ static int test_two_instance_project_compiles_and_runs(void) {
         return fail("arena init failed");
 
     apg_project_v2_resolved_t project;
-    if (load_resolved_project("projects-v2/two-gain-chain.project.v2.yaml", &arena, &project)) {
+    if (load_resolved_project("test/fixtures/projects-v2/two-gain-chain.project.v2.yaml", &arena, &project)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -264,7 +264,7 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
         return fail("arena init failed");
 
     apg_project_v2_resolved_t project;
-    if (load_resolved_project("projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &project)) {
+    if (load_resolved_project("test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &project)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -322,7 +322,7 @@ static int test_guitar_project_state_buffer_table_layout(void) {
         return fail("arena init failed");
 
     apg_project_v2_resolved_t project;
-    if (load_resolved_project("projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &project)) {
+    if (load_resolved_project("test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", &arena, &project)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -423,8 +423,8 @@ static int expect_compile_error_contains(const char *yaml, const char *label, co
     }
     project.units[0].id            = "gain_unit";
     project.units[0].file          = "../units-v2/simple_gain.unit.v2.yaml";
-    project.units[0].resolved_path = "units-v2/simple_gain.unit.v2.yaml";
-    status = apg_unit_v2_load_file("units-v2/simple_gain.unit.v2.yaml", &arena, &project.units[0].unit, &err);
+    project.units[0].resolved_path = "test/fixtures/units-v2/simple_gain.unit.v2.yaml";
+    status = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &project.units[0].unit, &err);
     if (status != UC_OK) {
         fprintf(stderr, "unit load error for %s: %s\n", label, err.msg);
         uc_arena_free(&arena);

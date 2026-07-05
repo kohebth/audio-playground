@@ -96,9 +96,9 @@ static int test_unit_file(const char *path, int *processed) {
 }
 
 int main(void) {
-    DIR *dir = opendir("units-v2");
+    DIR *dir = opendir("test/fixtures/units-v2");
     if (!dir) {
-        perror("opendir units-v2");
+        perror("opendir test/fixtures/units-v2");
         return 1;
     }
 
@@ -110,7 +110,7 @@ int main(void) {
             continue;
 
         char path[512];
-        snprintf(path, sizeof(path), "units-v2/%s", entry->d_name);
+        snprintf(path, sizeof(path), "test/fixtures/units-v2/%s", entry->d_name);
         checked++;
         failed += test_unit_file(path, &processed);
     }

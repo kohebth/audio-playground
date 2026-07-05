@@ -6,8 +6,8 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 - APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, validate/inspect JSON contracts, and runtime product controls for params, bypass, mute, and meters are implemented. Solo remains a host/UI routing concern until a real routing contract exists.
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
-- Reusable test metadata fixtures exist in `units-v2/`, including representative overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix graphs.
-- Project/session schema, deterministic test metadata fixtures, referenced-unit resolution, mono project compilation, and `projects-v2/guitar-pedalboard.project.v2.yaml` exist.
+- Reusable test metadata fixtures exist in `test/fixtures/units-v2/`, including representative overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix graphs.
+- Project/session schema, deterministic test metadata fixtures, referenced-unit resolution, mono project compilation, and `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml` exist.
 - The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, deterministic project render/benchmark JSON, and export surfaces for `wasm_realtime` and `m7_static`. Validation, unit inspect, project inspect, render, and atom catalog sample contracts are frozen under `test/golden/`.
 
 ## Readiness Declaration
@@ -31,15 +31,15 @@ This is not a hardware readiness declaration. STM32H7/M7 production deployment i
 Build the CLI once through the normal C workflow, then use these exact commands as frontend fixture metadata sources:
 
 ```sh
-./build/apg-v2 validate unit units-v2/simple_gain.unit.v2.yaml
-./build/apg-v2 validate project projects-v2/guitar-pedalboard.project.v2.yaml
+./build/apg-v2 validate unit test/fixtures/units-v2/simple_gain.unit.v2.yaml
+./build/apg-v2 validate project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml
 ./build/apg-v2 inspect atoms
-./build/apg-v2 inspect unit units-v2/simple_gain.unit.v2.yaml
-./build/apg-v2 inspect project projects-v2/guitar-pedalboard.project.v2.yaml
-./build/apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml
-./build/apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml
-./build/apg-v2 export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml dist/web/
-./build/apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml build/m7/
+./build/apg-v2 inspect unit test/fixtures/units-v2/simple_gain.unit.v2.yaml
+./build/apg-v2 inspect project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml
+./build/apg-v2 render project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml
+./build/apg-v2 benchmark project test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml
+./build/apg-v2 export --target wasm_realtime test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml dist/web/
+./build/apg-v2 export --target m7_static test/fixtures/projects-v2/two-gain-chain.project.v2.yaml build/m7/
 ```
 
 Committed sample files:
@@ -94,7 +94,7 @@ The UI needs stable diagnostics:
   "errors": [
     {
       "code": "APG_ATOM_UNKNOWN",
-      "file": "units-v2/example.unit.v2.yaml",
+      "file": "test/fixtures/units-v2/example.unit.v2.yaml",
       "path": "graph.nodes[2].atom",
       "message": "Unknown atom 'filter_biquadd'"
     }

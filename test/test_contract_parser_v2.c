@@ -46,8 +46,8 @@ static int expect_parse_without_validation(void) {
 }
 
 static int expect_boundary_parse_then_validate(void) {
-    const char *unit_file    = "units-v2/simple_gain.unit.v2.yaml";
-    const char *project_file = "projects-v2/simple-gain-board.project.v2.yaml";
+    const char *unit_file    = "test/fixtures/units-v2/simple_gain.unit.v2.yaml";
+    const char *project_file = "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml";
 
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)

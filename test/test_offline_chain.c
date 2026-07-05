@@ -59,7 +59,7 @@ int main(void) {
 
     apg_project_v2_resolved_t project;
     apg_project_v2_compiled_t compiled;
-    if (load_compile_project("projects-v2/two-gain-chain.project.v2.yaml", &arena, &project, &compiled)) {
+    if (load_compile_project("test/fixtures/projects-v2/two-gain-chain.project.v2.yaml", &arena, &project, &compiled)) {
         uc_arena_free(&arena);
         return 1;
     }

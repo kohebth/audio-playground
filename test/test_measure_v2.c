@@ -17,7 +17,7 @@ static int fail(const char *msg) {
 static int
 load_compile_runtime(uc_arena *arena, apg_unit_v2_t *unit, apg_v2_compiled_unit_t *plan, apg_v2_runtime_t *runtime) {
     uc_error  err    = {0};
-    uc_status status = apg_unit_v2_load_file("units-v2/simple_gain.unit.v2.yaml", arena, unit, &err);
+    uc_status status = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", arena, unit, &err);
     if (status != UC_OK) {
         fprintf(stderr, "load error: %s\n", err.msg);
         return fail("failed to load fixture");

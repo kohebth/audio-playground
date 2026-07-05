@@ -88,7 +88,7 @@ static int test_runtime_init_simple_gain(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -148,7 +148,7 @@ static int test_runtime_init_simple_gain(void) {
 static int test_v2_host_file_bridge_processes_simple_gain(void) {
     apg_v2_host_unit_t host;
     uc_error           err    = {0};
-    uc_status          status = apg_v2_host_load_file("units-v2/simple_gain.unit.v2.yaml", 8u, 48000.0f, &host, &err);
+    uc_status          status = apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", 8u, 48000.0f, &host, &err);
     if (status != UC_OK) {
         fprintf(stderr, "host load error: %s\n", err.msg);
         return fail("failed to load v2 host fixture");
@@ -176,7 +176,7 @@ static int test_runtime_config_error_names_node_atom_and_binding(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -205,7 +205,7 @@ static int test_simple_gain_process_mono(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -251,7 +251,7 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -326,7 +326,7 @@ static int test_named_public_port_signal_lookup(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_mix.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_mix.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -453,7 +453,7 @@ static int test_named_mono_port_rejects_bad_buffer_layouts(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -594,7 +594,7 @@ static int test_named_mono_port_process(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -821,7 +821,7 @@ static int test_simple_clip_process_generic(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_clip.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_clip.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -871,7 +871,7 @@ static int test_simple_mix_process_generic(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_mix.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_mix.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -1261,8 +1261,8 @@ static int test_delay_tap_scalar_input_refresh(void) {
 
 static int test_product_fixture_library_runtime_smoke(void) {
     const char *mono_fixtures[] = {
-        "units-v2/overdrive.unit.v2.yaml",  "units-v2/delay.unit.v2.yaml",      "units-v2/tremolo.unit.v2.yaml",
-        "units-v2/tone_stack.unit.v2.yaml", "units-v2/noise_gate.unit.v2.yaml",
+        "test/fixtures/units-v2/overdrive.unit.v2.yaml",  "test/fixtures/units-v2/delay.unit.v2.yaml",      "test/fixtures/units-v2/tremolo.unit.v2.yaml",
+        "test/fixtures/units-v2/tone_stack.unit.v2.yaml", "test/fixtures/units-v2/noise_gate.unit.v2.yaml",
     };
     const float input[4] = {0.1f, 0.25f, -0.5f, 0.75f};
 
@@ -1302,7 +1302,7 @@ static int test_product_fixture_library_runtime_smoke(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/wet_dry_mix.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -1345,7 +1345,7 @@ static int test_runtime_capable_fixture_library(void) {
     apg_v2_runtime_t       runtime;
     uc_error               err = {0};
 
-    if (load_and_compile_fixture("units-v2/delay_line_state.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/delay_line_state.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -1380,7 +1380,7 @@ static int test_runtime_capable_fixture_library(void) {
 
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
-    if (load_and_compile_fixture("units-v2/filter_comb_ff_state.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/filter_comb_ff_state.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -1415,7 +1415,7 @@ static int test_runtime_capable_fixture_library(void) {
 
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
-    if (load_and_compile_fixture("units-v2/modulation_frequency_state.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/modulation_frequency_state.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -1451,7 +1451,7 @@ static int test_runtime_capable_fixture_library(void) {
 
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
-    if (load_and_compile_fixture("units-v2/stereo_pan.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/stereo_pan.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -1479,7 +1479,7 @@ static int test_runtime_capable_fixture_library(void) {
 
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
-    if (load_and_compile_fixture("units-v2/control_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/control_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -1552,7 +1552,7 @@ static int test_runtime_init_rejects_zero_capacity(void) {
 
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    if (load_and_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
         uc_arena_free(&arena);
         return 1;
     }

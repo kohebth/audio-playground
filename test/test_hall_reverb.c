@@ -19,7 +19,7 @@ static int load_pedalboard(uc_arena *arena, apg_project_v2_compiled_t *compiled)
     apg_project_v2_resolved_t project;
     uc_error                  err = {0};
     uc_status                 status =
-        apg_project_v2_load_resolved_file("projects-v2/guitar-pedalboard.project.v2.yaml", arena, &project, &err);
+        apg_project_v2_load_resolved_file("test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", arena, &project, &err);
     if (status == UC_OK)
         status = apg_project_v2_compile(&project, arena, compiled, &err);
     if (status != UC_OK) {

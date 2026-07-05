@@ -26,7 +26,7 @@ int main(void) {
     uc_error              err = {0};
 
     uc_status status = apg_v2_host_project_load_file(
-        "projects-v2/simple-gain-board.project.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err
+        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err
     );
     if (status != UC_OK) {
         fprintf(stderr, "failed to load project: %s\n", err.msg);
