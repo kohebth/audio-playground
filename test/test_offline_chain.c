@@ -66,7 +66,7 @@ int main(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err = {0};
-    if (test_apg_v2_runtime_init_image(&compiled.plan, TEST_CHUNK, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_registry(&compiled.plan, TEST_CHUNK, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize v2 offline chain");

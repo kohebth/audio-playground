@@ -2,7 +2,7 @@
 #include <apgcore/json_contract_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/project_v2.h>
-#include <apgcore/runtime_image_builder_v2.h>
+#include <apgcore/registry/registry_builder_v2.h>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -190,9 +190,9 @@ first_unsupported_unit(const apg_project_v2_resolved_t *project, const char *tar
     return NULL;
 }
 
-static const char *first_unsupported_atom(const apg_v2_runtime_image_t *image, const char *target) {
-    for (size_t i = 0; image && i < image->nodes_len; i++) {
-        const char *atom_name = image->node_layouts[i].atom_name;
+static const char *first_unsupported_atom(const apg_v2_registry_t *registry, const char *target) {
+    for (size_t i = 0; registry && i < registry->nodes_len; i++) {
+        const char *atom_name = registry->node_layouts[i].atom_name;
         if (!apg_atom_profile_supported(atom_name, target))
             return atom_name;
     }
@@ -264,7 +264,7 @@ static bool parse_uint32_arg(const char *text, uint32_t *out) {
 static bool write_wasm_runtime_js(
     const char                      *path,
     const apg_project_v2_resolved_t *project,
-    const apg_v2_runtime_image_t    *image,
+    const apg_v2_registry_t         *registry,
     const wasm_export_options_t     *options
 ) {
     FILE *out = fopen(path, "w");
@@ -285,8 +285,8 @@ static bool write_wasm_runtime_js(
         fputs("  project: \"unknown\",\n", out);
     if (project)
         fprintf(out, "  units: %zu,\n", project->units_len);
-    if (image)
-        fprintf(out, "  nodes: %zu,\n  schedule: %zu,\n", image->nodes_len, image->schedule_len);
+    if (registry)
+        fprintf(out, "  nodes: %zu,\n  schedule: %zu,\n", registry->nodes_len, registry->schedule_len);
     fputs("};\n", out);
     fputs(
         "export function createRuntime() {\n"
@@ -319,7 +319,7 @@ static bool write_wasm_runtime_js(
 static bool write_wasm_runtime_manifest(
     const char                      *path,
     const apg_project_v2_resolved_t *project,
-    const apg_v2_runtime_image_t    *image,
+    const apg_v2_registry_t         *registry,
     const wasm_export_options_t     *options
 ) {
     FILE *out = fopen(path, "w");
@@ -332,8 +332,9 @@ static bool write_wasm_runtime_manifest(
         ",\"sample_rate\":%u,\"block_frames\":%u,\"runtime\":\"audio_worklet_stub\","
         "\"layout\":{\"params\":%zu,\"signals\":%zu,\"nodes\":%zu,\"schedule\":%zu},\"status\":\"generated\"}\n",
         options ? options->sample_rate : APG_WASM_DEFAULT_SAMPLE_RATE,
-        options ? options->block_frames : APG_WASM_DEFAULT_BLOCK_FRAMES, image ? image->params_len : 0u,
-        image ? image->signals_len : 0u, image ? image->nodes_len : 0u, image ? image->schedule_len : 0u
+        options ? options->block_frames : APG_WASM_DEFAULT_BLOCK_FRAMES, registry ? registry->params_len : 0u,
+        registry ? registry->signals_len : 0u, registry ? registry->nodes_len : 0u,
+        registry ? registry->schedule_len : 0u
     );
     return fclose(out) == 0;
 }
@@ -346,46 +347,47 @@ static bool parse_alignment_arg(const char *text, uint32_t *out) {
     return true;
 }
 
-static m7_memory_manifest_t m7_memory_manifest(const apg_v2_runtime_image_t *image) {
+static m7_memory_manifest_t m7_memory_manifest(const apg_v2_registry_t *registry) {
     m7_memory_manifest_t memory = {0};
-    if (!image)
+    if (!registry)
         return memory;
 
-    memory.signal_buffer_bytes        = image->signal_samples * sizeof(float);
-    memory.param_bytes                = image->params_len * sizeof(float);
-    memory.schedule_bytes             = image->schedule_len * sizeof(uint32_t);
-    memory.atom_call_bytes            = image->nodes_len * sizeof(atom_call_t);
-    memory.signal_array_pointer_count = image->signal_array_pointer_slots;
-    memory.signal_array_pointer_bytes = image->signal_array_pointer_slots * sizeof(float *);
-    memory.atom_storage_bytes         = image->atom_storage_bytes;
-    memory.state_buffer_bytes         = image->state_buffer_samples * sizeof(float);
+    memory.signal_buffer_bytes        = registry->signal_samples * sizeof(float);
+    memory.param_bytes                = registry->params_len * sizeof(float);
+    memory.schedule_bytes             = registry->schedule_len * sizeof(uint32_t);
+    memory.atom_call_bytes            = registry->nodes_len * sizeof(atom_call_t);
+    memory.signal_array_pointer_count = registry->signal_array_pointer_slots;
+    memory.signal_array_pointer_bytes = registry->signal_array_pointer_slots * sizeof(float *);
+    memory.atom_storage_bytes         = registry->atom_storage_bytes;
+    memory.state_buffer_bytes         = registry->state_buffer_samples * sizeof(float);
     memory.static_ram_bytes           = memory.signal_buffer_bytes + memory.param_bytes + memory.atom_call_bytes +
                               memory.signal_array_pointer_bytes + memory.atom_storage_bytes + memory.state_buffer_bytes;
     return memory;
 }
 
 static bool write_m7_header(
-    const char                   *path,
-    const apg_v2_runtime_image_t *image,
-    const m7_memory_manifest_t   *memory,
-    const m7_export_options_t    *options
+    const char                 *path,
+    const apg_v2_registry_t    *registry,
+    const m7_memory_manifest_t *memory,
+    const m7_export_options_t  *options
 ) {
     FILE *out = fopen(path, "w");
     if (!out)
         return false;
     fputs("#ifndef APG_PROJECT_M7_BUNDLE_H\n#define APG_PROJECT_M7_BUNDLE_H\n\n", out);
     fputs("#include <stddef.h>\n#include <stdint.h>\n#include <atom_registry.h>\n\n", out);
-    fprintf(out, "#define APG_M7_PROJECT_PARAM_COUNT %zuu\n", image->params_len);
-    fprintf(out, "#define APG_M7_PROJECT_SIGNAL_COUNT %zuu\n", image->signals_len);
-    fprintf(out, "#define APG_M7_PROJECT_NODE_COUNT %zuu\n", image->nodes_len);
-    fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_COUNT %zuu\n", image->schedule_len);
+    fprintf(out, "#define APG_M7_PROJECT_PARAM_COUNT %zuu\n", registry->params_len);
+    fprintf(out, "#define APG_M7_PROJECT_SIGNAL_COUNT %zuu\n", registry->signals_len);
+    fprintf(out, "#define APG_M7_PROJECT_NODE_COUNT %zuu\n", registry->nodes_len);
+    fprintf(out, "#define APG_M7_PROJECT_SCHEDULE_COUNT %zuu\n", registry->schedule_len);
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_COUNT %zuu\n\n", memory->signal_array_pointer_count);
-    fprintf(out, "#define APG_M7_PROJECT_BLOCK_FRAMES %uu\n", image->frame_capacity);
-    fprintf(out, "#define APG_M7_PROJECT_SAMPLE_RATE %uu\n", (unsigned)image->sample_rate);
-    fprintf(out, "#define APG_M7_PROJECT_ATOM_CALLS_PER_BLOCK %zuu\n", image->schedule_len);
+    fprintf(out, "#define APG_M7_PROJECT_BLOCK_FRAMES %uu\n", registry->frame_capacity);
+    fprintf(out, "#define APG_M7_PROJECT_SAMPLE_RATE %uu\n", (unsigned)registry->sample_rate);
+    fprintf(out, "#define APG_M7_PROJECT_ATOM_CALLS_PER_BLOCK %zuu\n", registry->schedule_len);
     fprintf(
         out, "#define APG_M7_PROJECT_ATOM_CALLS_PER_SECOND %zuu\n",
-        image->frame_capacity ? image->schedule_len * (size_t)image->sample_rate / image->frame_capacity : 0u
+        registry->frame_capacity ? registry->schedule_len * (size_t)registry->sample_rate / registry->frame_capacity
+                                 : 0u
     );
     fprintf(out, "#define APG_M7_PROJECT_SIGNAL_BUFFER_BYTES %zuu\n", memory->signal_buffer_bytes);
     fprintf(out, "#define APG_M7_PROJECT_PARAM_BYTES %zuu\n", memory->param_bytes);
@@ -430,7 +432,7 @@ static void write_c_float(FILE *out, float value) {
     fputc('f', out);
 }
 
-static void write_m7_scalar_value(FILE *out, const apg_v2_runtime_scalar_refresh_t *item) {
+static void write_m7_scalar_value(FILE *out, const apg_v2_registry_scalar_refresh_t *item) {
     if (!item) {
         fputs("0.0f", out);
     } else if (item->kind == APG_BIND_PARAM) {
@@ -443,7 +445,7 @@ static void write_m7_scalar_value(FILE *out, const apg_v2_runtime_scalar_refresh
 }
 
 static bool
-write_m7_source(const char *path, const apg_project_v2_resolved_t *project, const apg_v2_runtime_image_t *image) {
+write_m7_source(const char *path, const apg_project_v2_resolved_t *project, const apg_v2_registry_t *registry) {
     FILE *out = fopen(path, "w");
     if (!out)
         return false;
@@ -453,29 +455,29 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     fputs("const char apg_m7_project_name[] = ", out);
     write_c_string(out, project->project.name);
     fputs(";\n\nconst uint32_t apg_m7_project_schedule[APG_M7_PROJECT_SCHEDULE_COUNT] = {", out);
-    for (size_t i = 0; i < image->schedule_len; i++) {
+    for (size_t i = 0; i < registry->schedule_len; i++) {
         if (i > 0u)
             fputs(", ", out);
-        fprintf(out, "%uu", (unsigned)image->schedule[i]);
+        fprintf(out, "%uu", (unsigned)registry->schedule[i]);
     }
     fputs("};\n\nconst char *const apg_m7_project_nodes[APG_M7_PROJECT_NODE_COUNT] = {", out);
-    for (size_t i = 0; i < image->nodes_len; i++) {
+    for (size_t i = 0; i < registry->nodes_len; i++) {
         if (i > 0u)
             fputs(", ", out);
-        write_c_string(out, image->node_layouts[i].node_id);
+        write_c_string(out, registry->node_layouts[i].node_id);
     }
     fputs("};\n\n", out);
     fputs("const apg_process_info_t apg_m7_project_process_info = {", out);
     fprintf(
-        out, ".sample_rate = %.1ff, .frames = %uu, .output_frames = %uu, .channels = 1u", (double)image->sample_rate,
-        image->frame_capacity, image->frame_capacity
+        out, ".sample_rate = %.1ff, .frames = %uu, .output_frames = %uu, .channels = 1u", (double)registry->sample_rate,
+        registry->frame_capacity, registry->frame_capacity
     );
     fputs("};\n\n", out);
-    for (size_t i = 0; i < image->nodes_len; i++) {
+    for (size_t i = 0; i < registry->nodes_len; i++) {
         bool seen = false;
         // ponytail: O(n^2) is fine for generated project node counts; sort/dedupe if exports grow large.
         for (size_t j = 0; j < i; j++) {
-            if (strcmp(image->node_layouts[j].atom_name, image->node_layouts[i].atom_name) == 0) {
+            if (strcmp(registry->node_layouts[j].atom_name, registry->node_layouts[i].atom_name) == 0) {
                 seen = true;
                 break;
             }
@@ -483,23 +485,23 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         if (seen)
             continue;
         fputs("extern void ", out);
-        fputs(image->node_layouts[i].atom_name, out);
+        fputs(registry->node_layouts[i].atom_name, out);
         fputs("_thunk(atom_call_t *call);\n", out);
     }
     fputs("\nconst atom_thunk_fn apg_m7_project_atom_thunks[APG_M7_PROJECT_NODE_COUNT] = {", out);
-    for (size_t i = 0; i < image->nodes_len; i++) {
+    for (size_t i = 0; i < registry->nodes_len; i++) {
         if (i > 0u)
             fputs(", ", out);
-        fputs(image->node_layouts[i].atom_name, out);
+        fputs(registry->node_layouts[i].atom_name, out);
         fputs("_thunk", out);
     }
     fputs("};\n\n", out);
     fputs("const char *const apg_m7_project_atom_process_symbols[APG_M7_PROJECT_NODE_COUNT] = {", out);
-    for (size_t i = 0; i < image->nodes_len; i++) {
+    for (size_t i = 0; i < registry->nodes_len; i++) {
         if (i > 0u)
             fputs(", ", out);
         fputc('"', out);
-        fputs(image->node_layouts[i].atom_name, out);
+        fputs(registry->node_layouts[i].atom_name, out);
         fputs("_process\"", out);
     }
     fputs("};\n\n", out);
@@ -528,8 +530,8 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         out
     );
     fputs("#endif\n\n", out);
-    for (size_t i = 0; i < image->nodes_len; i++) {
-        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
         if (layout->mix_matrix_coefficients_len == 0u)
             continue;
         fprintf(out, "static float apg_m7_node%zu_mix_coefficients[%zu] = {", i, layout->mix_matrix_coefficients_len);
@@ -548,8 +550,8 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         fputs("};\n\n", out);
     }
     fputs("typedef struct {\n", out);
-    for (size_t i = 0; i < image->nodes_len; i++) {
-        const char *atom_name = image->node_layouts[i].atom_name;
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        const char *atom_name = registry->node_layouts[i].atom_name;
         fprintf(out, "    %s_out_t node%zu_out;\n", atom_name, i);
         fprintf(out, "    %s_in_t node%zu_in;\n", atom_name, i);
         fprintf(out, "    %s_params_t node%zu_config;\n", atom_name, i);
@@ -566,7 +568,7 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_CALLS) = {",
         out
     );
-    for (size_t i = 0; i < image->nodes_len; i++) {
+    for (size_t i = 0; i < registry->nodes_len; i++) {
         if (i > 0u)
             fputs(", ", out);
         fprintf(
@@ -589,11 +591,11 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     fputs("static float apg_m7_param(size_t index) {\n", out);
     fputs("    return ((float *)(void *)apg_m7_project_params)[index];\n}\n#endif\n\n", out);
     fputs("void apg_m7_project_refresh_params(void) {\n", out);
-    for (size_t i = 0; i < image->nodes_len; i++) {
-        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
         for (size_t j = 0; j < layout->config_refreshes_len; j++) {
-            const apg_v2_runtime_scalar_refresh_t *item = &layout->config_refreshes[j];
-            const char                            *key  = item->key;
+            const apg_v2_registry_scalar_refresh_t *item = &layout->config_refreshes[j];
+            const char                             *key  = item->key;
             if (!key)
                 continue;
             fprintf(out, "    apg_m7_project_atom_storage.node%zu_config.%s = ", i, key);
@@ -601,8 +603,8 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
             fputs(";\n", out);
         }
         for (size_t j = 0; j < layout->input_refreshes_len; j++) {
-            const apg_v2_runtime_scalar_refresh_t *item = &layout->input_refreshes[j];
-            const char                            *key  = item->key;
+            const apg_v2_registry_scalar_refresh_t *item = &layout->input_refreshes[j];
+            const char                             *key  = item->key;
             if (!key)
                 continue;
             fprintf(out, "    apg_m7_project_atom_storage.node%zu_in.%s = ", i, key);
@@ -619,18 +621,18 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     fputs("#endif\n#if APG_M7_PROJECT_STATE_BUFFER_BYTES > 0u\n", out);
     fputs("    memset(apg_m7_project_state_buffers, 0, APG_M7_PROJECT_STATE_BUFFER_BYTES);\n", out);
     fputs("#endif\n", out);
-    for (size_t i = 0; i < image->params_len; i++) {
+    for (size_t i = 0; i < registry->params_len; i++) {
         fputs("    ((float *)(void *)apg_m7_project_params)[", out);
         fprintf(out, "%zuu] = ", i);
-        write_c_float(out, image->param_defaults ? image->param_defaults[i] : 0.0f);
+        write_c_float(out, registry->param_defaults ? registry->param_defaults[i] : 0.0f);
         fputs(";\n", out);
     }
-    for (size_t i = 0; i < image->nodes_len; i++) {
-        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
         for (size_t j = 0; j < layout->signal_bindings_len; j++) {
-            const apg_v2_runtime_signal_binding_t *binding = &layout->signal_bindings[j];
-            const char                            *side    = binding->is_input ? "in" : "out";
-            const char                            *key     = binding->key;
+            const apg_v2_registry_signal_binding_t *binding = &layout->signal_bindings[j];
+            const char                             *side    = binding->is_input ? "in" : "out";
+            const char                             *key     = binding->key;
             if (!key)
                 continue;
             if (binding->is_signal_array) {
@@ -717,10 +719,10 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
         return rc;
     }
 
-    uc_arena               image_arena = {0};
-    apg_v2_runtime_image_t image       = {0};
-    status                             = apg_v2_runtime_image_build_with_growth(
-        &compiled.plan, options->block_frames, (float)options->sample_rate, &image_arena, &image, &err
+    uc_arena          registry_arena = {0};
+    apg_v2_registry_t registry       = {0};
+    status                           = apg_v2_registry_build_with_growth(
+        &compiled.plan, options->block_frames, (float)options->sample_rate, &registry_arena, &registry, &err
     );
     if (status != UC_OK) {
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
@@ -728,11 +730,11 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
         return rc;
     }
 
-    const char *unsupported_atom = first_unsupported_atom(&image, "wasm_realtime");
+    const char *unsupported_atom = first_unsupported_atom(&registry, "wasm_realtime");
     if (unsupported_atom) {
         uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support wasm_realtime", unsupported_atom);
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }
@@ -743,16 +745,16 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
         !join_path(js_path, sizeof(js_path), out_dir, "apg_project_wasm.mjs")) {
         uc_error_set(&err, UC_E_RANGE, (uc_loc){0, 0}, "export output path is too long");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }
 
-    if (!write_wasm_runtime_manifest(manifest_path, &project, &image, options) ||
-        !write_wasm_runtime_js(js_path, &project, &image, options)) {
+    if (!write_wasm_runtime_manifest(manifest_path, &project, &registry, options) ||
+        !write_wasm_runtime_js(js_path, &project, &registry, options)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write wasm_realtime export files");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }
@@ -762,16 +764,17 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     fputs(",\"target\":\"wasm_realtime\",\"out_dir\":", stdout);
     write_json_string(stdout, out_dir);
     fputs(",\"status\":\"stub\",\"files\":[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\"],\"nodes\":", stdout);
-    fprintf(stdout, "%zu,\"schedule\":%zu", image.nodes_len, image.schedule_len);
+    fprintf(stdout, "%zu,\"schedule\":%zu", registry.nodes_len, registry.schedule_len);
     fprintf(
         stdout, ",\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,\"atom_calls_per_block\":%zu,",
-        options->sample_rate, options->block_frames, image.schedule_len
+        options->sample_rate, options->block_frames, registry.schedule_len
     );
     fprintf(
-        stdout, "\"atom_calls_per_second\":%zu}}\n", image.schedule_len * options->sample_rate / options->block_frames
+        stdout, "\"atom_calls_per_second\":%zu}}\n",
+        registry.schedule_len * options->sample_rate / options->block_frames
     );
 
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
@@ -805,32 +808,32 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         return rc;
     }
 
-    uc_arena               image_arena = {0};
-    apg_v2_runtime_image_t image       = {0};
-    status                             = apg_v2_runtime_image_build_with_growth(
-        &compiled.plan, options->block_frames, (float)options->sample_rate, &image_arena, &image, &err
+    uc_arena          registry_arena = {0};
+    apg_v2_registry_t registry       = {0};
+    status                           = apg_v2_registry_build_with_growth(
+        &compiled.plan, options->block_frames, (float)options->sample_rate, &registry_arena, &registry, &err
     );
     if (status != UC_OK) {
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&arena);
         return rc;
     }
-    const char *unsupported_atom = first_unsupported_atom(&image, "m7_static");
+    const char *unsupported_atom = first_unsupported_atom(&registry, "m7_static");
     if (unsupported_atom) {
         uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support m7_static", unsupported_atom);
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }
-    m7_memory_manifest_t memory = m7_memory_manifest(&image);
+    m7_memory_manifest_t memory = m7_memory_manifest(&registry);
     if (options->has_static_ram_budget && memory.static_ram_bytes > options->static_ram_budget) {
         uc_error_set(
             &err, UC_E_RANGE, (uc_loc){0, 0}, "m7_static static RAM budget exceeded: %zu > %zu bytes",
             memory.static_ram_bytes, options->static_ram_budget
         );
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }
@@ -841,15 +844,16 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         !join_path(source_path, sizeof(source_path), out_dir, "apg_project_m7.c")) {
         uc_error_set(&err, UC_E_RANGE, (uc_loc){0, 0}, "export output path is too long");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }
 
-    if (!write_m7_header(header_path, &image, &memory, options) || !write_m7_source(source_path, &project, &image)) {
+    if (!write_m7_header(header_path, &registry, &memory, options) ||
+        !write_m7_source(source_path, &project, &registry)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write m7_static export files");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }
@@ -866,12 +870,13 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         "\"atom_storage_bytes\":%zu,\"state_buffer_bytes\":%zu,"
         "\"static_ram_bytes\":%zu,\"cache_line_bytes\":%u},\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,"
         "\"atom_calls_per_block\":%zu,\"atom_calls_per_second\":%zu}}\n",
-        image.nodes_len, image.schedule_len, options->block_frames, memory.signal_buffer_bytes, memory.param_bytes,
-        memory.schedule_bytes, memory.atom_call_bytes, memory.signal_array_pointer_bytes, memory.atom_storage_bytes,
-        memory.state_buffer_bytes, memory.static_ram_bytes, options->cache_line_bytes, options->sample_rate,
-        options->block_frames, image.schedule_len, image.schedule_len * options->sample_rate / options->block_frames
+        registry.nodes_len, registry.schedule_len, options->block_frames, memory.signal_buffer_bytes,
+        memory.param_bytes, memory.schedule_bytes, memory.atom_call_bytes, memory.signal_array_pointer_bytes,
+        memory.atom_storage_bytes, memory.state_buffer_bytes, memory.static_ram_bytes, options->cache_line_bytes,
+        options->sample_rate, options->block_frames, registry.schedule_len,
+        registry.schedule_len * options->sample_rate / options->block_frames
     );
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }

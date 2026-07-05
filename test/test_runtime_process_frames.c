@@ -45,8 +45,8 @@ static int assert_output(const float *output, uint32_t frames) {
 static int load_runtime(uc_arena *arena, apg_v2_runtime_t *runtime) {
     apg_unit_v2_t          unit;
     apg_v2_compiled_unit_t plan;
-    uc_error               err    = {0};
-    uc_status              status = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", arena, &unit, &err);
+    uc_error               err = {0};
+    uc_status status = apg_unit_v2_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", arena, &unit, &err);
     if (status != UC_OK) {
         fprintf(stderr, "load error: %s\n", err.msg);
         return fail("failed to load v2 fixture");
@@ -58,7 +58,7 @@ static int load_runtime(uc_arena *arena, apg_v2_runtime_t *runtime) {
         return fail("failed to compile v2 fixture");
     }
 
-    status = test_apg_v2_runtime_init_image(&plan, TEST_CAPACITY, 48000.0f, arena, runtime, &err);
+    status = test_apg_v2_runtime_init_registry(&plan, TEST_CAPACITY, 48000.0f, arena, runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         return fail("failed to initialize v2 runtime");

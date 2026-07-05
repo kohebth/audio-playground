@@ -18,7 +18,7 @@ Done:
 ## Remaining Implementation
 
 - [ ] Do not move compiler-owned atom binding field resolution into validator.
-- [ ] Keep validator output runtime-free: no schedule, storage, atom-call, or runtime-image fields.
+- [ ] Keep validator output runtime-free: no schedule, storage, atom-call, or registry fields.
 - [ ] If project route bugs appear, fix them in project validator before compiler receives the graph.
 
 ## Tests

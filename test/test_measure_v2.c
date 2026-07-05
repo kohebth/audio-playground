@@ -27,7 +27,7 @@ load_compile_runtime(uc_arena *arena, apg_unit_v2_t *unit, apg_v2_compiled_unit_
         fprintf(stderr, "compile error: %s\n", err.msg);
         return fail("failed to compile fixture");
     }
-    status = test_apg_v2_runtime_init_image(plan, 8u, 48000.0f, arena, runtime, &err);
+    status = test_apg_v2_runtime_init_registry(plan, 8u, 48000.0f, arena, runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime error: %s\n", err.msg);
         return fail("failed to initialize runtime");

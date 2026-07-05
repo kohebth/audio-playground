@@ -8,8 +8,8 @@
   compatibility, and typed contract fields consumed by compiler binding validation.
 - `parser`: `apg_v2_parse_string(...)` and `apg_v2_parse_file(...)` return raw YAML contract graphs without semantic checks, with regression coverage for parser-accepted/validator-rejected contracts.
 - `validator`: unit and project validators own schema, metadata-reference, known profile, compatibility, and route checks.
-- `compiler`: unit and project compilers expand contracts, validate atom binding fields, bind params/signals, emit topological plans, and record instance I/O facts for runtime-image consumers.
-- `runtime image`: `apg_v2_runtime_image_build(...)` consumes compiler graph facts and precomputes signal, param, meter, control-target, bypass, node, schedule, and state-buffer layout counts.
+- `compiler`: unit and project compilers expand contracts, validate atom binding fields, bind params/signals, emit topological plans, and record instance I/O facts for registry consumers.
+- `registry`: `apg_v2_registry_build(...)` consumes compiler graph facts and precomputes signal, param, meter, control-target, bypass, node, schedule, and state-buffer layout counts.
 - `measure`: `apg_v2_measure_*` exposes snapshots, meters, and diagnostics for host/tooling reads.
 
 ## Boundary Leaks To Close
@@ -23,7 +23,7 @@ Host/tooling-facing render, smoke, load-all, offline-chain, hall-render, project
 
 ## PB3 Progress
 
-Runtime image now records per-node atom storage sizes and state-buffer counts. Runtime initialization now consumes precomputed signal/config binding plans and no longer resolves signal/config pointers from compiled binding descriptors.
+Registry now records per-node atom storage sizes and state-buffer counts. Runtime initialization now consumes precomputed signal/config binding plans and no longer resolves signal/config pointers from compiled binding descriptors.
 
 ## PB4 Progress
 
@@ -87,7 +87,7 @@ CMake now exposes an opt-in ARM/M7 link gate through `APG_M7_LINKER_SCRIPT` so g
 
 ## PC15 Progress
 
-M7 static export now accepts explicit board block-frame and sample-rate options. Generated timing macros, runtime image sizing, and export JSON reflect the selected board contract.
+M7 static export now accepts explicit board block-frame and sample-rate options. Generated timing macros, registry sizing, and export JSON reflect the selected board contract.
 
 ## PC16 Progress
 
@@ -99,15 +99,15 @@ M7 static export now checks compiled node atom profile metadata, so target-incom
 
 ## PD1 Progress
 
-Runtime image node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from image metadata instead of using atom descriptor capacities directly.
+Registry node layouts now record per-node state-buffer sample counts. Runtime initialization allocates state buffers from registry metadata instead of using atom descriptor capacities directly.
 
 ## PD2 Progress
 
-Runtime image node layouts now record signal-array pointer pool sizes. Runtime initialization uses one pre-sized per-node pointer pool for signal-array bindings instead of allocating one auxiliary block per binding.
+Registry node layouts now record signal-array pointer pool sizes. Runtime initialization uses one pre-sized per-node pointer pool for signal-array bindings instead of allocating one auxiliary block per binding.
 
 ## PD3 Progress
 
-Runtime image node layouts now record scalar config and scalar input refresh plans. Runtime processing walks those compact entries instead of scanning binding keys and atom field metadata per node.
+Registry node layouts now record scalar config and scalar input refresh plans. Runtime processing walks those compact entries instead of scanning binding keys and atom field metadata per node.
 
 ## PD4 Progress
 
@@ -115,43 +115,43 @@ Compiler scalar bindings now store parsed numeric literals. Runtime scalar refre
 
 ## PD5 Progress
 
-Runtime image now precomputes parameter smoothing frame counts from unit metadata and sample rate. Runtime control updates reuse those counts without parsing text.
+Registry now precomputes parameter smoothing frame counts from unit metadata and sample rate. Runtime control updates reuse those counts without parsing text.
 
 ## PD6 Progress
 
-Control-port updates now apply through runtime-image parameter indexes instead of doing a second parameter-name lookup.
+Control-port updates now apply through registry parameter indexes instead of doing a second parameter-name lookup.
 
 ## PD7 Progress
 
-Default mono processing now uses the first image-owned audio-port map entries directly instead of converting those entries back through port-name lookup.
+Default mono processing now uses the first registry-owned audio-port map entries directly instead of converting those entries back through port-name lookup.
 
 ## PD8 Progress
 
-Scalar refresh binding-key validation now happens during runtime-image build. Runtime processing applies image-validated offsets and field types without per-block key comparisons.
+Scalar refresh binding-key validation now happens during registry build. Runtime processing applies registry-validated offsets and field types without per-block key comparisons.
 
 ## PD9 Progress
 
-Runtime image now exposes the schedule view used by runtime processing. The process loop no longer traverses `runtime->plan` for schedule iteration.
+Registry now exposes the schedule view used by runtime processing. The process loop no longer traverses `runtime->plan` for schedule iteration.
 
 ## PD10 Progress
 
-Runtime reset and process entry checks now operate from runtime-owned buffers, image schedule metadata, and per-node compiled metadata pointers.
+Runtime reset and process entry checks now operate from runtime-owned buffers, registry schedule metadata, and per-node compiled metadata pointers.
 
 ## PD11 Progress
 
-Runtime image now exposes signal and parameter name maps, and runtime signal/param lookup APIs use those image-owned maps instead of traversing the source compiled plan.
+Registry now exposes signal and parameter name maps, and runtime signal/param lookup APIs use those registry-owned maps instead of traversing the source compiled plan.
 
 ## PD12 Progress
 
-Runtime no longer stores a source compiled-plan pointer. Measure snapshots report runtime/image-derived counts and transport state without exposing compiled-plan identity, and meter reads use image-derived audio port maps.
+Runtime no longer stores a source compiled-plan pointer. Measure snapshots report runtime/registry-derived counts and transport state without exposing compiled-plan identity, and meter reads use registry-derived audio port maps.
 
 ## PD13 Progress
 
-Runtime tests now initialize through explicit runtime-image builds instead of the former `apg_v2_runtime_init(...)` compatibility wrapper.
+Runtime tests now initialize through explicit registry builds instead of the former `apg_v2_runtime_init(...)` compatibility wrapper.
 
 ## PD14 Progress
 
-The runtime plan-initializer compatibility API and runtime-owned image arena state have been removed; callers must build runtime images explicitly before runtime init.
+The runtime plan-initializer compatibility API and runtime-owned registry arena state have been removed; callers must build registries explicitly before runtime init.
 
 ## PD15 Progress
 
@@ -159,19 +159,19 @@ The no-op project solo runtime state was removed; solo remains a future host/UI 
 
 ## PD16 Progress
 
-Runtime nodes now execute image-owned atom thunks and labels instead of borrowing compiled node metadata.
+Runtime nodes now execute registry-owned atom thunks and labels instead of borrowing compiled node metadata.
 
 ## PD17 Progress
 
-Runtime scalar refresh and signal-array binding plans now copy the needed binding values into runtime-image metadata instead of borrowing compiled binding structs.
+Runtime scalar refresh and signal-array binding plans now copy the needed binding values into registry metadata instead of borrowing compiled binding structs.
 
 ## PD18 Progress
 
-Runtime-image descriptors no longer store the source compiled-plan pointer. The image copies schedule/name tables it needs, and M7 export reads generated runtime artifacts from the image descriptor.
+Registry descriptors no longer store the source compiled-plan pointer. The registry copies schedule/name tables it needs, and M7 export reads generated runtime artifacts from the registry descriptor.
 
 ## PD19 Progress
 
-Runtime-image consumer types now live separately from the compiler-backed builder API, so runtime headers no longer pull compiler plan definitions.
+Registry consumer types now live separately from the compiler-backed builder API, so runtime headers no longer pull compiler plan definitions.
 
 ## PD20 Progress
 
@@ -191,11 +191,11 @@ Runtime bypass transport entries are now internal runtime state. Public runtime 
 
 ## PE1 Progress
 
-Runtime image node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.
+Registry node layouts now record aligned offsets into one atom storage pool. Runtime initialization allocates that contiguous pool once and points per-node out/in/config/state storage into it.
 
 ## PE2 Progress
 
-Runtime image node layouts now record per-buffer state sample offsets. Runtime initialization allocates one contiguous state-buffer pool and points per-node state buffer tables into it.
+Registry node layouts now record per-buffer state sample offsets. Runtime initialization allocates one contiguous state-buffer pool and points per-node state buffer tables into it.
 
 ## PE3 Progress
 

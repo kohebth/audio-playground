@@ -5,7 +5,7 @@
 #include <apgcore/measure_v2.h>
 #include <apgcore/project_compiler_v2.h>
 #include <apgcore/project_v2.h>
-#include <apgcore/runtime_image_builder_v2.h>
+#include <apgcore/registry/registry_builder_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/unit_v2.h>
 
@@ -437,9 +437,9 @@ static void write_project_render(FILE *out, const char *path, const float *outpu
 void apg_v2_json_write_render_project(FILE *out, const char *path) {
     if (!out)
         return;
-    uc_arena               arena;
-    uc_arena               image_arena = {0};
-    apg_v2_runtime_image_t image       = {0};
+    uc_arena          arena;
+    uc_arena          registry_arena = {0};
+    apg_v2_registry_t registry       = {0};
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
         uc_error err = {.status = UC_E_OOM};
         write_validation_error(out, "apg.project.render.v2", path, "$.project", &err);
@@ -455,11 +455,11 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     if (status == UC_OK)
         status = apg_project_v2_compile(&project, &arena, &compiled, &err);
     if (status == UC_OK) {
-        status = apg_v2_runtime_image_build_with_growth(
-            &compiled.plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, &image_arena, &image, &err
+        status = apg_v2_registry_build_with_growth(
+            &compiled.plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, &registry_arena, &registry, &err
         );
         if (status == UC_OK)
-            status = apg_v2_runtime_create_from_image(&image, &runtime, &err);
+            status = apg_v2_runtime_create_from_registry(&registry, &runtime, &err);
         runtime_ready = status == UC_OK;
     }
 
@@ -482,6 +482,6 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     if (runtime_ready && runtime) {
         apg_v2_runtime_destroy_owned(&runtime);
     }
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
 }

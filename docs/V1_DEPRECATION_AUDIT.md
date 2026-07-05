@@ -23,7 +23,7 @@ APG v1 is legacy. Runtime, control, and unit-loader code has been removed from t
 - The old `inc/yaml/unit.h` v1 unit shape has been removed; v2 bindings use `apg_v2_value_t`.
 - Fixed-size `src/unit` adapter helpers and their direct adapter test have been removed.
 - Clean tracked v1 fixture files have been removed; only pre-existing modified or untracked `units/` files remain.
-- v2 parser, validator, compiler, runtime image, runtime, and measure modules are the production path.
+- v2 parser, validator, compiler, registry, runtime, and measure modules are the production path.
 
 ## Removal Blockers
 

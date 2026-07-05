@@ -17,9 +17,10 @@ static int fail(const char *msg) {
 
 static int load_pedalboard(uc_arena *arena, apg_project_v2_compiled_t *compiled) {
     apg_project_v2_resolved_t project;
-    uc_error                  err = {0};
-    uc_status                 status =
-        apg_project_v2_load_resolved_file("test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", arena, &project, &err);
+    uc_error                  err    = {0};
+    uc_status                 status = apg_project_v2_load_resolved_file(
+        "test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", arena, &project, &err
+    );
     if (status == UC_OK)
         status = apg_project_v2_compile(&project, arena, compiled, &err);
     if (status != UC_OK) {
@@ -79,7 +80,7 @@ int main(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err = {0};
-    if (test_apg_v2_runtime_init_image(&compiled.plan, CHUNK, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_registry(&compiled.plan, CHUNK, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize pedalboard runtime");

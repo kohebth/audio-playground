@@ -1,6 +1,6 @@
 #include <apgcore/compiler_v2.h>
 #include <apgcore/measure_v2.h>
-#include <apgcore/runtime_image_builder_v2.h>
+#include <apgcore/registry/registry_builder_v2.h>
 #include <apgcore/runtime_v2.h>
 #include <apgcore/runtime_v2_internal.h>
 #include <apgcore/unit_v2.h>
@@ -46,7 +46,7 @@ static int load_compile_string(const char *yaml, uc_arena *arena, apg_unit_v2_t 
     return 0;
 }
 
-static int test_runtime_image_layout(void) {
+static int test_registry_layout(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
@@ -58,117 +58,119 @@ static int test_runtime_image_layout(void) {
         return 1;
     }
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0) {
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
         uc_arena_free(&arena);
-        return fail("image arena init failed");
+        return fail("registry arena init failed");
     }
 
-    apg_v2_runtime_image_t image;
-    uc_error               err    = {0};
-    uc_status              status = apg_v2_runtime_image_build(&plan, 16u, 44100.0f, &image_arena, &image, &err);
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 16u, 44100.0f, &registry_arena, &registry, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "runtime image error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to build runtime image");
+        return fail("failed to build registry");
     }
 
-    if (image.frame_capacity != 16u || image.sample_rate != 44100.0f)
-        return fail("unexpected runtime image identity");
-    if (image.signals_len != 3u || image.signal_samples != 48u || image.params_len != 1u || !image.param_defaults ||
-        image.param_defaults[0] != 1.0f || !image.param_smoothing_frames || image.param_smoothing_frames[0] != 441u)
-        return fail("unexpected runtime image signal or param layout");
-    if (!image.signal_names || image.signal_names == unit.signals || strcmp(image.signal_names[0], "input") != 0 ||
-        !image.param_names || strcmp(image.param_names[0], "gain") != 0)
-        return fail("runtime image did not expose lookup names");
-    if (image.input_meters_len != 1u || image.output_meters_len != 1u || image.nodes_len != 2u ||
-        image.schedule_len != 2u || image.state_buffers_len != 0u || image.state_buffer_samples != 0u)
-        return fail("unexpected runtime image execution layout");
-    if (image.schedule == plan.schedule || image.schedule[0] != plan.schedule[0] ||
-        image.schedule[1] != plan.schedule[1])
-        return fail("runtime image did not copy compiled schedule");
-    if (image.atom_storage_bytes == 0u)
-        return fail("runtime image did not reserve atom storage");
-    if (!image.node_layouts || image.node_layouts[0].out_size == 0u || image.node_layouts[0].in_size == 0u ||
-        image.node_layouts[0].config_size == 0u || image.node_layouts[0].state_size == 0u)
-        return fail("unexpected runtime image node layout");
-    if (image.node_layouts[0].out_offset >= image.atom_storage_bytes ||
-        image.node_layouts[1].state_offset >= image.atom_storage_bytes)
-        return fail("runtime image atom storage offsets are out of range");
-    if (image.node_layouts[0].state_buffer_samples_by_index)
+    if (registry.frame_capacity != 16u || registry.sample_rate != 44100.0f)
+        return fail("unexpected registry identity");
+    if (registry.signals_len != 3u || registry.signal_samples != 48u || registry.params_len != 1u ||
+        !registry.param_defaults || registry.param_defaults[0] != 1.0f || !registry.param_smoothing_frames ||
+        registry.param_smoothing_frames[0] != 441u)
+        return fail("unexpected registry signal or param layout");
+    if (!registry.signal_names || registry.signal_names == unit.signals ||
+        strcmp(registry.signal_names[0], "input") != 0 || !registry.param_names ||
+        strcmp(registry.param_names[0], "gain") != 0)
+        return fail("registry did not expose lookup names");
+    if (registry.input_meters_len != 1u || registry.output_meters_len != 1u || registry.nodes_len != 2u ||
+        registry.schedule_len != 2u || registry.state_buffers_len != 0u || registry.state_buffer_samples != 0u)
+        return fail("unexpected registry execution layout");
+    if (registry.schedule == plan.schedule || registry.schedule[0] != plan.schedule[0] ||
+        registry.schedule[1] != plan.schedule[1])
+        return fail("registry did not copy compiled schedule");
+    if (registry.atom_storage_bytes == 0u)
+        return fail("registry did not reserve atom storage");
+    if (!registry.node_layouts || registry.node_layouts[0].out_size == 0u || registry.node_layouts[0].in_size == 0u ||
+        registry.node_layouts[0].config_size == 0u || registry.node_layouts[0].state_size == 0u)
+        return fail("unexpected registry node layout");
+    if (registry.node_layouts[0].out_offset >= registry.atom_storage_bytes ||
+        registry.node_layouts[1].state_offset >= registry.atom_storage_bytes)
+        return fail("registry atom storage offsets are out of range");
+    if (registry.node_layouts[0].state_buffer_samples_by_index)
         return fail("stateless node should not have state buffer sample layout");
-    if (image.node_layouts[0].config_refreshes_len != 1u || image.node_layouts[1].config_refreshes_len != 0u)
-        return fail("unexpected runtime image config refresh layout");
-    if (strcmp(image.node_layouts[0].config_refreshes[0].key, "value") != 0 ||
-        image.node_layouts[0].config_refreshes[0].kind != APG_BIND_PARAM ||
-        image.node_layouts[0].config_refreshes[0].param_index != 0u)
-        return fail("runtime image did not copy scalar refresh metadata");
-    if (image.node_layouts[0].signal_bindings_len != 1u || !image.node_layouts[0].signal_bindings ||
-        image.node_layouts[1].signal_bindings_len != 3u || !image.node_layouts[1].signal_bindings)
-        return fail("unexpected runtime image signal binding layout");
+    if (registry.node_layouts[0].config_refreshes_len != 1u || registry.node_layouts[1].config_refreshes_len != 0u)
+        return fail("unexpected registry config refresh layout");
+    if (strcmp(registry.node_layouts[0].config_refreshes[0].key, "value") != 0 ||
+        registry.node_layouts[0].config_refreshes[0].kind != APG_BIND_PARAM ||
+        registry.node_layouts[0].config_refreshes[0].param_index != 0u)
+        return fail("registry did not copy scalar refresh metadata");
+    if (registry.node_layouts[0].signal_bindings_len != 1u || !registry.node_layouts[0].signal_bindings ||
+        registry.node_layouts[1].signal_bindings_len != 3u || !registry.node_layouts[1].signal_bindings)
+        return fail("unexpected registry signal binding layout");
 
     apg_v2_runtime_t runtime;
-    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to initialize runtime from image");
+        return fail("failed to initialize runtime from registry");
     }
 
-    if (runtime.frame_capacity != image.frame_capacity || runtime.process_info.sample_rate != image.sample_rate ||
-        runtime.signals_len != image.signals_len || runtime.params_len != image.params_len ||
-        runtime.params[0] != image.param_defaults[0] || runtime.input_meters_len != image.input_meters_len ||
-        runtime.output_meters_len != image.output_meters_len || runtime.nodes_len != image.nodes_len ||
-        runtime.schedule != image.schedule || runtime.schedule_len != image.schedule_len)
-        return fail("runtime did not adopt image layout");
-    if (runtime.nodes[0].thunk != image.node_layouts[0].thunk ||
-        strcmp(runtime.nodes[0].atom_name, image.node_layouts[0].atom_name) != 0 ||
-        strcmp(runtime.nodes[1].node_id, image.node_layouts[1].node_id) != 0)
-        return fail("runtime nodes did not adopt image execution metadata");
-    if (runtime.param_smoothing_frames != image.param_smoothing_frames)
-        return fail("runtime did not adopt image param smoothing layout");
-    if (runtime.signal_names != image.signal_names || runtime.param_names != image.param_names)
-        return fail("runtime did not adopt image lookup names");
-    if (!runtime.atom_storage_pool || runtime.atom_storage_bytes != image.atom_storage_bytes)
-        return fail("runtime did not allocate image atom storage pool");
+    if (runtime.frame_capacity != registry.frame_capacity || runtime.process_info.sample_rate != registry.sample_rate ||
+        runtime.signals_len != registry.signals_len || runtime.params_len != registry.params_len ||
+        runtime.params[0] != registry.param_defaults[0] || runtime.input_meters_len != registry.input_meters_len ||
+        runtime.output_meters_len != registry.output_meters_len || runtime.nodes_len != registry.nodes_len ||
+        runtime.schedule != registry.schedule || runtime.schedule_len != registry.schedule_len)
+        return fail("runtime did not adopt registry layout");
+    if (runtime.nodes[0].thunk != registry.node_layouts[0].thunk ||
+        strcmp(runtime.nodes[0].atom_name, registry.node_layouts[0].atom_name) != 0 ||
+        strcmp(runtime.nodes[1].node_id, registry.node_layouts[1].node_id) != 0)
+        return fail("runtime nodes did not adopt registry execution metadata");
+    if (runtime.param_smoothing_frames != registry.param_smoothing_frames)
+        return fail("runtime did not adopt registry param smoothing layout");
+    if (runtime.signal_names != registry.signal_names || runtime.param_names != registry.param_names)
+        return fail("runtime did not adopt registry lookup names");
+    if (!runtime.atom_storage_pool || runtime.atom_storage_bytes != registry.atom_storage_bytes)
+        return fail("runtime did not allocate registry atom storage pool");
     const char *pool = (const char *)runtime.atom_storage_pool;
     if ((const char *)runtime.nodes[0].out_storage < pool ||
         (const char *)runtime.nodes[0].out_storage >= pool + runtime.atom_storage_bytes ||
         (const char *)runtime.nodes[1].state_storage < pool ||
         (const char *)runtime.nodes[1].state_storage >= pool + runtime.atom_storage_bytes)
         return fail("runtime node storage does not point into atom storage pool");
-    if (runtime.nodes[0].config_refreshes_len != image.node_layouts[0].config_refreshes_len ||
-        runtime.nodes[1].config_refreshes_len != image.node_layouts[1].config_refreshes_len)
+    if (runtime.nodes[0].config_refreshes_len != registry.node_layouts[0].config_refreshes_len ||
+        runtime.nodes[1].config_refreshes_len != registry.node_layouts[1].config_refreshes_len)
         return fail("runtime did not adopt config refresh plan");
-    if (runtime.nodes[0].signal_bindings != image.node_layouts[0].signal_bindings ||
-        runtime.nodes[0].signal_bindings_len != image.node_layouts[0].signal_bindings_len ||
-        runtime.nodes[1].signal_bindings != image.node_layouts[1].signal_bindings ||
-        runtime.nodes[1].signal_bindings_len != image.node_layouts[1].signal_bindings_len)
+    if (runtime.nodes[0].signal_bindings != registry.node_layouts[0].signal_bindings ||
+        runtime.nodes[0].signal_bindings_len != registry.node_layouts[0].signal_bindings_len ||
+        runtime.nodes[1].signal_bindings != registry.node_layouts[1].signal_bindings ||
+        runtime.nodes[1].signal_bindings_len != registry.node_layouts[1].signal_bindings_len)
         return fail("runtime did not adopt signal binding plan");
 
     if (!apg_v2_runtime_find_signal(&runtime, "input") || !apg_v2_runtime_set_param(&runtime, "gain", 1.0f))
-        return fail("runtime image lookup metadata failed");
+        return fail("registry lookup metadata failed");
     if (!apg_v2_runtime_reset(&runtime))
-        return fail("runtime image reset failed");
+        return fail("registry reset failed");
 
     float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
     float output[4] = {0};
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
-        return fail("runtime image process failed");
+        return fail("registry process failed");
     for (size_t i = 0; i < 4u; i++) {
         if (output[i] != input[i])
-            return fail("runtime image output mismatch");
+            return fail("registry output mismatch");
     }
 
     apg_v2_runtime_destroy(&runtime);
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
 
-static int test_runtime_image_state_buffer_samples(void) {
+static int test_registry_state_buffer_samples(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
@@ -180,25 +182,25 @@ static int test_runtime_image_state_buffer_samples(void) {
         return 1;
     }
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0) {
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
         uc_arena_free(&arena);
-        return fail("image arena init failed");
+        return fail("registry arena init failed");
     }
 
-    apg_v2_runtime_image_t image;
-    uc_error               err    = {0};
-    uc_status              status = apg_v2_runtime_image_build(&plan, 64u, 48000.0f, &image_arena, &image, &err);
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 64u, 48000.0f, &registry_arena, &registry, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "runtime image error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to build stateful runtime image");
+        return fail("failed to build stateful registry");
     }
 
     size_t stateful_layouts = 0u;
-    for (size_t i = 0; i < image.nodes_len; i++) {
-        const apg_v2_runtime_node_layout_t *layout = &image.node_layouts[i];
+    for (size_t i = 0; i < registry.nodes_len; i++) {
+        const apg_v2_registry_node_layout_t *layout = &registry.node_layouts[i];
         if (layout->state_buffers_len == 0u)
             continue;
         stateful_layouts++;
@@ -207,23 +209,23 @@ static int test_runtime_image_state_buffer_samples(void) {
         for (size_t j = 0; j < layout->state_buffers_len; j++) {
             if (layout->state_buffer_samples_by_index[j] == 0u)
                 return fail("state buffer sample layout did not preserve capacity");
-            if (layout->state_buffer_sample_offsets_by_index[j] >= image.state_buffer_samples)
+            if (layout->state_buffer_sample_offsets_by_index[j] >= registry.state_buffer_samples)
                 return fail("state buffer sample offset is out of range");
         }
     }
-    if (stateful_layouts == 0u || image.state_buffers_len == 0u || image.state_buffer_samples == 0u)
-        return fail("expected stateful runtime image layout");
+    if (stateful_layouts == 0u || registry.state_buffers_len == 0u || registry.state_buffer_samples == 0u)
+        return fail("expected stateful registry layout");
 
     apg_v2_runtime_t runtime;
-    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return fail("failed to initialize stateful runtime");
     }
-    if (!runtime.state_buffer_pool || runtime.state_buffer_samples != image.state_buffer_samples)
-        return fail("runtime did not allocate image state buffer pool");
+    if (!runtime.state_buffer_pool || runtime.state_buffer_samples != registry.state_buffer_samples)
+        return fail("runtime did not allocate registry state buffer pool");
     for (size_t i = 0; i < runtime.nodes_len; i++) {
         for (size_t j = 0; j < runtime.nodes[i].state_buffers_len; j++) {
             const float *buffer = runtime.nodes[i].state_buffers[j];
@@ -234,12 +236,12 @@ static int test_runtime_image_state_buffer_samples(void) {
     }
 
     apg_v2_runtime_destroy(&runtime);
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
 
-static int test_runtime_image_control_targets(void) {
+static int test_registry_control_targets(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
@@ -251,50 +253,50 @@ static int test_runtime_image_control_targets(void) {
         return 1;
     }
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0) {
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
         uc_arena_free(&arena);
-        return fail("image arena init failed");
+        return fail("registry arena init failed");
     }
 
-    apg_v2_runtime_image_t image;
-    uc_error               err    = {0};
-    uc_status              status = apg_v2_runtime_image_build(&plan, 8u, 48000.0f, &image_arena, &image, &err);
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 8u, 48000.0f, &registry_arena, &registry, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "runtime image error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to build control runtime image");
+        return fail("failed to build control registry");
     }
-    if (image.control_targets_len != 1u || !image.control_targets ||
-        strcmp(image.control_targets[0].port_name, "amount") != 0 ||
-        strcmp(image.control_targets[0].param_name, "gain") != 0 || image.control_targets[0].param_index != 0u)
-        return fail("unexpected runtime image control target");
+    if (registry.control_targets_len != 1u || !registry.control_targets ||
+        strcmp(registry.control_targets[0].port_name, "amount") != 0 ||
+        strcmp(registry.control_targets[0].param_name, "gain") != 0 || registry.control_targets[0].param_index != 0u)
+        return fail("unexpected registry control target");
 
     apg_v2_runtime_t runtime;
-    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to initialize control runtime from image");
+        return fail("failed to initialize control runtime from registry");
     }
     if (runtime.control_targets_len != 1u || !runtime.control_targets ||
         strcmp(runtime.control_targets[0].port_name, "amount") != 0)
-        return fail("runtime did not copy control target image");
+        return fail("runtime did not copy control target registry");
     if (!apg_v2_runtime_set_control_port(&runtime, "amount", 2.0f) || runtime.params[0] != 2.0f)
         return fail("runtime control target did not update param");
 
     apg_v2_runtime_destroy(&runtime);
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
 
-static int test_runtime_image_signal_array_pool(void) {
+static int test_registry_signal_array_pool(void) {
     const char *yaml = "kind: apg.unit\n"
                        "schema: apg.unit.v2\n"
-                       "name: matrix_image\n"
+                       "name: matrix_registry\n"
                        "version: 2.0.0\n"
                        "params: {}\n"
                        "ports:\n"
@@ -347,72 +349,73 @@ static int test_runtime_image_signal_array_pool(void) {
         return 1;
     }
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0) {
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
         uc_arena_free(&arena);
-        return fail("image arena init failed");
+        return fail("registry arena init failed");
     }
 
-    apg_v2_runtime_image_t image;
-    uc_error               err    = {0};
-    uc_status              status = apg_v2_runtime_image_build(&plan, 8u, 48000.0f, &image_arena, &image, &err);
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 8u, 48000.0f, &registry_arena, &registry, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "runtime image error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to build signal-array runtime image");
+        return fail("failed to build signal-array registry");
     }
-    if (image.nodes_len != 1u || image.signal_array_pointer_slots != 4u ||
-        image.node_layouts[0].signal_array_pointer_slots != 4u || image.node_layouts[0].signal_bindings_len != 2u ||
-        !image.node_layouts[0].signal_bindings)
+    if (registry.nodes_len != 1u || registry.signal_array_pointer_slots != 4u ||
+        registry.node_layouts[0].signal_array_pointer_slots != 4u ||
+        registry.node_layouts[0].signal_bindings_len != 2u || !registry.node_layouts[0].signal_bindings)
         return fail("unexpected signal-array pointer pool layout");
-    if (!image.node_layouts[0].signal_bindings[0].signal_array_indices ||
-        !image.node_layouts[0].signal_bindings[1].signal_array_indices ||
-        image.node_layouts[0].signal_bindings[0].signal_array_indices[0] != 2u ||
-        image.node_layouts[0].signal_bindings[1].signal_array_indices[1] != 1u)
-        return fail("runtime image did not copy signal-array binding indexes");
+    if (!registry.node_layouts[0].signal_bindings[0].signal_array_indices ||
+        !registry.node_layouts[0].signal_bindings[1].signal_array_indices ||
+        registry.node_layouts[0].signal_bindings[0].signal_array_indices[0] != 2u ||
+        registry.node_layouts[0].signal_bindings[1].signal_array_indices[1] != 1u)
+        return fail("registry did not copy signal-array binding indexes");
 
     apg_v2_runtime_t runtime;
-    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return fail("failed to initialize signal-array runtime");
     }
     if (runtime.signal_array_pool_len != 4u || runtime.signal_array_pool != runtime.nodes[0].signal_array_pool ||
         runtime.nodes[0].signal_array_pool_len != 4u || runtime.nodes[0].signal_array_pool_used != 4u ||
-        runtime.nodes[0].signal_bindings != image.node_layouts[0].signal_bindings ||
-        runtime.nodes[0].signal_bindings_len != image.node_layouts[0].signal_bindings_len)
-        return fail("runtime did not consume image signal-array pool");
-    if (!image.node_layouts[0].mix_matrix_row_pointers || !image.node_layouts[0].mix_matrix_coefficients ||
-        image.node_layouts[0].mix_matrix_coefficients_len != 4u || image.node_layouts[0].mix_matrix_num_out != 2u ||
-        image.node_layouts[0].mix_matrix_num_in != 2u || image.node_layouts[0].mix_matrix_coefficients[0] != 0.5f ||
-        image.node_layouts[0].mix_matrix_coefficients[1] != 0.5f ||
-        image.node_layouts[0].mix_matrix_coefficients[2] != 1.0f ||
-        image.node_layouts[0].mix_matrix_coefficients[3] != -1.0f)
-        return fail("unexpected mix_matrix image matrix layout");
+        runtime.nodes[0].signal_bindings != registry.node_layouts[0].signal_bindings ||
+        runtime.nodes[0].signal_bindings_len != registry.node_layouts[0].signal_bindings_len)
+        return fail("runtime did not consume registry signal-array pool");
+    if (!registry.node_layouts[0].mix_matrix_row_pointers || !registry.node_layouts[0].mix_matrix_coefficients ||
+        registry.node_layouts[0].mix_matrix_coefficients_len != 4u ||
+        registry.node_layouts[0].mix_matrix_num_out != 2u || registry.node_layouts[0].mix_matrix_num_in != 2u ||
+        registry.node_layouts[0].mix_matrix_coefficients[0] != 0.5f ||
+        registry.node_layouts[0].mix_matrix_coefficients[1] != 0.5f ||
+        registry.node_layouts[0].mix_matrix_coefficients[2] != 1.0f ||
+        registry.node_layouts[0].mix_matrix_coefficients[3] != -1.0f)
+        return fail("unexpected mix_matrix registry matrix layout");
 
     const mix_matrix_params_t *matrix_params = (const mix_matrix_params_t *)runtime.nodes[0].config_storage;
     if (!matrix_params->coefficients || matrix_params->num_in != 2 || matrix_params->num_out != 2)
         return fail("runtime did not consume mix_matrix matrix layout");
-    if (matrix_params->coefficients[0] != image.node_layouts[0].mix_matrix_row_pointers[0] ||
-        matrix_params->coefficients[1] != image.node_layouts[0].mix_matrix_row_pointers[1])
-        return fail("runtime mix_matrix matrix rows did not point to image rows");
+    if (matrix_params->coefficients[0] != registry.node_layouts[0].mix_matrix_row_pointers[0] ||
+        matrix_params->coefficients[1] != registry.node_layouts[0].mix_matrix_row_pointers[1])
+        return fail("runtime mix_matrix matrix rows did not point to registry rows");
     if (matrix_params->coefficients[0][0] != 0.5f || matrix_params->coefficients[0][1] != 0.5f ||
         matrix_params->coefficients[1][0] != 1.0f || matrix_params->coefficients[1][1] != -1.0f)
         return fail("runtime mix_matrix coefficients mismatch");
 
     apg_v2_runtime_destroy(&runtime);
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
 
-static int test_runtime_image_scalar_input_refresh(void) {
+static int test_registry_scalar_input_refresh(void) {
     const char *yaml = "kind: apg.unit\n"
                        "schema: apg.unit.v2\n"
-                       "name: tap_image\n"
+                       "name: tap_registry\n"
                        "version: 2.0.0\n"
                        "params:\n"
                        "  tap:\n"
@@ -457,30 +460,30 @@ static int test_runtime_image_scalar_input_refresh(void) {
         return 1;
     }
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0) {
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
         uc_arena_free(&arena);
-        return fail("image arena init failed");
+        return fail("registry arena init failed");
     }
 
-    apg_v2_runtime_image_t image;
-    uc_error               err    = {0};
-    uc_status              status = apg_v2_runtime_image_build(&plan, 8u, 48000.0f, &image_arena, &image, &err);
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 8u, 48000.0f, &registry_arena, &registry, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "runtime image error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to build scalar-input runtime image");
+        return fail("failed to build scalar-input registry");
     }
-    if (image.nodes_len != 1u || image.node_layouts[0].input_refreshes_len != 1u ||
-        image.node_layouts[0].config_refreshes_len != 1u)
-        return fail("unexpected scalar refresh image layout");
+    if (registry.nodes_len != 1u || registry.node_layouts[0].input_refreshes_len != 1u ||
+        registry.node_layouts[0].config_refreshes_len != 1u)
+        return fail("unexpected scalar refresh registry layout");
 
     apg_v2_runtime_t runtime;
-    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return fail("failed to initialize scalar-input runtime");
     }
@@ -488,12 +491,12 @@ static int test_runtime_image_scalar_input_refresh(void) {
         return fail("runtime did not adopt scalar refresh plans");
 
     apg_v2_runtime_destroy(&runtime);
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
 
-static int test_runtime_image_uses_compiler_instance_metadata(void) {
+static int test_registry_uses_compiler_instance_metadata(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
@@ -507,35 +510,36 @@ static int test_runtime_image_uses_compiler_instance_metadata(void) {
 
     plan.nodes[1].id = "mutated_node_id";
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0) {
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
         uc_arena_free(&arena);
-        return fail("image arena init failed");
+        return fail("registry arena init failed");
     }
 
-    apg_v2_runtime_image_t image;
-    uc_error               err    = {0};
-    uc_status              status = apg_v2_runtime_image_build(&plan, 16u, 44100.0f, &image_arena, &image, &err);
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 16u, 44100.0f, &registry_arena, &registry, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "runtime image error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to build runtime image from compiler instance metadata");
+        return fail("failed to build registry from compiler instance metadata");
     }
 
-    if (image.bypassed_instances_len != 1u || !image.bypass_instances ||
-        strncmp(image.bypass_instances[0].instance_id, "apply_gain", image.bypass_instances[0].instance_id_len) != 0 ||
-        image.bypass_instances[0].input_index != 0u || image.bypass_instances[0].output_index != 1u)
-        return fail("runtime image did not use compiler instance bypass metadata");
-    if (!image.bypass_index_by_node || image.bypass_index_by_node[1] != 0u)
-        return fail("runtime image did not use compiler node-to-instance metadata");
+    if (registry.bypassed_instances_len != 1u || !registry.bypass_instances ||
+        strncmp(registry.bypass_instances[0].instance_id, "apply_gain", registry.bypass_instances[0].instance_id_len) !=
+            0 ||
+        registry.bypass_instances[0].input_index != 0u || registry.bypass_instances[0].output_index != 1u)
+        return fail("registry did not use compiler instance bypass metadata");
+    if (!registry.bypass_index_by_node || registry.bypass_index_by_node[1] != 0u)
+        return fail("registry did not use compiler node-to-instance metadata");
 
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
 
-static int test_runtime_init_from_image_ignores_plan_mutation(void) {
+static int test_runtime_init_from_registry_ignores_plan_mutation(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
@@ -547,20 +551,20 @@ static int test_runtime_init_from_image_ignores_plan_mutation(void) {
         return 1;
     }
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0) {
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
         uc_arena_free(&arena);
-        return fail("image arena init failed");
+        return fail("registry arena init failed");
     }
 
-    apg_v2_runtime_image_t image;
-    uc_error               err    = {0};
-    uc_status              status = apg_v2_runtime_image_build(&plan, 16u, 44100.0f, &image_arena, &image, &err);
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 16u, 44100.0f, &registry_arena, &registry, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "runtime image error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to build runtime image");
+        return fail("failed to build registry");
     }
 
     plan.nodes_len            = 0;
@@ -573,12 +577,12 @@ static int test_runtime_init_from_image_ignores_plan_mutation(void) {
 
     apg_v2_runtime_t runtime;
     err    = (uc_error){0};
-    status = apg_v2_runtime_init_from_image(&image, &runtime, &err);
+    status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error after plan mutation: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("runtime should initialize from built image regardless of plan mutation");
+        return fail("runtime should initialize from built registry regardless of plan mutation");
     }
 
     float input[4]  = {0.25f, -0.5f, 1.0f, -1.0f};
@@ -586,22 +590,22 @@ static int test_runtime_init_from_image_ignores_plan_mutation(void) {
     if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
         fprintf(stderr, "runtime process error: %s\n", apg_v2_measure_last_error(&runtime));
         apg_v2_runtime_destroy(&runtime);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("runtime should still process from image schedule after plan mutation");
+        return fail("runtime should still process from registry schedule after plan mutation");
     }
 
     for (size_t i = 0; i < 4u; i++) {
         if (output[i] != input[i]) {
             apg_v2_runtime_destroy(&runtime);
-            uc_arena_free(&image_arena);
+            uc_arena_free(&registry_arena);
             uc_arena_free(&arena);
             return fail("runtime output changed after plan mutation");
         }
     }
 
     apg_v2_runtime_destroy(&runtime);
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
@@ -618,36 +622,36 @@ static int test_runtime_create_owned_lifecycle(void) {
         return 1;
     }
 
-    uc_arena image_arena;
-    if (uc_arena_init(&image_arena, 4096) != 0) {
+    uc_arena registry_arena;
+    if (uc_arena_init(&registry_arena, 4096) != 0) {
         uc_arena_free(&arena);
-        return fail("image arena init failed");
+        return fail("registry arena init failed");
     }
 
-    apg_v2_runtime_image_t image;
-    uc_error               err    = {0};
-    uc_status              status = apg_v2_runtime_image_build(&plan, 16u, 48000.0f, &image_arena, &image, &err);
+    apg_v2_registry_t registry;
+    uc_error          err    = {0};
+    uc_status         status = apg_v2_registry_build(&plan, 16u, 48000.0f, &registry_arena, &registry, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "runtime image error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("failed to build runtime image");
+        return fail("failed to build registry");
     }
 
     apg_v2_runtime_t *runtime = NULL;
     err                       = (uc_error){0};
-    status                    = apg_v2_runtime_create_from_image(&image, &runtime, &err);
+    status                    = apg_v2_runtime_create_from_registry(&registry, &runtime, &err);
     if (status != UC_OK || !runtime) {
         fprintf(stderr, "runtime create error: %s\n", err.msg);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return fail("failed to create owned runtime");
     }
     if (runtime->frame_capacity != 16u || runtime->process_info.frames != 16u || runtime->output_meters_len != 1u) {
         apg_v2_runtime_destroy_owned(&runtime);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
-        return fail("runtime from image not initialized as expected");
+        return fail("runtime from registry not initialized as expected");
     }
 
     const float input[4]  = {0.25f, -0.5f, 1.0f, -1.0f};
@@ -655,7 +659,7 @@ static int test_runtime_create_owned_lifecycle(void) {
     if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, 4u)) {
         fprintf(stderr, "runtime process failed: %s\n", apg_v2_measure_last_error(runtime));
         apg_v2_runtime_destroy_owned(&runtime);
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return fail("runtime owned object failed to process");
     }
@@ -663,7 +667,7 @@ static int test_runtime_create_owned_lifecycle(void) {
     for (size_t i = 0; i < 4u; i++) {
         if (output[i] != input[i]) {
             apg_v2_runtime_destroy_owned(&runtime);
-            uc_arena_free(&image_arena);
+            uc_arena_free(&registry_arena);
             uc_arena_free(&arena);
             return fail("owned runtime output changed unexpectedly");
         }
@@ -674,25 +678,25 @@ static int test_runtime_create_owned_lifecycle(void) {
     if (runtime != NULL)
         return fail("owned destroy did not null runtime pointer");
 
-    uc_arena_free(&image_arena);
+    uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;
 }
 
 int main(void) {
-    if (test_runtime_image_layout())
+    if (test_registry_layout())
         return 1;
-    if (test_runtime_image_state_buffer_samples())
+    if (test_registry_state_buffer_samples())
         return 1;
-    if (test_runtime_image_signal_array_pool())
+    if (test_registry_signal_array_pool())
         return 1;
-    if (test_runtime_image_scalar_input_refresh())
+    if (test_registry_scalar_input_refresh())
         return 1;
-    if (test_runtime_image_control_targets())
+    if (test_registry_control_targets())
         return 1;
-    if (test_runtime_image_uses_compiler_instance_metadata())
+    if (test_registry_uses_compiler_instance_metadata())
         return 1;
     if (test_runtime_create_owned_lifecycle())
         return 1;
-    return test_runtime_init_from_image_ignores_plan_mutation();
+    return test_runtime_init_from_registry_ignores_plan_mutation();
 }

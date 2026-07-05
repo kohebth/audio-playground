@@ -1,6 +1,6 @@
 # Unit v2 Compiler Architecture
 
-`core-design.md` is the current production module-boundary target: metadata, parser, validator, compiler, runtime image, runtime, measure, and host.
+`core-design.md` is the current production module-boundary target: metadata, parser, validator, compiler, registry, runtime, measure, and host.
 
 ## Production Module Flow
 
@@ -11,12 +11,12 @@ flowchart LR
     Metadata["metadata"] --> Validator
     Validator --> Compiler["compiler"]
     Metadata --> Compiler
-    Compiler --> RuntimeImage["runtime image"]
-    RuntimeImage --> Runtime["runtime"]
-    RuntimeImage --> Measure["measure"]
+    Compiler --> Registry["registry"]
+    Registry --> Runtime["runtime"]
+    Registry --> Measure["measure"]
     Runtime --> Measure
     Metadata --> Runtime
-    RuntimeImage --> Host["host"]
+    Registry --> Host["host"]
     Measure --> Host
     Host --> Runtime
 ```
@@ -27,7 +27,7 @@ flowchart LR
 
 The public loaders remain thin compatibility entry points that run parser then validator. They preserve string values in the caller-provided arena and do not allocate runtime buffers or resolve signal indexes.
 
-For production DSP execution, parser/validator/compiler/image stages are intentionally out of the real-time path: runtime initialization and `apg_v2_runtime_process_*` operate only on prebuilt metadata and immutable schedules.
+For production DSP execution, parser/validator/compiler/registry stages are intentionally out of the real-time path: runtime initialization and `apg_v2_runtime_process_*` operate only on prebuilt metadata and immutable schedules.
 
 ## Compiler Plan
 
@@ -50,9 +50,9 @@ This scheduling step guarantees a fixed, validated execution order before any au
 
 ## Runtime MVP
 
-`apg_v2_runtime_image_build(...)` is declared by `runtime_image_builder_v2.h` and creates an arena-owned runtime image descriptor from a compiled plan. The consumer type in `runtime_image_v2.h` does not include compiler plan definitions. The builder precomputes signal name maps, param defaults, smoothing frames, meter, public audio port maps, bypass/project-mute metadata, per-node atom storage offsets, copied schedule view, state-buffer count/capacity/offsets, signal-array pointer-pool sizing, scalar refresh plans, copied signal-array indexes, and control-target layout metadata without allocating audio/runtime buffers. Scalar literal text is parsed by the compiler before runtime, and scalar refresh field/key validation stops at image build.
+`apg_v2_registry_build(...)` is declared by `registry_builder_v2.h` and creates an arena-owned registry descriptor from a compiled plan. The consumer type in `registry_v2.h` does not include compiler plan definitions. The builder precomputes signal name maps, param defaults, smoothing frames, meter, public audio port maps, bypass/project-mute metadata, per-node atom storage offsets, copied schedule view, state-buffer count/capacity/offsets, signal-array pointer-pool sizing, scalar refresh plans, copied signal-array indexes, and control-target layout metadata without allocating audio/runtime buffers. Scalar literal text is parsed by the compiler before runtime, and scalar refresh field/key validation stops at registry build.
 
-`apg_v2_runtime_init_from_image(...)` creates an opaque `apg_v2_runtime_t` from that descriptor. The runtime owns signal buffers, param/default tables, image-derived lookup/control targets, and internal per-node `atom_call_t` storage, but not the source compiled-plan pointer or runtime-image arena. Runtime nodes execute atom thunks and labels copied from the runtime image. Public runtime headers expose only the runtime handle and control/process APIs; runtime layout lives in `runtime_v2_internal.h`. `apg_v2_runtime_find_input_port_signal(...)` and `apg_v2_runtime_find_output_port_signal(...)` expose the first channel of named public audio ports, while explicit channel APIs expose mapped channel buffers. `apg_v2_runtime_set_param(...)` and `apg_v2_runtime_set_control_port(...)` use runtime-image metadata. `apg_v2_runtime_reset(...)` clears signal buffers, restores image-derived param defaults, and resets state storage while preserving internal buffer pointers. Processing APIs copy named external buffers, refresh scalar bindings, execute the runtime-image schedule through atom thunks, and copy outputs back to the caller. Meter snapshots are produced by `apg_v2_measure_*` from runtime signal buffers.
+`apg_v2_runtime_init_from_registry(...)` creates an opaque `apg_v2_runtime_t` from that descriptor. The runtime owns signal buffers, param/default tables, registry-derived lookup/control targets, and internal per-node `atom_call_t` storage, but not the source compiled-plan pointer or registry arena. Runtime nodes execute atom thunks and labels copied from the registry. Public runtime headers expose only the runtime handle and control/process APIs; runtime layout lives in `runtime_v2_internal.h`. `apg_v2_runtime_find_input_port_signal(...)` and `apg_v2_runtime_find_output_port_signal(...)` expose the first channel of named public audio ports, while explicit channel APIs expose mapped channel buffers. `apg_v2_runtime_set_param(...)` and `apg_v2_runtime_set_control_port(...)` use registry metadata. `apg_v2_runtime_reset(...)` clears signal buffers, restores registry-derived param defaults, and resets state storage while preserving internal buffer pointers. Processing APIs copy named external buffers, refresh scalar bindings, execute the registry schedule through atom thunks, and copy outputs back to the caller. Meter snapshots are produced by `apg_v2_measure_*` from runtime signal buffers.
 
 `apg_v2_measure_*` APIs expose host/tooling reads for runtime snapshots, meter snapshots, and diagnostics. There are no remaining runtime read wrappers for these paths; callers use `measure_v2` directly. See `docs/APGCORE_BOUNDARY_AUDIT.md` for the current production boundary audit.
 
@@ -60,7 +60,7 @@ This scheduling step guarantees a fixed, validated execution order before any au
 
 The loader and compiler write all parsed unit data, binding arrays, schedules, and producer maps into the caller-provided `uc_arena`. The compiled plan borrows the loaded unit pointer, so the arena must outlive both `apg_unit_v2_t` and `apg_v2_compiled_unit_t`. Treat loaded units and compiled plans as immutable once a runtime has been initialized from them.
 
-The runtime image does not store the compiled-plan pointer. It owns arena-allocated metadata/default/layout tables and copies schedule/name pointer tables while borrowing immutable source strings. The runtime borrows image-derived metadata and owns only its mutable allocations: signal pool, signal pointer table, parameter/default/target values, bypass state flags, one contiguous atom storage pool, and one contiguous state-buffer pool. Runtime lookup APIs return pointers into owned buffers; callers must not free them and must stop using them after `apg_v2_runtime_destroy(...)`. Destroying a runtime frees only runtime-owned memory and does not free the runtime-image arena. Public host structs keep runtime ownership behind pointers so callers cannot mutate runtime layout directly.
+The registry does not store the compiled-plan pointer. It owns arena-allocated metadata/default/layout tables and copies schedule/name pointer tables while borrowing immutable source strings. The runtime borrows registry-derived metadata and owns only its mutable allocations: signal pool, signal pointer table, parameter/default/target values, bypass state flags, one contiguous atom storage pool, and one contiguous state-buffer pool. Runtime lookup APIs return pointers into owned buffers; callers must not free them and must stop using them after `apg_v2_runtime_destroy(...)`. Destroying a runtime frees only runtime-owned memory and does not free the registry arena. Public host structs keep runtime ownership behind pointers so callers cannot mutate runtime layout directly.
 
 Current limits: control ports update params only, atom in/out fields are bound by compiled binding order, and state allocation currently covers `FIELD_BUFFER` descriptors with atom-declared capacities. The v1 runtime/unit/YAML paths are legacy; see `docs/V1_DEPRECATION_AUDIT.md` before removing anything.
 

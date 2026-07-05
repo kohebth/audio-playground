@@ -95,7 +95,7 @@ static int test_runtime_init_simple_gain(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 16u, 44100.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 16u, 44100.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -147,8 +147,9 @@ static int test_runtime_init_simple_gain(void) {
 
 static int test_v2_host_file_bridge_processes_simple_gain(void) {
     apg_v2_host_unit_t host;
-    uc_error           err    = {0};
-    uc_status          status = apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", 8u, 48000.0f, &host, &err);
+    uc_error           err = {0};
+    uc_status          status =
+        apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", 8u, 48000.0f, &host, &err);
     if (status != UC_OK) {
         fprintf(stderr, "host load error: %s\n", err.msg);
         return fail("failed to load v2 host fixture");
@@ -184,15 +185,15 @@ static int test_runtime_config_error_names_node_atom_and_binding(void) {
     plan.nodes[0].config[0].key = "missing_value";
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status == UC_OK) {
         apg_v2_runtime_destroy(&runtime);
         uc_arena_free(&arena);
-        return fail("runtime image accepted missing config field metadata");
+        return fail("registry accepted missing config field metadata");
     }
     if (!strstr(err.msg, "gain_value") || !strstr(err.msg, "generation_dc") || !strstr(err.msg, "config binding key") ||
         !strstr(err.msg, "missing_value"))
-        return fail("runtime image config error did not include node, atom, and binding context");
+        return fail("registry config error did not include node, atom, and binding context");
 
     uc_arena_free(&arena);
     return 0;
@@ -212,7 +213,7 @@ static int test_simple_gain_process_mono(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -258,7 +259,7 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 512u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 512u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -333,7 +334,7 @@ static int test_named_public_port_signal_lookup(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -421,7 +422,7 @@ static int test_multi_output_public_port_process(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -460,7 +461,7 @@ static int test_named_mono_port_rejects_bad_buffer_layouts(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -556,7 +557,7 @@ static int test_interleaved_stereo_public_port_process(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -601,7 +602,7 @@ static int test_named_mono_port_process(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -699,7 +700,7 @@ static int test_control_port_sets_matching_param(void) {
     }
 
     apg_v2_runtime_t runtime;
-    status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -794,7 +795,7 @@ static int test_named_mono_port_rejects_multichannel_port(void) {
     }
 
     apg_v2_runtime_t runtime;
-    status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -828,7 +829,7 @@ static int test_simple_clip_process_generic(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -878,7 +879,7 @@ static int test_simple_mix_process_generic(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -974,7 +975,7 @@ static int test_mix_matrix_process_generic(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -1061,7 +1062,7 @@ static int test_delay_line_state_buffer_process(void) {
     }
 
     apg_v2_runtime_t runtime;
-    status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -1154,7 +1155,7 @@ static int test_filter_state_buffer_uses_descriptor_capacity(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -1220,7 +1221,7 @@ static int test_delay_tap_scalar_input_refresh(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -1261,8 +1262,9 @@ static int test_delay_tap_scalar_input_refresh(void) {
 
 static int test_product_fixture_library_runtime_smoke(void) {
     const char *mono_fixtures[] = {
-        "test/fixtures/units-v2/overdrive.unit.v2.yaml",  "test/fixtures/units-v2/delay.unit.v2.yaml",      "test/fixtures/units-v2/tremolo.unit.v2.yaml",
-        "test/fixtures/units-v2/tone_stack.unit.v2.yaml", "test/fixtures/units-v2/noise_gate.unit.v2.yaml",
+        "test/fixtures/units-v2/overdrive.unit.v2.yaml",  "test/fixtures/units-v2/delay.unit.v2.yaml",
+        "test/fixtures/units-v2/tremolo.unit.v2.yaml",    "test/fixtures/units-v2/tone_stack.unit.v2.yaml",
+        "test/fixtures/units-v2/noise_gate.unit.v2.yaml",
     };
     const float input[4] = {0.1f, 0.25f, -0.5f, 0.75f};
 
@@ -1280,7 +1282,7 @@ static int test_product_fixture_library_runtime_smoke(void) {
 
         apg_v2_runtime_t runtime;
         uc_error         err = {0};
-        if (test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+        if (test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
             fprintf(stderr, "runtime init error: %s\n", err.msg);
             uc_arena_free(&arena);
             return fail("failed to initialize product fixture runtime");
@@ -1309,7 +1311,7 @@ static int test_product_fixture_library_runtime_smoke(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err = {0};
-    if (test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize wet/dry fixture runtime");
@@ -1349,7 +1351,7 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return 1;
     }
-    if (test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize delay fixture runtime");
@@ -1384,7 +1386,7 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return 1;
     }
-    if (test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize filter fixture runtime");
@@ -1415,11 +1417,13 @@ static int test_runtime_capable_fixture_library(void) {
 
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
-    if (load_and_compile_fixture("test/fixtures/units-v2/modulation_frequency_state.unit.v2.yaml", &arena, &unit, &plan)) {
+    if (load_and_compile_fixture(
+            "test/fixtures/units-v2/modulation_frequency_state.unit.v2.yaml", &arena, &unit, &plan
+        )) {
         uc_arena_free(&arena);
         return 1;
     }
-    if (test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize modulation fixture runtime");
@@ -1455,7 +1459,7 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return 1;
     }
-    if (test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize stereo fixture runtime");
@@ -1483,7 +1487,7 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return 1;
     }
-    if (test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+    if (test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err) != UC_OK) {
         fprintf(stderr, "runtime init error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to initialize control fixture runtime");
@@ -1526,7 +1530,7 @@ static int test_runtime_init_failure_cleans_partial_allocations(void) {
 
     apg_v2_runtime_t runtime = {0};
     uc_error         err     = {0};
-    uc_status        status  = test_apg_v2_runtime_init_image(&plan, 8u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status  = test_apg_v2_runtime_init_registry(&plan, 8u, 48000.0f, &arena, &runtime, &err);
     if (status == UC_OK) {
         uc_arena_free(&arena);
         return fail("runtime init accepted node without atom metadata");
@@ -1559,7 +1563,7 @@ static int test_runtime_init_rejects_zero_capacity(void) {
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_image(&plan, 0u, 48000.0f, &arena, &runtime, &err);
+    uc_status        status = test_apg_v2_runtime_init_registry(&plan, 0u, 48000.0f, &arena, &runtime, &err);
     uc_arena_free(&arena);
     if (status == UC_OK)
         return fail("runtime accepted zero frame capacity");

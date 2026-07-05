@@ -2,7 +2,7 @@
 
 ## Goal
 
-Runtime is audio-callback-safe execution over prebuilt image memory and schedule.
+Runtime is audio-callback-safe execution over prebuilt registry memory and schedule.
 
 ## Current Status
 
@@ -10,8 +10,8 @@ Mostly complete.
 
 Done:
 
-- Runtime initializes from runtime image.
-- Runtime executes image-owned schedule and atom thunks.
+- Runtime initializes from registry.
+- Runtime executes registry-owned schedule and atom thunks.
 - Runtime owns audio/control execution state, not parsing, validation, compilation, or layout planning.
 - Public runtime header exposes an opaque handle.
 
@@ -20,7 +20,7 @@ Done:
 - [ ] Audit all functions called by `apg_v2_runtime_process*` for allocation, file I/O, YAML/parser use, compiler use, string parsing, metadata lookup, locks, and platform calls.
 - [ ] Keep bypass and mute in runtime because they alter output samples.
 - [ ] If the audit finds a real-time-path lookup or allocation bug, fix that root cause and add one focused regression test.
-- [ ] Keep multi-channel helpers thin over image-owned audio-port maps.
+- [ ] Keep multi-channel helpers thin over registry-owned audio-port maps.
 
 ## Tests
 

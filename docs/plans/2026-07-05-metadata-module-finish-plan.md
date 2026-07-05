@@ -17,7 +17,7 @@ Done:
 
 ## Remaining Implementation
 
-- [ ] Do not add new metadata APIs unless compiler/runtime-image cannot finish without them.
+- [ ] Do not add new metadata APIs unless compiler/registry cannot finish without them.
 - [ ] Keep atom call pointers and registry descriptors isolated from parser and validator.
 - [ ] If compatibility rules grow, replace fragile prefix-only logic with explicit atom metadata entries.
 - [ ] If new atom fields are added, add catalog tests before consumers depend on them.

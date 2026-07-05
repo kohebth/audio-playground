@@ -1,4 +1,4 @@
-#include <apgcore/runtime_image_builder_v2.h>
+#include <apgcore/registry/registry_builder_v2.h>
 
 #include <limits.h>
 #include <stdbool.h>
@@ -42,9 +42,9 @@ static bool align_up_size(size_t value, size_t alignment, size_t *out) {
 static uc_status reserve_storage(size_t size, size_t *cursor, size_t *out_offset, uc_error *err) {
     size_t aligned = 0u;
     if (!align_up_size(*cursor, runtime_storage_align(), &aligned))
-        return set_error(err, UC_E_RANGE, "v2 runtime image atom storage alignment overflow");
+        return set_error(err, UC_E_RANGE, "v2 registry atom storage alignment overflow");
     if (size > SIZE_MAX - aligned)
-        return set_error(err, UC_E_RANGE, "v2 runtime image atom storage layout is too large");
+        return set_error(err, UC_E_RANGE, "v2 registry atom storage layout is too large");
     *out_offset = aligned;
     *cursor     = aligned + size;
     return UC_OK;
@@ -91,13 +91,13 @@ static const char *audio_port_channel_signal_name(const apg_unit_v2_port_t *port
 }
 
 static uc_status fill_audio_port_map(
-    uc_arena                     *arena,
-    const apg_unit_v2_t          *unit,
-    const apg_unit_v2_port_t     *ports,
-    size_t                        ports_len,
-    apg_v2_runtime_audio_port_t **out_ports,
-    size_t                       *out_ports_len,
-    uc_error                     *err
+    uc_arena                      *arena,
+    const apg_unit_v2_t           *unit,
+    const apg_unit_v2_port_t      *ports,
+    size_t                         ports_len,
+    apg_v2_registry_audio_port_t **out_ports,
+    size_t                        *out_ports_len,
+    uc_error                      *err
 ) {
     size_t port_count = audio_port_count(ports, ports_len);
     *out_ports        = NULL;
@@ -105,9 +105,9 @@ static uc_status fill_audio_port_map(
     if (port_count == 0u)
         return UC_OK;
 
-    apg_v2_runtime_audio_port_t *items = uc_arena_alloc(arena, port_count * sizeof(*items), sizeof(void *));
+    apg_v2_registry_audio_port_t *items = uc_arena_alloc(arena, port_count * sizeof(*items), sizeof(void *));
     if (!items)
-        return set_error(err, UC_E_OOM, "v2 runtime image audio port map allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry audio port map allocation failed");
 
     size_t port_index  = 0u;
     size_t meter_index = 0u;
@@ -118,20 +118,20 @@ static uc_status fill_audio_port_map(
 
         size_t channels = 0u;
         if (!parse_port_channel_count(port, &channels))
-            return set_error(err, UC_E_RANGE, "v2 runtime image audio port channel count is invalid");
+            return set_error(err, UC_E_RANGE, "v2 registry audio port channel count is invalid");
 
         size_t *indices = uc_arena_alloc(arena, channels * sizeof(*indices), sizeof(size_t));
         if (!indices)
-            return set_error(err, UC_E_OOM, "v2 runtime image audio port signal map allocation failed");
+            return set_error(err, UC_E_OOM, "v2 registry audio port signal map allocation failed");
 
         for (size_t ch = 0; ch < channels; ch++) {
             int signal_index = signal_index_by_name(unit, audio_port_channel_signal_name(port, ch));
             if (signal_index < 0)
-                return set_error(err, UC_E_MISSING, "v2 runtime image audio port signal is missing");
+                return set_error(err, UC_E_MISSING, "v2 registry audio port signal is missing");
             indices[ch] = (size_t)signal_index;
         }
 
-        items[port_index++] = (apg_v2_runtime_audio_port_t){
+        items[port_index++] = (apg_v2_registry_audio_port_t){
             .port_name      = port->name,
             .channel_count  = channels,
             .meter_index    = meter_index,
@@ -167,17 +167,17 @@ static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, float s
 }
 
 static uc_status
-fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_runtime_image_t *out, uc_error *err) {
+fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_registry_t *out, uc_error *err) {
     if (!arena || !plan || !out)
         return UC_OK;
 
     if (plan->nodes_len == 0u || plan->instances_len == 0u || !plan->instances)
         return UC_OK;
 
-    apg_v2_runtime_image_bypass_entry_t *entries =
+    apg_v2_registry_bypass_entry_t *entries =
         uc_arena_alloc(arena, plan->instances_len * sizeof(*entries), sizeof(void *));
     if (!entries)
-        return set_error(err, UC_E_OOM, "v2 runtime image bypass metadata allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry bypass metadata allocation failed");
 
     size_t bypass_count = 0u;
     for (size_t i = 0; i < plan->instances_len; i++) {
@@ -186,8 +186,8 @@ fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2
             continue;
 
         if (bypass_count >= plan->instances_len)
-            return set_error(err, UC_E_RANGE, "v2 runtime image bypass metadata overflow");
-        entries[bypass_count++] = (apg_v2_runtime_image_bypass_entry_t){
+            return set_error(err, UC_E_RANGE, "v2 registry bypass metadata overflow");
+        entries[bypass_count++] = (apg_v2_registry_bypass_entry_t){
             .instance_id     = instance->id,
             .instance_id_len = instance->id_len,
             .input_index     = instance->input_signal_index,
@@ -201,13 +201,13 @@ fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2
 
     out->bypass_instances = uc_arena_alloc(arena, bypass_count * sizeof(*out->bypass_instances), sizeof(void *));
     if (!out->bypass_instances)
-        return set_error(err, UC_E_OOM, "v2 runtime image bypass entry allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry bypass entry allocation failed");
     memcpy(out->bypass_instances, entries, bypass_count * sizeof(*out->bypass_instances));
 
     out->bypass_index_by_node =
         uc_arena_alloc(arena, out->nodes_len * sizeof(*out->bypass_index_by_node), sizeof(void *));
     if (!out->bypass_index_by_node)
-        return set_error(err, UC_E_OOM, "v2 runtime image bypass index metadata allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry bypass index metadata allocation failed");
 
     for (size_t i = 0; i < out->nodes_len; i++)
         out->bypass_index_by_node[i] = (size_t)-1u;
@@ -231,9 +231,8 @@ fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2
     return UC_OK;
 }
 
-static uc_status fill_project_mute_output_indices(
-    uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_image_t *out, uc_error *err
-) {
+static uc_status
+fill_project_mute_output_indices(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_registry_t *out, uc_error *err) {
     if (!arena || !unit || !out)
         return UC_OK;
 
@@ -253,7 +252,7 @@ static uc_status fill_project_mute_output_indices(
     out->project_mute_output_indices =
         uc_arena_alloc(arena, count * sizeof(*out->project_mute_output_indices), sizeof(size_t));
     if (!out->project_mute_output_indices)
-        return set_error(err, UC_E_OOM, "v2 runtime image project mute output index allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry project mute output index allocation failed");
 
     size_t filled = 0u;
     for (size_t i = 0; i < unit->output_ports_len; i++) {
@@ -295,37 +294,35 @@ static int param_index_by_name(const apg_unit_v2_t *unit, const char *name) {
     return -1;
 }
 
-static uc_status
-fill_signal_names(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_image_t *out, uc_error *err) {
+static uc_status fill_signal_names(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_registry_t *out, uc_error *err) {
     if (out->signals_len == 0u)
         return UC_OK;
     out->signal_names = uc_arena_alloc(arena, out->signals_len * sizeof(*out->signal_names), sizeof(void *));
     if (!out->signal_names)
-        return set_error(err, UC_E_OOM, "v2 runtime image signal name allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry signal name allocation failed");
     for (size_t i = 0; i < out->signals_len; i++)
         out->signal_names[i] = unit->signals[i];
     return UC_OK;
 }
 
-static uc_status
-fill_param_names(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_image_t *out, uc_error *err) {
+static uc_status fill_param_names(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_registry_t *out, uc_error *err) {
     if (out->params_len == 0u)
         return UC_OK;
     out->param_names = uc_arena_alloc(arena, out->params_len * sizeof(*out->param_names), sizeof(void *));
     if (!out->param_names)
-        return set_error(err, UC_E_OOM, "v2 runtime image param name allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry param name allocation failed");
     for (size_t i = 0; i < out->params_len; i++)
         out->param_names[i] = unit->params[i].name;
     return UC_OK;
 }
 
 static uc_status
-fill_schedule(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_runtime_image_t *out, uc_error *err) {
+fill_schedule(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_registry_t *out, uc_error *err) {
     if (out->schedule_len == 0u)
         return UC_OK;
     uint32_t *schedule = uc_arena_alloc(arena, out->schedule_len * sizeof(*schedule), sizeof(*schedule));
     if (!schedule)
-        return set_error(err, UC_E_OOM, "v2 runtime image schedule allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry schedule allocation failed");
     memcpy(schedule, plan->schedule, out->schedule_len * sizeof(*schedule));
     out->schedule = schedule;
     return UC_OK;
@@ -425,12 +422,12 @@ static bool is_mix_matrix_node(const apg_v2_compiled_node_t *node) {
 }
 
 static uc_status fill_scalar_refreshes(
-    uc_arena                         *arena,
-    const apg_v2_compiled_node_t     *node,
-    apg_v2_runtime_scalar_refresh_t **out_items,
-    size_t                           *out_len,
-    bool                              config,
-    uc_error                         *err
+    uc_arena                          *arena,
+    const apg_v2_compiled_node_t      *node,
+    apg_v2_registry_scalar_refresh_t **out_items,
+    size_t                            *out_len,
+    bool                               config,
+    uc_error                          *err
 ) {
     size_t len = config ? count_config_refreshes(node) : count_input_refreshes(node);
     *out_items = NULL;
@@ -438,9 +435,9 @@ static uc_status fill_scalar_refreshes(
     if (len == 0u)
         return UC_OK;
 
-    apg_v2_runtime_scalar_refresh_t *items = uc_arena_alloc(arena, len * sizeof(*items), sizeof(void *));
+    apg_v2_registry_scalar_refresh_t *items = uc_arena_alloc(arena, len * sizeof(*items), sizeof(void *));
     if (!items)
-        return set_error(err, UC_E_OOM, "v2 runtime image scalar refresh allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry scalar refresh allocation failed");
 
     size_t                           item_index  = 0u;
     size_t                           binding_len = config ? node->config_len : node->in_len;
@@ -464,7 +461,7 @@ static uc_status fill_scalar_refreshes(
             return set_error(err, UC_E_MISSING, msg);
         }
         if (!scalar_refresh_field(field))
-            return set_error(err, UC_E_TYPE, "v2 runtime image scalar refresh field type is unsupported");
+            return set_error(err, UC_E_TYPE, "v2 registry scalar refresh field type is unsupported");
         items[item_index].key            = bindings[i].key;
         items[item_index].kind           = bindings[i].kind;
         items[item_index].param_index    = bindings[i].index;
@@ -480,19 +477,19 @@ static uc_status fill_scalar_refreshes(
 }
 
 static uc_status fill_signal_bindings(
-    uc_arena                        *arena,
-    size_t                           signals_len,
-    const apg_v2_compiled_node_t    *node,
-    const apg_v2_compiled_binding_t *bindings,
-    size_t                           bindings_len,
-    bool                             is_input,
-    size_t                          *array_cursor,
-    apg_v2_runtime_signal_binding_t *items,
-    size_t                           items_cap,
-    size_t                          *items_len,
-    apg_v2_runtime_node_layout_t    *layout,
-    size_t                           node_array_base,
-    uc_error                        *err
+    uc_arena                         *arena,
+    size_t                            signals_len,
+    const apg_v2_compiled_node_t     *node,
+    const apg_v2_compiled_binding_t  *bindings,
+    size_t                            bindings_len,
+    bool                              is_input,
+    size_t                           *array_cursor,
+    apg_v2_registry_signal_binding_t *items,
+    size_t                            items_cap,
+    size_t                           *items_len,
+    apg_v2_registry_node_layout_t    *layout,
+    size_t                            node_array_base,
+    uc_error                         *err
 ) {
     size_t len = 0u;
     for (size_t i = 0; i < bindings_len; i++) {
@@ -503,13 +500,13 @@ static uc_status fill_signal_bindings(
     if (len == 0u)
         return UC_OK;
     if (!items || !items_len)
-        return set_error(err, UC_E_MISSING, "v2 runtime image signal binding output buffer is missing");
+        return set_error(err, UC_E_MISSING, "v2 registry signal binding output buffer is missing");
     if (*items_len > SIZE_MAX - len || *items_len + len > items_cap)
-        return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+        return set_error(err, UC_E_RANGE, "v2 registry signal binding layout is inconsistent");
     if (!array_cursor)
-        return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor is missing");
+        return set_error(err, UC_E_RANGE, "v2 registry signal array cursor is missing");
     if (*array_cursor < node_array_base)
-        return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+        return set_error(err, UC_E_RANGE, "v2 registry signal binding layout is inconsistent");
 
     size_t local_array_cursor = 0u;
     size_t item_index         = 0u;
@@ -518,47 +515,43 @@ static uc_status fill_signal_bindings(
         if (binding->kind != APG_BIND_SIGNAL && binding->kind != APG_BIND_SIGNAL_ARRAY)
             continue;
 
-        apg_v2_runtime_signal_binding_t item = {0};
-        item.key                             = binding->key;
-        item.is_input                        = is_input;
-        item.storage_offset                  = i * sizeof(float *);
-        item.signal_array_len                = 0u;
+        apg_v2_registry_signal_binding_t item = {0};
+        item.key                              = binding->key;
+        item.is_input                         = is_input;
+        item.storage_offset                   = i * sizeof(float *);
+        item.signal_array_len                 = 0u;
 
         if (is_input) {
             const atom_field_desc_t *field = find_input_field(node->atom, binding->key);
             if (field) {
                 if (field->type != FIELD_SIGNAL) {
                     if (binding->kind == APG_BIND_SIGNAL)
-                        return set_error(err, UC_E_TYPE, "v2 runtime image input binding field is not a signal");
-                    return set_error(
-                        err, UC_E_TYPE, "v2 runtime image input binding field does not support signal arrays"
-                    );
+                        return set_error(err, UC_E_TYPE, "v2 registry input binding field is not a signal");
+                    return set_error(err, UC_E_TYPE, "v2 registry input binding field does not support signal arrays");
                 }
                 item.storage_offset = field->offset;
             }
             if (binding->kind == APG_BIND_SIGNAL) {
                 if (binding->index >= signals_len)
-                    return set_error(
-                        err, UC_E_MISSING, "v2 runtime image input binding references invalid signal index"
-                    );
+                    return set_error(err, UC_E_MISSING, "v2 registry input binding references invalid signal index");
                 item.signal_index = binding->index;
             } else {
                 item.is_signal_array  = true;
                 item.signal_index     = SIZE_MAX;
                 item.signal_array_len = binding->indices_len;
                 if (binding->indices_len > SIZE_MAX - local_array_cursor)
-                    return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is too large");
+                    return set_error(err, UC_E_RANGE, "v2 registry signal binding layout is too large");
                 item.signal_array_offset = *array_cursor - node_array_base + local_array_cursor;
                 if (binding->indices_len == 0u)
-                    return set_error(err, UC_E_RANGE, "v2 runtime image input binding has empty signal array");
+                    return set_error(err, UC_E_RANGE, "v2 registry input binding has empty signal array");
                 item.signal_array_indices =
                     uc_arena_alloc(arena, binding->indices_len * sizeof(*item.signal_array_indices), sizeof(size_t));
                 if (!item.signal_array_indices)
-                    return set_error(err, UC_E_OOM, "v2 runtime image signal array index allocation failed");
+                    return set_error(err, UC_E_OOM, "v2 registry signal array index allocation failed");
                 for (size_t j = 0; j < binding->indices_len; j++) {
                     if (binding->indices[j] >= signals_len)
                         return set_error(
-                            err, UC_E_MISSING, "v2 runtime image input binding references invalid signal index"
+                            err, UC_E_MISSING, "v2 registry input binding references invalid signal index"
                         );
                     item.signal_array_indices[j] = binding->indices[j];
                 }
@@ -567,27 +560,25 @@ static uc_status fill_signal_bindings(
         } else {
             if (binding->kind == APG_BIND_SIGNAL) {
                 if (binding->index >= signals_len)
-                    return set_error(
-                        err, UC_E_MISSING, "v2 runtime image output binding references invalid signal index"
-                    );
+                    return set_error(err, UC_E_MISSING, "v2 registry output binding references invalid signal index");
                 item.signal_index = binding->index;
             } else {
                 item.is_signal_array  = true;
                 item.signal_index     = SIZE_MAX;
                 item.signal_array_len = binding->indices_len;
                 if (binding->indices_len > SIZE_MAX - local_array_cursor)
-                    return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is too large");
+                    return set_error(err, UC_E_RANGE, "v2 registry signal binding layout is too large");
                 item.signal_array_offset = *array_cursor - node_array_base + local_array_cursor;
                 if (binding->indices_len == 0u)
-                    return set_error(err, UC_E_RANGE, "v2 runtime image output binding has empty signal array");
+                    return set_error(err, UC_E_RANGE, "v2 registry output binding has empty signal array");
                 item.signal_array_indices =
                     uc_arena_alloc(arena, binding->indices_len * sizeof(*item.signal_array_indices), sizeof(size_t));
                 if (!item.signal_array_indices)
-                    return set_error(err, UC_E_OOM, "v2 runtime image signal array index allocation failed");
+                    return set_error(err, UC_E_OOM, "v2 registry signal array index allocation failed");
                 for (size_t j = 0; j < binding->indices_len; j++) {
                     if (binding->indices[j] >= signals_len)
                         return set_error(
-                            err, UC_E_MISSING, "v2 runtime image output binding references invalid signal index"
+                            err, UC_E_MISSING, "v2 registry output binding references invalid signal index"
                         );
                     item.signal_array_indices[j] = binding->indices[j];
                 }
@@ -599,32 +590,32 @@ static uc_status fill_signal_bindings(
     }
 
     if (local_array_cursor > layout->signal_array_pointer_slots)
-        return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+        return set_error(err, UC_E_RANGE, "v2 registry signal binding layout is inconsistent");
     if (item_index != len)
-        return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+        return set_error(err, UC_E_RANGE, "v2 registry signal binding layout is inconsistent");
     if (local_array_cursor > SIZE_MAX - *array_cursor)
-        return set_error(err, UC_E_RANGE, "v2 runtime image signal array cursor overflow");
+        return set_error(err, UC_E_RANGE, "v2 registry signal array cursor overflow");
     *array_cursor += local_array_cursor;
     *items_len += item_index;
     return UC_OK;
 }
 
 static uc_status fill_mix_matrix_layout(
-    uc_arena *arena, const apg_v2_compiled_node_t *node, apg_v2_runtime_node_layout_t *layout, uc_error *err
+    uc_arena *arena, const apg_v2_compiled_node_t *node, apg_v2_registry_node_layout_t *layout, uc_error *err
 ) {
     if (!is_mix_matrix_node(node))
         return UC_OK;
 
     const apg_v2_compiled_binding_t *matrix = find_compiled_binding(node->config, node->config_len, "coefficients");
     if (!matrix || matrix->kind != APG_BIND_FLOAT_MATRIX)
-        return set_error(err, UC_E_TYPE, "v2 runtime image mix_matrix requires coefficient matrix binding");
+        return set_error(err, UC_E_TYPE, "v2 registry mix_matrix requires coefficient matrix binding");
     if (matrix->rows == 0u || matrix->cols == 0u)
-        return set_error(err, UC_E_RANGE, "v2 runtime image mix_matrix requires non-empty coefficient matrix");
+        return set_error(err, UC_E_RANGE, "v2 registry mix_matrix requires non-empty coefficient matrix");
     if (matrix->numbers == NULL)
-        return set_error(err, UC_E_MISSING, "v2 runtime image mix_matrix coefficient data is missing");
+        return set_error(err, UC_E_MISSING, "v2 registry mix_matrix coefficient data is missing");
 
     if (matrix->rows > SIZE_MAX / matrix->cols)
-        return set_error(err, UC_E_RANGE, "v2 runtime image mix_matrix matrix size overflow");
+        return set_error(err, UC_E_RANGE, "v2 registry mix_matrix matrix size overflow");
 
     size_t coefficient_count            = matrix->rows * matrix->cols;
     layout->mix_matrix_coefficients_len = coefficient_count;
@@ -634,13 +625,13 @@ static uc_status fill_mix_matrix_layout(
     layout->mix_matrix_coefficients =
         uc_arena_alloc(arena, coefficient_count * sizeof(*layout->mix_matrix_coefficients), sizeof(float));
     if (!layout->mix_matrix_coefficients)
-        return set_error(err, UC_E_OOM, "v2 runtime image mix_matrix coefficient allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry mix_matrix coefficient allocation failed");
     memcpy(layout->mix_matrix_coefficients, matrix->numbers, coefficient_count * sizeof(float));
 
     layout->mix_matrix_row_pointers =
         uc_arena_alloc(arena, matrix->rows * sizeof(*layout->mix_matrix_row_pointers), sizeof(float *));
     if (!layout->mix_matrix_row_pointers)
-        return set_error(err, UC_E_OOM, "v2 runtime image mix_matrix row pointer allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry mix_matrix row pointer allocation failed");
 
     for (size_t row = 0u; row < matrix->rows; row++)
         layout->mix_matrix_row_pointers[row] = &layout->mix_matrix_coefficients[row * matrix->cols];
@@ -649,7 +640,7 @@ static uc_status fill_mix_matrix_layout(
 }
 
 static uc_status
-fill_control_targets(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_image_t *out, uc_error *err) {
+fill_control_targets(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_registry_t *out, uc_error *err) {
     out->control_targets_len = control_port_count(unit->input_ports, unit->input_ports_len);
     if (out->control_targets_len == 0u)
         return UC_OK;
@@ -657,7 +648,7 @@ fill_control_targets(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_
     out->control_targets =
         uc_arena_alloc(arena, out->control_targets_len * sizeof(*out->control_targets), sizeof(void *));
     if (!out->control_targets)
-        return set_error(err, UC_E_OOM, "v2 runtime image control target allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry control target allocation failed");
 
     size_t target_index = 0u;
     for (size_t i = 0; i < unit->input_ports_len; i++) {
@@ -665,12 +656,12 @@ fill_control_targets(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_
         if (!port->type || strcmp(port->type, "control") != 0)
             continue;
         if (port->target_kind && strcmp(port->target_kind, "param") != 0)
-            return set_error(err, UC_E_TYPE, "v2 runtime image only supports param control targets");
+            return set_error(err, UC_E_TYPE, "v2 registry only supports param control targets");
         const char *target =
             port->target_name ? port->target_name : (port->target_param ? port->target_param : port->name);
         int index = param_index_by_name(unit, target);
         if (index < 0)
-            return set_error(err, UC_E_MISSING, "v2 runtime image control target param is missing");
+            return set_error(err, UC_E_MISSING, "v2 registry control target param is missing");
         out->control_targets[target_index].port_name   = port->name;
         out->control_targets[target_index].param_name  = target;
         out->control_targets[target_index].param_index = (size_t)index;
@@ -680,25 +671,25 @@ fill_control_targets(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_runtime_
 }
 
 static uc_status
-fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_runtime_image_t *out, uc_error *err) {
+fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_registry_t *out, uc_error *err) {
     out->nodes_len = plan->nodes_len;
     if (out->nodes_len == 0u)
         return UC_OK;
 
     out->node_layouts = uc_arena_alloc(arena, out->nodes_len * sizeof(*out->node_layouts), sizeof(void *));
     if (!out->node_layouts)
-        return set_error(err, UC_E_OOM, "v2 runtime image node layout allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry node layout allocation failed");
 
     size_t atom_storage_cursor       = 0u;
     size_t state_buffer_cursor       = 0u;
     size_t state_buffer_table_offset = 0u;
     size_t signal_array_cursor       = 0u;
     for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
-        const apg_v2_compiled_node_t *node   = &plan->nodes[node_index];
-        const atom_registry_entry_t  *atom   = node->atom;
-        apg_v2_runtime_node_layout_t *layout = &out->node_layouts[node_index];
+        const apg_v2_compiled_node_t  *node   = &plan->nodes[node_index];
+        const atom_registry_entry_t   *atom   = node->atom;
+        apg_v2_registry_node_layout_t *layout = &out->node_layouts[node_index];
         if (!atom)
-            return set_error(err, UC_E_MISSING, "v2 runtime image node is missing atom metadata");
+            return set_error(err, UC_E_MISSING, "v2 registry node is missing atom metadata");
 
         memset(layout, 0, sizeof(*layout));
 
@@ -739,7 +730,7 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_ru
                 arena, layout->state_buffers_len * sizeof(*layout->state_buffer_sample_offsets_by_index), sizeof(size_t)
             );
             if (!layout->state_buffer_samples_by_index || !layout->state_buffer_sample_offsets_by_index)
-                return set_error(err, UC_E_OOM, "v2 runtime image state buffer layout allocation failed");
+                return set_error(err, UC_E_OOM, "v2 registry state buffer layout allocation failed");
         }
 
         size_t buffer_index = 0u;
@@ -749,16 +740,16 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_ru
             layout->state_buffer_samples_by_index[buffer_index++] = atom->state_fields[field_index].buffer_samples;
             layout->state_buffer_sample_offsets_by_index[buffer_index - 1u] = state_buffer_cursor;
             if (atom->state_fields[field_index].buffer_samples > SIZE_MAX - state_buffer_cursor)
-                return set_error(err, UC_E_RANGE, "v2 runtime image state buffer layout is too large");
+                return set_error(err, UC_E_RANGE, "v2 registry state buffer layout is too large");
             state_buffer_cursor += atom->state_fields[field_index].buffer_samples;
             layout->state_buffer_samples += atom->state_fields[field_index].buffer_samples;
         }
         if (state_buffer_table_offset > SIZE_MAX - layout->state_buffers_len)
-            return set_error(err, UC_E_RANGE, "v2 runtime image state-buffer table is too large");
+            return set_error(err, UC_E_RANGE, "v2 registry state-buffer table is too large");
         layout->state_buffer_table_offset = state_buffer_table_offset;
         state_buffer_table_offset += layout->state_buffers_len;
         if (layout->state_buffer_samples > SIZE_MAX - out->state_buffer_samples)
-            return set_error(err, UC_E_RANGE, "v2 runtime image state-buffer samples is too large");
+            return set_error(err, UC_E_RANGE, "v2 registry state-buffer samples is too large");
         out->state_buffers_len += layout->state_buffers_len;
         out->state_buffer_samples += layout->state_buffer_samples;
 
@@ -777,7 +768,7 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_ru
             layout->signal_bindings =
                 uc_arena_alloc(arena, signal_bindings_len * sizeof(*layout->signal_bindings), sizeof(void *));
             if (!layout->signal_bindings)
-                return set_error(err, UC_E_OOM, "v2 runtime image signal binding allocation failed");
+                return set_error(err, UC_E_OOM, "v2 registry signal binding allocation failed");
         }
 
         size_t signal_binding_index = 0u;
@@ -797,10 +788,10 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_ru
         if (status != UC_OK)
             return status;
         if (signal_binding_index != layout->signal_bindings_len)
-            return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+            return set_error(err, UC_E_RANGE, "v2 registry signal binding layout is inconsistent");
 
         if (signal_array_cursor - layout->signal_array_pool_offset > layout->signal_array_pointer_slots)
-            return set_error(err, UC_E_RANGE, "v2 runtime image signal binding layout is inconsistent");
+            return set_error(err, UC_E_RANGE, "v2 registry signal binding layout is inconsistent");
 
         status = fill_mix_matrix_layout(arena, node, layout, err);
         if (status != UC_OK)
@@ -812,12 +803,12 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_ru
     return UC_OK;
 }
 
-uc_status apg_v2_runtime_image_build(
+uc_status apg_v2_registry_build(
     const apg_v2_compiled_unit_t *plan,
     uint32_t                      frame_capacity,
     float                         sample_rate,
     uc_arena                     *arena,
-    apg_v2_runtime_image_t       *out,
+    apg_v2_registry_t            *out,
     uc_error                     *err
 ) {
     if (!plan || !plan->unit || !arena || !out || !err)
@@ -825,11 +816,11 @@ uc_status apg_v2_runtime_image_build(
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
     if (frame_capacity == 0u)
-        return set_error(err, UC_E_RANGE, "v2 runtime image frame capacity must be greater than zero");
+        return set_error(err, UC_E_RANGE, "v2 registry frame capacity must be greater than zero");
     if (plan->unit->signals_len > 0u && plan->unit->signals_len > SIZE_MAX / (size_t)frame_capacity)
-        return set_error(err, UC_E_RANGE, "v2 runtime image signal layout is too large");
+        return set_error(err, UC_E_RANGE, "v2 registry signal layout is too large");
     if (plan->schedule_len > 0u && !plan->schedule)
-        return set_error(err, UC_E_MISSING, "v2 runtime image schedule is missing");
+        return set_error(err, UC_E_MISSING, "v2 registry schedule is missing");
 
     out->frame_capacity    = frame_capacity;
     out->sample_rate       = sample_rate > 0.0f ? sample_rate : 48000.0f;
@@ -889,7 +880,7 @@ uc_status apg_v2_runtime_image_build(
         arena, out->params_len * sizeof(*out->param_smoothing_frames), sizeof(*out->param_smoothing_frames)
     );
     if (!out->param_defaults || !out->param_smoothing_frames)
-        return set_error(err, UC_E_OOM, "v2 runtime image param metadata allocation failed");
+        return set_error(err, UC_E_OOM, "v2 registry param metadata allocation failed");
     for (size_t i = 0; i < out->params_len; i++) {
         out->param_defaults[i]         = parse_param_default(&plan->unit->params[i]);
         out->param_smoothing_frames[i] = param_smoothing_frames(&plan->unit->params[i], out->sample_rate);
@@ -897,38 +888,38 @@ uc_status apg_v2_runtime_image_build(
     return UC_OK;
 }
 
-uc_status apg_v2_runtime_image_build_with_growth(
+uc_status apg_v2_registry_build_with_growth(
     const apg_v2_compiled_unit_t *plan,
     uint32_t                      frame_capacity,
     float                         sample_rate,
     uc_arena                     *out_arena,
-    apg_v2_runtime_image_t       *out_image,
+    apg_v2_registry_t            *out_registry,
     uc_error                     *err
 ) {
-    if (!plan || !out_arena || !out_image || !err)
+    if (!plan || !out_arena || !out_registry || !err)
         return UC_E_TYPE;
 
     *out_arena = (uc_arena){0};
-    memset(out_image, 0, sizeof(*out_image));
+    memset(out_registry, 0, sizeof(*out_registry));
 
-    size_t image_arena_size = 4096u;
-    while (image_arena_size > 0u && image_arena_size <= (SIZE_MAX >> 1)) {
-        uc_arena image_arena = {0};
-        if (uc_arena_init(&image_arena, image_arena_size) != 0) {
-            return set_error(err, UC_E_OOM, "v2 runtime image arena allocation failed");
+    size_t registry_arena_size = 4096u;
+    while (registry_arena_size > 0u && registry_arena_size <= (SIZE_MAX >> 1)) {
+        uc_arena registry_arena = {0};
+        if (uc_arena_init(&registry_arena, registry_arena_size) != 0) {
+            return set_error(err, UC_E_OOM, "v2 registry arena allocation failed");
         }
 
-        uc_status status = apg_v2_runtime_image_build(plan, frame_capacity, sample_rate, &image_arena, out_image, err);
+        uc_status status = apg_v2_registry_build(plan, frame_capacity, sample_rate, &registry_arena, out_registry, err);
         if (status == UC_OK) {
-            *out_arena = image_arena;
+            *out_arena = registry_arena;
             return UC_OK;
         }
 
-        uc_arena_free(&image_arena);
+        uc_arena_free(&registry_arena);
         if (status != UC_E_OOM)
             return status;
-        image_arena_size *= 2u;
+        registry_arena_size *= 2u;
     }
 
-    return set_error(err, UC_E_OOM, "v2 runtime image arena growth overflow");
+    return set_error(err, UC_E_OOM, "v2 registry arena growth overflow");
 }

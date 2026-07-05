@@ -34,8 +34,8 @@ static int name_index(const char *const *names, size_t names_len, const char *na
     return -1;
 }
 
-static const apg_v2_runtime_audio_port_t *
-runtime_audio_port_by_name(const apg_v2_runtime_audio_port_t *ports, size_t ports_len, const char *port_name) {
+static const apg_v2_registry_audio_port_t *
+runtime_audio_port_by_name(const apg_v2_registry_audio_port_t *ports, size_t ports_len, const char *port_name) {
     if (!ports || !port_name)
         return NULL;
     for (size_t i = 0; i < ports_len; i++) {
@@ -60,25 +60,25 @@ static bool runtime_execution_metadata_ready(const apg_v2_runtime_t *runtime) {
            (runtime->nodes || runtime->nodes_len == 0u);
 }
 
-static uc_status init_signal_buffers(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
-    out->signals_len = image->signals_len;
+static uc_status init_signal_buffers(const apg_v2_registry_t *registry, apg_v2_runtime_t *out, uc_error *err) {
+    out->signals_len = registry->signals_len;
     if (out->signals_len == 0u)
         return UC_OK;
-    if (image->signal_samples > SIZE_MAX / sizeof(float))
+    if (registry->signal_samples > SIZE_MAX / sizeof(float))
         return set_error(err, UC_E_RANGE, "v2 runtime signal pool is too large");
 
     out->signals     = calloc(out->signals_len, sizeof(*out->signals));
-    out->signal_pool = calloc(image->signal_samples, sizeof(*out->signal_pool));
+    out->signal_pool = calloc(registry->signal_samples, sizeof(*out->signal_pool));
     if (!out->signals || !out->signal_pool)
         return set_error(err, UC_E_OOM, "v2 runtime signal allocation failed");
 
     for (size_t i = 0; i < out->signals_len; i++)
-        out->signals[i] = &out->signal_pool[i * (size_t)image->frame_capacity];
+        out->signals[i] = &out->signal_pool[i * (size_t)registry->frame_capacity];
     return UC_OK;
 }
 
-static uc_status init_params(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
-    out->params_len = image->params_len;
+static uc_status init_params(const apg_v2_registry_t *registry, apg_v2_runtime_t *out, uc_error *err) {
+    out->params_len = registry->params_len;
     if (out->params_len == 0u)
         return UC_OK;
 
@@ -90,20 +90,20 @@ static uc_status init_params(const apg_v2_runtime_image_t *image, apg_v2_runtime
         return set_error(err, UC_E_OOM, "v2 runtime param allocation failed");
 
     for (size_t i = 0; i < out->params_len; i++) {
-        out->param_defaults[i] = image->param_defaults ? image->param_defaults[i] : 0.0f;
+        out->param_defaults[i] = registry->param_defaults ? registry->param_defaults[i] : 0.0f;
         out->params[i]         = out->param_defaults[i];
         out->param_targets[i]  = out->params[i];
     }
-    out->param_smoothing_frames = image->param_smoothing_frames;
+    out->param_smoothing_frames = registry->param_smoothing_frames;
     return UC_OK;
 }
 
 static uc_status
-init_bypass_state_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *runtime, uc_error *err) {
-    if (!image || !runtime)
+init_bypass_state_from_registry(const apg_v2_registry_t *registry, apg_v2_runtime_t *runtime, uc_error *err) {
+    if (!registry || !runtime)
         return UC_E_TYPE;
 
-    runtime->bypassed_instances_len = image->bypassed_instances_len;
+    runtime->bypassed_instances_len = registry->bypassed_instances_len;
     if (runtime->bypassed_instances_len == 0u)
         return UC_OK;
 
@@ -113,10 +113,10 @@ init_bypass_state_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime
 
     for (size_t i = 0; i < runtime->bypassed_instances_len; i++) {
         runtime->bypassed_instances[i] = (apg_v2_runtime_bypass_entry_t){
-            .instance_id     = image->bypass_instances[i].instance_id,
-            .instance_id_len = image->bypass_instances[i].instance_id_len,
-            .input_index     = image->bypass_instances[i].input_index,
-            .output_index    = image->bypass_instances[i].output_index,
+            .instance_id     = registry->bypass_instances[i].instance_id,
+            .instance_id_len = registry->bypass_instances[i].instance_id_len,
+            .input_index     = registry->bypass_instances[i].input_index,
+            .output_index    = registry->bypass_instances[i].output_index,
             .enabled         = false,
         };
     }
@@ -139,7 +139,7 @@ static void advance_smoothed_params(apg_v2_runtime_t *runtime, uint32_t frames) 
     }
 }
 
-static float scalar_refresh_value(const apg_v2_runtime_scalar_refresh_t *item, const apg_v2_runtime_t *runtime) {
+static float scalar_refresh_value(const apg_v2_registry_scalar_refresh_t *item, const apg_v2_runtime_t *runtime) {
     if (item->kind == APG_BIND_PARAM)
         return item->param_index < runtime->params_len ? runtime->params[item->param_index] : 0.0f;
     if (item->kind == APG_BIND_LITERAL)
@@ -148,23 +148,23 @@ static float scalar_refresh_value(const apg_v2_runtime_scalar_refresh_t *item, c
 }
 
 static bool refresh_scalar_plan_runtime(
-    const apg_v2_runtime_scalar_refresh_t *items,
-    size_t                                 items_len,
-    const char                            *node_id,
-    const char                            *atom_name,
-    apg_v2_runtime_t                      *runtime,
-    void                                  *storage
+    const apg_v2_registry_scalar_refresh_t *items,
+    size_t                                  items_len,
+    const char                             *node_id,
+    const char                             *atom_name,
+    apg_v2_runtime_t                       *runtime,
+    void                                   *storage
 );
 
 static uc_status apply_signal_bindings(
-    const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_t *runtime, apg_v2_runtime_node_t *node, uc_error *err
+    const apg_v2_registry_node_layout_t *layout, apg_v2_runtime_t *runtime, apg_v2_runtime_node_t *node, uc_error *err
 ) {
     if (!layout || !runtime || !node)
         return UC_OK;
 
     for (size_t i = 0; i < layout->signal_bindings_len; i++) {
-        const apg_v2_runtime_signal_binding_t *entry   = &layout->signal_bindings[i];
-        void                                  *storage = entry->is_input ? node->in_storage : node->out_storage;
+        const apg_v2_registry_signal_binding_t *entry   = &layout->signal_bindings[i];
+        void                                   *storage = entry->is_input ? node->in_storage : node->out_storage;
 
         if (entry->is_signal_array) {
             if (entry->signal_array_len == 0u)
@@ -193,13 +193,13 @@ static uc_status apply_signal_bindings(
 }
 
 static uc_status refresh_scalar_plan(
-    const apg_v2_runtime_scalar_refresh_t *items,
-    size_t                                 items_len,
-    const char                            *node_id,
-    const char                            *atom_name,
-    apg_v2_runtime_t                      *runtime,
-    void                                  *storage,
-    uc_error                              *err
+    const apg_v2_registry_scalar_refresh_t *items,
+    size_t                                  items_len,
+    const char                             *node_id,
+    const char                             *atom_name,
+    apg_v2_runtime_t                       *runtime,
+    void                                   *storage,
+    uc_error                               *err
 ) {
     if (!runtime || !runtime->last_error || !node_id || !atom_name || !storage) {
         return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh context is missing");
@@ -212,7 +212,7 @@ static uc_status refresh_scalar_plan(
     return UC_OK;
 }
 
-static size_t count_param_scalar_refreshes(const apg_v2_runtime_scalar_refresh_t *items, size_t items_len) {
+static size_t count_param_scalar_refreshes(const apg_v2_registry_scalar_refresh_t *items, size_t items_len) {
     size_t count = 0u;
     for (size_t i = 0; i < items_len; i++) {
         if (items[i].kind == APG_BIND_PARAM)
@@ -222,11 +222,11 @@ static size_t count_param_scalar_refreshes(const apg_v2_runtime_scalar_refresh_t
 }
 
 static uc_status copy_param_scalar_refreshes(
-    const apg_v2_runtime_scalar_refresh_t *all_items,
-    size_t                                 all_items_len,
-    apg_v2_runtime_scalar_refresh_t      **out_items,
-    size_t                                *out_len,
-    uc_error                              *err
+    const apg_v2_registry_scalar_refresh_t *all_items,
+    size_t                                  all_items_len,
+    apg_v2_registry_scalar_refresh_t      **out_items,
+    size_t                                 *out_len,
+    uc_error                               *err
 ) {
     if (!out_items || !out_len)
         return UC_E_TYPE;
@@ -239,7 +239,7 @@ static uc_status copy_param_scalar_refreshes(
     if (count == 0u)
         return UC_OK;
 
-    apg_v2_runtime_scalar_refresh_t *param_items = calloc(count, sizeof(*param_items));
+    apg_v2_registry_scalar_refresh_t *param_items = calloc(count, sizeof(*param_items));
     if (!param_items)
         return set_error(err, UC_E_OOM, "v2 runtime scalar refresh allocation failed");
 
@@ -255,12 +255,12 @@ static uc_status copy_param_scalar_refreshes(
 }
 
 static bool refresh_scalar_plan_runtime(
-    const apg_v2_runtime_scalar_refresh_t *items,
-    size_t                                 items_len,
-    const char                            *node_id,
-    const char                            *atom_name,
-    apg_v2_runtime_t                      *runtime,
-    void                                  *storage
+    const apg_v2_registry_scalar_refresh_t *items,
+    size_t                                  items_len,
+    const char                             *node_id,
+    const char                             *atom_name,
+    apg_v2_runtime_t                       *runtime,
+    void                                   *storage
 ) {
     if (!runtime || !node_id || !atom_name || !storage)
         return runtime_set_error(runtime, "v2 runtime scalar refresh context is missing"), false;
@@ -297,20 +297,20 @@ static bool refresh_scalar_plan_runtime(
     return true;
 }
 
-static uc_status validate_schedule(const apg_v2_runtime_image_t *image, uc_error *err) {
-    if (image->schedule_len == 0u)
+static uc_status validate_schedule(const apg_v2_registry_t *registry, uc_error *err) {
+    if (registry->schedule_len == 0u)
         return UC_OK;
-    if (!image->schedule)
-        return set_error(err, UC_E_MISSING, "v2 runtime image schedule is missing");
-    for (size_t i = 0; i < image->schedule_len; i++) {
-        if (image->schedule[i] >= image->nodes_len)
+    if (!registry->schedule)
+        return set_error(err, UC_E_MISSING, "v2 registry schedule is missing");
+    for (size_t i = 0; i < registry->schedule_len; i++) {
+        if (registry->schedule[i] >= registry->nodes_len)
             return set_error(err, UC_E_RANGE, "v2 runtime schedule index is out of range");
     }
     return UC_OK;
 }
 
 static uc_status
-apply_mix_matrix_config(const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_node_t *node, uc_error *err) {
+apply_mix_matrix_config(const apg_v2_registry_node_layout_t *layout, apg_v2_runtime_node_t *node, uc_error *err) {
     if (!layout || !node)
         return UC_OK;
     if (!layout->mix_matrix_row_pointers)
@@ -326,7 +326,7 @@ apply_mix_matrix_config(const apg_v2_runtime_node_layout_t *layout, apg_v2_runti
 }
 
 static uc_status init_state_buffers(
-    const apg_v2_runtime_node_layout_t *layout, apg_v2_runtime_t *runtime, apg_v2_runtime_node_t *node, uc_error *err
+    const apg_v2_registry_node_layout_t *layout, apg_v2_runtime_t *runtime, apg_v2_runtime_node_t *node, uc_error *err
 ) {
     if (!layout || layout->state_buffers_len == 0u)
         return UC_OK;
@@ -382,30 +382,30 @@ static uc_status init_state_buffers(
     return UC_OK;
 }
 
-static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
+static uc_status init_node_calls(const apg_v2_registry_t *registry, apg_v2_runtime_t *out, uc_error *err) {
     uc_status status = UC_OK;
-    out->nodes_len   = image->nodes_len;
+    out->nodes_len   = registry->nodes_len;
     if (out->nodes_len == 0u)
         return UC_OK;
-    if (!image->node_layouts)
-        return set_error(err, UC_E_MISSING, "v2 runtime image node layouts are missing");
+    if (!registry->node_layouts)
+        return set_error(err, UC_E_MISSING, "v2 registry node layouts are missing");
 
     out->nodes = calloc(out->nodes_len, sizeof(*out->nodes));
     if (!out->nodes)
         return set_error(err, UC_E_OOM, "v2 runtime node allocation failed");
-    out->atom_storage_bytes = image->atom_storage_bytes;
+    out->atom_storage_bytes = registry->atom_storage_bytes;
     if (out->atom_storage_bytes > 0u) {
         out->atom_storage_pool = calloc(1u, out->atom_storage_bytes);
         if (!out->atom_storage_pool)
             return set_error(err, UC_E_OOM, "v2 runtime atom storage pool allocation failed");
     }
-    out->state_buffer_samples = image->state_buffer_samples;
+    out->state_buffer_samples = registry->state_buffer_samples;
     if (out->state_buffer_samples > 0u) {
         out->state_buffer_pool = calloc(out->state_buffer_samples, sizeof(*out->state_buffer_pool));
         if (!out->state_buffer_pool)
             return set_error(err, UC_E_OOM, "v2 runtime state buffer pool allocation failed");
     }
-    out->state_buffer_count = image->state_buffers_len;
+    out->state_buffer_count = registry->state_buffers_len;
     if (out->state_buffer_count > 0u) {
         if (out->state_buffer_count > SIZE_MAX / sizeof(*out->state_buffer_ptrs))
             return set_error(err, UC_E_RANGE, "v2 runtime state buffer table is too large");
@@ -418,16 +418,16 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
         if (!out->state_buffer_sample_counts)
             return set_error(err, UC_E_OOM, "v2 runtime state buffer sample table allocation failed");
     }
-    if (image->signal_array_pointer_slots > 0u) {
-        out->signal_array_pool_len = image->signal_array_pointer_slots;
+    if (registry->signal_array_pointer_slots > 0u) {
+        out->signal_array_pool_len = registry->signal_array_pointer_slots;
         out->signal_array_pool     = calloc(out->signal_array_pool_len, sizeof(*out->signal_array_pool));
         if (!out->signal_array_pool)
             return set_error(err, UC_E_OOM, "v2 runtime signal array pool allocation failed");
     }
 
     for (size_t i = 0; i < out->nodes_len; i++) {
-        apg_v2_runtime_node_t              *node   = &out->nodes[i];
-        const apg_v2_runtime_node_layout_t *layout = &image->node_layouts[i];
+        apg_v2_runtime_node_t               *node   = &out->nodes[i];
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
         if (!layout->thunk || !layout->atom_name)
             return set_error(err, UC_E_MISSING, "v2 runtime node is missing atom metadata");
 
@@ -435,7 +435,7 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
             layout->in_offset + layout->in_size > out->atom_storage_bytes ||
             layout->config_offset + layout->config_size > out->atom_storage_bytes ||
             layout->state_offset + layout->state_size > out->atom_storage_bytes)
-            return set_error(err, UC_E_RANGE, "v2 runtime image atom storage layout exceeds pool");
+            return set_error(err, UC_E_RANGE, "v2 registry atom storage layout exceeds pool");
         node->out_storage            = (char *)out->atom_storage_pool + layout->out_offset;
         node->in_storage             = (char *)out->atom_storage_pool + layout->in_offset;
         node->config_storage         = (char *)out->atom_storage_pool + layout->config_offset;
@@ -496,55 +496,55 @@ static uc_status init_node_calls(const apg_v2_runtime_image_t *image, apg_v2_run
             return status;
     }
 
-    if ((status = validate_schedule(image, err)) != UC_OK)
+    if ((status = validate_schedule(registry, err)) != UC_OK)
         return status;
 
     return UC_OK;
 }
 
-uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err) {
-    if (!image || !out || !err)
+uc_status apg_v2_runtime_init_from_registry(const apg_v2_registry_t *registry, apg_v2_runtime_t *out, uc_error *err) {
+    if (!registry || !out || !err)
         return UC_E_TYPE;
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
-    if (image->frame_capacity == 0u)
+    if (registry->frame_capacity == 0u)
         return set_error(err, UC_E_RANGE, "v2 runtime frame capacity must be greater than zero");
 
-    out->frame_capacity             = image->frame_capacity;
-    out->process_info.sample_rate   = image->sample_rate;
-    out->process_info.frames        = image->frame_capacity;
-    out->process_info.output_frames = image->frame_capacity;
+    out->frame_capacity             = registry->frame_capacity;
+    out->process_info.sample_rate   = registry->sample_rate;
+    out->process_info.frames        = registry->frame_capacity;
+    out->process_info.output_frames = registry->frame_capacity;
     out->process_info.channels      = 1u;
 
-    uc_status status = init_signal_buffers(image, out, err);
+    uc_status status = init_signal_buffers(registry, out, err);
     if (status != UC_OK)
         goto fail;
-    out->signal_names           = image->signal_names;
-    out->input_meters_len       = image->input_meters_len;
-    out->output_meters_len      = image->output_meters_len;
-    out->input_audio_ports      = image->input_audio_ports;
-    out->input_audio_ports_len  = image->input_audio_ports_len;
-    out->output_audio_ports     = image->output_audio_ports;
-    out->output_audio_ports_len = image->output_audio_ports_len;
-    status                      = init_params(image, out, err);
+    out->signal_names           = registry->signal_names;
+    out->input_meters_len       = registry->input_meters_len;
+    out->output_meters_len      = registry->output_meters_len;
+    out->input_audio_ports      = registry->input_audio_ports;
+    out->input_audio_ports_len  = registry->input_audio_ports_len;
+    out->output_audio_ports     = registry->output_audio_ports;
+    out->output_audio_ports_len = registry->output_audio_ports_len;
+    status                      = init_params(registry, out, err);
     if (status != UC_OK)
         goto fail;
-    out->param_names         = image->param_names;
-    out->control_targets     = image->control_targets;
-    out->control_targets_len = image->control_targets_len;
-    status                   = init_node_calls(image, out, err);
+    out->param_names         = registry->param_names;
+    out->control_targets     = registry->control_targets;
+    out->control_targets_len = registry->control_targets_len;
+    status                   = init_node_calls(registry, out, err);
     if (status != UC_OK)
         goto fail;
-    out->schedule     = image->schedule;
-    out->schedule_len = image->schedule_len;
-    status            = init_bypass_state_from_image(image, out, err);
+    out->schedule     = registry->schedule;
+    out->schedule_len = registry->schedule_len;
+    status            = init_bypass_state_from_registry(registry, out, err);
     if (status != UC_OK)
         goto fail;
-    out->bypass_index_by_node            = image->bypass_index_by_node;
-    out->project_mute_output_indices     = image->project_mute_output_indices;
-    out->project_mute_output_indices_len = image->project_mute_output_indices_len;
-    if (out->nodes_len != 0u && image->bypassed_instances_len > 0u && !out->bypass_index_by_node) {
-        status = set_error(err, UC_E_MISSING, "v2 runtime bypass index map is missing from runtime image");
+    out->bypass_index_by_node            = registry->bypass_index_by_node;
+    out->project_mute_output_indices     = registry->project_mute_output_indices;
+    out->project_mute_output_indices_len = registry->project_mute_output_indices_len;
+    if (out->nodes_len != 0u && registry->bypassed_instances_len > 0u && !out->bypass_index_by_node) {
+        status = set_error(err, UC_E_MISSING, "v2 runtime bypass index map is missing from registry");
         goto fail;
     }
     return UC_OK;
@@ -554,18 +554,19 @@ fail:
     return status;
 }
 
-uc_status apg_v2_runtime_create_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t **out, uc_error *err) {
+uc_status
+apg_v2_runtime_create_from_registry(const apg_v2_registry_t *registry, apg_v2_runtime_t **out, uc_error *err) {
     if (!out || !err)
         return UC_E_TYPE;
     *out = NULL;
-    if (!image)
-        return set_error(err, UC_E_MISSING, "v2 runtime image is missing");
+    if (!registry)
+        return set_error(err, UC_E_MISSING, "v2 registry is missing");
 
     apg_v2_runtime_t *runtime = calloc(1, sizeof(*runtime));
     if (!runtime)
         return set_error(err, UC_E_OOM, "v2 runtime allocation failed");
 
-    uc_status status = apg_v2_runtime_init_from_image(image, runtime, err);
+    uc_status status = apg_v2_runtime_init_from_registry(registry, runtime, err);
     if (status != UC_OK) {
         free(runtime);
         return status;
@@ -586,7 +587,7 @@ float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
 float *apg_v2_runtime_find_input_port_signal(apg_v2_runtime_t *runtime, const char *port_name) {
     if (!runtime || !port_name)
         return NULL;
-    const apg_v2_runtime_audio_port_t *port =
+    const apg_v2_registry_audio_port_t *port =
         runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, port_name);
     if (!port || port->channel_count == 0u || port->signal_indices[0] >= runtime->signals_len)
         return NULL;
@@ -596,7 +597,7 @@ float *apg_v2_runtime_find_input_port_signal(apg_v2_runtime_t *runtime, const ch
 float *apg_v2_runtime_find_output_port_signal(apg_v2_runtime_t *runtime, const char *port_name) {
     if (!runtime || !port_name)
         return NULL;
-    const apg_v2_runtime_audio_port_t *port =
+    const apg_v2_registry_audio_port_t *port =
         runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, port_name);
     if (!port || port->channel_count == 0u || port->signal_indices[0] >= runtime->signals_len)
         return NULL;
@@ -607,7 +608,7 @@ float *
 apg_v2_runtime_find_input_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index) {
     if (!runtime || !port_name)
         return NULL;
-    const apg_v2_runtime_audio_port_t *port =
+    const apg_v2_registry_audio_port_t *port =
         runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, port_name);
     if (!port || channel_index >= port->channel_count || port->signal_indices[channel_index] >= runtime->signals_len)
         return NULL;
@@ -618,7 +619,7 @@ float *
 apg_v2_runtime_find_output_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index) {
     if (!runtime || !port_name)
         return NULL;
-    const apg_v2_runtime_audio_port_t *port =
+    const apg_v2_registry_audio_port_t *port =
         runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, port_name);
     if (!port || channel_index >= port->channel_count || port->signal_indices[channel_index] >= runtime->signals_len)
         return NULL;
@@ -635,7 +636,7 @@ bool apg_v2_runtime_resolve_input_port_channel_signal(
     if (!runtime || !port_name)
         return false;
 
-    const apg_v2_runtime_audio_port_t *port =
+    const apg_v2_registry_audio_port_t *port =
         runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, port_name);
     if (!port || !port->signal_indices || port->channel_count == 0u || channel_index >= port->channel_count)
         return false;
@@ -660,7 +661,7 @@ bool apg_v2_runtime_resolve_output_port_channel_signal(
     if (!runtime || !port_name)
         return false;
 
-    const apg_v2_runtime_audio_port_t *port =
+    const apg_v2_registry_audio_port_t *port =
         runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, port_name);
     if (!port || !port->signal_indices || port->channel_count == 0u || channel_index >= port->channel_count)
         return false;
@@ -782,7 +783,7 @@ bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port
     if (!runtime || !port_name)
         return false;
     for (size_t i = 0; i < runtime->control_targets_len; i++) {
-        const apg_v2_runtime_control_target_t *target = &runtime->control_targets[i];
+        const apg_v2_registry_control_target_t *target = &runtime->control_targets[i];
         if (!target->port_name || strcmp(target->port_name, port_name) != 0)
             continue;
         return apg_v2_runtime_set_param_index(runtime, target->param_index, value);
@@ -868,7 +869,7 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
         return false;
     runtime->last_error[0] = '\0';
     if (!runtime_execution_metadata_ready(runtime)) {
-        runtime_set_error(runtime, "v2 runtime image execution metadata is missing");
+        runtime_set_error(runtime, "v2 registry execution metadata is missing");
         return false;
     }
     if (frames == 0u) {
@@ -906,7 +907,7 @@ bool apg_v2_runtime_process_interleaved_ports(
         return false;
     runtime->last_error[0] = '\0';
     if (!runtime_execution_metadata_ready(runtime)) {
-        runtime_set_error(runtime, "v2 runtime image execution metadata is missing");
+        runtime_set_error(runtime, "v2 registry execution metadata is missing");
         return false;
     }
     if (!input || !output) {
@@ -914,9 +915,9 @@ bool apg_v2_runtime_process_interleaved_ports(
         return false;
     }
 
-    const apg_v2_runtime_audio_port_t *input_port =
+    const apg_v2_registry_audio_port_t *input_port =
         runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, input_port_name);
-    const apg_v2_runtime_audio_port_t *output_port =
+    const apg_v2_registry_audio_port_t *output_port =
         runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, output_port_name);
     if (!input_port) {
         runtime_set_error(runtime, "v2 runtime input audio port signal lookup failed");
@@ -964,18 +965,18 @@ bool apg_v2_runtime_process_interleaved_ports(
 }
 
 static bool apg_v2_runtime_process_mono_audio_ports(
-    apg_v2_runtime_t                  *runtime,
-    const apg_v2_runtime_audio_port_t *input_port,
-    const float                       *input,
-    const apg_v2_runtime_audio_port_t *output_port,
-    float                             *output,
-    uint32_t                           frames
+    apg_v2_runtime_t                   *runtime,
+    const apg_v2_registry_audio_port_t *input_port,
+    const float                        *input,
+    const apg_v2_registry_audio_port_t *output_port,
+    float                              *output,
+    uint32_t                            frames
 ) {
     if (!runtime)
         return false;
     runtime->last_error[0] = '\0';
     if (!runtime_execution_metadata_ready(runtime)) {
-        runtime_set_error(runtime, "v2 runtime image execution metadata is missing");
+        runtime_set_error(runtime, "v2 registry execution metadata is missing");
         return false;
     }
     if (!input || !output) {
@@ -1013,11 +1014,11 @@ bool apg_v2_runtime_process_mono_ports(
     float            *output,
     uint32_t          frames
 ) {
-    const apg_v2_runtime_audio_port_t *input_port =
+    const apg_v2_registry_audio_port_t *input_port =
         runtime
             ? runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, input_port_name)
             : NULL;
-    const apg_v2_runtime_audio_port_t *output_port =
+    const apg_v2_registry_audio_port_t *output_port =
         runtime
             ? runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, output_port_name)
             : NULL;

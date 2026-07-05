@@ -1,6 +1,6 @@
 #include <apgcore/host_v2.h>
 #include <apgcore/measure_v2.h>
-#include <apgcore/runtime_image_builder_v2.h>
+#include <apgcore/registry/registry_builder_v2.h>
 
 #include <limits.h>
 #include <stddef.h>
@@ -16,21 +16,21 @@ static uc_status build_runtime_from_plan(
     const apg_v2_compiled_unit_t *plan,
     uint32_t                      frame_capacity,
     float                         sample_rate,
-    uc_arena                     *image_arena,
-    apg_v2_runtime_image_t       *image,
+    uc_arena                     *registry_arena,
+    apg_v2_registry_t            *registry,
     apg_v2_runtime_t            **runtime,
     uc_error                     *err
 ) {
-    if (!plan || !image_arena || !image || !runtime || !err)
+    if (!plan || !registry_arena || !registry || !runtime || !err)
         return UC_E_TYPE;
     *runtime = NULL;
 
     uc_status status =
-        apg_v2_runtime_image_build_with_growth(plan, frame_capacity, sample_rate, image_arena, image, err);
+        apg_v2_registry_build_with_growth(plan, frame_capacity, sample_rate, registry_arena, registry, err);
     if (status != UC_OK)
         return status;
 
-    status = apg_v2_runtime_create_from_image(image, runtime, err);
+    status = apg_v2_runtime_create_from_registry(registry, runtime, err);
     if (status != UC_OK) {
         return status;
     }
@@ -50,11 +50,11 @@ uc_status apg_v2_host_load_file(
     out->arena_ready = true;
 
     uc_status status = apg_unit_v2_load_file(path, &out->arena, &out->unit, err);
-    if (uc_arena_init(&out->image_arena, 1024u * 1024u) != 0) {
-        status = set_error(err, UC_E_OOM, "v2 host image arena allocation failed");
+    if (uc_arena_init(&out->registry_arena, 1024u * 1024u) != 0) {
+        status = set_error(err, UC_E_OOM, "v2 host registry arena allocation failed");
         goto fail;
     }
-    out->image_ready = true;
+    out->registry_ready = true;
     if (status != UC_OK)
         goto fail;
 
@@ -63,7 +63,7 @@ uc_status apg_v2_host_load_file(
         goto fail;
 
     status = build_runtime_from_plan(
-        &out->plan, frame_capacity, sample_rate, &out->image_arena, &out->image, &out->runtime, err
+        &out->plan, frame_capacity, sample_rate, &out->registry_arena, &out->registry, &out->runtime, err
     );
     if (status != UC_OK)
         goto fail;
@@ -105,8 +105,8 @@ void apg_v2_host_destroy(apg_v2_host_unit_t *host) {
     if (host->runtime) {
         apg_v2_runtime_destroy_owned(&host->runtime);
     }
-    if (host->image_ready)
-        uc_arena_free(&host->image_arena);
+    if (host->registry_ready)
+        uc_arena_free(&host->registry_arena);
     if (host->arena_ready)
         uc_arena_free(&host->arena);
     memset(host, 0, sizeof(*host));
@@ -125,11 +125,11 @@ uc_status apg_v2_host_project_load_file(
     out->arena_ready = true;
 
     uc_status status = apg_project_v2_load_resolved_file(path, &out->arena, &out->resolved_project, err);
-    if (uc_arena_init(&out->image_arena, 2 * 1024 * 1024u) != 0) {
-        status = set_error(err, UC_E_OOM, "v2 host image arena allocation failed");
+    if (uc_arena_init(&out->registry_arena, 2 * 1024 * 1024u) != 0) {
+        status = set_error(err, UC_E_OOM, "v2 host registry arena allocation failed");
         goto fail;
     }
-    out->image_ready = true;
+    out->registry_ready = true;
     if (status != UC_OK)
         goto fail;
 
@@ -138,7 +138,7 @@ uc_status apg_v2_host_project_load_file(
         goto fail;
 
     status = build_runtime_from_plan(
-        &out->compiled.plan, frame_capacity, sample_rate, &out->image_arena, &out->image, &out->runtime, err
+        &out->compiled.plan, frame_capacity, sample_rate, &out->registry_arena, &out->registry, &out->runtime, err
     );
     if (status != UC_OK)
         goto fail;
@@ -180,8 +180,8 @@ void apg_v2_host_project_destroy(apg_v2_host_project_t *host) {
     if (host->runtime) {
         apg_v2_runtime_destroy_owned(&host->runtime);
     }
-    if (host->image_ready)
-        uc_arena_free(&host->image_arena);
+    if (host->registry_ready)
+        uc_arena_free(&host->registry_arena);
     if (host->arena_ready)
         uc_arena_free(&host->arena);
     memset(host, 0, sizeof(*host));

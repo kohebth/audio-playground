@@ -18,7 +18,7 @@ Done:
 
 - [ ] Audit host/tooling code for direct runtime internals reads that should go through measure.
 - [ ] Keep measure read-only with respect to DSP execution state, except copying snapshots out.
-- [ ] Add readiness snapshots only if host/UI needs runtime state already available from image/runtime; keep export-specific JSON in CLI/export code.
+- [ ] Add readiness snapshots only if host/UI needs runtime state already available from registry/runtime; keep export-specific JSON in CLI/export code.
 
 ## Tests
 

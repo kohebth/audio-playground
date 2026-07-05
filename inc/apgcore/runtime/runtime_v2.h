@@ -5,18 +5,18 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <apgcore/runtime_image_v2.h>
+#include <apgcore/registry/registry_v2.h>
 #include <yaml/error.h>
 
 typedef struct apg_v2_runtime_t apg_v2_runtime_t;
 
 /*
- * Initialize a runtime from a prebuilt runtime image descriptor.
- * The image metadata and borrowed source strings must outlive the runtime.
+ * Initialize a runtime from a prebuilt registry descriptor.
+ * The registry metadata and borrowed source strings must outlive the runtime.
  */
-uc_status apg_v2_runtime_init_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t *out, uc_error *err);
-/* Allocate and initialize a runtime from a prebuilt runtime image descriptor. */
-uc_status apg_v2_runtime_create_from_image(const apg_v2_runtime_image_t *image, apg_v2_runtime_t **out, uc_error *err);
+uc_status apg_v2_runtime_init_from_registry(const apg_v2_registry_t *registry, apg_v2_runtime_t *out, uc_error *err);
+/* Allocate and initialize a runtime from a prebuilt registry descriptor. */
+uc_status apg_v2_runtime_create_from_registry(const apg_v2_registry_t *registry, apg_v2_runtime_t **out, uc_error *err);
 
 /* Return the mutable internal signal buffer for a graph signal name, or NULL if missing. */
 float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name);

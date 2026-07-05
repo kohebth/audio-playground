@@ -5,7 +5,7 @@
 This repository contains several independent project areas:
 
 - `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, metadata registry, YAML parser helpers, APGCore v2 modules, and CTest targets. APGCore code is grouped by module under `src/apgcore/<module>/` and `inc/apgcore/<module>/`; atom implementations are grouped by family under `src/atom/<family>/`.
-- `core-design.md`: current production architecture target. Keep new core work aligned with the `metadata -> parser -> validator -> compiler -> runtime image -> runtime -> measure -> host` boundary.
+- `core-design.md`: current production architecture target. Keep new core work aligned with the `metadata -> parser -> validator -> compiler -> registry -> runtime -> measure -> host` boundary.
 - `units/`: legacy local v1 YAML drafts only. They are not loaded by the default production build; do not stage modified files here unless the user explicitly decides to port or delete them.
 - `test/fixtures/units-v2/` and `test/fixtures/projects-v2/`: v2 test metadata fixtures for parser/validator/compiler/runtime and UI contract checks. These are not APGCore source paths or production module roots.
 - `test/golden/`: frozen JSON samples for frontend contract tests and mock data.
@@ -55,7 +55,7 @@ Name C tests `test_<feature>.c`. Name v2 fixture metadata `<name>.unit.v2.yaml` 
 
 ## Testing Guidelines
 
-C tests are CTest targets. Add focused tests under `test/` for atom behavior, parser boundaries, validator contracts, compiler plans, runtime-image layout, runtime execution, and measure/host reads. V2 fixture coverage should load/compile all `test/fixtures/units-v2/*.unit.v2.yaml`, and runtime tests should exercise named signal buffers, params, schedule execution, state buffers, and failure messages.
+C tests are CTest targets. Add focused tests under `test/` for atom behavior, parser boundaries, validator contracts, compiler plans, registry layout, runtime execution, and measure/host reads. V2 fixture coverage should load/compile all `test/fixtures/units-v2/*.unit.v2.yaml`, and runtime tests should exercise named signal buffers, params, schedule execution, state buffers, and failure messages.
 
 ## Commit & Pull Request Guidelines
 
@@ -69,7 +69,7 @@ Reread `AGENTS.md` at the start of each new work slice before making repository 
 
 ## Continuous Work Protocol
 
-Current milestone: Full Audio Playground v2 MVP phases AC-AJ are complete. The next target is production core hardening from `core-design.md`: make `metadata`, `parser`, `validator`, `compiler`, runtime image, `runtime`, `measure`, and `host` stay isolated so the real-time path only executes a compact prebuilt schedule over registered contiguous memory. After that, continue STM32H7/M7 export validation and real WASM AudioWorklet preview/export from `problem.md`.
+Current milestone: Full Audio Playground v2 MVP phases AC-AJ are complete. The next target is production core hardening from `core-design.md`: make `metadata`, `parser`, `validator`, `compiler`, registry, `runtime`, `measure`, and `host` stay isolated so the real-time path only executes a compact prebuilt schedule over registered contiguous memory. After that, continue STM32H7/M7 export validation and real WASM AudioWorklet preview/export from `problem.md`.
 
 When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, tracker updates, build-only verification, and commit. Prefer one coherent module at a time, but continue into the next module in the same turn when the path is clear and no approval or product decision is needed. For broad edits or refactors, complete all closely related changes as one coherent slice instead of fragmenting them into small commits, unless a product decision, risky behavior change, or verification failure requires stopping.
 
