@@ -86,8 +86,8 @@
     _(modulation_phase_state_fields, 2)             \
     _(modulation_scrub_config_fields, 1)            \
     _(nonlinear_bitcrush_config_fields, 1)          \
-    _(nonlinear_samplerate_reduce_config_fields, 1) \
-    _(nonlinear_samplerate_reduce_state_fields, 2)  \
+    _(nonlinear_sample_hold_config_fields, 1)        \
+    _(nonlinear_sample_hold_state_fields, 2)         \
     _(nonlinear_waveshape_config_fields, 2)         \
     _(src_antialias_config_fields, 2)               \
     _(src_antialias_state_fields, 2)                \

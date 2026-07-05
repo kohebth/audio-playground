@@ -202,7 +202,7 @@ static int test_atom_inspect_json_is_available(void) {
         free(json);
         return fail("atom inspect json lacked expected catalog fields");
     }
-    if (strlen(json) != 26184u || fnv1a64(json) != UINT64_C(0xe1501c05be8a87cc)) {
+    if (strlen(json) != 26178u || fnv1a64(json) != UINT64_C(0x422db7ba152254e1)) {
         free(json);
         return fail("atom inspect json changed from the frozen sample contract");
     }

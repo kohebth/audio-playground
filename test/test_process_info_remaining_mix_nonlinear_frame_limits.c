@@ -146,18 +146,18 @@ int test_process_info_remaining_mix_nonlinear_frame_limits(void) {
             mono[i] = (float)i;
             y[i]    = -99.0f;
         }
-        nonlinear_samplerate_reduce_out_t    sr_out    = {.signal = y};
-        nonlinear_samplerate_reduce_in_t     sr_in     = {.signal = mono};
-        nonlinear_samplerate_reduce_params_t sr_params = {.factor = 2.0f};
-        nonlinear_samplerate_reduce_state_t  sr_state  = {.last_val = 0.0f, .counter = 0.0f};
-        nonlinear_samplerate_reduce_process(&sr_out, &sr_in, &sr_params, &sr_state, &info);
+        nonlinear_sample_hold_out_t    sr_out    = {.signal = y};
+        nonlinear_sample_hold_in_t     sr_in     = {.signal = mono};
+        nonlinear_sample_hold_params_t sr_params = {.factor = 2.0f};
+        nonlinear_sample_hold_state_t  sr_state  = {.last_val = 0.0f, .counter = 0.0f};
+        nonlinear_sample_hold_process(&sr_out, &sr_in, &sr_params, &sr_state, &info);
         for (int i = 0; i < frames; i++) {
             float expected = (i < 2) ? 0.0f : (float)((i / 2) * 2);
             if (fabsf(y[i] - expected) > 1e-7f)
-                return fail("nonlinear_samplerate_reduce_process mismatch");
+                return fail("nonlinear_sample_hold_process mismatch");
         }
         if (frames < 1024 && y[frames] != -99.0f)
-            return fail("nonlinear_samplerate_reduce_process wrote past info.frames");
+            return fail("nonlinear_sample_hold_process wrote past info.frames");
     }
 
     return 0;

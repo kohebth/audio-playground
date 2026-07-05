@@ -504,11 +504,11 @@ void nonlinear_bitcrush(
     void *                           state       // { /* no members */ }
 );
 
-void nonlinear_samplerate_reduce(
-    nonlinear_samplerate_reduce_out_t out,      // { float *signal; }
-    nonlinear_samplerate_reduce_in_t in,      // { float *signal; }
-    nonlinear_samplerate_reduce_params_t params,      // { float factor; }
-    nonlinear_samplerate_reduce_state_t * state       // { float last_val; float counter; }
+void nonlinear_sample_hold(
+    nonlinear_sample_hold_out_t out,      // { float *signal; }
+    nonlinear_sample_hold_in_t in,      // { float *signal; }
+    nonlinear_sample_hold_params_t params,      // { float factor; }
+    nonlinear_sample_hold_state_t * state       // { float last_val; float counter; }
 );
 ```
 
@@ -548,7 +548,7 @@ void nonlinear_samplerate_reduce(
 | `src_antiimage`               | `z1`, `z2`                    |
 | `freq_overlap_add`            | `buffer[]`                    |
 | `freq_overlap_save`           | `buffer[]`, `write_pos`       |
-| `nonlinear_samplerate_reduce` | `last_val`, `counter`         |
+| `nonlinear_sample_hold`        | `last_val`, `counter`         |
 
 ---
 
@@ -566,4 +566,4 @@ void nonlinear_samplerate_reduce(
 | `src_`           | upsample, downsample, antialias, antiimage, convert_format                   |
 | `freq_`          | fft, ifft, window, multiply, overlap_add, overlap_save                       |
 | `mix_`           | crossfade, wet_dry, matrix, pan_stereo, encode_ms, decode_ms                 |
-| `nonlinear_`     | waveshape, bitcrush, samplerate_reduce                                       |
+| `nonlinear_`     | waveshape, bitcrush, sample_hold                                           |

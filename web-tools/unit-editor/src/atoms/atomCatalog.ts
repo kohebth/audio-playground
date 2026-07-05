@@ -76,7 +76,7 @@ export const ATOM_CATALOG: AtomDef[] = [
   // ── nonlinear ────────────────────────────────────────────────────────────
   { name: 'nonlinear_waveshape', category: 'nonlinear', ins: ['signal'], outs: ['signal'], config: [{ name: 'drive', type: 'float' }, { name: 'mode', type: 'int' }] },
   { name: 'nonlinear_bitcrush', category: 'nonlinear', ins: ['signal'], outs: ['signal'], config: [{ name: 'bits', type: 'int' }] },
-  { name: 'nonlinear_samplerate_reduce', category: 'nonlinear', ins: ['signal'], outs: ['signal'], config: [{ name: 'factor', type: 'int' }] },
+  { name: 'nonlinear_sample_hold', category: 'nonlinear', ins: ['signal'], outs: ['signal'], config: [{ name: 'factor', type: 'int' }] },
 
   // ── freq ─────────────────────────────────────────────────────────────────
   { name: 'freq_fft', category: 'freq', ins: ['signal'], outs: ['real', 'imag'], config: [{ name: 'size', type: 'int' }] },

@@ -395,10 +395,10 @@ typedef struct { float *signal; }   nonlinear_bitcrush_in_t;
 typedef struct { float bit_depth; } nonlinear_bitcrush_params_t;
 typedef struct { /* no members */ } nonlinear_bitcrush_state_t;
 
-typedef struct { float *signal; }                 nonlinear_samplerate_reduce_out_t;
-typedef struct { float *signal; }                 nonlinear_samplerate_reduce_in_t;
-typedef struct { float factor; }                  nonlinear_samplerate_reduce_params_t;
-typedef struct { float last_val; float counter; } nonlinear_samplerate_reduce_state_t;
+typedef struct { float *signal; }                 nonlinear_sample_hold_out_t;
+typedef struct { float *signal; }                 nonlinear_sample_hold_in_t;
+typedef struct { float factor; }                  nonlinear_sample_hold_params_t;
+typedef struct { float last_val; float counter; } nonlinear_sample_hold_state_t;
 
 typedef struct { float *signal; }                 freq_quantize_out_t;
 typedef struct { float *signal; }                 freq_quantize_in_t;

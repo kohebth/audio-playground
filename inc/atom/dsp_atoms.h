@@ -75,7 +75,7 @@
     _(mix_decode_ms)          \
     _(nonlinear_waveshape)    \
     _(nonlinear_bitcrush)     \
-    _(nonlinear_samplerate_reduce)
+    _(nonlinear_sample_hold)
 
 DECLARE_ALL(ATOM);
 
@@ -535,12 +535,12 @@ void nonlinear_waveshape_process(
     nonlinear_waveshape_state_t  *state,
     const apg_process_info_t     *info
 );
-void nonlinear_samplerate_reduce_process(
-    nonlinear_samplerate_reduce_out_t    *out,
-    nonlinear_samplerate_reduce_in_t     *in,
-    nonlinear_samplerate_reduce_params_t *params,
-    nonlinear_samplerate_reduce_state_t  *state,
-    const apg_process_info_t             *info
+void nonlinear_sample_hold_process(
+    nonlinear_sample_hold_out_t    *out,
+    nonlinear_sample_hold_in_t     *in,
+    nonlinear_sample_hold_params_t *params,
+    nonlinear_sample_hold_state_t  *state,
+    const apg_process_info_t       *info
 );
 
 #endif // DSP_ATOMS_H

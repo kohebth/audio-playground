@@ -10,16 +10,16 @@ const atom_field_desc_t nonlinear_bitcrush_config_fields[] = {
 };
 FIELD_COUNT(nonlinear_bitcrush_config_fields);
 
-const atom_field_desc_t nonlinear_samplerate_reduce_config_fields[] = {
-    {"factor", FIELD_FLOAT, offsetof(nonlinear_samplerate_reduce_params_t, factor)},
+const atom_field_desc_t nonlinear_sample_hold_config_fields[] = {
+    {"factor", FIELD_FLOAT, offsetof(nonlinear_sample_hold_params_t, factor)},
 };
-FIELD_COUNT(nonlinear_samplerate_reduce_config_fields);
+FIELD_COUNT(nonlinear_sample_hold_config_fields);
 
-const atom_field_desc_t nonlinear_samplerate_reduce_state_fields[] = {
-    {"last_val", FIELD_FLOAT, offsetof(nonlinear_samplerate_reduce_state_t, last_val)},
-    { "counter", FIELD_FLOAT, offsetof(nonlinear_samplerate_reduce_state_t,  counter)},
+const atom_field_desc_t nonlinear_sample_hold_state_fields[] = {
+    {"last_val", FIELD_FLOAT, offsetof(nonlinear_sample_hold_state_t, last_val)},
+    { "counter", FIELD_FLOAT, offsetof(nonlinear_sample_hold_state_t,  counter)},
 };
-FIELD_COUNT(nonlinear_samplerate_reduce_state_fields);
+FIELD_COUNT(nonlinear_sample_hold_state_fields);
 
 const atom_field_desc_t nonlinear_waveshape_config_fields[] = {
     {"transfer_table", FIELD_BUFFER, offsetof(nonlinear_waveshape_params_t, transfer_table)},
