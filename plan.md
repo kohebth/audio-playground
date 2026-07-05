@@ -157,6 +157,13 @@ Module note: M7 export now rejects target-incompatible compiled atoms.
 
 Module note: Atom contract metadata now owns binding field shape, and compiler validation reads that metadata directly.
 
+### Parser Isolation
+
+- [x] PN1: Add parser-boundary coverage for semantic-invalid unit/project YAML that must still parse as raw contracts.
+- [x] PN2: Add parser-stage negative coverage for malformed flow-map syntax.
+
+Module note: Parser tests now prove syntax parsing stays separate from validator and compiler semantic rejection.
+
 ### Runtime Image Hardening
 
 - [x] PD1: Move per-node state-buffer sample capacities into runtime image metadata.

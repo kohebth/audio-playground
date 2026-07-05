@@ -100,6 +100,13 @@ Module note: PB runtime-boundary tests now assert image-owned init behavior and 
 
 Module note: Atom contract metadata now owns binding field shape, and compiler validation reads that metadata directly.
 
+## Parser Isolation
+
+- [x] PN1: Add parser-boundary coverage for semantic-invalid unit/project YAML that must still parse as raw contracts.
+- [x] PN2: Add parser-stage negative coverage for malformed flow-map syntax.
+
+Module note: Parser tests now prove syntax parsing stays separate from validator and compiler semantic rejection.
+
 ## STM32H7/M7 Readiness Queue
 
 - [x] PC1: Add deterministic M7 static memory manifest fields to export JSON and generated headers.
