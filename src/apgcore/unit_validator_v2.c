@@ -1,5 +1,6 @@
 #include <apgcore/unit_validator_v2.h>
 
+#include <apgcore/atom_catalog.h>
 #include <atom_registry.h>
 #include <yaml/node.h>
 
@@ -734,6 +735,11 @@ validate_and_fill_compatibility(const uc_node *compatibility, uc_arena *arena, a
         const char *supported = node_scalar(compatibility->map[i].value);
         if (!bool_scalar_is_valid(compatibility->map[i].value))
             return set_error(err, UC_E_TYPE, "compatibility flag must be true or false");
+        if (!apg_atom_profile_known(compatibility->map[i].key)) {
+            char msg[128];
+            snprintf(msg, sizeof(msg), "compatibility profile '%s' is unknown", compatibility->map[i].key);
+            return set_error(err, UC_E_TYPE, msg);
+        }
         items[i].target    = compatibility->map[i].key;
         items[i].supported = supported;
     }

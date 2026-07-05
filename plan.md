@@ -164,6 +164,14 @@ Module note: Atom contract metadata now owns binding field shape, and compiler v
 
 Module note: Parser tests now prove syntax parsing stays separate from validator and compiler semantic rejection.
 
+### Validator Isolation
+
+- [x] PV1: Share known target profile validation through atom metadata.
+- [x] PV2: Reject unknown unit compatibility profiles during validation.
+- [x] PV3: Keep atom binding field validation in compiler while tightening validator profile semantics.
+
+Module note: Validators now share target profile metadata and reject unknown unit compatibility profiles.
+
 ### Runtime Image Hardening
 
 - [x] PD1: Move per-node state-buffer sample capacities into runtime image metadata.

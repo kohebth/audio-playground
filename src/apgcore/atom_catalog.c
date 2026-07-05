@@ -282,8 +282,15 @@ static const char *field_type_name(atom_field_type_t type) {
     return "unknown";
 }
 
+bool apg_atom_profile_known(const char *profile) {
+    return profile && (strcmp(profile, "desktop_full") == 0 || strcmp(profile, "wasm_realtime") == 0 ||
+                       strcmp(profile, "m7_static") == 0 || strcmp(profile, "offline_render") == 0);
+}
+
 bool apg_atom_profile_supported(const char *name, const char *profile) {
     if (!name || !profile)
+        return false;
+    if (!apg_atom_profile_known(profile))
         return false;
     if (strcmp(profile, "desktop_full") == 0 || strcmp(profile, "offline_render") == 0)
         return true;

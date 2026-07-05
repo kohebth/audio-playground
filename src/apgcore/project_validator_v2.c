@@ -1,5 +1,6 @@
 #include <apgcore/project_validator_v2.h>
 
+#include <apgcore/atom_catalog.h>
 #include <yaml/node.h>
 
 #include <errno.h>
@@ -98,11 +99,6 @@ static uc_value to_value(const uc_node *node) {
         value.text = node->text;
     }
     return value;
-}
-
-static bool profile_is_valid(const char *profile) {
-    return profile && (strcmp(profile, "desktop_full") == 0 || strcmp(profile, "wasm_realtime") == 0 ||
-                       strcmp(profile, "m7_static") == 0 || strcmp(profile, "offline_render") == 0);
 }
 
 static bool unit_ref_exists(const apg_project_v2_t *project, const char *id) {
@@ -359,7 +355,7 @@ static uc_status fill_targets(const uc_node *targets, uc_arena *arena, apg_proje
     const char *default_profile = required_scalar(targets, "default", "targets.default", err);
     if (!default_profile)
         return err->status;
-    if (!profile_is_valid(default_profile)) {
+    if (!apg_atom_profile_known(default_profile)) {
         char msg[128];
         snprintf(msg, sizeof(msg), "targets.default profile '%s' is unknown", default_profile);
         return set_error(err, UC_E_TYPE, msg);
@@ -377,7 +373,7 @@ static uc_status fill_targets(const uc_node *targets, uc_arena *arena, apg_proje
         const char *profile = export->seq[i] && export->seq[i]->kind == UC_NODE_SCALAR ? export->seq[i]->text : NULL;
         if (!profile)
             return set_error(err, UC_E_TYPE, "targets.export entries must be scalar");
-        if (!profile_is_valid(profile)) {
+        if (!apg_atom_profile_known(profile)) {
             char msg[128];
             snprintf(msg, sizeof(msg), "targets.export profile '%s' is unknown", profile);
             return set_error(err, UC_E_TYPE, msg);

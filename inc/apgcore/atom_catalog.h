@@ -30,6 +30,7 @@ typedef struct {
     bool                           required;
 } apg_atom_contract_field_t;
 
+bool   apg_atom_profile_known(const char *profile);
 bool   apg_atom_profile_supported(const char *name, const char *profile);
 size_t apg_atom_contract_field_count(const char *atom, apg_atom_contract_section_t section);
 bool   apg_atom_contract_field(

@@ -92,10 +92,17 @@ int main(void) {
         return fail("profile hints are missing");
     if (!strstr(json, "\"m7_static\":false"))
         return fail("restricted profile hint is missing");
+    if (!apg_atom_profile_known("desktop_full") || !apg_atom_profile_known("wasm_realtime") ||
+        !apg_atom_profile_known("m7_static") || !apg_atom_profile_known("offline_render"))
+        return fail("known profile lookup failed");
+    if (apg_atom_profile_known("toaster_realtime"))
+        return fail("unknown profile lookup succeeded");
     if (!apg_atom_profile_supported("generation_dc", "m7_static"))
         return fail("m7-supported atom profile check failed");
     if (apg_atom_profile_supported("src_downsample", "m7_static"))
         return fail("m7-restricted atom profile check failed");
+    if (apg_atom_profile_supported("generation_dc", "toaster_realtime"))
+        return fail("unknown profile support check succeeded");
     if (apg_atom_profile_supported(NULL, "m7_static"))
         return fail("missing atom profile check failed");
 

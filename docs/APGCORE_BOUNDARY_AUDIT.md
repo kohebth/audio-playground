@@ -7,8 +7,8 @@
 - `metadata`: `atom_catalog` and `atom_register` remain isolated reference data for atom call metadata, target
   compatibility, and typed contract fields consumed by compiler binding validation.
 - `parser`: `apg_v2_parse_string(...)` and `apg_v2_parse_file(...)` return raw YAML contract graphs without semantic checks, with regression coverage for parser-accepted/validator-rejected contracts.
-- `validator`: unit and project validators own schema, metadata-reference, binding-key, compatibility, and route checks.
-- `compiler`: unit and project compilers expand contracts, bind params/signals, and emit topological plans.
+- `validator`: unit and project validators own schema, metadata-reference, known profile, compatibility, and route checks.
+- `compiler`: unit and project compilers expand contracts, validate atom binding fields, bind params/signals, and emit topological plans.
 - `runtime image`: `apg_v2_runtime_image_build(...)` precomputes signal, param, meter, control-target, node, schedule, and state-buffer layout counts.
 - `measure`: `apg_v2_measure_*` exposes snapshots, meters, and diagnostics for host/tooling reads.
 

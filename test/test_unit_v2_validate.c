@@ -139,6 +139,40 @@ int main(void) {
     if (expect_valid(bool_param, "bool param without numeric bounds"))
         return 1;
 
+    const char *all_known_profiles = "kind: apg.unit\n"
+                                     "schema: apg.unit.v2\n"
+                                     "name: known_profiles\n"
+                                     "version: 2.0.0\n"
+                                     "params:\n"
+                                     "  gain:\n"
+                                     "    type: float\n"
+                                     "    default: 1.0\n"
+                                     "    min: 0.0\n"
+                                     "    max: 2.0\n"
+                                     "ports:\n"
+                                     "  inputs:\n"
+                                     "    - name: input\n"
+                                     "      type: audio\n"
+                                     "      channels: 1\n"
+                                     "  outputs:\n"
+                                     "    - name: output\n"
+                                     "      type: audio\n"
+                                     "      channels: 1\n"
+                                     "graph:\n"
+                                     "  signals:\n"
+                                     "    - input\n"
+                                     "    - output\n"
+                                     "  nodes:\n"
+                                     "    - id: pass\n"
+                                     "      atom: amplitude_multiply\n"
+                                     "compatibility:\n"
+                                     "  desktop_full: true\n"
+                                     "  wasm_realtime: true\n"
+                                     "  m7_static: false\n"
+                                     "  offline_render: true\n";
+    if (expect_valid(all_known_profiles, "all known compatibility profiles"))
+        return 1;
+
     const char *meta_not_map = "kind: apg.unit\n"
                                "schema: apg.unit.v2\n"
                                "name: bad_unit\n"
@@ -1043,6 +1077,37 @@ int main(void) {
                                          "compatibility:\n"
                                          "  desktop_full: maybe\n";
     if (expect_invalid(compatibility_non_bool, "compatibility non-bool flag"))
+        return 1;
+
+    const char *compatibility_unknown_profile = "kind: apg.unit\n"
+                                                "schema: apg.unit.v2\n"
+                                                "name: bad_unit\n"
+                                                "version: 2.0.0\n"
+                                                "params:\n"
+                                                "  gain:\n"
+                                                "    type: float\n"
+                                                "    default: 1.0\n"
+                                                "    min: 0.0\n"
+                                                "    max: 2.0\n"
+                                                "ports:\n"
+                                                "  inputs:\n"
+                                                "    - name: input\n"
+                                                "      type: audio\n"
+                                                "      channels: 1\n"
+                                                "  outputs:\n"
+                                                "    - name: output\n"
+                                                "      type: audio\n"
+                                                "      channels: 1\n"
+                                                "graph:\n"
+                                                "  signals:\n"
+                                                "    - input\n"
+                                                "    - output\n"
+                                                "  nodes:\n"
+                                                "    - id: pass\n"
+                                                "      atom: amplitude_multiply\n"
+                                                "compatibility:\n"
+                                                "  toaster_realtime: true\n";
+    if (expect_invalid_contains(compatibility_unknown_profile, "unknown compatibility profile", "toaster_realtime"))
         return 1;
 
     return 0;
