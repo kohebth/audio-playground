@@ -1,6 +1,7 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_COMPILER_V2_H
 #define AUDIO_PLAYGROUND_APGCORE_COMPILER_V2_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -35,13 +36,25 @@ typedef struct {
 } apg_v2_compiled_node_t;
 
 typedef struct {
-    const apg_unit_v2_t    *unit;
-    uint32_t               *schedule;
-    size_t                  schedule_len;
-    apg_v2_compiled_node_t *nodes;
-    size_t                  nodes_len;
-    uint32_t               *signal_producers;
-    size_t                  signal_producers_len;
+    const char *id;
+    size_t      id_len;
+    size_t      input_signal_index;
+    size_t      output_signal_index;
+    bool        bypassable;
+} apg_v2_compiled_instance_t;
+
+typedef struct {
+    const apg_unit_v2_t        *unit;
+    uint32_t                   *schedule;
+    size_t                      schedule_len;
+    apg_v2_compiled_node_t     *nodes;
+    size_t                      nodes_len;
+    uint32_t                   *signal_producers;
+    size_t                      signal_producers_len;
+    apg_v2_compiled_instance_t *instances;
+    size_t                      instances_len;
+    size_t                     *instance_index_by_node;
+    size_t                      instance_index_by_node_len;
 } apg_v2_compiled_unit_t;
 
 /*

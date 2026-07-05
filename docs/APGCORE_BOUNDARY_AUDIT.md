@@ -8,8 +8,8 @@
   compatibility, and typed contract fields consumed by compiler binding validation.
 - `parser`: `apg_v2_parse_string(...)` and `apg_v2_parse_file(...)` return raw YAML contract graphs without semantic checks, with regression coverage for parser-accepted/validator-rejected contracts.
 - `validator`: unit and project validators own schema, metadata-reference, known profile, compatibility, and route checks.
-- `compiler`: unit and project compilers expand contracts, validate atom binding fields, bind params/signals, and emit topological plans.
-- `runtime image`: `apg_v2_runtime_image_build(...)` precomputes signal, param, meter, control-target, node, schedule, and state-buffer layout counts.
+- `compiler`: unit and project compilers expand contracts, validate atom binding fields, bind params/signals, emit topological plans, and record instance I/O facts for runtime-image consumers.
+- `runtime image`: `apg_v2_runtime_image_build(...)` consumes compiler graph facts and precomputes signal, param, meter, control-target, bypass, node, schedule, and state-buffer layout counts.
 - `measure`: `apg_v2_measure_*` exposes snapshots, meters, and diagnostics for host/tooling reads.
 
 ## Boundary Leaks To Close

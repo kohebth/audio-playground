@@ -40,6 +40,15 @@ static int test_simple_gain_compile(void) {
     if (plan.signal_producers_len != 3u || plan.signal_producers[0] != UINT32_MAX || plan.signal_producers[1] != 1u ||
         plan.signal_producers[2] != 0u)
         return fail("unexpected simple_gain producer map");
+    if (plan.instances_len != 2u || plan.instance_index_by_node_len != 2u || plan.instance_index_by_node[0] != 0u ||
+        plan.instance_index_by_node[1] != 1u)
+        return fail("unexpected simple_gain compiler instance map");
+    if (strncmp(plan.instances[0].id, "gain_value", plan.instances[0].id_len) != 0 ||
+        strncmp(plan.instances[1].id, "apply_gain", plan.instances[1].id_len) != 0)
+        return fail("unexpected simple_gain compiler instance ids");
+    if (plan.instances[0].bypassable || !plan.instances[1].bypassable || plan.instances[1].input_signal_index != 0u ||
+        plan.instances[1].output_signal_index != 1u)
+        return fail("unexpected simple_gain compiler instance io");
 
     const apg_v2_compiled_node_t *dc = &plan.nodes[0];
     if (strcmp(dc->id, "gain_value") != 0 || !dc->atom || strcmp(dc->atom->name, "generation_dc") != 0)
@@ -1591,6 +1600,11 @@ static int test_forward_references_scheduled(void) {
         plan.signal_producers[2] != 1u) {
         uc_arena_free(&arena);
         return fail("unexpected producer map for forward reference unit");
+    }
+    if (plan.instance_index_by_node_len != 2u || plan.instance_index_by_node[0] != 0u ||
+        plan.instance_index_by_node[1] != 1u) {
+        uc_arena_free(&arena);
+        return fail("unexpected forward reference compiler instance map");
     }
 
     uc_arena_free(&arena);

@@ -19,72 +19,6 @@ static size_t runtime_storage_align(void) { return _Alignof(max_align_t); }
 
 static bool parse_port_channel_count(const apg_unit_v2_port_t *port, size_t *out_count);
 
-static bool node_id_has_instance_prefix_len(const char *node_id, const char *instance_id, size_t instance_len) {
-    if (!node_id || !instance_id || instance_id[0] == '\0')
-        return false;
-    return strncmp(node_id, instance_id, instance_len) == 0 &&
-           (node_id[instance_len] == '\0' || node_id[instance_len] == '.');
-}
-
-static bool node_outputs_signal(const apg_v2_compiled_node_t *node, size_t signal_index) {
-    if (!node)
-        return false;
-    for (size_t i = 0; i < node->out_len; i++) {
-        const apg_v2_compiled_binding_t *binding = &node->out[i];
-        if (binding->kind == APG_BIND_SIGNAL) {
-            if (binding->index == signal_index)
-                return true;
-        } else if (binding->kind == APG_BIND_SIGNAL_ARRAY) {
-            for (size_t j = 0; j < binding->indices_len; j++) {
-                if (binding->indices[j] == signal_index)
-                    return true;
-            }
-        }
-    }
-    return false;
-}
-
-static size_t binding_signal_count(const apg_v2_compiled_binding_t *binding) {
-    if (!binding)
-        return 0u;
-    if (binding->kind == APG_BIND_SIGNAL)
-        return 1u;
-    if (binding->kind == APG_BIND_SIGNAL_ARRAY)
-        return binding->indices_len;
-    return 0u;
-}
-
-static bool binding_signal_index(const apg_v2_compiled_binding_t *binding, size_t offset, size_t *out_index) {
-    if (!binding || !out_index)
-        return false;
-    if (binding->kind == APG_BIND_SIGNAL && offset == 0u) {
-        *out_index = binding->index;
-        return true;
-    }
-    if (binding->kind == APG_BIND_SIGNAL_ARRAY && offset < binding->indices_len) {
-        *out_index = binding->indices[offset];
-        return true;
-    }
-    return false;
-}
-
-static bool node_instance_prefix(const char *node_id, const char **out_instance_id, size_t *out_instance_len) {
-    if (!node_id || node_id[0] == '\0')
-        return false;
-    const char *dot = strchr(node_id, '.');
-    if (dot) {
-        size_t instance_len = (size_t)(dot - node_id);
-        if (instance_len == 0u)
-            return false;
-        *out_instance_id  = node_id;
-        *out_instance_len = instance_len;
-        return true;
-    }
-    *out_instance_id  = node_id;
-    *out_instance_len = strlen(node_id);
-    return true;
-}
-
 static int signal_index_by_name(const apg_unit_v2_t *unit, const char *name) {
     if (!unit || !name)
         return -1;
@@ -93,134 +27,6 @@ static int signal_index_by_name(const apg_unit_v2_t *unit, const char *name) {
             return (int)i;
     }
     return -1;
-}
-
-static bool instance_outputs_signal(
-    const apg_v2_compiled_node_t *nodes,
-    size_t                        nodes_len,
-    const char                   *instance_id,
-    size_t                        instance_len,
-    size_t                        signal_index
-) {
-    if (!nodes)
-        return false;
-    for (size_t i = 0; i < nodes_len; i++) {
-        const apg_v2_compiled_node_t *node = &nodes[i];
-        if (node_id_has_instance_prefix_len(node->id, instance_id, instance_len) &&
-            node_outputs_signal(node, signal_index))
-            return true;
-    }
-    return false;
-}
-
-static bool signal_consumed_outside_instance(
-    const apg_v2_compiled_node_t *nodes,
-    size_t                        nodes_len,
-    const char                   *instance_id,
-    size_t                        instance_len,
-    size_t                        signal_index
-) {
-    if (!nodes)
-        return false;
-    for (size_t i = 0; i < nodes_len; i++) {
-        const apg_v2_compiled_node_t *node = &nodes[i];
-        if (node_id_has_instance_prefix_len(node->id, instance_id, instance_len))
-            continue;
-        for (size_t j = 0; j < node->in_len; j++) {
-            const apg_v2_compiled_binding_t *binding = &node->in[j];
-            if (binding->kind == APG_BIND_SIGNAL && binding->index == signal_index)
-                return true;
-            if (binding->kind == APG_BIND_SIGNAL_ARRAY) {
-                for (size_t k = 0; k < binding->indices_len; k++) {
-                    if (binding->indices[k] == signal_index)
-                        return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
-static bool signal_is_public_output(const apg_unit_v2_t *unit, size_t signal_index) {
-    if (!unit)
-        return false;
-    for (size_t i = 0; i < unit->output_ports_len; i++) {
-        const apg_unit_v2_port_t *port = &unit->output_ports[i];
-        if (!port || !port->type || strcmp(port->type, "audio") != 0)
-            continue;
-
-        size_t channels = 0u;
-        if (!parse_port_channel_count(port, &channels))
-            continue;
-
-        for (size_t ch = 0; ch < channels; ch++) {
-            int index = -1;
-            if (port->signals_len > 0u) {
-                if (ch < port->signals_len && port->signals[ch])
-                    index = signal_index_by_name(unit, port->signals[ch]);
-            } else if (ch == 0u && port->name) {
-                index = signal_index_by_name(unit, port->name);
-            }
-            if (index >= 0 && (size_t)index == signal_index)
-                return true;
-        }
-    }
-    return false;
-}
-
-static bool find_instance_bypass_io_by_prefix(
-    const apg_v2_compiled_unit_t        *plan,
-    const char                          *instance_id,
-    size_t                               instance_len,
-    apg_v2_runtime_image_bypass_entry_t *entry
-) {
-    if (!plan || !plan->unit || !plan->nodes || !entry)
-        return false;
-
-    size_t input_index  = 0u;
-    size_t output_index = 0u;
-    bool   found_input  = false;
-    bool   found_output = false;
-
-    for (size_t i = 0; i < plan->nodes_len; i++) {
-        const apg_v2_compiled_node_t *node = &plan->nodes[i];
-        if (!node_id_has_instance_prefix_len(node->id, instance_id, instance_len))
-            continue;
-
-        for (size_t b = 0; b < node->in_len && !found_input; b++) {
-            for (size_t s = 0; s < binding_signal_count(&node->in[b]); s++) {
-                size_t index = 0u;
-                if (!binding_signal_index(&node->in[b], s, &index))
-                    continue;
-                if (!instance_outputs_signal(plan->nodes, plan->nodes_len, instance_id, instance_len, index)) {
-                    input_index = index;
-                    found_input = true;
-                    break;
-                }
-            }
-        }
-
-        for (size_t b = 0; b < node->out_len && !found_output; b++) {
-            for (size_t s = 0; s < binding_signal_count(&node->out[b]); s++) {
-                size_t index = 0u;
-                if (!binding_signal_index(&node->out[b], s, &index))
-                    continue;
-                if (signal_consumed_outside_instance(plan->nodes, plan->nodes_len, instance_id, instance_len, index) ||
-                    signal_is_public_output(plan->unit, index)) {
-                    output_index = index;
-                    found_output = true;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (!found_input || !found_output)
-        return false;
-
-    entry->input_index  = input_index;
-    entry->output_index = output_index;
-    return true;
 }
 
 static bool align_up_size(size_t value, size_t alignment, size_t *out) {
@@ -362,51 +168,31 @@ static uint32_t param_smoothing_frames(const apg_unit_v2_param_t *param, float s
 
 static uc_status
 fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_runtime_image_t *out, uc_error *err) {
-    if (!arena || !plan || !plan->unit || !plan->nodes || !out)
+    if (!arena || !plan || !out)
         return UC_OK;
 
-    if (plan->nodes_len == 0u)
-        return UC_OK;
-
-    size_t total_instances = plan->nodes_len;
-    if (total_instances == 0u)
+    if (plan->nodes_len == 0u || plan->instances_len == 0u || !plan->instances)
         return UC_OK;
 
     apg_v2_runtime_image_bypass_entry_t *entries =
-        uc_arena_alloc(arena, total_instances * sizeof(*entries), sizeof(void *));
+        uc_arena_alloc(arena, plan->instances_len * sizeof(*entries), sizeof(void *));
     if (!entries)
         return set_error(err, UC_E_OOM, "v2 runtime image bypass metadata allocation failed");
 
     size_t bypass_count = 0u;
-    for (size_t i = 0; i < plan->nodes_len; i++) {
-        const apg_v2_compiled_node_t *node         = &plan->nodes[i];
-        const char                   *instance_id  = NULL;
-        size_t                        instance_len = 0u;
-        if (!node_instance_prefix(node->id, &instance_id, &instance_len))
+    for (size_t i = 0; i < plan->instances_len; i++) {
+        const apg_v2_compiled_instance_t *instance = &plan->instances[i];
+        if (!instance->bypassable)
             continue;
 
-        bool exists = false;
-        for (size_t j = 0; j < bypass_count; j++) {
-            const apg_v2_runtime_image_bypass_entry_t *existing = &entries[j];
-            if (existing->instance_id_len != instance_len)
-                continue;
-            if (strncmp(existing->instance_id, instance_id, instance_len) == 0) {
-                exists = true;
-                break;
-            }
-        }
-        if (exists)
-            continue;
-
-        apg_v2_runtime_image_bypass_entry_t candidate = {0};
-        candidate.instance_id                         = instance_id;
-        candidate.instance_id_len                     = instance_len;
-        if (!find_instance_bypass_io_by_prefix(plan, instance_id, instance_len, &candidate))
-            continue;
-
-        if (bypass_count >= total_instances)
+        if (bypass_count >= plan->instances_len)
             return set_error(err, UC_E_RANGE, "v2 runtime image bypass metadata overflow");
-        entries[bypass_count++] = candidate;
+        entries[bypass_count++] = (apg_v2_runtime_image_bypass_entry_t){
+            .instance_id     = instance->id,
+            .instance_id_len = instance->id_len,
+            .input_index     = instance->input_signal_index,
+            .output_index    = instance->output_signal_index,
+        };
     }
 
     out->bypassed_instances_len = bypass_count;
@@ -433,8 +219,11 @@ fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2
             continue;
 
         for (size_t node_index = 0; node_index < out->nodes_len; node_index++) {
-            const apg_v2_compiled_node_t *node = &plan->nodes[node_index];
-            if (node_id_has_instance_prefix_len(node->id, instance_id, instance_len))
+            if (!plan->instance_index_by_node || node_index >= plan->instance_index_by_node_len)
+                continue;
+            size_t instance_index = plan->instance_index_by_node[node_index];
+            if (instance_index < plan->instances_len && plan->instances[instance_index].id_len == instance_len &&
+                strncmp(plan->instances[instance_index].id, instance_id, instance_len) == 0)
                 out->bypass_index_by_node[node_index] = i;
         }
     }

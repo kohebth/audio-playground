@@ -74,6 +74,52 @@ static const char *port_signal_name(const apg_unit_v2_port_t *port, size_t chann
     return channel_index == 0u ? port->name : NULL;
 }
 
+static int node_id_has_instance_prefix_len(const char *node_id, const char *instance_id, size_t instance_len) {
+    return node_id && instance_id && instance_id[0] != '\0' && strncmp(node_id, instance_id, instance_len) == 0 &&
+           (node_id[instance_len] == '\0' || node_id[instance_len] == '.');
+}
+
+static int node_instance_prefix(const char *node_id, const char **out_instance_id, size_t *out_instance_len) {
+    if (!node_id || node_id[0] == '\0' || !out_instance_id || !out_instance_len)
+        return 0;
+    const char *dot = strchr(node_id, '.');
+    if (dot) {
+        size_t instance_len = (size_t)(dot - node_id);
+        if (instance_len == 0u)
+            return 0;
+        *out_instance_id  = node_id;
+        *out_instance_len = instance_len;
+        return 1;
+    }
+    *out_instance_id  = node_id;
+    *out_instance_len = strlen(node_id);
+    return 1;
+}
+
+static size_t binding_signal_count(const apg_v2_compiled_binding_t *binding) {
+    if (!binding)
+        return 0u;
+    if (binding->kind == APG_BIND_SIGNAL)
+        return 1u;
+    if (binding->kind == APG_BIND_SIGNAL_ARRAY)
+        return binding->indices_len;
+    return 0u;
+}
+
+static int binding_signal_index(const apg_v2_compiled_binding_t *binding, size_t offset, size_t *out_index) {
+    if (!binding || !out_index)
+        return 0;
+    if (binding->kind == APG_BIND_SIGNAL && offset == 0u) {
+        *out_index = binding->index;
+        return 1;
+    }
+    if (binding->kind == APG_BIND_SIGNAL_ARRAY && offset < binding->indices_len) {
+        *out_index = binding->indices[offset];
+        return 1;
+    }
+    return 0;
+}
+
 static uc_status mark_input_port_signals(const apg_unit_v2_t *unit, int *signal_available, uc_error *err) {
     for (size_t i = 0; i < unit->input_ports_len; i++) {
         if (!port_is_audio(&unit->input_ports[i]))
@@ -137,6 +183,55 @@ static uc_status record_node_output_producers(
     return UC_OK;
 }
 
+static int node_outputs_signal(const apg_v2_compiled_node_t *node, size_t signal_index) {
+    if (!node)
+        return 0;
+    for (size_t i = 0; i < node->out_len; i++) {
+        for (size_t j = 0; j < binding_signal_count(&node->out[i]); j++) {
+            size_t index = 0u;
+            if (binding_signal_index(&node->out[i], j, &index) && index == signal_index)
+                return 1;
+        }
+    }
+    return 0;
+}
+
+static int instance_outputs_signal(
+    const apg_v2_compiled_node_t *nodes,
+    size_t                        nodes_len,
+    const char                   *instance_id,
+    size_t                        instance_len,
+    size_t                        signal_index
+) {
+    for (size_t i = 0; nodes && i < nodes_len; i++) {
+        if (node_id_has_instance_prefix_len(nodes[i].id, instance_id, instance_len) &&
+            node_outputs_signal(&nodes[i], signal_index))
+            return 1;
+    }
+    return 0;
+}
+
+static int signal_consumed_outside_instance(
+    const apg_v2_compiled_node_t *nodes,
+    size_t                        nodes_len,
+    const char                   *instance_id,
+    size_t                        instance_len,
+    size_t                        signal_index
+) {
+    for (size_t i = 0; nodes && i < nodes_len; i++) {
+        if (node_id_has_instance_prefix_len(nodes[i].id, instance_id, instance_len))
+            continue;
+        for (size_t j = 0; j < nodes[i].in_len; j++) {
+            for (size_t k = 0; k < binding_signal_count(&nodes[i].in[j]); k++) {
+                size_t index = 0u;
+                if (binding_signal_index(&nodes[i].in[j], k, &index) && index == signal_index)
+                    return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 static uc_status
 validate_output_port_signals_produced(const apg_unit_v2_t *unit, const int *signal_available, uc_error *err) {
     for (size_t i = 0; i < unit->output_ports_len; i++) {
@@ -150,6 +245,122 @@ validate_output_port_signals_produced(const apg_unit_v2_t *unit, const int *sign
                 return set_error(err, UC_E_MISSING, "output audio port signal is not produced by the graph");
         }
     }
+    return UC_OK;
+}
+
+static int signal_is_public_output(const apg_unit_v2_t *unit, size_t signal_index) {
+    if (!unit)
+        return 0;
+    for (size_t i = 0; i < unit->output_ports_len; i++) {
+        if (!port_is_audio(&unit->output_ports[i]))
+            continue;
+        for (size_t ch = 0; ch < port_signal_count(&unit->output_ports[i]); ch++) {
+            int index = find_signal_index(unit, port_signal_name(&unit->output_ports[i], ch));
+            if (index >= 0 && (size_t)index == signal_index)
+                return 1;
+        }
+    }
+    return 0;
+}
+
+static void fill_instance_io(
+    const apg_unit_v2_t          *unit,
+    const apg_v2_compiled_node_t *nodes,
+    size_t                        nodes_len,
+    apg_v2_compiled_instance_t   *instance
+) {
+    instance->input_signal_index  = (size_t)-1u;
+    instance->output_signal_index = (size_t)-1u;
+    instance->bypassable          = false;
+
+    for (size_t i = 0; nodes && i < nodes_len && instance->input_signal_index == (size_t)-1u; i++) {
+        if (!node_id_has_instance_prefix_len(nodes[i].id, instance->id, instance->id_len))
+            continue;
+        for (size_t j = 0; j < nodes[i].in_len && instance->input_signal_index == (size_t)-1u; j++) {
+            for (size_t k = 0; k < binding_signal_count(&nodes[i].in[j]); k++) {
+                size_t index = 0u;
+                if (!binding_signal_index(&nodes[i].in[j], k, &index))
+                    continue;
+                if (!instance_outputs_signal(nodes, nodes_len, instance->id, instance->id_len, index)) {
+                    instance->input_signal_index = index;
+                    break;
+                }
+            }
+        }
+    }
+
+    for (size_t i = 0; nodes && i < nodes_len && instance->output_signal_index == (size_t)-1u; i++) {
+        if (!node_id_has_instance_prefix_len(nodes[i].id, instance->id, instance->id_len))
+            continue;
+        for (size_t j = 0; j < nodes[i].out_len && instance->output_signal_index == (size_t)-1u; j++) {
+            for (size_t k = 0; k < binding_signal_count(&nodes[i].out[j]); k++) {
+                size_t index = 0u;
+                if (!binding_signal_index(&nodes[i].out[j], k, &index))
+                    continue;
+                if (signal_consumed_outside_instance(nodes, nodes_len, instance->id, instance->id_len, index) ||
+                    signal_is_public_output(unit, index)) {
+                    instance->output_signal_index = index;
+                    break;
+                }
+            }
+        }
+    }
+
+    instance->bypassable = instance->input_signal_index != (size_t)-1u && instance->output_signal_index != (size_t)-1u;
+}
+
+static size_t find_compiled_instance(
+    const apg_v2_compiled_instance_t *instances, size_t instances_len, const char *id, size_t id_len
+) {
+    for (size_t i = 0; instances && i < instances_len; i++) {
+        if (instances[i].id_len == id_len && strncmp(instances[i].id, id, id_len) == 0)
+            return i;
+    }
+    return (size_t)-1u;
+}
+
+static uc_status build_instance_metadata(
+    const apg_unit_v2_t          *unit,
+    const apg_v2_compiled_node_t *nodes,
+    size_t                        nodes_len,
+    uc_arena                     *arena,
+    apg_v2_compiled_unit_t       *out,
+    uc_error                     *err
+) {
+    out->instances                  = NULL;
+    out->instances_len              = 0u;
+    out->instance_index_by_node     = NULL;
+    out->instance_index_by_node_len = nodes_len;
+    if (nodes_len == 0u)
+        return UC_OK;
+
+    apg_v2_compiled_instance_t *instances = uc_arena_alloc(arena, nodes_len * sizeof(*instances), sizeof(void *));
+    size_t                     *by_node   = uc_arena_alloc(arena, nodes_len * sizeof(*by_node), sizeof(size_t));
+    if (!instances || !by_node)
+        return set_error(err, UC_E_OOM, "arena OOM");
+
+    size_t instances_len = 0u;
+    for (size_t i = 0; i < nodes_len; i++) {
+        by_node[i]               = (size_t)-1u;
+        const char *instance_id  = NULL;
+        size_t      instance_len = 0u;
+        if (!node_instance_prefix(nodes[i].id, &instance_id, &instance_len))
+            continue;
+
+        size_t instance_index = find_compiled_instance(instances, instances_len, instance_id, instance_len);
+        if (instance_index == (size_t)-1u) {
+            instance_index            = instances_len++;
+            instances[instance_index] = (apg_v2_compiled_instance_t){.id = instance_id, .id_len = instance_len};
+        }
+        by_node[i] = instance_index;
+    }
+
+    for (size_t i = 0; i < instances_len; i++)
+        fill_instance_io(unit, nodes, nodes_len, &instances[i]);
+
+    out->instances              = instances;
+    out->instances_len          = instances_len;
+    out->instance_index_by_node = by_node;
     return UC_OK;
 }
 
@@ -713,5 +924,5 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
     out->schedule_len         = unit->nodes_len;
     out->signal_producers     = signal_producers;
     out->signal_producers_len = unit->signals_len;
-    return UC_OK;
+    return build_instance_metadata(unit, nodes, unit->nodes_len, arena, out, err);
 }

@@ -115,6 +115,14 @@ Module note: Parser tests now prove syntax parsing stays separate from validator
 
 Module note: Validators now share target profile metadata and reject unknown unit compatibility profiles.
 
+## Compiler Isolation
+
+- [x] PX1: Record compiler-owned instance metadata and node-to-instance indexes in compiled plans.
+- [x] PX2: Move bypass endpoint graph facts out of runtime-image inference and into compiler output.
+- [x] PX3: Keep project expansion and atom binding validation in compiler while preserving existing plan consumers.
+
+Module note: Compiler plans now carry instance I/O facts consumed by runtime-image bypass metadata.
+
 ## STM32H7/M7 Readiness Queue
 
 - [x] PC1: Add deterministic M7 static memory manifest fields to export JSON and generated headers.

@@ -493,6 +493,48 @@ static int test_runtime_image_scalar_input_refresh(void) {
     return 0;
 }
 
+static int test_runtime_image_uses_compiler_instance_metadata(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_fixture("units-v2/simple_gain.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    plan.nodes[1].id = "mutated_node_id";
+
+    uc_arena image_arena;
+    if (uc_arena_init(&image_arena, 4096) != 0) {
+        uc_arena_free(&arena);
+        return fail("image arena init failed");
+    }
+
+    apg_v2_runtime_image_t image;
+    uc_error               err    = {0};
+    uc_status              status = apg_v2_runtime_image_build(&plan, 16u, 44100.0f, &image_arena, &image, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime image error: %s\n", err.msg);
+        uc_arena_free(&image_arena);
+        uc_arena_free(&arena);
+        return fail("failed to build runtime image from compiler instance metadata");
+    }
+
+    if (image.bypassed_instances_len != 1u || !image.bypass_instances ||
+        strncmp(image.bypass_instances[0].instance_id, "apply_gain", image.bypass_instances[0].instance_id_len) != 0 ||
+        image.bypass_instances[0].input_index != 0u || image.bypass_instances[0].output_index != 1u)
+        return fail("runtime image did not use compiler instance bypass metadata");
+    if (!image.bypass_index_by_node || image.bypass_index_by_node[1] != 0u)
+        return fail("runtime image did not use compiler node-to-instance metadata");
+
+    uc_arena_free(&image_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_runtime_init_from_image_ignores_plan_mutation(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -647,6 +689,8 @@ int main(void) {
     if (test_runtime_image_scalar_input_refresh())
         return 1;
     if (test_runtime_image_control_targets())
+        return 1;
+    if (test_runtime_image_uses_compiler_instance_metadata())
         return 1;
     if (test_runtime_create_owned_lifecycle())
         return 1;

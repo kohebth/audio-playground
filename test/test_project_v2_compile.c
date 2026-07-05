@@ -114,6 +114,13 @@ static int test_simple_project_compiles_and_runs(void) {
         return fail("project compiler did not namespace graph nodes");
     if (compiled.plan.unit != &compiled.expanded_unit || compiled.plan.nodes_len != 2u)
         return fail("project compiler did not produce a runtime plan");
+    if (compiled.plan.instances_len != 1u || compiled.plan.instance_index_by_node_len != 2u ||
+        compiled.plan.instance_index_by_node[0] != 0u || compiled.plan.instance_index_by_node[1] != 0u)
+        return fail("project compiler did not produce instance metadata");
+    if (compiled.plan.instances[0].id_len != 5u || strncmp(compiled.plan.instances[0].id, "gain1", 5u) != 0 ||
+        !compiled.plan.instances[0].bypassable || compiled.plan.instances[0].input_signal_index == (size_t)-1u ||
+        compiled.plan.instances[0].output_signal_index == (size_t)-1u)
+        return fail("project compiler produced unexpected gain1 instance metadata");
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
@@ -171,6 +178,13 @@ static int test_two_instance_project_compiles_and_runs(void) {
         return fail("two-instance project params were not namespaced");
     if (compiled.expanded_unit.nodes_len != 4u || compiled.plan.nodes_len != 4u)
         return fail("two-instance project did not expand both unit graphs");
+    if (compiled.plan.instances_len != 2u || compiled.plan.instance_index_by_node_len != 4u ||
+        compiled.plan.instance_index_by_node[0] != 0u || compiled.plan.instance_index_by_node[1] != 0u ||
+        compiled.plan.instance_index_by_node[2] != 1u || compiled.plan.instance_index_by_node[3] != 1u)
+        return fail("two-instance project compiler instance map is wrong");
+    if (compiled.plan.instances[0].id_len != 5u || strncmp(compiled.plan.instances[0].id, "gain1", 5u) != 0 ||
+        compiled.plan.instances[1].id_len != 5u || strncmp(compiled.plan.instances[1].id, "gain2", 5u) != 0)
+        return fail("two-instance project compiler instance ids are wrong");
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
@@ -266,6 +280,15 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
         return fail("pedalboard project params were not namespaced");
     if (compiled.expanded_unit.nodes_len != 16u || compiled.plan.nodes_len != 16u)
         return fail("pedalboard project did not expand the product unit graphs");
+    if (compiled.plan.instances_len != 6u || compiled.plan.instances[0].id_len != 5u ||
+        strncmp(compiled.plan.instances[0].id, "gate1", 5u) != 0 ||
+        strncmp(compiled.plan.instances[5].id, "blend1", 6u) != 0)
+        return fail("pedalboard compiler instance metadata is wrong");
+    for (size_t i = 0; i < compiled.plan.instances_len; i++) {
+        if (compiled.plan.instances[i].bypassable && (compiled.plan.instances[i].input_signal_index == (size_t)-1u ||
+                                                      compiled.plan.instances[i].output_signal_index == (size_t)-1u))
+            return fail("pedalboard bypassable instance is missing io metadata");
+    }
 
     apg_v2_runtime_t runtime;
     uc_error         err    = {0};
