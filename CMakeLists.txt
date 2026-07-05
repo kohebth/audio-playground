@@ -24,7 +24,7 @@ include_directories(
 )
 
 file(GLOB_RECURSE APGCORE_SOURCES CONFIGURE_DEPENDS src/apgcore/*.c)
-file(GLOB ATOM_SOURCES src/atom/*.c)
+file(GLOB_RECURSE ATOM_SOURCES CONFIGURE_DEPENDS src/atom/*.c)
 set(ATOM_REGISTRY_SOURCE src/rte/atom_register.c)
 file(GLOB UTIL_SOURCES src/util/*.c)
 file(GLOB YAML_SOURCES src/yaml/*.c)
