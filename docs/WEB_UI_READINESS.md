@@ -31,15 +31,15 @@ This is not a hardware readiness declaration. STM32H7/M7 production deployment i
 Build the CLI once through the normal C workflow, then use these exact commands as frontend fixture sources:
 
 ```sh
-/tmp/audio-playground-apgcore-build/apg-v2 validate unit units-v2/simple_gain.unit.v2.yaml
-/tmp/audio-playground-apgcore-build/apg-v2 validate project projects-v2/guitar-pedalboard.project.v2.yaml
-/tmp/audio-playground-apgcore-build/apg-v2 inspect atoms
-/tmp/audio-playground-apgcore-build/apg-v2 inspect unit units-v2/simple_gain.unit.v2.yaml
-/tmp/audio-playground-apgcore-build/apg-v2 inspect project projects-v2/guitar-pedalboard.project.v2.yaml
-/tmp/audio-playground-apgcore-build/apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml
-/tmp/audio-playground-apgcore-build/apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml
-/tmp/audio-playground-apgcore-build/apg-v2 export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml dist/web/
-/tmp/audio-playground-apgcore-build/apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml build/m7/
+./build/apg-v2 validate unit units-v2/simple_gain.unit.v2.yaml
+./build/apg-v2 validate project projects-v2/guitar-pedalboard.project.v2.yaml
+./build/apg-v2 inspect atoms
+./build/apg-v2 inspect unit units-v2/simple_gain.unit.v2.yaml
+./build/apg-v2 inspect project projects-v2/guitar-pedalboard.project.v2.yaml
+./build/apg-v2 render project projects-v2/guitar-pedalboard.project.v2.yaml
+./build/apg-v2 benchmark project projects-v2/guitar-pedalboard.project.v2.yaml
+./build/apg-v2 export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml dist/web/
+./build/apg-v2 export --target m7_static projects-v2/two-gain-chain.project.v2.yaml build/m7/
 ```
 
 Committed sample files:

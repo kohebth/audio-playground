@@ -23,16 +23,16 @@ For C/APGCore work, use the repo-root wrapper:
 ./build-and-test.sh
 ```
 
-It configures CMake under `/tmp/audio-playground-apgcore-build`, suppresses CMake/build stdout, and runs CTest. Use it once per completed implementation slice.
+It configures CMake under `./build`, suppresses CMake/build stdout, and runs CTest. Use it once per completed implementation slice.
 
 Useful direct commands:
 
 ```sh
-ctest --test-dir /tmp/audio-playground-apgcore-build
-cmake --build /tmp/audio-playground-apgcore-build --target check_v2
-cmake -S . -B /tmp/audio-playground-apgcore-asan -DCMAKE_BUILD_TYPE=Debug -DAPG_ENABLE_SANITIZERS=ON
-cmake --build /tmp/audio-playground-apgcore-asan && ctest --test-dir /tmp/audio-playground-apgcore-asan
-/tmp/audio-playground-apgcore-build/test_unit_v2_runtime
+ctest --test-dir ./build
+cmake --build ./build --target check_v2
+cmake -S . -B ./build-asan -DCMAKE_BUILD_TYPE=Debug -DAPG_ENABLE_SANITIZERS=ON
+cmake --build ./build-asan && ctest --test-dir ./build-asan
+./build/test_unit_v2_runtime
 ```
 
 For web and MCP packages, run commands inside their package directories:

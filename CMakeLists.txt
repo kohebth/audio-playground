@@ -128,7 +128,7 @@ set_tests_properties(test_apg_v2_cli_benchmark PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_wasm_export_prepare
-        COMMAND ${CMAKE_COMMAND} -E make_directory /tmp/apg-wasm-export
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export
 )
 set_tests_properties(test_apg_v2_cli_wasm_export_prepare PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -137,7 +137,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export_prepare PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_wasm_export
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml /tmp/apg-wasm-export"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime projects-v2/guitar-pedalboard.project.v2.yaml ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export"
 )
 set_tests_properties(test_apg_v2_cli_wasm_export PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -148,7 +148,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_wasm_export_manifest
-        COMMAND ${CMAKE_COMMAND} -E cat /tmp/apg-wasm-export/apg_project_wasm.json
+        COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export/apg_project_wasm.json
 )
 set_tests_properties(test_apg_v2_cli_wasm_export_manifest PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -159,7 +159,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export_manifest PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_wasm_export_js
-        COMMAND ${CMAKE_COMMAND} -E cat /tmp/apg-wasm-export/apg_project_wasm.mjs
+        COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export/apg_project_wasm.mjs
 )
 set_tests_properties(test_apg_v2_cli_wasm_export_js PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -170,7 +170,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export_js PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_m7_export_rejects_unsupported
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-profile.project.v2.yaml /tmp || true"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-profile.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
 )
 set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -180,7 +180,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_m7_export_rejects_unsupported_atom
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-src.project.v2.yaml /tmp || true"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-src.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
 )
 set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported_atom PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -190,7 +190,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported_atom PROPERTI
 
 add_test(
         NAME test_apg_v2_cli_m7_export_rejects_undeclared_compat
-        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-compat.project.v2.yaml /tmp || true"
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static projects-v2/m7-unsupported-compat.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
 )
 set_tests_properties(test_apg_v2_cli_m7_export_rejects_undeclared_compat PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -198,7 +198,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_rejects_undeclared_compat PROPERT
         PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*does not declare m7_static compatibility"
 )
 
-set(APG_M7_CLI_TEST_DIR /tmp/audio-playground-apgcore-m7-export)
+set(APG_M7_CLI_TEST_DIR ${CMAKE_BINARY_DIR}/test-artifacts/m7-export)
 add_test(NAME test_apg_v2_cli_m7_export_prepare COMMAND ${CMAKE_COMMAND} -E make_directory ${APG_M7_CLI_TEST_DIR})
 set_tests_properties(test_apg_v2_cli_m7_export_prepare PROPERTIES LABELS v2)
 
@@ -304,7 +304,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_static_ram_budget PROPERTIES
         PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*\"APG_RANGE_ERROR\".*static RAM budget exceeded"
 )
 
-set(APG_M7_CLI_CUSTOM_TEST_DIR /tmp/audio-playground-apgcore-m7-export-custom)
+set(APG_M7_CLI_CUSTOM_TEST_DIR ${CMAKE_BINARY_DIR}/test-artifacts/m7-export-custom)
 add_test(NAME test_apg_v2_cli_m7_export_custom_prepare COMMAND ${CMAKE_COMMAND} -E make_directory ${APG_M7_CLI_CUSTOM_TEST_DIR})
 set_tests_properties(test_apg_v2_cli_m7_export_custom_prepare PROPERTIES LABELS v2)
 add_test(
