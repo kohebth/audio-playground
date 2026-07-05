@@ -916,361 +916,96 @@ static const atom_field_desc_t src_upsample_config_fields[] = {
 // Registry table
 // ─────────────────────────────────────────────
 
-#define ENTRY_WITH_FIELDS(atom_name, c_fields, n_cfg, s_fields, n_st) \
-    {                                                                 \
-        .name            = #atom_name,                                \
-        .thunk           = atom_name##_thunk,                         \
-        .out_size        = sizeof(atom_name##_out_t),                 \
-        .in_size         = sizeof(atom_name##_in_t),                  \
-        .config_size     = sizeof(atom_name##_params_t),              \
-        .state_size      = sizeof(atom_name##_state_t),               \
-        .config_fields   = c_fields,                                  \
-        .n_config_fields = n_cfg,                                     \
-        .state_fields    = s_fields,                                  \
-        .n_state_fields  = n_st,                                      \
-    },
+#define ENTRY_WITH_FIELDS(atom_name, c_fields, n_cfg, s_fields, n_st)                                   \
+    {                                                                                                   \
+        .name = #atom_name, .thunk = atom_name##_thunk, .out_size = sizeof(atom_name##_out_t),          \
+        .in_size = sizeof(atom_name##_in_t), .config_size = sizeof(atom_name##_params_t),               \
+        .state_size = sizeof(atom_name##_state_t), .config_fields = c_fields, .n_config_fields = n_cfg, \
+        .state_fields = s_fields, .n_state_fields = n_st,                                               \
+    }
+
+#define FIELD_COUNT(fields)               (sizeof(fields) / sizeof((fields)[0]))
+#define ENTRY(atom_name)                  ENTRY_WITH_FIELDS(atom_name, NULL, 0, NULL, 0)
+#define ENTRY_CONFIG(atom_name, c_fields) ENTRY_WITH_FIELDS(atom_name, c_fields, FIELD_COUNT(c_fields), NULL, 0)
+#define ENTRY_STATE(atom_name, s_fields)  ENTRY_WITH_FIELDS(atom_name, NULL, 0, s_fields, FIELD_COUNT(s_fields))
+#define ENTRY_CONFIG_STATE(atom_name, c_fields, s_fields) \
+    ENTRY_WITH_FIELDS(atom_name, c_fields, FIELD_COUNT(c_fields), s_fields, FIELD_COUNT(s_fields))
 
 static atom_registry_entry_t g_registry[] = {
-    ENTRY_WITH_FIELDS(amplitude_accumulate, NULL, 0, amplitude_accumulate_state_fields, sizeof(amplitude_accumulate_state_fields) / sizeof(amplitude_accumulate_state_fields[0])) ENTRY_WITH_FIELDS(
-        amplitude_latch,
-        amplitude_latch_config_fields,
-        sizeof(amplitude_latch_config_fields) / sizeof(amplitude_latch_config_fields[0]),
-        amplitude_latch_state_fields,
-        sizeof(amplitude_latch_state_fields) / sizeof(amplitude_latch_state_fields[0])
-    ) ENTRY_WITH_FIELDS(amplitude_add, NULL, 0, NULL, 0)
-        ENTRY_WITH_FIELDS(amplitude_clip_hard, amplitude_clip_hard_config_fields, sizeof(amplitude_clip_hard_config_fields) / sizeof(amplitude_clip_hard_config_fields[0]), NULL, 0) ENTRY_WITH_FIELDS(
-            amplitude_clip_soft,
-            amplitude_clip_soft_config_fields,
-            sizeof(amplitude_clip_soft_config_fields) / sizeof(amplitude_clip_soft_config_fields[0]),
-            NULL,
-            0
-        ) ENTRY_WITH_FIELDS(amplitude_divide, amplitude_divide_config_fields, sizeof(amplitude_divide_config_fields) / sizeof(amplitude_divide_config_fields[0]), NULL, 0)
-            ENTRY_WITH_FIELDS(amplitude_multiply, NULL, 0, NULL, 0) ENTRY_WITH_FIELDS(
-                amplitude_normalize,
-                amplitude_normalize_config_fields,
-                sizeof(amplitude_normalize_config_fields) / sizeof(amplitude_normalize_config_fields[0]),
-                amplitude_normalize_state_fields,
-                sizeof(amplitude_normalize_state_fields) / sizeof(amplitude_normalize_state_fields[0])
-            )
-                ENTRY_WITH_FIELDS(
-                    amplitude_smooth,
-                    amplitude_smooth_config_fields,
-                    sizeof(amplitude_smooth_config_fields) / sizeof(amplitude_smooth_config_fields[0]),
-                    amplitude_smooth_state_fields,
-                    sizeof(amplitude_smooth_state_fields) /
-                        sizeof(amplitude_smooth_state_fields[0])
-                ) ENTRY_WITH_FIELDS(amplitude_subtract, NULL, 0, NULL, 0)
-                    ENTRY_WITH_FIELDS(
-                        delay_fractional,
-                        delay_fractional_config_fields,
-                        sizeof(delay_fractional_config_fields) / sizeof(delay_fractional_config_fields[0]),
-                        delay_fractional_state_fields,
-                        sizeof(delay_fractional_state_fields) /
-                            sizeof(delay_fractional_state_fields[0])
-                    )
-                        ENTRY_WITH_FIELDS(
-                            delay_line,
-                            delay_line_config_fields,
-                            sizeof(delay_line_config_fields) / sizeof(delay_line_config_fields[0]),
-                            delay_line_state_fields,
-                            sizeof(delay_line_state_fields) /
-                                sizeof(delay_line_state_fields[0])
-                        ) ENTRY_WITH_FIELDS(delay_tap_feedback, delay_tap_feedback_config_fields, sizeof(delay_tap_feedback_config_fields) / sizeof(delay_tap_feedback_config_fields[0]), NULL, 0) ENTRY_WITH_FIELDS(delay_tap_feedforward, delay_tap_feedforward_config_fields, sizeof(delay_tap_feedforward_config_fields) / sizeof(delay_tap_feedforward_config_fields[0]), NULL, 0) ENTRY_WITH_FIELDS(delay_unit, NULL, 0, delay_unit_state_fields, sizeof(delay_unit_state_fields) / sizeof(delay_unit_state_fields[0])) ENTRY_WITH_FIELDS(detect_autocorrelate, detect_autocorrelate_config_fields, sizeof(detect_autocorrelate_config_fields) / sizeof(detect_autocorrelate_config_fields[0]), detect_autocorrelate_state_fields, sizeof(detect_autocorrelate_state_fields) / sizeof(detect_autocorrelate_state_fields[0])) ENTRY_WITH_FIELDS(detect_pitch, detect_pitch_config_fields, sizeof(detect_pitch_config_fields) / sizeof(detect_pitch_config_fields[0]), detect_pitch_state_fields, sizeof(detect_pitch_state_fields) / sizeof(detect_pitch_state_fields[0]))
-
-                            ENTRY_WITH_FIELDS(
-                                detect_envelope,
-                                detect_envelope_config_fields,
-                                sizeof(detect_envelope_config_fields) /
-                                    sizeof(detect_envelope_config_fields[0]),
-                                detect_envelope_state_fields,
-                                sizeof(detect_envelope_state_fields) / sizeof(detect_envelope_state_fields[0])
-                            )
-                                ENTRY_WITH_FIELDS(
-                                    detect_peak,
-                                    detect_peak_config_fields,
-                                    sizeof(detect_peak_config_fields) /
-                                        sizeof(detect_peak_config_fields[0]),
-                                    detect_peak_state_fields,
-                                    sizeof(detect_peak_state_fields) / sizeof(detect_peak_state_fields[0])
-                                )
-                                    ENTRY_WITH_FIELDS(
-                                        detect_rms,
-                                        detect_rms_config_fields,
-                                        sizeof(detect_rms_config_fields) / sizeof(detect_rms_config_fields[0]),
-                                        detect_rms_state_fields,
-                                        sizeof(detect_rms_state_fields) /
-                                            sizeof(detect_rms_state_fields[0])
-                                    ) ENTRY_WITH_FIELDS(detect_slope, NULL, 0, detect_slope_state_fields, sizeof(detect_slope_state_fields) / sizeof(detect_slope_state_fields[0]))
-                                        ENTRY_WITH_FIELDS(
-                                            detect_threshold,
-                                            detect_threshold_config_fields,
-                                            sizeof(detect_threshold_config_fields) /
-                                                sizeof(detect_threshold_config_fields[0]),
-                                            NULL,
-                                            0
-                                        ) ENTRY_WITH_FIELDS(detect_zero_crossing, NULL, 0, detect_zero_crossing_state_fields, sizeof(detect_zero_crossing_state_fields) / sizeof(detect_zero_crossing_state_fields[0])) ENTRY_WITH_FIELDS(filter_allpass, filter_allpass_config_fields, sizeof(filter_allpass_config_fields) / sizeof(filter_allpass_config_fields[0]), filter_allpass_state_fields, sizeof(filter_allpass_state_fields) / sizeof(filter_allpass_state_fields[0]))
-                                            ENTRY_WITH_FIELDS(filter_biquad, filter_biquad_config_fields, sizeof(filter_biquad_config_fields) / sizeof(filter_biquad_config_fields[0]), filter_biquad_state_fields, sizeof(filter_biquad_state_fields) / sizeof(filter_biquad_state_fields[0])) ENTRY_WITH_FIELDS(
-                                                filter_comb_fb,
-                                                filter_comb_fb_config_fields,
-                                                sizeof(filter_comb_fb_config_fields) /
-                                                    sizeof(filter_comb_fb_config_fields[0]),
-                                                filter_comb_fb_state_fields,
-                                                sizeof(filter_comb_fb_state_fields) /
-                                                    sizeof(filter_comb_fb_state_fields[0])
-                                            )
-                                                ENTRY_WITH_FIELDS(
-                                                    filter_comb_ff,
-                                                    filter_comb_ff_config_fields,
-                                                    sizeof(filter_comb_ff_config_fields) /
-                                                        sizeof(filter_comb_ff_config_fields[0]),
-                                                    filter_comb_ff_state_fields,
-                                                    sizeof(filter_comb_ff_state_fields) /
-                                                        sizeof(filter_comb_ff_state_fields[0])
-                                                ) ENTRY_WITH_FIELDS(filter_dc_block, filter_dc_block_config_fields, sizeof(filter_dc_block_config_fields) / sizeof(filter_dc_block_config_fields[0]), filter_dc_block_state_fields, sizeof(filter_dc_block_state_fields) / sizeof(filter_dc_block_state_fields[0])) ENTRY_WITH_FIELDS(filter_differentiate, NULL, 0, filter_differentiate_state_fields, sizeof(filter_differentiate_state_fields) / sizeof(filter_differentiate_state_fields[0]))
-                                                    ENTRY_WITH_FIELDS(filter_fir, filter_fir_config_fields, sizeof(filter_fir_config_fields) / sizeof(filter_fir_config_fields[0]), filter_fir_state_fields, sizeof(filter_fir_state_fields) / sizeof(filter_fir_state_fields[0])) ENTRY_WITH_FIELDS(filter_integrate, NULL, 0, filter_integrate_state_fields, sizeof(filter_integrate_state_fields) / sizeof(filter_integrate_state_fields[0])) ENTRY_WITH_FIELDS(
-                                                        freq_fft,
-                                                        freq_fft_config_fields,
-                                                        sizeof(freq_fft_config_fields) /
-                                                            sizeof(freq_fft_config_fields[0]),
-                                                        NULL,
-                                                        0
-                                                    ) ENTRY_WITH_FIELDS(freq_ifft, freq_ifft_config_fields, sizeof(freq_ifft_config_fields) / sizeof(freq_ifft_config_fields[0]), NULL, 0) ENTRY_WITH_FIELDS(freq_multiply, freq_multiply_config_fields, sizeof(freq_multiply_config_fields) / sizeof(freq_multiply_config_fields[0]), NULL, 0) ENTRY_WITH_FIELDS(freq_overlap_add, freq_overlap_add_config_fields, sizeof(freq_overlap_add_config_fields) / sizeof(freq_overlap_add_config_fields[0]), freq_overlap_add_state_fields, sizeof(freq_overlap_add_state_fields) / sizeof(freq_overlap_add_state_fields[0]))
-                                                        ENTRY_WITH_FIELDS(
-                                                            freq_overlap_save,
-                                                            freq_overlap_save_config_fields,
-                                                            sizeof(freq_overlap_save_config_fields) /
-                                                                sizeof(freq_overlap_save_config_fields[0]),
-                                                            freq_overlap_save_state_fields,
-                                                            sizeof(freq_overlap_save_state_fields) /
-                                                                sizeof(freq_overlap_save_state_fields[0])
-                                                        )
-                                                            ENTRY_WITH_FIELDS(freq_overlap_add, freq_overlap_add_config_fields, sizeof(freq_overlap_add_config_fields) / sizeof(freq_overlap_add_config_fields[0]), freq_overlap_add_state_fields, sizeof(freq_overlap_add_state_fields) / sizeof(freq_overlap_add_state_fields[0])) ENTRY_WITH_FIELDS(
-                                                                freq_overlap_save,
-                                                                freq_overlap_save_config_fields,
-                                                                sizeof(freq_overlap_save_config_fields) /
-                                                                    sizeof(freq_overlap_save_config_fields[0]),
-                                                                freq_overlap_save_state_fields,
-                                                                sizeof(freq_overlap_save_state_fields) /
-                                                                    sizeof(freq_overlap_save_state_fields[0])
-                                                            ) ENTRY_WITH_FIELDS(freq_window, freq_window_config_fields, sizeof(freq_window_config_fields) / sizeof(freq_window_config_fields[0]), NULL, 0)
-                                                                ENTRY_WITH_FIELDS(
-                                                                    freq_shift,
-                                                                    freq_shift_config_fields,
-                                                                    sizeof(freq_shift_config_fields) /
-                                                                        sizeof(freq_shift_config_fields[0]),
-                                                                    freq_shift_state_fields,
-                                                                    sizeof(freq_shift_state_fields) /
-                                                                        sizeof(freq_shift_state_fields[0])
-                                                                )
-
-                                                                    ENTRY_WITH_FIELDS(
-                                                                        generation_dc,
-                                                                        generation_dc_config_fields,
-                                                                        sizeof(generation_dc_config_fields) /
-                                                                            sizeof(generation_dc_config_fields[0]),
-                                                                        NULL,
-                                                                        0
-                                                                    )
-                                                                        ENTRY_WITH_FIELDS(
-                                                                            generation_envelope,
-                                                                            generation_envelope_config_fields,
-                                                                            sizeof(generation_envelope_config_fields) /
-                                                                                sizeof(generation_envelope_config_fields
-                                                                                           [0]
-                                                                                ),
-                                                                            generation_envelope_state_fields,
-                                                                            sizeof(generation_envelope_state_fields) /
-                                                                                sizeof(generation_envelope_state_fields
-                                                                                           [0]
-                                                                                )
-                                                                        ) ENTRY_WITH_FIELDS(generation_impulse, generation_impulse_config_fields, sizeof(generation_impulse_config_fields) / sizeof(generation_impulse_config_fields[0]), generation_impulse_state_fields, sizeof(generation_impulse_state_fields) / sizeof(generation_impulse_state_fields[0])) ENTRY_WITH_FIELDS(generation_lfo, generation_lfo_config_fields, sizeof(generation_lfo_config_fields) / sizeof(generation_lfo_config_fields[0]), generation_lfo_state_fields, sizeof(generation_lfo_state_fields) / sizeof(generation_lfo_state_fields[0]))
-                                                                            ENTRY_WITH_FIELDS(
-                                                                                generation_noise,
-                                                                                generation_noise_config_fields,
-                                                                                sizeof(generation_noise_config_fields) /
-                                                                                    sizeof(
-                                                                                        generation_noise_config_fields
-                                                                                            [0]
-                                                                                    ),
-                                                                                generation_noise_state_fields,
-                                                                                sizeof(generation_noise_state_fields) /
-                                                                                    sizeof(generation_noise_state_fields
-                                                                                               [0])
-                                                                            )
-                                                                                ENTRY_WITH_FIELDS(
-                                                                                    generation_oscillator,
-                                                                                    generation_oscillator_config_fields,
-                                                                                    sizeof(
-                                                                                        generation_oscillator_config_fields
-                                                                                    ) /
-                                                                                        sizeof(
-                                                                                            generation_oscillator_config_fields
-                                                                                                [0]
-                                                                                        ),
-                                                                                    generation_oscillator_state_fields,
-                                                                                    sizeof(
-                                                                                        generation_oscillator_state_fields
-                                                                                    ) /
-                                                                                        sizeof(
-                                                                                            generation_oscillator_state_fields
-                                                                                                [0]
-                                                                                        )
-                                                                                ) ENTRY_WITH_FIELDS(interpolation_cubic, NULL, 0, NULL, 0)
-                                                                                    ENTRY_WITH_FIELDS(
-                                                                                        interpolation_lagrange,
-                                                                                        interpolation_lagrange_config_fields,
-                                                                                        sizeof(
-                                                                                            interpolation_lagrange_config_fields
-                                                                                        ) /
-                                                                                            sizeof(
-                                                                                                interpolation_lagrange_config_fields
-                                                                                                    [0]
-                                                                                            ),
-                                                                                        interpolation_lagrange_state_fields,
-                                                                                        sizeof(
-                                                                                            interpolation_lagrange_state_fields
-                                                                                        ) /
-                                                                                            sizeof(
-                                                                                                interpolation_lagrange_state_fields
-                                                                                                    [0]
-                                                                                            )
-                                                                                    ) ENTRY_WITH_FIELDS(interpolation_linear, NULL, 0, NULL, 0)
-                                                                                        ENTRY_WITH_FIELDS(interpolation_sinc, interpolation_sinc_config_fields, sizeof(interpolation_sinc_config_fields) / sizeof(interpolation_sinc_config_fields[0]), interpolation_sinc_state_fields, sizeof(interpolation_sinc_state_fields) / sizeof(interpolation_sinc_state_fields[0])) ENTRY_WITH_FIELDS(mix_crossfade, mix_crossfade_config_fields, sizeof(mix_crossfade_config_fields) / sizeof(mix_crossfade_config_fields[0]), NULL, 0) ENTRY_WITH_FIELDS(mix_decode_ms, NULL, 0, NULL, 0) ENTRY_WITH_FIELDS(mix_encode_ms, NULL, 0, NULL, 0) ENTRY_WITH_FIELDS(
-                                                                                            mix_matrix,
-                                                                                            mix_matrix_config_fields,
-                                                                                            sizeof(
-                                                                                                mix_matrix_config_fields
-                                                                                            ) /
-                                                                                                sizeof(
-                                                                                                    mix_matrix_config_fields
-                                                                                                        [0]
-                                                                                                ),
-                                                                                            NULL,
-                                                                                            0
-                                                                                        )
-                                                                                            ENTRY_WITH_FIELDS(
-                                                                                                mix_pan_stereo,
-                                                                                                mix_pan_stereo_config_fields,
-                                                                                                sizeof(
-                                                                                                    mix_pan_stereo_config_fields
-                                                                                                ) /
-                                                                                                    sizeof(
-                                                                                                        mix_pan_stereo_config_fields
-                                                                                                            [0]
-                                                                                                    ),
-                                                                                                NULL,
-                                                                                                0
-                                                                                            ) ENTRY_WITH_FIELDS(mix_wet_dry, mix_wet_dry_config_fields, sizeof(mix_wet_dry_config_fields) / sizeof(mix_wet_dry_config_fields[0]), NULL, 0) ENTRY_WITH_FIELDS(modulation_amplitude, modulation_amplitude_config_fields, sizeof(modulation_amplitude_config_fields) / sizeof(modulation_amplitude_config_fields[0]), NULL, 0) ENTRY_WITH_FIELDS(modulation_frequency, modulation_frequency_config_fields, sizeof(modulation_frequency_config_fields) / sizeof(modulation_frequency_config_fields[0]), modulation_frequency_state_fields, sizeof(modulation_frequency_state_fields) / sizeof(modulation_frequency_state_fields[0]))
-                                                                                                ENTRY_WITH_FIELDS(
-                                                                                                    modulation_phase,
-                                                                                                    modulation_phase_config_fields,
-                                                                                                    sizeof(
-                                                                                                        modulation_phase_config_fields
-                                                                                                    ) /
-                                                                                                        sizeof(
-                                                                                                            modulation_phase_config_fields
-                                                                                                                [0]
-                                                                                                        ),
-                                                                                                    modulation_phase_state_fields,
-                                                                                                    sizeof(
-                                                                                                        modulation_phase_state_fields
-                                                                                                    ) /
-                                                                                                        sizeof(
-                                                                                                            modulation_phase_state_fields
-                                                                                                                [0]
-                                                                                                        )
-                                                                                                ) ENTRY_WITH_FIELDS(modulation_ring, NULL, 0, NULL, 0)
-                                                                                                    ENTRY_WITH_FIELDS(
-                                                                                                        modulation_scrub,
-                                                                                                        modulation_scrub_config_fields,
-                                                                                                        sizeof(
-                                                                                                            modulation_scrub_config_fields
-                                                                                                        ) /
-                                                                                                            sizeof(
-                                                                                                                modulation_scrub_config_fields
-                                                                                                                    [0]
-                                                                                                            ),
-                                                                                                        NULL,
-                                                                                                        0
-                                                                                                    )
-                                                                                                        ENTRY_WITH_FIELDS(
-                                                                                                            nonlinear_bitcrush,
-                                                                                                            nonlinear_bitcrush_config_fields,
-                                                                                                            sizeof(
-                                                                                                                nonlinear_bitcrush_config_fields
-                                                                                                            ) /
-                                                                                                                sizeof(
-                                                                                                                    nonlinear_bitcrush_config_fields
-                                                                                                                        [0]
-                                                                                                                ),
-                                                                                                            NULL,
-                                                                                                            0
-                                                                                                        ) ENTRY_WITH_FIELDS(nonlinear_samplerate_reduce, nonlinear_samplerate_reduce_config_fields, sizeof(nonlinear_samplerate_reduce_config_fields) / sizeof(nonlinear_samplerate_reduce_config_fields[0]), nonlinear_samplerate_reduce_state_fields, sizeof(nonlinear_samplerate_reduce_state_fields) / sizeof(nonlinear_samplerate_reduce_state_fields[0])) ENTRY_WITH_FIELDS(nonlinear_waveshape, nonlinear_waveshape_config_fields, sizeof(nonlinear_waveshape_config_fields) / sizeof(nonlinear_waveshape_config_fields[0]), NULL, 0)
-                                                                                                            ENTRY_WITH_FIELDS(
-                                                                                                                src_antialias,
-                                                                                                                src_antialias_config_fields,
-                                                                                                                sizeof(
-                                                                                                                    src_antialias_config_fields
-                                                                                                                ) /
-                                                                                                                    sizeof(
-                                                                                                                        src_antialias_config_fields
-                                                                                                                            [0]
-                                                                                                                    ),
-                                                                                                                src_antialias_state_fields,
-                                                                                                                sizeof(
-                                                                                                                    src_antialias_state_fields
-                                                                                                                ) /
-                                                                                                                    sizeof(
-                                                                                                                        src_antialias_state_fields
-                                                                                                                            [0]
-                                                                                                                    )
-                                                                                                            ) ENTRY_WITH_FIELDS(src_antiimage, src_antiimage_config_fields, sizeof(src_antiimage_config_fields) / sizeof(src_antiimage_config_fields[0]), src_antiimage_state_fields, sizeof(src_antiimage_state_fields) / sizeof(src_antiimage_state_fields[0]))
-                                                                                                                ENTRY_WITH_FIELDS(
-                                                                                                                    src_convert_format,
-                                                                                                                    src_convert_format_config_fields,
-                                                                                                                    sizeof(
-                                                                                                                        src_convert_format_config_fields
-                                                                                                                    ) /
-                                                                                                                        sizeof(
-                                                                                                                            src_convert_format_config_fields
-                                                                                                                                [0]
-                                                                                                                        ),
-                                                                                                                    NULL,
-                                                                                                                    0
-                                                                                                                )
-                                                                                                                    ENTRY_WITH_FIELDS(
-                                                                                                                        src_downsample,
-                                                                                                                        src_downsample_config_fields,
-                                                                                                                        sizeof(
-                                                                                                                            src_downsample_config_fields
-                                                                                                                        ) /
-                                                                                                                            sizeof(
-                                                                                                                                src_downsample_config_fields
-                                                                                                                                    [0]
-                                                                                                                            ),
-                                                                                                                        NULL,
-                                                                                                                        0
-                                                                                                                    )
-                                                                                                                        ENTRY_WITH_FIELDS(
-                                                                                                                            src_upsample,
-                                                                                                                            src_upsample_config_fields,
-                                                                                                                            sizeof(
-                                                                                                                                src_upsample_config_fields
-                                                                                                                            ) /
-                                                                                                                                sizeof(
-                                                                                                                                    src_upsample_config_fields
-                                                                                                                                        [0]
-                                                                                                                                ),
-                                                                                                                            NULL,
-                                                                                                                            0
-                                                                                                                        )
-                                                                                                                            ENTRY_WITH_FIELDS(
-                                                                                                                                freq_quantize,
-                                                                                                                                NULL,
-                                                                                                                                0,
-                                                                                                                                NULL,
-                                                                                                                                0
-                                                                                                                            )
+    ENTRY_STATE(amplitude_accumulate, amplitude_accumulate_state_fields),
+    ENTRY_CONFIG_STATE(amplitude_latch, amplitude_latch_config_fields, amplitude_latch_state_fields),
+    ENTRY(amplitude_add),
+    ENTRY_CONFIG(amplitude_clip_hard, amplitude_clip_hard_config_fields),
+    ENTRY_CONFIG(amplitude_clip_soft, amplitude_clip_soft_config_fields),
+    ENTRY_CONFIG(amplitude_divide, amplitude_divide_config_fields),
+    ENTRY(amplitude_multiply),
+    ENTRY_CONFIG_STATE(amplitude_normalize, amplitude_normalize_config_fields, amplitude_normalize_state_fields),
+    ENTRY_CONFIG_STATE(amplitude_smooth, amplitude_smooth_config_fields, amplitude_smooth_state_fields),
+    ENTRY(amplitude_subtract),
+    ENTRY_CONFIG_STATE(delay_fractional, delay_fractional_config_fields, delay_fractional_state_fields),
+    ENTRY_CONFIG_STATE(delay_line, delay_line_config_fields, delay_line_state_fields),
+    ENTRY_CONFIG(delay_tap_feedback, delay_tap_feedback_config_fields),
+    ENTRY_CONFIG(delay_tap_feedforward, delay_tap_feedforward_config_fields),
+    ENTRY_STATE(delay_unit, delay_unit_state_fields),
+    ENTRY_CONFIG_STATE(detect_autocorrelate, detect_autocorrelate_config_fields, detect_autocorrelate_state_fields),
+    ENTRY_CONFIG_STATE(detect_pitch, detect_pitch_config_fields, detect_pitch_state_fields),
+    ENTRY_CONFIG_STATE(detect_envelope, detect_envelope_config_fields, detect_envelope_state_fields),
+    ENTRY_CONFIG_STATE(detect_peak, detect_peak_config_fields, detect_peak_state_fields),
+    ENTRY_CONFIG_STATE(detect_rms, detect_rms_config_fields, detect_rms_state_fields),
+    ENTRY_STATE(detect_slope, detect_slope_state_fields),
+    ENTRY_CONFIG(detect_threshold, detect_threshold_config_fields),
+    ENTRY_STATE(detect_zero_crossing, detect_zero_crossing_state_fields),
+    ENTRY_CONFIG_STATE(filter_allpass, filter_allpass_config_fields, filter_allpass_state_fields),
+    ENTRY_CONFIG_STATE(filter_biquad, filter_biquad_config_fields, filter_biquad_state_fields),
+    ENTRY_CONFIG_STATE(filter_comb_fb, filter_comb_fb_config_fields, filter_comb_fb_state_fields),
+    ENTRY_CONFIG_STATE(filter_comb_ff, filter_comb_ff_config_fields, filter_comb_ff_state_fields),
+    ENTRY_CONFIG_STATE(filter_dc_block, filter_dc_block_config_fields, filter_dc_block_state_fields),
+    ENTRY_STATE(filter_differentiate, filter_differentiate_state_fields),
+    ENTRY_CONFIG_STATE(filter_fir, filter_fir_config_fields, filter_fir_state_fields),
+    ENTRY_STATE(filter_integrate, filter_integrate_state_fields),
+    ENTRY_CONFIG(freq_fft, freq_fft_config_fields),
+    ENTRY_CONFIG(freq_ifft, freq_ifft_config_fields),
+    ENTRY_CONFIG(freq_multiply, freq_multiply_config_fields),
+    ENTRY_CONFIG_STATE(freq_overlap_add, freq_overlap_add_config_fields, freq_overlap_add_state_fields),
+    ENTRY_CONFIG_STATE(freq_overlap_save, freq_overlap_save_config_fields, freq_overlap_save_state_fields),
+    ENTRY_CONFIG_STATE(freq_overlap_add, freq_overlap_add_config_fields, freq_overlap_add_state_fields),
+    ENTRY_CONFIG_STATE(freq_overlap_save, freq_overlap_save_config_fields, freq_overlap_save_state_fields),
+    ENTRY_CONFIG(freq_window, freq_window_config_fields),
+    ENTRY_CONFIG_STATE(freq_shift, freq_shift_config_fields, freq_shift_state_fields),
+    ENTRY_CONFIG(generation_dc, generation_dc_config_fields),
+    ENTRY_CONFIG_STATE(generation_envelope, generation_envelope_config_fields, generation_envelope_state_fields),
+    ENTRY_CONFIG_STATE(generation_impulse, generation_impulse_config_fields, generation_impulse_state_fields),
+    ENTRY_CONFIG_STATE(generation_lfo, generation_lfo_config_fields, generation_lfo_state_fields),
+    ENTRY_CONFIG_STATE(generation_noise, generation_noise_config_fields, generation_noise_state_fields),
+    ENTRY_CONFIG_STATE(generation_oscillator, generation_oscillator_config_fields, generation_oscillator_state_fields),
+    ENTRY(interpolation_cubic),
+    ENTRY_CONFIG_STATE(
+        interpolation_lagrange, interpolation_lagrange_config_fields, interpolation_lagrange_state_fields
+    ),
+    ENTRY(interpolation_linear),
+    ENTRY_CONFIG_STATE(interpolation_sinc, interpolation_sinc_config_fields, interpolation_sinc_state_fields),
+    ENTRY_CONFIG(mix_crossfade, mix_crossfade_config_fields),
+    ENTRY(mix_decode_ms),
+    ENTRY(mix_encode_ms),
+    ENTRY_CONFIG(mix_matrix, mix_matrix_config_fields),
+    ENTRY_CONFIG(mix_pan_stereo, mix_pan_stereo_config_fields),
+    ENTRY_CONFIG(mix_wet_dry, mix_wet_dry_config_fields),
+    ENTRY_CONFIG(modulation_amplitude, modulation_amplitude_config_fields),
+    ENTRY_CONFIG_STATE(modulation_frequency, modulation_frequency_config_fields, modulation_frequency_state_fields),
+    ENTRY_CONFIG_STATE(modulation_phase, modulation_phase_config_fields, modulation_phase_state_fields),
+    ENTRY(modulation_ring),
+    ENTRY_CONFIG(modulation_scrub, modulation_scrub_config_fields),
+    ENTRY_CONFIG(nonlinear_bitcrush, nonlinear_bitcrush_config_fields),
+    ENTRY_CONFIG_STATE(
+        nonlinear_samplerate_reduce, nonlinear_samplerate_reduce_config_fields, nonlinear_samplerate_reduce_state_fields
+    ),
+    ENTRY_CONFIG(nonlinear_waveshape, nonlinear_waveshape_config_fields),
+    ENTRY_CONFIG_STATE(src_antialias, src_antialias_config_fields, src_antialias_state_fields),
+    ENTRY_CONFIG_STATE(src_antiimage, src_antiimage_config_fields, src_antiimage_state_fields),
+    ENTRY_CONFIG(src_convert_format, src_convert_format_config_fields),
+    ENTRY_CONFIG(src_downsample, src_downsample_config_fields),
+    ENTRY_CONFIG(src_upsample, src_upsample_config_fields),
+    ENTRY(freq_quantize),
 };
 
 static const int g_registry_count = sizeof(g_registry) / sizeof(g_registry[0]);
