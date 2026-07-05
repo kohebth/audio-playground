@@ -10,7 +10,6 @@ This repository contains several independent project areas:
 - `units-v2/` and `projects-v2/`: v2 compiler/runtime fixtures, including product units and guitar pedalboard project examples.
 - `test/golden/`: frozen JSON samples for frontend contract tests and mock data.
 - `docs/schemas/unit-v2.md`, `docs/schemas/project-v2.md`, `docs/UNIT_V2_ARCHITECTURE.md`, and `docs/WEB_UI_READINESS.md`: current v2 schemas, compiler/runtime design notes, and web handoff context.
-- `configs/`: PipeWire/runtime tuning config.
 - `web-tools/unit-editor/`, `audio-mcp/`, `search-mcp/`: separate frontend and MCP packages with their own dependencies.
 - `samples/` and `analysis/`: audio inputs and generated inspection outputs. Commit large generated audio only as intentional fixtures.
 
@@ -62,7 +61,7 @@ C tests are CTest targets. Add focused tests under `test/` for atom behavior, pa
 
 Use short imperative subjects, preferably Conventional Commit style: `feat:`, `fix:`, `test:`, `docs:`, or `refactor:`. The user has approved `git commit`; commit each completed, verified slice with a message describing the task done.
 
-Pull requests should name the changed project area, list commands run, call out PipeWire or audio-file requirements, and include screenshots for unit-editor UI changes.
+Pull requests should name the changed project area, list commands run, call out audio-file requirements, and include screenshots for unit-editor UI changes.
 
 ## Agent-Specific Instructions
 

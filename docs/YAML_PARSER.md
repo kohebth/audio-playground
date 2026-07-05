@@ -705,75 +705,9 @@ uc_status uc_parse(const uc_token_vec *tokens, uc_arena *arena,
 
 ---
 
-## `inc/yaml/unit.h`
+## Removed v1 unit model
 
-```c++
-#ifndef UNITCFG_UNIT_H
-#define UNITCFG_UNIT_H
-
-#include <stddef.h>
-
-typedef enum { UC_VAL_LITERAL, UC_VAL_VARREF } uc_value_kind;
-
-typedef struct {
-    uc_value_kind kind;
-    const char   *text;     /* literal text or "a.b.c" path */
-} uc_value;
-
-typedef struct {
-    const char *key;
-    uc_value    value;
-} uc_kv;
-
-typedef struct {
-    const char *key;
-    double      value;
-} uc_kv_d;
-
-typedef struct {
-    const char *name;
-    double      min;
-    double      max;
-    double      def;
-    const char *unit;
-} uc_param;
-
-typedef struct {
-    const char *id;
-    const char *fn;
-
-    uc_kv      *in;     size_t in_len;
-    uc_kv      *out;    size_t out_len;
-    uc_kv      *config; size_t config_len;
-    uc_kv_d    *state;  size_t state_len;
-} uc_stage;
-
-typedef struct {
-    int sample_rate;
-    int channel;
-} uc_system;
-
-typedef struct {
-    const char  *name;
-    const char  *version;
-    uc_system    system;
-
-    uc_param    *params;   size_t params_len;
-    uc_kv_d     *internal; size_t internal_len;
-
-    const char **signals;  size_t signals_len;
-
-    uc_stage    *pipeline; size_t pipeline_len;
-} uc_unit;
-
-#endif
-```
-
----
-
-## Removed v1 unit loader
-
-The former `inc/yaml/loader.h` and `src/yaml/loader.c` translated raw YAML nodes into the v1 `uc_unit` runtime shape. They were removed after APGCore v2 gained explicit parser and validator modules. Keep the lower-level `arena`, `lexer`, `parser`, `node`, and `error` files: v2 parser wrappers still use those pieces to turn YAML text into raw contract graphs before semantic validation.
+The former `inc/yaml/unit.h`, `inc/yaml/loader.h`, and `src/yaml/loader.c` translated raw YAML nodes into the v1 `uc_unit` runtime shape. They were removed after APGCore v2 gained explicit parser and validator modules. Keep the lower-level `arena`, `lexer`, `parser`, `node`, and `error` files: v2 parser wrappers still use those pieces to turn YAML text into raw contract graphs before semantic validation.
 
 ---
 

@@ -232,16 +232,16 @@ static uc_status clone_bindings(
             items[i].node = clone_signal_seq_node(project, project_node, unit, src[i].node, arena, err);
             if (!items[i].node || err->status != UC_OK)
                 return err->status;
-            items[i].value.kind = UC_VAL_LITERAL;
+            items[i].value.kind = APG_V2_VALUE_LITERAL;
             items[i].value.text = "";
             continue;
         }
-        if (signal_section && src[i].value.kind == UC_VAL_LITERAL) {
+        if (signal_section && src[i].value.kind == APG_V2_VALUE_LITERAL) {
             items[i].value.text = remap_signal(project, project_node, unit, src[i].value.text, arena, err);
             if (!items[i].value.text || err->status != UC_OK)
                 return err->status;
             items[i].node = NULL;
-        } else if (src[i].value.kind == UC_VAL_VARREF) {
+        } else if (src[i].value.kind == APG_V2_VALUE_VARREF) {
             items[i].value.text = namespace_param_ref(arena, project_node->id, src[i].value.text, err);
             if (!items[i].value.text || err->status != UC_OK)
                 return err->status;

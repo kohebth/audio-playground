@@ -4,9 +4,9 @@
 #include <stddef.h>
 
 #include <apgcore/unit_v2.h>
+#include <apgcore/validator/value_v2.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
-#include <yaml/unit.h>
 
 typedef struct {
     const char *id;
@@ -14,8 +14,8 @@ typedef struct {
 } apg_project_v2_unit_ref_t;
 
 typedef struct {
-    const char *key;
-    uc_value    value;
+    const char    *key;
+    apg_v2_value_t value;
 } apg_project_v2_param_override_t;
 
 typedef struct {

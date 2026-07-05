@@ -3,9 +3,9 @@
 
 #include <stddef.h>
 
+#include <apgcore/validator/value_v2.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
-#include <yaml/unit.h>
 
 typedef struct uc_node uc_node;
 
@@ -42,7 +42,7 @@ typedef struct {
 
 typedef struct {
     const char    *key;
-    uc_value       value;
+    apg_v2_value_t value;
     const uc_node *node;
 } apg_unit_v2_binding_t;
 

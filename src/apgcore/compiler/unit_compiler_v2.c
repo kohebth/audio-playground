@@ -729,7 +729,7 @@ static uc_status compile_signal_bindings(
         }
 
         if (section == APG_BIND_SECTION_IN && atom_input_key_is_scalar(atom, bindings[i].key)) {
-            if (bindings[i].value.kind == UC_VAL_VARREF) {
+            if (bindings[i].value.kind == APG_V2_VALUE_VARREF) {
                 const char *param_name  = param_ref_name(bindings[i].value.text);
                 int         param_index = find_param_index(unit, param_name);
                 if (param_index < 0) {
@@ -751,7 +751,7 @@ static uc_status compile_signal_bindings(
             continue;
         }
 
-        if (bindings[i].value.kind != UC_VAL_LITERAL) {
+        if (bindings[i].value.kind != APG_V2_VALUE_LITERAL) {
             char msg[192];
             snprintf(
                 msg, sizeof(msg), "node '%s' %s binding key '%s' must be a literal signal name", node_id ? node_id : "",
@@ -817,7 +817,7 @@ static uc_status compile_config_bindings(
             continue;
         }
 
-        if (bindings[i].value.kind == UC_VAL_VARREF) {
+        if (bindings[i].value.kind == APG_V2_VALUE_VARREF) {
             const char *param_name  = param_ref_name(bindings[i].value.text);
             int         param_index = find_param_index(unit, param_name);
             if (param_index < 0) {

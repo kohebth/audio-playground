@@ -96,15 +96,15 @@ static bool port_type_is_audio(const char *type) { return type && strcmp(type, "
 
 static bool port_type_is_control(const char *type) { return type && strcmp(type, "control") == 0; }
 
-static uc_value to_value(const uc_node *node) {
-    uc_value value = {UC_VAL_LITERAL, ""};
+static apg_v2_value_t to_value(const uc_node *node) {
+    apg_v2_value_t value = {APG_V2_VALUE_LITERAL, ""};
     if (!node)
         return value;
     if (node->kind == UC_NODE_VARREF) {
-        value.kind = UC_VAL_VARREF;
+        value.kind = APG_V2_VALUE_VARREF;
         value.text = node->text;
     } else if (node->kind == UC_NODE_SCALAR) {
-        value.kind = UC_VAL_LITERAL;
+        value.kind = APG_V2_VALUE_LITERAL;
         value.text = node->text;
     }
     return value;

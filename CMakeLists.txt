@@ -16,15 +16,11 @@ if(APG_ENABLE_SANITIZERS)
     endif()
 endif()
 
-find_package(PkgConfig QUIET)
-pkg_check_modules(PIPEWIRE QUIET libpipewire-0.3)
-
 include_directories(
         ${CMAKE_SOURCE_DIR}/inc/
         ${CMAKE_SOURCE_DIR}/inc/rte
         ${CMAKE_SOURCE_DIR}/inc/util
         ${CMAKE_SOURCE_DIR}/inc/yaml
-        ${PIPEWIRE_INCLUDE_DIRS}
 )
 
 file(GLOB_RECURSE APGCORE_SOURCES CONFIGURE_DEPENDS src/apgcore/*.c)
@@ -32,32 +28,10 @@ file(GLOB ATOM_SOURCES src/atom/*.c)
 set(ATOM_REGISTRY_SOURCE src/rte/atom_register.c)
 file(GLOB UTIL_SOURCES src/util/*.c)
 file(GLOB YAML_SOURCES src/yaml/*.c)
-file(GLOB WAVE_SOURCES src/wave.c)
-list(REMOVE_ITEM UTIL_SOURCES "${CMAKE_SOURCE_DIR}/src/util/fast_chunk.c")
 list(APPEND UTIL_SOURCES ${APGCORE_SOURCES})
 list(APPEND UTIL_SOURCES ${ATOM_SOURCES})
 list(APPEND UTIL_SOURCES ${ATOM_REGISTRY_SOURCE})
 list(APPEND UTIL_SOURCES ${YAML_SOURCES})
-list(APPEND UTIL_SOURCES ${WAVE_SOURCES})
-
-if(PIPEWIRE_FOUND)
-    set(PIPEWIRE_SO "${PIPEWIRE_LIBDIR}/libpipewire-0.3.so")
-    if(NOT EXISTS "${PIPEWIRE_SO}")
-        set(PIPEWIRE_SO "${PIPEWIRE_LIBDIR}/libpipewire-0.3.so.0")
-    endif()
-    if(EXISTS "${PIPEWIRE_SO}")
-        set(PIPEWIRE_LIB "${PIPEWIRE_SO}")
-    else()
-        set(PIPEWIRE_LIB "pipewire-0.3")
-    endif()
-    add_executable(live
-            src/live.c
-            src/util/fast_chunk.c
-            ${UTIL_SOURCES}
-    )
-    target_link_libraries(live "${PIPEWIRE_LIB}" m)
-
-endif()
 
 add_executable(test_runtime
         src/test_runtime.c
@@ -65,21 +39,11 @@ add_executable(test_runtime
 )
 target_link_libraries(test_runtime m)
 
-add_executable(fast_math_test
-        src/fast_math_test.c
-        ${UTIL_SOURCES}
-        inc/atom/dsp_types.h
-)
-target_link_libraries(fast_math_test m)
-
 add_executable(apg-v2
         tools/apg_v2_cli.c
         ${UTIL_SOURCES}
 )
 target_link_libraries(apg-v2 m)
-if(PIPEWIRE_FOUND)
-    target_link_libraries(apg-v2 "${PIPEWIRE_LIB}")
-endif()
 
 set(TEST_TARGETS
         test_atom_basic
@@ -135,9 +99,6 @@ foreach(TEST_TARGET ${TEST_TARGETS})
         )
     endif()
     target_link_libraries(${TEST_TARGET} m)
-    if(PIPEWIRE_FOUND)
-        target_link_libraries(${TEST_TARGET} "${PIPEWIRE_LIB}")
-    endif()
     add_test(NAME ${TEST_TARGET} COMMAND ${TEST_TARGET})
     set_tests_properties(${TEST_TARGET} PROPERTIES
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}

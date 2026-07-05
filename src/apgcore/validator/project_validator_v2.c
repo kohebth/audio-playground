@@ -87,15 +87,15 @@ static const uc_node *optional_seq(const uc_node *map, const char *key, const ch
     return node;
 }
 
-static uc_value to_value(const uc_node *node) {
-    uc_value value = {UC_VAL_LITERAL, ""};
+static apg_v2_value_t to_value(const uc_node *node) {
+    apg_v2_value_t value = {APG_V2_VALUE_LITERAL, ""};
     if (!node)
         return value;
     if (node->kind == UC_NODE_VARREF) {
-        value.kind = UC_VAL_VARREF;
+        value.kind = APG_V2_VALUE_VARREF;
         value.text = node->text;
     } else if (node->kind == UC_NODE_SCALAR) {
-        value.kind = UC_VAL_LITERAL;
+        value.kind = APG_V2_VALUE_LITERAL;
         value.text = node->text;
     }
     return value;
@@ -554,7 +554,7 @@ static uc_status validate_param_overrides(const apg_project_v2_resolved_t *proje
                 );
                 return set_error(err, UC_E_MISSING, msg);
             }
-            if (node->params[p].value.kind != UC_VAL_LITERAL) {
+            if (node->params[p].value.kind != APG_V2_VALUE_LITERAL) {
                 char msg[192];
                 snprintf(
                     msg, sizeof(msg), "project node '%s' param override '%s' must be literal", node->id ? node->id : "",

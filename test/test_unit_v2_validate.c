@@ -56,7 +56,7 @@ static int expect_valid_fixture(void) {
     if (!unit.nodes || strcmp(unit.nodes[0].id, "gain_value") != 0 || strcmp(unit.nodes[0].atom, "generation_dc") != 0)
         return fail("unexpected parsed v2 first node");
     if (unit.nodes[0].config_len != 1u || strcmp(unit.nodes[0].config[0].key, "value") != 0 ||
-        unit.nodes[0].config[0].value.kind != UC_VAL_VARREF ||
+        unit.nodes[0].config[0].value.kind != APG_V2_VALUE_VARREF ||
         strcmp(unit.nodes[0].config[0].value.text, "params.gain") != 0)
         return fail("unexpected parsed v2 config binding");
     if (strcmp(unit.nodes[1].id, "apply_gain") != 0 || unit.nodes[1].in_len != 2u || unit.nodes[1].out_len != 1u)
