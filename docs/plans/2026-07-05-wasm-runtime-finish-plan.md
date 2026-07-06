@@ -12,6 +12,7 @@ Done:
 
 - `wasm_realtime` export emits deterministic scaffold artifacts.
 - Web preview has a runtime adapter boundary and deterministic fallback behavior.
+- Exported adapter now has a browser AudioWorklet compile/start/stop lifecycle around the generated processor.
 
 ## Remaining Implementation
 
@@ -21,9 +22,10 @@ Done:
   - AudioWorklet processor JS
   - adapter JS
 - [x] Preserve current scaffold manifest fields where possible.
-- [ ] Implement compile/start/stop lifecycle in the browser adapter.
+- [x] Implement compile/start/stop lifecycle in the browser adapter.
 - [x] Wire param updates, bypass updates, meter polling, and error reporting to stable runtime names.
 - [x] Reject unsupported atoms/features for `wasm_realtime` with stable diagnostics.
+- [ ] Generate/load a real `apg_project_wasm.wasm` DSP module and invoke registry/runtime processing from the AudioWorklet processor.
 
 ## Tests
 
