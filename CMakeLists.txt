@@ -387,6 +387,15 @@ set_tests_properties(test_apg_v2_cli_m7_export_custom_header PROPERTIES
 set(APG_M7_C_COMPILER "" CACHE FILEPATH "Optional ARM/M7 C compiler used to syntax-check generated m7_static bundles")
 set(APG_M7_LINKER_SCRIPT "" CACHE FILEPATH "Optional STM32H7/M7 linker script used to link generated m7_static bundles")
 set(APG_M7_BOARD_TIMING_COMMAND "" CACHE STRING "Optional command that measures a generated m7_static bundle on board; receives export dir as last argument")
+set(APG_M7_REQUIRE_BOARD_TIMING OFF CACHE BOOL "Fail CMake configure when APG_M7_BOARD_TIMING_COMMAND is not configured")
+if(APG_M7_REQUIRE_BOARD_TIMING AND NOT APG_M7_BOARD_TIMING_COMMAND)
+    message(
+            FATAL_ERROR
+            "APG_M7_REQUIRE_BOARD_TIMING is ON, but APG_M7_BOARD_TIMING_COMMAND is not configured. "
+            "Set APG_M7_BOARD_TIMING_COMMAND to a BSP timing command that prints "
+            "m7_static_board_block_us=<value> budget_us=<value>."
+    )
+endif()
 if(NOT APG_M7_C_COMPILER)
     find_program(APG_M7_C_COMPILER_DETECTED arm-none-eabi-gcc)
     if(APG_M7_C_COMPILER_DETECTED)
@@ -479,4 +488,14 @@ set_tests_properties(test_apg_v2_cli_m7_export_board_timing_gate_mock PROPERTIES
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_bundle
         PASS_REGULAR_EXPRESSION "m7_static_board_block_us=10.000 budget_us=1000.000 source=mock"
+)
+
+add_test(
+        NAME test_apg_v2_cli_m7_export_requires_board_timing
+        COMMAND ${CMAKE_COMMAND} -S ${CMAKE_SOURCE_DIR} -B ${CMAKE_BINARY_DIR}/test-artifacts/m7-require-board-timing-config -DAPG_M7_REQUIRE_BOARD_TIMING=ON
+)
+set_tests_properties(test_apg_v2_cli_m7_export_requires_board_timing PROPERTIES
+        LABELS v2
+        WILL_FAIL TRUE
+        PASS_REGULAR_EXPRESSION "APG_M7_REQUIRE_BOARD_TIMING is ON, but APG_M7_BOARD_TIMING_COMMAND is not configured"
 )

@@ -15,6 +15,7 @@ Done:
 - Unsupported target profiles and incompatible atoms are rejected.
 - `APG_M7_BOARD_TIMING_COMMAND` output is now routed through a strict timing gate that rejects missing, nonpositive,
   or over-budget board measurements.
+- `APG_M7_REQUIRE_BOARD_TIMING=ON` fails CMake configure unless a board timing command is supplied.
 
 ## Remaining Implementation
 
@@ -27,7 +28,8 @@ Done:
 Blocked external input:
 
 - `APG_M7_BOARD_TIMING_COMMAND` must be a board/BSP command that runs the generated bundle on target hardware or an equivalent board harness and prints `m7_static_board_block_us=<value> budget_us=<value>`.
-- The repository cannot invent this measurement locally; the current fallback test only reports that the board timing command is unconfigured.
+- The repository cannot invent this measurement locally; normal developer runs report that the board timing command is
+  unconfigured, while production runs can set `APG_M7_REQUIRE_BOARD_TIMING=ON` to make that a hard configure failure.
 
 ## Tests
 
@@ -36,6 +38,7 @@ Blocked external input:
 - ARM link gate when a linker script is configured.
 - Board timing gate when command is configured.
 - Mock board timing gate test for command-output validation only; not production timing evidence.
+- Configure-failure test for `APG_M7_REQUIRE_BOARD_TIMING=ON` without a command.
 
 ## Exit Criteria
 
