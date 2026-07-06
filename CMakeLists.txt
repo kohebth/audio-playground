@@ -451,7 +451,10 @@ endif()
 
 if(APG_M7_BOARD_TIMING_COMMAND)
     separate_arguments(APG_M7_BOARD_TIMING_COMMAND_LIST NATIVE_COMMAND "${APG_M7_BOARD_TIMING_COMMAND}")
-    add_test(NAME test_apg_v2_cli_m7_export_board_timing COMMAND ${APG_M7_BOARD_TIMING_COMMAND_LIST} ${APG_M7_CLI_TEST_DIR})
+    add_test(
+            NAME test_apg_v2_cli_m7_export_board_timing
+            COMMAND /bin/sh ${CMAKE_SOURCE_DIR}/tools/apg_m7_board_timing_gate.sh ${APG_M7_CLI_TEST_DIR} ${APG_M7_BOARD_TIMING_COMMAND_LIST}
+    )
     set_tests_properties(test_apg_v2_cli_m7_export_board_timing PROPERTIES
             LABELS v2
             DEPENDS test_apg_v2_cli_m7_export_bundle
@@ -467,3 +470,13 @@ else()
             PASS_REGULAR_EXPRESSION "skipping board timing gate"
     )
 endif()
+
+add_test(
+        NAME test_apg_v2_cli_m7_export_board_timing_gate_mock
+        COMMAND /bin/sh ${CMAKE_SOURCE_DIR}/tools/apg_m7_board_timing_gate.sh ${APG_M7_CLI_TEST_DIR} /bin/sh ${CMAKE_SOURCE_DIR}/test/fixtures/m7/mock_board_timing.sh
+)
+set_tests_properties(test_apg_v2_cli_m7_export_board_timing_gate_mock PROPERTIES
+        LABELS v2
+        DEPENDS test_apg_v2_cli_m7_export_bundle
+        PASS_REGULAR_EXPRESSION "m7_static_board_block_us=10.000 budget_us=1000.000 source=mock"
+)

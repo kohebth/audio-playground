@@ -13,6 +13,8 @@ Done:
 - M7 export emits deterministic memory manifest, generated source/header, static atom storage, atom calls, schedule runner, section attributes, and configurable block/sample/cache settings.
 - Host-side generated runner, stack, object, section, ARM syntax, and static RAM gates exist.
 - Unsupported target profiles and incompatible atoms are rejected.
+- `APG_M7_BOARD_TIMING_COMMAND` output is now routed through a strict timing gate that rejects missing, nonpositive,
+  or over-budget board measurements.
 
 ## Remaining Implementation
 
@@ -33,6 +35,7 @@ Blocked external input:
 - `test_apg_v2_cli_m7_export_arm_stack_usage`
 - ARM link gate when a linker script is configured.
 - Board timing gate when command is configured.
+- Mock board timing gate test for command-output validation only; not production timing evidence.
 
 ## Exit Criteria
 
