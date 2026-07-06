@@ -111,6 +111,8 @@ The UI needs a way to drive live or offline preview:
 - bypass unit instance
 - read meters
 - compile/swap a valid graph without replacing active audio on failure
+- move or replace units by preparing a resolved project in host, committing only a valid replacement runtime, and
+  crossfading mono preview output after commit
 
 ## Phase Gates
 

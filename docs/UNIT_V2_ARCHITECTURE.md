@@ -54,6 +54,12 @@ This scheduling step guarantees a fixed, validated execution order before any au
 
 `apg_v2_runtime_init_from_registry(...)` creates an opaque `apg_v2_runtime_t` from that descriptor. The runtime owns contiguous signal and parameter pools, registry-derived index/control metadata, and internal per-node `atom_call_t` storage, but not the source compiled-plan pointer or registry arena. Runtime nodes execute atom thunks and labels copied from the registry. Public runtime headers expose only the runtime handle and index-based control/process APIs; runtime layout lives in `runtime_v2_internal.h`. Signal buffers are exposed by compiled index through `apg_v2_runtime_signal_buffer_at(...)` and `apg_v2_runtime_signal_buffer_at_mut(...)`. `apg_v2_runtime_set_param_index(...)`, `apg_v2_runtime_set_control_port_index(...)`, `apg_v2_runtime_set_instance_bypass_index(...)`, `apg_v2_runtime_process_mono_port_indices(...)`, and `apg_v2_runtime_process_interleaved_port_indices(...)` are the real-time-friendly entry points: hosts resolve names outside runtime, then use compiled indices in the audio loop. `apg_v2_runtime_reset(...)` clears signal buffers, restores registry-derived param defaults, and resets state storage while preserving internal buffer pointers. Processing refreshes scalar bindings, executes the registry schedule through atom thunks, applies project mute, and copies indexed external buffers when requested. Meter snapshots are produced by `apg_v2_measure_*` from runtime signal buffers.
 
+Project topology edits are host operations, not runtime graph mutations. `apg_v2_host_project_prepare_swap(...)` compiles a
+replacement resolved project into a separate host-owned bundle, applies matching host control shadows, and leaves the
+active runtime untouched if preparation fails. `apg_v2_host_project_commit_swap(...)` swaps in the prepared bundle at the
+host boundary and crossfades mono preview output from the previous runtime to the new runtime. Runtime processing remains
+fixed-schedule and does not parse, compile, allocate graph metadata, or resolve text names for these edits.
+
 `apg_v2_measure_*` APIs expose host/tooling reads for runtime snapshots, meter snapshots, and diagnostics. There are no remaining runtime read wrappers for these paths; callers use `measure_v2` directly. See `docs/APGCORE_BOUNDARY_AUDIT.md` for the current production boundary audit.
 
 ## Memory Ownership
