@@ -6,7 +6,9 @@ Measure is the only host/tooling read layer for runtime state, meters, diagnosti
 
 ## Current Status
 
-Mostly complete.
+Complete for the current host/tooling read boundary. Production host/tooling code uses runtime public APIs for execution
+and measure APIs for runtime diagnostics/read snapshots; direct runtime-internal reads are limited to runtime, measure,
+and focused tests.
 
 Done:
 
@@ -16,9 +18,9 @@ Done:
 
 ## Remaining Implementation
 
-- [ ] Audit host/tooling code for direct runtime internals reads that should go through measure.
-- [ ] Keep measure read-only with respect to DSP execution state, except copying snapshots out.
-- [ ] Add readiness snapshots only if host/UI needs runtime state already available from registry/runtime; keep export-specific JSON in CLI/export code.
+- [x] Audit host/tooling code for direct runtime internals reads that should go through measure.
+- [x] Keep measure read-only with respect to DSP execution state, except copying snapshots out.
+- [x] Add readiness snapshots only if host/UI needs runtime state already available from registry/runtime; keep export-specific JSON in CLI/export code.
 
 ## Tests
 
