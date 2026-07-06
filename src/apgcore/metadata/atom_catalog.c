@@ -287,6 +287,13 @@ bool apg_atom_profile_known(const char *profile) {
                        strcmp(profile, "m7_static") == 0 || strcmp(profile, "offline_render") == 0);
 }
 
+bool apg_atom_known(const char *name) {
+    if (!name)
+        return false;
+    atom_registry_init();
+    return atom_registry_find(name) != NULL;
+}
+
 bool apg_atom_profile_supported(const char *name, const char *profile) {
     if (!name || !profile)
         return false;

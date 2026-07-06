@@ -6,7 +6,7 @@ Validator owns semantic contract correctness using metadata, while preserving th
 
 ## Current Status
 
-Complete.
+Complete and re-audited against the current core boundary.
 
 Done:
 
@@ -17,9 +17,9 @@ Done:
 
 ## Remaining Implementation
 
-- [ ] Do not move compiler-owned atom binding field resolution into validator.
-- [ ] Keep validator output runtime-free: no schedule, storage, atom-call, or registry fields.
-- [ ] If project route bugs appear, fix them in project validator before compiler receives the graph.
+- [x] Do not move compiler-owned atom binding field resolution into validator.
+- [x] Keep validator output runtime-free: no schedule, storage, atom-call, or registry fields.
+- [x] If project route bugs appear, fix them in project validator before compiler receives the graph.
 
 ## Tests
 

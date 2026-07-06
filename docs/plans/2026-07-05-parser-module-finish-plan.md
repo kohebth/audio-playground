@@ -6,7 +6,7 @@ Parser converts YAML source into a raw contract graph only. It must not perform 
 
 ## Current Status
 
-Complete.
+Complete and re-audited against the current core boundary.
 
 Done:
 
@@ -16,9 +16,9 @@ Done:
 
 ## Remaining Implementation
 
-- [ ] Do not add atom, route, compatibility, param, or binding semantics to parser.
-- [ ] Keep `apg_unit_v2_load_*` and `apg_project_v2_load_*` as parser-then-validator wrappers.
-- [ ] If loader code grows, move semantic checks back into validator.
+- [x] Do not add atom, route, compatibility, param, or binding semantics to parser.
+- [x] Keep `apg_unit_v2_load_*` and `apg_project_v2_load_*` as parser-then-validator wrappers.
+- [x] If loader code grows, move semantic checks back into validator.
 
 ## Tests
 

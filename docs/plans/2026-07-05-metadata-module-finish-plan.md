@@ -6,21 +6,22 @@ Metadata is the single reference source for atom descriptors, call pointers, con
 
 ## Current Status
 
-Functionally complete.
+Functionally complete and re-audited against parser/validator/compiler boundaries.
 
 Done:
 
 - Atom catalog owns known target profiles and compatibility hints.
 - Atom catalog owns typed atom contract fields, field types, and required flags.
+- Atom catalog owns registered atom existence checks for validator without exposing registry descriptors.
 - Compiler consumes metadata for binding validation.
 - Validator consumes metadata for known profile and atom reference checks.
 
 ## Remaining Implementation
 
-- [ ] Do not add new metadata APIs unless compiler/registry cannot finish without them.
-- [ ] Keep atom call pointers and registry descriptors isolated from parser and validator.
-- [ ] If compatibility rules grow, replace fragile prefix-only logic with explicit atom metadata entries.
-- [ ] If new atom fields are added, add catalog tests before consumers depend on them.
+- [x] Do not add new metadata APIs unless compiler/registry cannot finish without them.
+- [x] Keep atom call pointers and registry descriptors isolated from parser and validator.
+- [x] If compatibility rules grow, replace fragile prefix-only logic with explicit atom metadata entries.
+- [x] If new atom fields are added, add catalog tests before consumers depend on them.
 
 ## Tests
 

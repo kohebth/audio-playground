@@ -105,6 +105,10 @@ int main(void) {
         return fail("unknown profile support check succeeded");
     if (apg_atom_profile_supported(NULL, "m7_static"))
         return fail("missing atom profile check failed");
+    if (!apg_atom_known("generation_dc"))
+        return fail("known atom lookup failed");
+    if (apg_atom_known("not_a_real_atom"))
+        return fail("unknown atom lookup succeeded");
 
     if (apg_atom_contract_field_count("generation_dc", APG_ATOM_CONTRACT_CONFIG) != 1u)
         return fail("generation_dc metadata field count failed");

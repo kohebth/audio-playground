@@ -1,7 +1,6 @@
 #include <apgcore/validator/unit_validator_v2.h>
 
 #include <apgcore/metadata/atom_catalog.h>
-#include <atom_registry.h>
 #include <yaml/node.h>
 
 #include <stdio.h>
@@ -660,7 +659,6 @@ static uc_status validate_and_fill_nodes(
     if (!items && nodes->seq_len > 0)
         return set_error(err, UC_E_OOM, "arena OOM");
 
-    atom_registry_init();
     for (size_t i = 0; i < nodes->seq_len; i++) {
         const uc_node *node = nodes->seq[i];
         if (!node || node->kind != UC_NODE_MAP)
@@ -672,7 +670,7 @@ static uc_status validate_and_fill_nodes(
         const char *atom = required_scalar(node, "atom", err);
         if (!atom)
             return err->status;
-        if (!atom_registry_find(atom)) {
+        if (!apg_atom_known(atom)) {
             char msg[160];
             snprintf(msg, sizeof(msg), "node '%s' references unknown atom '%s'", id ? id : "", atom ? atom : "");
             return set_error(err, UC_E_MISSING, msg);
