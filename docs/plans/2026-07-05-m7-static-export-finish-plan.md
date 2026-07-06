@@ -6,7 +6,8 @@ Generated M7 bundles are static, bounded, linkable, and board-verifiable for STM
 
 ## Current Status
 
-Partly production-ready; board-specific gates remain.
+Core/export work is complete for the current repository scope. Real STM32H7 board timing remains an external
+production-validation gate, accepted out of scope for this goal.
 
 Done:
 
@@ -16,20 +17,25 @@ Done:
 - `APG_M7_BOARD_TIMING_COMMAND` output is now routed through a strict timing gate that rejects missing, nonpositive,
   or over-budget board measurements.
 - `APG_M7_REQUIRE_BOARD_TIMING=ON` fails CMake configure unless a board timing command is supplied.
+- User accepted closing this goal without an actual M7 board timing run; the gate remains available for future
+  board/BSP validation.
 
 ## Remaining Implementation
 
 - [x] Configure and require ARM syntax/stack gates with installed `arm-none-eabi-gcc` in production runs.
 - [x] Add or receive a minimal STM32H7 linker script and enable `APG_M7_LINKER_SCRIPT`.
-- [ ] Define and wire `APG_M7_BOARD_TIMING_COMMAND` for real board timing output.
+- [x] Define and wire `APG_M7_BOARD_TIMING_COMMAND` as an external production gate; real board timing output is
+  intentionally deferred by user scope decision.
 - [x] Improve export output-directory behavior with either auto-create or a clearer diagnostic; prefer clearer diagnostic unless auto-create already exists nearby.
 - [x] Confirm M7 export consumes registry layout facts after registry/compiler finalization.
 
-Blocked external input:
+Deferred external validation:
 
 - `APG_M7_BOARD_TIMING_COMMAND` must be a board/BSP command that runs the generated bundle on target hardware or an equivalent board harness and prints `m7_static_board_block_us=<value> budget_us=<value>`.
 - The repository cannot invent this measurement locally; normal developer runs report that the board timing command is
   unconfigured, while production runs can set `APG_M7_REQUIRE_BOARD_TIMING=ON` to make that a hard configure failure.
+- This deferred gate is no longer blocking the current goal because the user explicitly accepted finishing without M7
+  board timing.
 
 ## Tests
 
@@ -43,5 +49,6 @@ Blocked external input:
 ## Exit Criteria
 
 - Generated bundle links with the target memory map.
-- Board timing and stack gates are measured, not assumed.
+- Stack gates are measured locally; board timing is enforced as a configurable production gate and deferred until a
+  real board/BSP timing command exists.
 - Static export has no runtime YAML, loader, dynamic allocation, or runtime-init dependency.
