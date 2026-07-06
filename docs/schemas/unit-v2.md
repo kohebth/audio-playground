@@ -65,7 +65,7 @@ Ports are grouped under `ports.inputs` and `ports.outputs`. Names must be unique
 
 ## Graph
 
-`graph.signals` is the complete signal namespace and rejects duplicates. `graph.nodes` is source ordered; the compiler reorders it when dependencies allow.
+`graph.signals` is the complete signal namespace for explicit-binding graphs and rejects duplicates. When `graph.routes` is present and `graph.signals` is omitted, the validator synthesizes the required signal namespace from public audio ports and route edges. `graph.nodes` is source ordered in list form; keyed-map node form is also accepted for route-driven graphs.
 
 Each node requires unique `id` and registered `atom`. Binding sections are maps:
 
@@ -74,6 +74,27 @@ Each node requires unique `id` and registered `atom`. Binding sections are maps:
 - `config`: Literal values or `${params.name}` references.
 
 Duplicate binding keys are rejected during loading. Unknown signal references, unknown param references, missing required atom bindings, and unsupported binding keys are rejected during compile.
+
+Route-driven graph form keeps signal routing outside the node declarations:
+
+```yaml
+graph:
+  nodes:
+    input:
+      atom: input_signal
+    drive:
+      atom: amplitude_clip_soft
+      params:
+        threshold: 0.5
+        curve: 2.0
+    output:
+      atom: output_signal
+  routes:
+    - input.out -> drive.in
+    - drive.out -> output.in
+```
+
+In route-driven form, keyed `nodes` map keys are node IDs. Node `params` is a shorthand for atom `config`; do not declare both `params` and `config` on the same node. The pseudo atoms `input_signal` and `output_signal` mark public audio boundaries and are removed during normalization; their node IDs map to same-named public mono audio port signals. Route endpoints use `node.field`; `in` and `out` are accepted aliases when the target atom has exactly one signal input or output field.
 
 ## Implemented Atom Binding Contracts
 

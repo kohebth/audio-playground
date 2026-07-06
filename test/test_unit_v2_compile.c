@@ -79,6 +79,75 @@ static int test_simple_gain_compile(void) {
     return 0;
 }
 
+static int test_route_style_unit_compile(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: route_style_clip\n"
+                       "version: 2.0.0\n"
+                       "params: {}\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  nodes:\n"
+                       "    input:\n"
+                       "      atom: input_signal\n"
+                       "    drive:\n"
+                       "      atom: amplitude_clip_soft\n"
+                       "      params:\n"
+                       "        threshold: 0.5\n"
+                       "        curve: 2.0\n"
+                       "    output:\n"
+                       "      atom: output_signal\n"
+                       "  routes:\n"
+                       "    - input.out -> drive.in\n"
+                       "    - drive.out -> output.in\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err    = {0};
+    uc_status     status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "route-style load error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to load route-style unit");
+    }
+    if (unit.signals_len != 2u || strcmp(unit.signals[0], "input") != 0 || strcmp(unit.signals[1], "output") != 0)
+        return fail("route-style unit did not synthesize public signals");
+    if (unit.nodes_len != 1u || strcmp(unit.nodes[0].id, "drive") != 0 || unit.nodes[0].in_len != 1u ||
+        unit.nodes[0].out_len != 1u || unit.nodes[0].config_len != 2u)
+        return fail("route-style unit did not normalize node bindings");
+
+    apg_v2_compiled_unit_t plan;
+    status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "route-style compile error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to compile route-style unit");
+    }
+    if (plan.nodes_len != 1u || plan.schedule_len != 1u || plan.schedule[0] != 0u)
+        return fail("unexpected route-style schedule");
+    if (plan.nodes[0].in_len != 1u || strcmp(plan.nodes[0].in[0].key, "signal") != 0 || plan.nodes[0].in[0].index != 0u)
+        return fail("unexpected route-style compiled input");
+    if (plan.nodes[0].out_len != 1u || strcmp(plan.nodes[0].out[0].key, "signal") != 0 ||
+        plan.nodes[0].out[0].index != 1u)
+        return fail("unexpected route-style compiled output");
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int expect_compile_invalid_contains(
     const char *yaml,
     const char *label,
@@ -1773,6 +1842,8 @@ static int test_scalar_literals_must_be_numeric(void) {
 
 int main(void) {
     if (test_simple_gain_compile())
+        return 1;
+    if (test_route_style_unit_compile())
         return 1;
     if (test_unknown_signal_rejected())
         return 1;
