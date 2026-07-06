@@ -31,6 +31,7 @@
     _(delay_tap_feedforward)  \
     _(filter_fir)             \
     _(filter_biquad)          \
+    _(filter_biquad_lowpass)  \
     _(filter_dc_block)        \
     _(filter_comb_ff)         \
     _(filter_comb_fb)         \
@@ -106,6 +107,13 @@ void filter_biquad_process(
     filter_biquad_params_t   *params,
     filter_biquad_state_t    *state,
     const apg_process_info_t *info
+);
+void filter_biquad_lowpass_process(
+    filter_biquad_lowpass_out_t    *out,
+    filter_biquad_lowpass_in_t     *in,
+    filter_biquad_lowpass_params_t *params,
+    filter_biquad_lowpass_state_t  *state,
+    const apg_process_info_t       *info
 );
 
 void generation_dc_process(

@@ -781,7 +781,7 @@ static bool atom_contract_has_exactly_one_signal_field(
         apg_atom_contract_field_t item;
         if (!apg_atom_contract_field(atom, section, i, &item))
             continue;
-        if (item.type != APG_ATOM_FIELD_SIGNAL && item.type != APG_ATOM_FIELD_SIGNAL_OPTIONAL)
+        if (item.type != APG_ATOM_FIELD_SIGNAL)
             continue;
         field = item.name;
         seen++;

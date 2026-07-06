@@ -110,6 +110,7 @@ The compiler currently validates required keys for these MVP atoms:
 - `delay_fractional`: `in.signal`, `out.signal`, `config.delay_samples`, `config.interpolation`
 - `delay_tap_feedback`, `delay_tap_feedforward`: `in.buffer`, scalar `in.tap_position`, `out.signal`, `config.coefficient`
 - `filter_biquad`: `in.signal`, `out.signal`, `config.b0`, `config.b1`, `config.b2`, `config.a1`, `config.a2`
+- `filter_biquad_lowpass`: `in.signal`, optional `in.cutoff`, `out.signal`, `config.cutoff`, `config.q`, `config.sample_rate`, `config.smoothing_ms`
 - `filter_allpass`, `filter_comb_ff`: `in.signal`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_comb_fb`: `in.signal`, optional `in.delay`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_dc_block`: `in.signal`, `out.signal`, `config.coefficient`
@@ -125,6 +126,22 @@ The compiler currently validates required keys for these MVP atoms:
 - `mix_decode_ms`: `in.mid`, `in.side`, `out.left`, `out.right`
 
 Atoms without explicit metadata may still compile without key-level validation until their contracts are added.
+
+`filter_biquad` is the raw coefficient form. For pedal-style cutoff controls, prefer `filter_biquad_lowpass`; it computes stable lowpass coefficients from cutoff/Q, accepts a routed cutoff signal, and smooths cutoff/Q changes using `smoothing_ms`:
+
+```yaml
+filter:
+  atom: filter_biquad_lowpass
+  params:
+    cutoff: 5800.0
+    q: 0.707
+    sample_rate: 48000.0
+    smoothing_ms: 12.0
+routes:
+  - drive.out -> filter.in
+  - lfo.out -> filter.cutoff
+  - filter.out -> output.in
+```
 
 ## Runtime MVP Limits
 

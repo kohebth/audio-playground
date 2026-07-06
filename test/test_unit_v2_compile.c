@@ -148,6 +148,78 @@ static int test_route_style_unit_compile(void) {
     return 0;
 }
 
+static int test_route_style_lowpass_cutoff_input_compile(void) {
+    const char *yaml = "kind: apg.unit\n"
+                       "schema: apg.unit.v2\n"
+                       "name: route_style_lowpass\n"
+                       "version: 2.0.0\n"
+                       "params: {}\n"
+                       "ports:\n"
+                       "  inputs:\n"
+                       "    - name: input\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "  outputs:\n"
+                       "    - name: output\n"
+                       "      type: audio\n"
+                       "      channels: 1\n"
+                       "graph:\n"
+                       "  nodes:\n"
+                       "    input:\n"
+                       "      atom: input_signal\n"
+                       "    cutoff_source:\n"
+                       "      atom: generation_dc\n"
+                       "      params:\n"
+                       "        value: 1800.0\n"
+                       "    filter:\n"
+                       "      atom: filter_biquad_lowpass\n"
+                       "      params:\n"
+                       "        cutoff: 5800.0\n"
+                       "        q: 0.707\n"
+                       "        sample_rate: 48000.0\n"
+                       "        smoothing_ms: 12.0\n"
+                       "    output:\n"
+                       "      atom: output_signal\n"
+                       "  routes:\n"
+                       "    - input.out -> filter.in\n"
+                       "    - cutoff_source.out -> filter.cutoff\n"
+                       "    - filter.out -> output.in\n"
+                       "compatibility:\n"
+                       "  desktop_full: true\n";
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err    = {0};
+    uc_status     status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "route lowpass load error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to load route-style lowpass unit");
+    }
+
+    apg_v2_compiled_unit_t plan;
+    status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "route lowpass compile error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to compile route-style lowpass unit");
+    }
+
+    if (plan.nodes_len != 2u || strcmp(plan.nodes[1].atom_name, "filter_biquad_lowpass") != 0)
+        return fail("unexpected route-style lowpass compiled nodes");
+    if (plan.nodes[1].in_len != 2u || strcmp(plan.nodes[1].in[0].key, "signal") != 0 ||
+        strcmp(plan.nodes[1].in[1].key, "cutoff") != 0)
+        return fail("route-style lowpass cutoff input did not compile");
+    if (plan.nodes[1].config_len != 4u)
+        return fail("route-style lowpass config did not compile");
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int expect_compile_invalid_contains(
     const char *yaml,
     const char *label,
@@ -1844,6 +1916,8 @@ int main(void) {
     if (test_simple_gain_compile())
         return 1;
     if (test_route_style_unit_compile())
+        return 1;
+    if (test_route_style_lowpass_cutoff_input_compile())
         return 1;
     if (test_unknown_signal_rejected())
         return 1;

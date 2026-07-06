@@ -32,6 +32,28 @@ const atom_field_desc_t filter_biquad_state_fields[] = {
 };
 FIELD_COUNT(filter_biquad_state_fields);
 
+const atom_field_desc_t filter_biquad_lowpass_in_fields[] = {
+    {"signal", FIELD_SIGNAL, offsetof(filter_biquad_lowpass_in_t, signal)},
+    {"cutoff", FIELD_SIGNAL, offsetof(filter_biquad_lowpass_in_t, cutoff)},
+};
+FIELD_COUNT(filter_biquad_lowpass_in_fields);
+
+const atom_field_desc_t filter_biquad_lowpass_config_fields[] = {
+    {      "cutoff", FIELD_FLOAT, offsetof(filter_biquad_lowpass_params_t,       cutoff)},
+    {           "q", FIELD_FLOAT, offsetof(filter_biquad_lowpass_params_t,            q)},
+    { "sample_rate", FIELD_FLOAT, offsetof(filter_biquad_lowpass_params_t,  sample_rate)},
+    {"smoothing_ms", FIELD_FLOAT, offsetof(filter_biquad_lowpass_params_t, smoothing_ms)},
+};
+FIELD_COUNT(filter_biquad_lowpass_config_fields);
+
+const atom_field_desc_t filter_biquad_lowpass_state_fields[] = {
+    {            "z1", FIELD_FLOAT, offsetof(filter_biquad_lowpass_state_t,             z1)},
+    {            "z2", FIELD_FLOAT, offsetof(filter_biquad_lowpass_state_t,             z2)},
+    {"current_cutoff", FIELD_FLOAT, offsetof(filter_biquad_lowpass_state_t, current_cutoff)},
+    {     "current_q", FIELD_FLOAT, offsetof(filter_biquad_lowpass_state_t,      current_q)},
+};
+FIELD_COUNT(filter_biquad_lowpass_state_fields);
+
 const atom_field_desc_t filter_comb_fb_config_fields[] = {
     {"delay_samples",   FIELD_INT, offsetof(filter_comb_fb_params_t, delay_samples)},
     {  "coefficient", FIELD_FLOAT, offsetof(filter_comb_fb_params_t,   coefficient)},

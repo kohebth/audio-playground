@@ -28,6 +28,7 @@
     _(detect_zero_crossing)   \
     _(filter_allpass)         \
     _(filter_biquad)          \
+    _(filter_biquad_lowpass)  \
     _(filter_comb_fb)         \
     _(filter_comb_ff)         \
     _(filter_dc_block)        \

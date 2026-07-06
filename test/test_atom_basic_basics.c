@@ -108,3 +108,38 @@ int test_biquad_impulse_stability(void) {
         return fail("filter_biquad impulse did not decay");
     return 0;
 }
+
+int test_biquad_lowpass_cutoff_smoothing(void) {
+    float x[TEST_CHUNK];
+    float cutoff[TEST_CHUNK];
+    float y[TEST_CHUNK];
+
+    for (int i = 0; i < TEST_CHUNK; i++) {
+        x[i]      = (i == 0) ? 1.0f : 0.0f;
+        cutoff[i] = i < (TEST_CHUNK / 2) ? 400.0f : 6000.0f;
+        y[i]      = 0.0f;
+    }
+
+    filter_biquad_lowpass_out_t    out    = {.signal = y};
+    filter_biquad_lowpass_in_t     in     = {.signal = x, .cutoff = cutoff};
+    filter_biquad_lowpass_params_t params = {
+        .cutoff       = 400.0f,
+        .q            = 0.70710678f,
+        .sample_rate  = 48000.0f,
+        .smoothing_ms = 5.0f,
+    };
+    filter_biquad_lowpass_state_t state = {0};
+    apg_process_info_t            info  = {
+                    .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
+    };
+
+    filter_biquad_lowpass_process(&out, &in, &params, &state, &info);
+
+    if (assert_finite_buffer(y, TEST_CHUNK, "filter_biquad_lowpass"))
+        return 1;
+    if (state.current_cutoff <= 400.0f || state.current_cutoff >= 6000.0f)
+        return fail("filter_biquad_lowpass cutoff did not smooth toward target");
+    if (state.current_q <= 0.0f)
+        return fail("filter_biquad_lowpass q state was not initialized");
+    return 0;
+}

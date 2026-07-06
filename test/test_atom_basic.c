@@ -4,6 +4,7 @@ int test_amplitude_multiply(void);
 int test_soft_clip_bounds_and_monotonicity(void);
 int test_delay_line_impulse_position(void);
 int test_biquad_impulse_stability(void);
+int test_biquad_lowpass_cutoff_smoothing(void);
 int test_process_info_frame_limits(void);
 int test_process_info_modulation_frame_limits(void);
 int test_process_info_control_frame_limits(void);
@@ -29,6 +30,8 @@ int main(void) {
     if (test_delay_line_impulse_position())
         return 1;
     if (test_biquad_impulse_stability())
+        return 1;
+    if (test_biquad_lowpass_cutoff_smoothing())
         return 1;
     if (test_process_info_frame_limits())
         return 1;

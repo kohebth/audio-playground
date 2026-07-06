@@ -40,6 +40,7 @@
     _(detect_zero_crossing, 0, 1)   \
     _(filter_allpass, 2, 2)         \
     _(filter_biquad, 5, 2)          \
+    _(filter_biquad_lowpass, 4, 4)  \
     _(filter_comb_fb, 2, 2)         \
     _(filter_comb_ff, 2, 2)         \
     _(filter_dc_block, 1, 2)        \
@@ -118,6 +119,11 @@ static const atom_field_desc_t *registry_in_fields_for_name(const char *name, si
         if (out_len)
             *out_len = sizeof(delay_tap_feedforward_in_fields) / sizeof(delay_tap_feedforward_in_fields[0]);
         return delay_tap_feedforward_in_fields;
+    }
+    if (strcmp(name, "filter_biquad_lowpass") == 0) {
+        if (out_len)
+            *out_len = sizeof(filter_biquad_lowpass_in_fields) / sizeof(filter_biquad_lowpass_in_fields[0]);
+        return filter_biquad_lowpass_in_fields;
     }
     return NULL;
 }
