@@ -147,7 +147,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
         DEPENDS test_apg_v2_cli_wasm_export_prepare
-        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v2\".*\"ok\":true.*\"target\":\"wasm_realtime\".*\"files\":\\[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\",\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\"\\]"
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v2\".*\"ok\":true.*\"target\":\"wasm_realtime\".*\"files\":\\[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\",\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\",\"apg_project_wasm.h\",\"apg_project_wasm.c\""
 )
 
 add_test(
@@ -157,7 +157,7 @@ add_test(
 set_tests_properties(test_apg_v2_cli_wasm_export_manifest PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.wasm_realtime.v2\".*\"project\":\"guitar-pedalboard\".*\"runtime\":\"audio_worklet_stub\".*\"status\":\"generated\".*\"artifacts\":\\{.*\"adapter_js\":\"apg_project_wasm_adapter.mjs\".*\"worklet_processor_js\":\"apg_project_wasm_processor.js\".*\"wasm_module\":\"apg_project_wasm.wasm\".*\"wasm_module_available\":false"
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.wasm_realtime.v2\".*\"project\":\"guitar-pedalboard\".*\"runtime\":\"audio_worklet_wasm\".*\"status\":\"generated\".*\"artifacts\":\\{.*\"adapter_js\":\"apg_project_wasm_adapter.mjs\".*\"worklet_processor_js\":\"apg_project_wasm_processor.js\".*\"wasm_header\":\"apg_project_wasm.h\".*\"wasm_source\":\"apg_project_wasm.c\".*\"wasm_module\":\"apg_project_wasm.wasm\".*\"wasm_module_available\":"
         DEPENDS test_apg_v2_cli_wasm_export
 )
 
@@ -190,7 +190,18 @@ add_test(
 set_tests_properties(test_apg_v2_cli_wasm_export_processor_js PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "registerProcessor\\(\"apg-project-wasm-processor\""
+        PASS_REGULAR_EXPRESSION "WebAssembly\\.instantiate.*apg_wasm_project_input_ptr.*apg_wasm_project_output_ptr.*apg_wasm_project_process_block.*registerProcessor\\(\"apg-project-wasm-processor\""
+        DEPENDS test_apg_v2_cli_wasm_export
+)
+
+add_test(
+        NAME test_apg_v2_cli_wasm_export_source
+        COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export/apg_project_wasm.c
+)
+set_tests_properties(test_apg_v2_cli_wasm_export_source PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "apg_wasm_project_atom_thunks.*detect_threshold_thunk.*mix_wet_dry_thunk.*apg_wasm_project_input_ptr.*apg_wasm_project_output_ptr.*apg_wasm_project_process_block"
         DEPENDS test_apg_v2_cli_wasm_export
 )
 

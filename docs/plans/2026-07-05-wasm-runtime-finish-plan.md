@@ -13,6 +13,8 @@ Done:
 - `wasm_realtime` export emits deterministic scaffold artifacts.
 - Web preview has a runtime adapter boundary and deterministic fallback behavior.
 - Exported adapter now has a browser AudioWorklet compile/start/stop lifecycle around the generated processor.
+- Export emits a registry-derived static WASM C bundle and the AudioWorklet processor loads/calls its exported block
+  functions when `apg_project_wasm.wasm` is present.
 
 ## Remaining Implementation
 
@@ -25,19 +27,24 @@ Done:
 - [x] Implement compile/start/stop lifecycle in the browser adapter.
 - [x] Wire param updates, bypass updates, meter polling, and error reporting to stable runtime names.
 - [x] Reject unsupported atoms/features for `wasm_realtime` with stable diagnostics.
-- [ ] Generate/load a real `apg_project_wasm.wasm` DSP module and invoke registry/runtime processing from the AudioWorklet processor.
+- [x] Generate/load a real `apg_project_wasm.wasm` DSP module and invoke registry/runtime processing from the AudioWorklet processor.
 
-Blocked external input:
+Toolchain note:
 
-- A WASM C toolchain is not currently available in the local environment (`emcc`, `clang`, and `wasm-ld` are absent).
-- Ubuntu `emscripten` is available through apt, but installing it requires sudo/password access that this session does not have.
+- `wasm_realtime` always emits `apg_project_wasm.h` and `apg_project_wasm.c`.
+- Set `APG_WASM_EMCC` to an Emscripten command to additionally emit `apg_project_wasm.wasm`; otherwise the manifest
+  records `wasm_module_available:false`.
+- This slice was verified with a non-root `/tmp` Emscripten extraction via `APG_WASM_EMCC` and Node WebAssembly
+  instantiation.
 
 ## Tests
 
 - Export rejects unsupported atoms.
 - Export emits expected files.
 - JS adapter exposes stable method names.
-- Add browser smoke only after the real worklet path exists.
+- Generated WASM source exposes block process, input pointer, output pointer, and param setter symbols.
+- Real `.wasm` export instantiates under Node when `APG_WASM_EMCC` is configured.
+- Browser smoke remains a separate web/UI verification gate.
 
 ## Exit Criteria
 

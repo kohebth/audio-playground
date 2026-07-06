@@ -281,7 +281,8 @@ static bool write_wasm_runtime_js(
     const char                      *path,
     const apg_project_v2_resolved_t *project,
     const apg_v2_registry_t         *registry,
-    const wasm_export_options_t     *options
+    const wasm_export_options_t     *options,
+    bool                             wasm_module_available
 ) {
     FILE *out = fopen(path, "w");
     if (!out)
@@ -306,6 +307,8 @@ static bool write_wasm_runtime_js(
         fprintf(out, "  units: %zu,\n", project->units_len);
     if (registry)
         fprintf(out, "  nodes: %zu,\n  schedule: %zu,\n", registry->nodes_len, registry->schedule_len);
+    fputs("  wasmModule: \"apg_project_wasm.wasm\",\n", out);
+    fprintf(out, "  wasmModuleAvailable: %s,\n", wasm_module_available ? "true" : "false");
     fputs("};\n", out);
     return fclose(out) == 0;
 }
@@ -369,6 +372,7 @@ static bool write_wasm_runtime_adapter_js(const char *path, const apg_v2_registr
     fputs("\n};\n", out);
     fputs(
         "const defaultProcessorUrl = new URL(\"./apg_project_wasm_processor.js\", import.meta.url).href;\n"
+        "const defaultWasmUrl = new URL(\"./apg_project_wasm.wasm\", import.meta.url).href;\n"
         "function hasName(items, name) {\n"
         "  return items.includes(name);\n"
         "}\n"
@@ -382,6 +386,11 @@ static bool write_wasm_runtime_adapter_js(const char *path, const apg_v2_registr
         "  let compiled = false;\n"
         "  const paramValues = new Map(runtimeNames.params.map((name) => [name, 0]));\n"
         "  const bypassStates = new Map(runtimeNames.bypassInstances.map((name) => [name, false]));\n"
+        "  function post(type, payload = {}) {\n"
+        "    if (node) {\n"
+        "      node.port.postMessage({type, ...payload});\n"
+        "    }\n"
+        "  }\n"
         "  return {\n"
         "    async compile(options = {}) {\n"
         "      const AudioContextCtor = globalThis.AudioContext || globalThis.webkitAudioContext;\n"
@@ -409,7 +418,17 @@ static bool write_wasm_runtime_adapter_js(const char *path, const apg_v2_registr
         "        lastError = \"AudioWorkletNode is not available\";\n"
         "        throw new Error(lastError);\n"
         "      }\n"
-        "      node = new AudioWorkletNodeCtor(audioContext, workletProcessorName, options.nodeOptions || {});\n"
+        "      const nodeOptions = Object.assign({}, options.nodeOptions || {});\n"
+        "      nodeOptions.processorOptions = Object.assign(\n"
+        "        {wasmUrl: options.wasmUrl || defaultWasmUrl},\n"
+        "        nodeOptions.processorOptions || {}\n"
+        "      );\n"
+        "      node = new AudioWorkletNodeCtor(audioContext, workletProcessorName, nodeOptions);\n"
+        "      node.port.onmessage = (event) => {\n"
+        "        if (event.data && event.data.type === \"error\") {\n"
+        "          lastError = event.data.message || \"AudioWorklet runtime error\";\n"
+        "        }\n"
+        "      };\n"
         "      if (options.input) {\n"
         "        options.input.connect(node);\n"
         "      }\n"
@@ -434,6 +453,7 @@ static bool write_wasm_runtime_adapter_js(const char *path, const apg_v2_registr
         "        return Promise.reject(new Error(lastError));\n"
         "      }\n"
         "      paramValues.set(name, Number(value));\n"
+        "      post(\"setParam\", {index: runtimeNames.params.indexOf(name), value: paramValues.get(name)});\n"
         "      lastError = null;\n"
         "      return Promise.resolve({ok: true, name, value: paramValues.get(name)});\n"
         "    },\n"
@@ -443,6 +463,8 @@ static bool write_wasm_runtime_adapter_js(const char *path, const apg_v2_registr
         "        return Promise.reject(new Error(lastError));\n"
         "      }\n"
         "      bypassStates.set(instanceId, Boolean(bypassed));\n"
+        "      post(\"setBypass\", {index: runtimeNames.bypassInstances.indexOf(instanceId), bypassed: "
+        "bypassStates.get(instanceId)});\n"
         "      lastError = null;\n"
         "      return Promise.resolve({ok: true, instanceId, bypassed: bypassStates.get(instanceId)});\n"
         "    },\n"
@@ -471,7 +493,59 @@ static bool write_wasm_runtime_processor_js(const char *path) {
         return false;
     fputs(
         "class ApgProjectWasmProcessor extends AudioWorkletProcessor {\n"
+        "  constructor(options = {}) {\n"
+        "    super();\n"
+        "    this.ready = false;\n"
+        "    this.exports = null;\n"
+        "    this.memoryF32 = null;\n"
+        "    this.init(options.processorOptions || {});\n"
+        "    this.port.onmessage = (event) => this.handleMessage(event.data || {});\n"
+        "  }\n"
+        "  async init(options) {\n"
+        "    try {\n"
+        "      const url = options.wasmUrl || \"apg_project_wasm.wasm\";\n"
+        "      const response = await fetch(url);\n"
+        "      const module = await WebAssembly.instantiate(await response.arrayBuffer(), {});\n"
+        "      this.exports = module.instance.exports;\n"
+        "      this.memoryF32 = new Float32Array(this.exports.memory.buffer);\n"
+        "      if (this.exports.apg_wasm_project_init) {\n"
+        "        this.exports.apg_wasm_project_init();\n"
+        "      }\n"
+        "      this.ready = true;\n"
+        "    } catch (error) {\n"
+        "      this.port.postMessage({type: \"error\", message: error && error.message ? error.message : "
+        "String(error)});\n"
+        "    }\n"
+        "  }\n"
+        "  handleMessage(message) {\n"
+        "    if (!this.exports) return;\n"
+        "    if (message.type === \"setParam\" && this.exports.apg_wasm_project_set_param) {\n"
+        "      this.exports.apg_wasm_project_set_param(message.index >>> 0, Number(message.value));\n"
+        "    }\n"
+        "  }\n"
+        "  copyInput(inputs) {\n"
+        "    const input = inputs[0] || [];\n"
+        "    const frames = input[0] ? input[0].length : 0;\n"
+        "    for (let channel = 0; channel < input.length; channel += 1) {\n"
+        "      const ptr = this.exports.apg_wasm_project_input_ptr(0, channel) >>> 2;\n"
+        "      this.memoryF32.set(input[channel], ptr);\n"
+        "    }\n"
+        "    return frames;\n"
+        "  }\n"
+        "  copyOutput(outputs) {\n"
+        "    const output = outputs[0] || [];\n"
+        "    for (let channel = 0; channel < output.length; channel += 1) {\n"
+        "      const ptr = this.exports.apg_wasm_project_output_ptr(0, channel) >>> 2;\n"
+        "      output[channel].set(this.memoryF32.subarray(ptr, ptr + output[channel].length));\n"
+        "    }\n"
+        "  }\n"
         "  process(inputs, outputs) {\n"
+        "    if (this.ready && this.exports && this.memoryF32) {\n"
+        "      this.copyInput(inputs);\n"
+        "      this.exports.apg_wasm_project_process_block();\n"
+        "      this.copyOutput(outputs);\n"
+        "      return true;\n"
+        "    }\n"
         "    const input = inputs[0] || [];\n"
         "    const output = outputs[0] || [];\n"
         "    const channels = Math.min(input.length, output.length);\n"
@@ -491,7 +565,8 @@ static bool write_wasm_runtime_manifest(
     const char                      *path,
     const apg_project_v2_resolved_t *project,
     const apg_v2_registry_t         *registry,
-    const wasm_export_options_t     *options
+    const wasm_export_options_t     *options,
+    bool                             wasm_module_available
 ) {
     FILE *out = fopen(path, "w");
     if (!out)
@@ -500,7 +575,7 @@ static bool write_wasm_runtime_manifest(
     write_json_string(out, project && project->project.name ? project->project.name : "unknown");
     fprintf(
         out,
-        ",\"sample_rate\":%u,\"block_frames\":%u,\"runtime\":\"audio_worklet_stub\","
+        ",\"sample_rate\":%u,\"block_frames\":%u,\"runtime\":\"audio_worklet_wasm\","
         "\"layout\":{\"params\":%zu,\"signals\":%zu,\"nodes\":%zu,\"schedule\":%zu},\"status\":\"generated\"",
         options ? options->sample_rate : APG_WASM_DEFAULT_SAMPLE_RATE,
         options ? options->block_frames : APG_WASM_DEFAULT_BLOCK_FRAMES, registry ? registry->params_len : 0u,
@@ -511,14 +586,21 @@ static bool write_wasm_runtime_manifest(
         ",\"artifacts\":{\"manifest\":\"apg_project_wasm.json\",\"entry_js\":\"apg_project_wasm.mjs\","
         "\"adapter_js\":\"apg_project_wasm_adapter.mjs\","
         "\"worklet_processor_js\":\"apg_project_wasm_processor.js\","
-        "\"wasm_module\":\"apg_project_wasm.wasm\",\"wasm_module_available\":false}",
+        "\"wasm_header\":\"apg_project_wasm.h\",\"wasm_source\":\"apg_project_wasm.c\","
+        "\"wasm_module\":\"apg_project_wasm.wasm\",\"wasm_module_available\":",
         out
     );
+    fputs(wasm_module_available ? "true" : "false", out);
+    fputc('}', out);
     fputs(
         ",\"files\":[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\","
-        "\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\"]}\n",
+        "\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\","
+        "\"apg_project_wasm.h\",\"apg_project_wasm.c\"",
         out
     );
+    if (wasm_module_available)
+        fputs(",\"apg_project_wasm.wasm\"", out);
+    fputs("]}\n", out);
     return fclose(out) == 0;
 }
 
@@ -884,6 +966,424 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     return fclose(out) == 0;
 }
 
+static bool write_wasm_header(const char *path, const apg_v2_registry_t *registry) {
+    FILE *out = fopen(path, "w");
+    if (!out)
+        return false;
+    fputs("#ifndef APG_PROJECT_WASM_BUNDLE_H\n#define APG_PROJECT_WASM_BUNDLE_H\n\n", out);
+    fputs("#include <stddef.h>\n#include <stdint.h>\n#include <atom_registry.h>\n\n", out);
+    fprintf(out, "#define APG_WASM_PROJECT_PARAM_COUNT %zuu\n", registry->params_len);
+    fprintf(out, "#define APG_WASM_PROJECT_SIGNAL_COUNT %zuu\n", registry->signals_len);
+    fprintf(out, "#define APG_WASM_PROJECT_NODE_COUNT %zuu\n", registry->nodes_len);
+    fprintf(out, "#define APG_WASM_PROJECT_SCHEDULE_COUNT %zuu\n", registry->schedule_len);
+    fprintf(out, "#define APG_WASM_PROJECT_SIGNAL_ARRAY_POINTER_COUNT %zuu\n", registry->signal_array_pointer_slots);
+    fprintf(out, "#define APG_WASM_PROJECT_BLOCK_FRAMES %uu\n", registry->frame_capacity);
+    fprintf(out, "#define APG_WASM_PROJECT_SAMPLE_RATE %uu\n", (unsigned)registry->sample_rate);
+    fprintf(out, "#define APG_WASM_PROJECT_SIGNAL_BUFFER_BYTES %zuu\n", registry->signal_samples * sizeof(float));
+    fprintf(out, "#define APG_WASM_PROJECT_PARAM_BYTES %zuu\n", registry->params_len * sizeof(float));
+    fprintf(out, "#define APG_WASM_PROJECT_ATOM_STORAGE_BYTES %zuu\n", registry->atom_storage_bytes);
+    fprintf(
+        out, "#define APG_WASM_PROJECT_STATE_BUFFER_BYTES %zuu\n\n", registry->state_buffer_samples * sizeof(float)
+    );
+    fputs("extern const char apg_wasm_project_name[];\n", out);
+    fputs("extern const uint32_t apg_wasm_project_schedule[APG_WASM_PROJECT_SCHEDULE_COUNT];\n", out);
+    fputs("extern const apg_process_info_t apg_wasm_project_process_info;\n", out);
+    fputs("extern atom_call_t apg_wasm_project_atom_calls[APG_WASM_PROJECT_NODE_COUNT];\n", out);
+    fputs("uint32_t apg_wasm_project_block_frames(void);\n", out);
+    fputs("uint32_t apg_wasm_project_input_ptr(uint32_t port_index, uint32_t channel_index);\n", out);
+    fputs("uint32_t apg_wasm_project_output_ptr(uint32_t port_index, uint32_t channel_index);\n", out);
+    fputs("void apg_wasm_project_set_param(uint32_t param_index, float value);\n", out);
+    fputs("void apg_wasm_project_init(void);\n", out);
+    fputs("void apg_wasm_project_refresh_params(void);\n", out);
+    fputs("void apg_wasm_project_process_block(void);\n", out);
+    fputs("\n#endif\n", out);
+    return fclose(out) == 0;
+}
+
+static void write_wasm_node_storage_ptr(FILE *out, const char *atom_name, const char *suffix, size_t offset) {
+    fprintf(
+        out, "((%s_%s_t *)(void *)&apg_wasm_project_atom_storage[%zuu])", atom_name ? atom_name : "void",
+        suffix ? suffix : "out", offset
+    );
+}
+
+static void write_wasm_scalar_value(FILE *out, const apg_v2_registry_scalar_refresh_t *item) {
+    if (!item) {
+        fputs("0.0f", out);
+    } else if (item->kind == APG_BIND_PARAM) {
+        fprintf(out, "apg_wasm_param(%zuu)", item->param_index);
+    } else if (item->kind == APG_BIND_LITERAL) {
+        write_c_float(out, item->number);
+    } else {
+        fputs("0.0f", out);
+    }
+}
+
+static bool
+write_wasm_source(const char *path, const apg_project_v2_resolved_t *project, const apg_v2_registry_t *registry) {
+    FILE *out = fopen(path, "w");
+    if (!out)
+        return false;
+    fputs("#include \"apg_project_wasm.h\"\n\n", out);
+    fputs("#include <stdint.h>\n#include <string.h>\n\n", out);
+    fputs("#include <atom/dsp_types.h>\n\n", out);
+    fputs("#if defined(__EMSCRIPTEN__)\n", out);
+    fputs("#define APG_WASM_EXPORT __attribute__((used, visibility(\"default\")))\n", out);
+    fputs("#else\n#define APG_WASM_EXPORT\n#endif\n\n", out);
+    fputs("const char apg_wasm_project_name[] = ", out);
+    write_c_string(out, project->project.name);
+    fputs(";\n\nconst uint32_t apg_wasm_project_schedule[APG_WASM_PROJECT_SCHEDULE_COUNT] = {", out);
+    for (size_t i = 0; i < registry->schedule_len; i++) {
+        if (i > 0u)
+            fputs(", ", out);
+        fprintf(out, "%uu", (unsigned)registry->schedule[i]);
+    }
+    fputs("};\n\n", out);
+    fputs("const apg_process_info_t apg_wasm_project_process_info = {", out);
+    fprintf(
+        out, ".sample_rate = %.1ff, .frames = %uu, .output_frames = %uu, .channels = 1u", (double)registry->sample_rate,
+        registry->frame_capacity, registry->frame_capacity
+    );
+    fputs("};\n\n", out);
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        bool seen = false;
+        for (size_t j = 0; j < i; j++) {
+            if (strcmp(registry->node_layouts[j].atom_name, registry->node_layouts[i].atom_name) == 0) {
+                seen = true;
+                break;
+            }
+        }
+        if (!seen)
+            fprintf(out, "extern void %s_thunk(atom_call_t *call);\n", registry->node_layouts[i].atom_name);
+    }
+    fputs("\nstatic const atom_thunk_fn apg_wasm_project_atom_thunks[APG_WASM_PROJECT_NODE_COUNT] = {", out);
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        if (i > 0u)
+            fputs(", ", out);
+        fputs(registry->node_layouts[i].atom_name, out);
+        fputs("_thunk", out);
+    }
+    fputs("};\n\n", out);
+    fputs("static uint8_t apg_wasm_project_signal_buffers[APG_WASM_PROJECT_SIGNAL_BUFFER_BYTES];\n", out);
+    fputs("static uint8_t apg_wasm_project_params[APG_WASM_PROJECT_PARAM_BYTES];\n", out);
+    fputs("static uint8_t apg_wasm_project_atom_storage[APG_WASM_PROJECT_ATOM_STORAGE_BYTES];\n", out);
+    fputs("static uint8_t apg_wasm_project_state_buffers[APG_WASM_PROJECT_STATE_BUFFER_BYTES];\n", out);
+    fputs("static float *apg_wasm_project_signal_array_pool[APG_WASM_PROJECT_SIGNAL_ARRAY_POINTER_COUNT];\n\n", out);
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
+        if (layout->mix_matrix_coefficients_len == 0u)
+            continue;
+        fprintf(out, "static float apg_wasm_node%zu_mix_coefficients[%zu] = {", i, layout->mix_matrix_coefficients_len);
+        for (size_t j = 0; j < layout->mix_matrix_coefficients_len; j++) {
+            if (j > 0u)
+                fputs(", ", out);
+            write_c_float(out, layout->mix_matrix_coefficients[j]);
+        }
+        fputs("};\n", out);
+        fprintf(out, "static float *apg_wasm_node%zu_mix_rows[%zu] = {", i, layout->mix_matrix_num_out);
+        for (size_t row = 0; row < layout->mix_matrix_num_out; row++) {
+            if (row > 0u)
+                fputs(", ", out);
+            fprintf(out, "&apg_wasm_node%zu_mix_coefficients[%zuu]", i, row * layout->mix_matrix_num_in);
+        }
+        fputs("};\n\n", out);
+    }
+    fputs("atom_call_t apg_wasm_project_atom_calls[APG_WASM_PROJECT_NODE_COUNT] = {", out);
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        if (i > 0u)
+            fputs(", ", out);
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
+        fprintf(
+            out,
+            "{.out = (void *)&apg_wasm_project_atom_storage[%zuu], .in = (void "
+            "*)&apg_wasm_project_atom_storage[%zuu], .config = (void "
+            "*)&apg_wasm_project_atom_storage[%zuu], .state = (void "
+            "*)&apg_wasm_project_atom_storage[%zuu], .info = &apg_wasm_project_process_info}",
+            layout->out_offset, layout->in_offset, layout->config_offset, layout->state_offset
+        );
+    }
+    fputs("};\n\n", out);
+    fputs("static float *apg_wasm_signal(size_t index) {\n", out);
+    fputs(
+        "    return (float *)(void *)&apg_wasm_project_signal_buffers[index * APG_WASM_PROJECT_BLOCK_FRAMES * "
+        "sizeof(float)];\n",
+        out
+    );
+    fputs("}\n\nstatic float apg_wasm_param(size_t index) {\n", out);
+    fputs("    return ((float *)(void *)apg_wasm_project_params)[index];\n}\n\n", out);
+    fputs(
+        "APG_WASM_EXPORT uint32_t apg_wasm_project_block_frames(void) { return APG_WASM_PROJECT_BLOCK_FRAMES; }\n\n",
+        out
+    );
+    fputs("APG_WASM_EXPORT uint32_t apg_wasm_project_input_ptr(uint32_t port_index, uint32_t channel_index) {\n", out);
+    fputs("    switch (port_index) {\n", out);
+    for (size_t i = 0; i < registry->input_audio_ports_len; i++) {
+        fprintf(out, "    case %zuu:\n", i);
+        fputs("        switch (channel_index) {\n", out);
+        for (size_t ch = 0; ch < registry->input_audio_ports[i].channel_count; ch++)
+            fprintf(
+                out, "        case %zuu: return (uint32_t)(uintptr_t)apg_wasm_signal(%zuu);\n", ch,
+                registry->input_audio_ports[i].signal_indices[ch]
+            );
+        fputs("        default: return 0u;\n        }\n", out);
+    }
+    fputs("    default: return 0u;\n    }\n}\n\n", out);
+    fputs("APG_WASM_EXPORT uint32_t apg_wasm_project_output_ptr(uint32_t port_index, uint32_t channel_index) {\n", out);
+    fputs("    switch (port_index) {\n", out);
+    for (size_t i = 0; i < registry->output_audio_ports_len; i++) {
+        fprintf(out, "    case %zuu:\n", i);
+        fputs("        switch (channel_index) {\n", out);
+        for (size_t ch = 0; ch < registry->output_audio_ports[i].channel_count; ch++)
+            fprintf(
+                out, "        case %zuu: return (uint32_t)(uintptr_t)apg_wasm_signal(%zuu);\n", ch,
+                registry->output_audio_ports[i].signal_indices[ch]
+            );
+        fputs("        default: return 0u;\n        }\n", out);
+    }
+    fputs("    default: return 0u;\n    }\n}\n\n", out);
+    fputs("APG_WASM_EXPORT void apg_wasm_project_set_param(uint32_t param_index, float value) {\n", out);
+    fputs("    if (param_index < APG_WASM_PROJECT_PARAM_COUNT) {\n", out);
+    fputs("        ((float *)(void *)apg_wasm_project_params)[param_index] = value;\n", out);
+    fputs("        apg_wasm_project_refresh_params();\n    }\n}\n\n", out);
+    fputs("APG_WASM_EXPORT void apg_wasm_project_refresh_params(void) {\n", out);
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
+        for (size_t j = 0; j < layout->config_refreshes_len; j++) {
+            const apg_v2_registry_scalar_refresh_t *item = &layout->config_refreshes[j];
+            if (!item->key)
+                continue;
+            fputs("    ", out);
+            write_wasm_node_storage_ptr(out, layout->atom_name, "params", layout->config_offset);
+            fprintf(out, "->%s = ", item->key);
+            write_wasm_scalar_value(out, item);
+            fputs(";\n", out);
+        }
+        for (size_t j = 0; j < layout->input_refreshes_len; j++) {
+            const apg_v2_registry_scalar_refresh_t *item = &layout->input_refreshes[j];
+            if (!item->key)
+                continue;
+            fputs("    ", out);
+            write_wasm_node_storage_ptr(out, layout->atom_name, "in", layout->in_offset);
+            fprintf(out, "->%s = ", item->key);
+            write_wasm_scalar_value(out, item);
+            fputs(";\n", out);
+        }
+    }
+    fputs("}\n\nAPG_WASM_EXPORT void apg_wasm_project_init(void) {\n", out);
+    fputs("    memset(apg_wasm_project_atom_storage, 0, APG_WASM_PROJECT_ATOM_STORAGE_BYTES);\n", out);
+    fputs("    memset(apg_wasm_project_signal_buffers, 0, APG_WASM_PROJECT_SIGNAL_BUFFER_BYTES);\n", out);
+    fputs("    memset(apg_wasm_project_params, 0, APG_WASM_PROJECT_PARAM_BYTES);\n", out);
+    fputs("    memset(apg_wasm_project_state_buffers, 0, APG_WASM_PROJECT_STATE_BUFFER_BYTES);\n", out);
+    for (size_t i = 0; i < registry->params_len; i++) {
+        fprintf(out, "    ((float *)(void *)apg_wasm_project_params)[%zuu] = ", i);
+        write_c_float(out, registry->param_defaults ? registry->param_defaults[i] : 0.0f);
+        fputs(";\n", out);
+    }
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
+        for (size_t j = 0; j < layout->signal_bindings_len; j++) {
+            const apg_v2_registry_signal_binding_t *binding = &layout->signal_bindings[j];
+            if (!binding->key)
+                continue;
+            if (binding->is_signal_array) {
+                for (size_t k = 0; k < binding->signal_array_len; k++) {
+                    fprintf(
+                        out, "    apg_wasm_project_signal_array_pool[%zuu] = apg_wasm_signal(%zuu);\n",
+                        layout->signal_array_pool_offset + binding->signal_array_offset + k,
+                        binding->signal_array_indices[k]
+                    );
+                }
+                fputs("    ", out);
+                write_wasm_node_storage_ptr(
+                    out, layout->atom_name, binding->is_input ? "in" : "out",
+                    binding->is_input ? layout->in_offset : layout->out_offset
+                );
+                fprintf(
+                    out, "->%s = &apg_wasm_project_signal_array_pool[%zuu];\n", binding->key,
+                    layout->signal_array_pool_offset + binding->signal_array_offset
+                );
+            } else {
+                fputs("    ", out);
+                write_wasm_node_storage_ptr(
+                    out, layout->atom_name, binding->is_input ? "in" : "out",
+                    binding->is_input ? layout->in_offset : layout->out_offset
+                );
+                fprintf(out, "->%s = apg_wasm_signal(%zuu);\n", binding->key, binding->signal_index);
+            }
+        }
+        size_t state_buffer_index = 0u;
+        for (int field_index = 0; field_index < layout->n_state_fields; field_index++) {
+            const atom_field_desc_t *field = &layout->state_fields[field_index];
+            if (field->type != FIELD_BUFFER)
+                continue;
+            fputs("    ", out);
+            write_wasm_node_storage_ptr(out, layout->atom_name, "state", layout->state_offset);
+            fprintf(
+                out, "->%s = (float *)(void *)&apg_wasm_project_state_buffers[%zuu];\n", field->name,
+                layout->state_buffer_sample_offsets_by_index[state_buffer_index] * sizeof(float)
+            );
+            state_buffer_index++;
+        }
+        if (layout->mix_matrix_coefficients_len > 0u) {
+            fputs("    ", out);
+            write_wasm_node_storage_ptr(out, layout->atom_name, "params", layout->config_offset);
+            fprintf(out, "->coefficients = apg_wasm_node%zu_mix_rows;\n", i);
+            fputs("    ", out);
+            write_wasm_node_storage_ptr(out, layout->atom_name, "params", layout->config_offset);
+            fprintf(out, "->num_in = %zu;\n", layout->mix_matrix_num_in);
+            fputs("    ", out);
+            write_wasm_node_storage_ptr(out, layout->atom_name, "params", layout->config_offset);
+            fprintf(out, "->num_out = %zu;\n", layout->mix_matrix_num_out);
+        }
+    }
+    fputs("    apg_wasm_project_refresh_params();\n}\n\n", out);
+    fputs("APG_WASM_EXPORT void apg_wasm_project_process_block(void) {\n", out);
+    fputs("    for (size_t i = 0u; i < APG_WASM_PROJECT_SCHEDULE_COUNT; i++) {\n", out);
+    fputs("        uint32_t node = apg_wasm_project_schedule[i];\n", out);
+    fputs("        apg_wasm_project_atom_thunks[node](&apg_wasm_project_atom_calls[node]);\n", out);
+    fputs("    }\n}\n", out);
+    return fclose(out) == 0;
+}
+
+static bool append_cmd(char *out, size_t out_size, const char *text) {
+    size_t used = strlen(out);
+    if (used >= out_size)
+        return false;
+    int written = snprintf(out + used, out_size - used, "%s", text);
+    return written >= 0 && (size_t)written < out_size - used;
+}
+
+static bool append_cmd_path(char *out, size_t out_size, const char *path) {
+    return append_cmd(out, out_size, " '") && append_cmd(out, out_size, path) && append_cmd(out, out_size, "'");
+}
+
+static bool compile_wasm_module(const char *source_path, const char *wasm_path) {
+    const char *emcc = getenv("APG_WASM_EMCC");
+    if (!emcc || emcc[0] == '\0')
+        return false;
+    const char *source_root = getenv("APG_WASM_SOURCE_ROOT");
+    if (!source_root || source_root[0] == '\0')
+        source_root = ".";
+
+    char command[32768] = {0};
+    if (!append_cmd(command, sizeof(command), emcc))
+        return false;
+    if (!append_cmd(command, sizeof(command), " -std=c11 -O2 -D_GNU_SOURCE -DM_PI=3.14159265358979323846"))
+        return false;
+    if (!append_cmd(command, sizeof(command), " -DM_SQRT1_2=0.70710678118654752440 -I"))
+        return false;
+    if (!append_cmd_path(command, sizeof(command), source_root))
+        return false;
+    if (!append_cmd(command, sizeof(command), "/inc -I"))
+        return false;
+    if (!append_cmd_path(command, sizeof(command), source_root))
+        return false;
+    if (!append_cmd(command, sizeof(command), "/inc/rte -I"))
+        return false;
+    if (!append_cmd_path(command, sizeof(command), source_root))
+        return false;
+    if (!append_cmd(command, sizeof(command), " -s STANDALONE_WASM=1 -s EXPORTED_FUNCTIONS="))
+        return false;
+    if (!append_cmd(
+            command, sizeof(command),
+            "_apg_wasm_project_init,_apg_wasm_project_process_block,_apg_wasm_project_set_param,"
+            "_apg_wasm_project_input_ptr,_apg_wasm_project_output_ptr,_apg_wasm_project_block_frames"
+        ))
+        return false;
+    if (!append_cmd(command, sizeof(command), " -Wl,--no-entry"))
+        return false;
+    if (!append_cmd_path(command, sizeof(command), source_path))
+        return false;
+    if (!append_cmd(command, sizeof(command), " "))
+        return false;
+    char rooted_path[512];
+    int  written = snprintf(rooted_path, sizeof(rooted_path), "%s/src/rte/atom_thunk.c", source_root);
+    if (written < 0 || (size_t)written >= sizeof(rooted_path))
+        return false;
+    if (!append_cmd_path(command, sizeof(command), rooted_path))
+        return false;
+    static const char *const atom_sources[] = {
+        "src/atom/amplitude/amplitude_accumulate.c",
+        "src/atom/amplitude/amplitude_add.c",
+        "src/atom/amplitude/amplitude_clip_hard.c",
+        "src/atom/amplitude/amplitude_clip_soft.c",
+        "src/atom/amplitude/amplitude_divide.c",
+        "src/atom/amplitude/amplitude_latch.c",
+        "src/atom/amplitude/amplitude_multiply.c",
+        "src/atom/amplitude/amplitude_normalize.c",
+        "src/atom/amplitude/amplitude_smooth.c",
+        "src/atom/amplitude/amplitude_subtract.c",
+        "src/atom/delay/delay_fractional.c",
+        "src/atom/delay/delay_line.c",
+        "src/atom/delay/delay_tap_feedback.c",
+        "src/atom/delay/delay_tap_feedforward.c",
+        "src/atom/delay/delay_unit.c",
+        "src/atom/detect/detect_autocorrelate.c",
+        "src/atom/detect/detect_envelope.c",
+        "src/atom/detect/detect_peak.c",
+        "src/atom/detect/detect_pitch.c",
+        "src/atom/detect/detect_rms.c",
+        "src/atom/detect/detect_slope.c",
+        "src/atom/detect/detect_threshold.c",
+        "src/atom/detect/detect_zero_crossing.c",
+        "src/atom/filter/filter_allpass.c",
+        "src/atom/filter/filter_biquad.c",
+        "src/atom/filter/filter_comb_fb.c",
+        "src/atom/filter/filter_comb_ff.c",
+        "src/atom/filter/filter_dc_block.c",
+        "src/atom/filter/filter_differentiate.c",
+        "src/atom/filter/filter_fir.c",
+        "src/atom/filter/filter_integrate.c",
+        "src/atom/frequency/frequency_fft.c",
+        "src/atom/frequency/frequency_ifft.c",
+        "src/atom/frequency/frequency_multiply.c",
+        "src/atom/frequency/frequency_overlap_add.c",
+        "src/atom/frequency/frequency_overlap_save.c",
+        "src/atom/frequency/frequency_quantize.c",
+        "src/atom/frequency/frequency_shift.c",
+        "src/atom/frequency/frequency_window.c",
+        "src/atom/generation/generation_dc.c",
+        "src/atom/generation/generation_envelope.c",
+        "src/atom/generation/generation_impulse.c",
+        "src/atom/generation/generation_lfo.c",
+        "src/atom/generation/generation_noise.c",
+        "src/atom/generation/generation_oscillator.c",
+        "src/atom/interpolation/interpolation_cubic.c",
+        "src/atom/interpolation/interpolation_lagrange.c",
+        "src/atom/interpolation/interpolation_linear.c",
+        "src/atom/interpolation/interpolation_sinc.c",
+        "src/atom/mix/mix_crossfade.c",
+        "src/atom/mix/mix_decode_ms.c",
+        "src/atom/mix/mix_encode_ms.c",
+        "src/atom/mix/mix_matrix.c",
+        "src/atom/mix/mix_pan_stereo.c",
+        "src/atom/mix/mix_wet_dry.c",
+        "src/atom/modulation/modulation_amplitude.c",
+        "src/atom/modulation/modulation_frequency.c",
+        "src/atom/modulation/modulation_phase.c",
+        "src/atom/modulation/modulation_ring.c",
+        "src/atom/modulation/modulation_scrub.c",
+        "src/atom/nonlinear/nonlinear_bitcrush.c",
+        "src/atom/nonlinear/nonlinear_sample_hold.c",
+        "src/atom/nonlinear/nonlinear_waveshape.c",
+        "src/atom/source/source_antialias.c",
+        "src/atom/source/source_antiimage.c",
+        "src/atom/source/source_convert_format.c",
+        "src/atom/source/source_downsample.c",
+        "src/atom/source/source_upsample.c",
+    };
+    for (size_t i = 0; i < sizeof(atom_sources) / sizeof(atom_sources[0]); i++) {
+        written = snprintf(rooted_path, sizeof(rooted_path), "%s/%s", source_root, atom_sources[i]);
+        if (written < 0 || (size_t)written >= sizeof(rooted_path))
+            return false;
+        if (!append_cmd(command, sizeof(command), " ") || !append_cmd_path(command, sizeof(command), rooted_path))
+            return false;
+    }
+    if (!append_cmd(command, sizeof(command), " -lm -o") || !append_cmd_path(command, sizeof(command), wasm_path))
+        return false;
+    return system(command) == 0;
+}
+
 static int export_wasm_realtime(const char *project_path, const char *out_dir, const wasm_export_options_t *options) {
     uc_arena arena;
     if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0) {
@@ -944,10 +1444,16 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     char js_path[512];
     char adapter_path[512];
     char processor_path[512];
+    char header_path[512];
+    char source_path[512];
+    char wasm_path[512];
     if (!join_path(manifest_path, sizeof(manifest_path), out_dir, "apg_project_wasm.json") ||
         !join_path(js_path, sizeof(js_path), out_dir, "apg_project_wasm.mjs") ||
         !join_path(adapter_path, sizeof(adapter_path), out_dir, "apg_project_wasm_adapter.mjs") ||
-        !join_path(processor_path, sizeof(processor_path), out_dir, "apg_project_wasm_processor.js")) {
+        !join_path(processor_path, sizeof(processor_path), out_dir, "apg_project_wasm_processor.js") ||
+        !join_path(header_path, sizeof(header_path), out_dir, "apg_project_wasm.h") ||
+        !join_path(source_path, sizeof(source_path), out_dir, "apg_project_wasm.c") ||
+        !join_path(wasm_path, sizeof(wasm_path), out_dir, "apg_project_wasm.wasm")) {
         uc_error_set(&err, UC_E_RANGE, (uc_loc){0, 0}, "export output path is too long");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&registry_arena);
@@ -955,8 +1461,18 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
         return rc;
     }
 
-    if (!write_wasm_runtime_manifest(manifest_path, &project, &registry, options) ||
-        !write_wasm_runtime_js(js_path, &project, &registry, options) ||
+    bool wasm_module_available = false;
+    if (!write_wasm_header(header_path, &registry) || !write_wasm_source(source_path, &project, &registry)) {
+        uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write wasm_realtime C bundle");
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return rc;
+    }
+    wasm_module_available = compile_wasm_module(source_path, wasm_path);
+
+    if (!write_wasm_runtime_manifest(manifest_path, &project, &registry, options, wasm_module_available) ||
+        !write_wasm_runtime_js(js_path, &project, &registry, options, wasm_module_available) ||
         !write_wasm_runtime_adapter_js(adapter_path, &registry) || !write_wasm_runtime_processor_js(processor_path)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write wasm_realtime export files");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
@@ -970,10 +1486,16 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     fputs(",\"target\":\"wasm_realtime\",\"out_dir\":", stdout);
     write_json_string(stdout, out_dir);
     fputs(
-        ",\"status\":\"stub\",\"files\":[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\","
-        "\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\"],\"nodes\":",
+        ",\"status\":\"generated\",\"files\":[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\","
+        "\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\","
+        "\"apg_project_wasm.h\",\"apg_project_wasm.c\"",
         stdout
     );
+    if (wasm_module_available)
+        fputs(",\"apg_project_wasm.wasm\"", stdout);
+    fputs("],\"wasm_module_available\":", stdout);
+    fputs(wasm_module_available ? "true" : "false", stdout);
+    fputs(",\"nodes\":", stdout);
     fprintf(stdout, "%zu,\"schedule\":%zu", registry.nodes_len, registry.schedule_len);
     fprintf(
         stdout, ",\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,\"atom_calls_per_block\":%zu,",
