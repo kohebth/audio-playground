@@ -6,7 +6,8 @@ Host orchestrates parser, validator, compiler, registry, runtime, and measure wi
 
 ## Current Status
 
-Usable but not production-closed.
+Public host handles are opaque and host remains an orchestration layer over parser, compiler, registry, runtime, and
+measure.
 
 Done:
 
@@ -16,11 +17,11 @@ Done:
 
 ## Remaining Implementation
 
-- [ ] Audit `host_v2.h` for exposed compiler/registry/runtime internals.
-- [ ] If public host structs still expose module internals, replace them with opaque handles and move struct definitions into implementation/private headers.
-- [ ] Preserve simple usage: load file, set param, process mono ports, read diagnostics through measure/host, destroy.
-- [ ] Keep host orchestration-only: no atom behavior, graph scheduling, metadata compatibility, or meter math.
-- [ ] Add include-only public-header tests for host/runtime/measure/parser/validator headers if header dependencies remain unclear.
+- [x] Audit `host_v2.h` for exposed compiler/registry/runtime internals.
+- [x] If public host structs still expose module internals, replace them with opaque handles and move struct definitions into implementation/private headers.
+- [x] Preserve simple usage: load file, set param, process mono ports, read diagnostics through measure/host, destroy.
+- [x] Keep host orchestration-only: no atom behavior, graph scheduling, metadata compatibility, or meter math.
+- [x] Add include-only public-header tests for host/runtime/measure/parser/validator headers if header dependencies remain unclear.
 
 ## Tests
 

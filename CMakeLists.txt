@@ -63,6 +63,7 @@ set(TEST_TARGETS
         test_unit_v2_runtime
         test_registry_v2
         test_measure_v2
+        test_public_headers
         test_offline_chain
         test_chain_guitar_sample
         test_hall_reverb
@@ -109,14 +110,14 @@ foreach(TEST_TARGET ${TEST_TARGETS})
     if(TEST_TARGET MATCHES "^test_unit_v2_" OR TEST_TARGET STREQUAL "test_unit_load_all" OR TEST_TARGET STREQUAL "test_offline_chain" OR
             TEST_TARGET STREQUAL "test_hall_reverb" OR TEST_TARGET STREQUAL "test_host_v2_project" OR TEST_TARGET STREQUAL "test_atom_catalog" OR
             TEST_TARGET STREQUAL "test_contract_parser_v2" OR TEST_TARGET STREQUAL "test_contract_validator_v2" OR TEST_TARGET STREQUAL "test_registry_v2" OR
-            TEST_TARGET STREQUAL "test_measure_v2" OR TEST_TARGET STREQUAL "test_chain_guitar_sample" OR TEST_TARGET MATCHES "^test_project_v2_" OR TEST_TARGET STREQUAL "test_v2_json_contract")
+            TEST_TARGET STREQUAL "test_measure_v2" OR TEST_TARGET STREQUAL "test_public_headers" OR TEST_TARGET STREQUAL "test_chain_guitar_sample" OR TEST_TARGET MATCHES "^test_project_v2_" OR TEST_TARGET STREQUAL "test_v2_json_contract")
         set_tests_properties(${TEST_TARGET} PROPERTIES LABELS v2)
     endif()
 endforeach()
 
 add_custom_target(check_v2
         COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} -L v2 --output-on-failure
-        DEPENDS test_atom_catalog test_contract_parser_v2 test_contract_validator_v2 test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime test_registry_v2 test_measure_v2 test_host_v2_project test_chain_guitar_sample
+        DEPENDS test_atom_catalog test_contract_parser_v2 test_contract_validator_v2 test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime test_registry_v2 test_measure_v2 test_public_headers test_host_v2_project test_chain_guitar_sample
 )
 
 add_test(

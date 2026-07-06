@@ -4,41 +4,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <apgcore/compiler/compiler_v2.h>
-#include <apgcore/compiler/project_compiler_v2.h>
-#include <apgcore/runtime/runtime_v2.h>
-#include <apgcore/validator/project_v2.h>
-#include <apgcore/validator/unit_v2.h>
-#include <yaml/arena.h>
 #include <yaml/error.h>
 
-typedef struct {
-    uc_arena               arena;
-    apg_unit_v2_t          unit;
-    apg_v2_compiled_unit_t plan;
-    apg_v2_registry_t      registry;
-    uc_arena               registry_arena;
-    apg_v2_runtime_t      *runtime;
-    bool                   arena_ready;
-    bool                   registry_ready;
-    bool                   runtime_ready;
-} apg_v2_host_unit_t;
-
-typedef struct {
-    uc_arena                  arena;
-    apg_project_v2_t          project;
-    apg_project_v2_resolved_t resolved_project;
-    apg_project_v2_compiled_t compiled;
-    apg_v2_registry_t         registry;
-    uc_arena                  registry_arena;
-    apg_v2_runtime_t         *runtime;
-    bool                      arena_ready;
-    bool                      registry_ready;
-    bool                      runtime_ready;
-} apg_v2_host_project_t;
+typedef struct apg_v2_host_unit    apg_v2_host_unit_t;
+typedef struct apg_v2_host_project apg_v2_host_project_t;
 
 uc_status apg_v2_host_load_file(
-    const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_unit_t *out, uc_error *err
+    const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_unit_t **out, uc_error *err
 );
 
 bool        apg_v2_host_set_param(apg_v2_host_unit_t *host, const char *name, float value);
@@ -56,7 +28,7 @@ bool apg_v2_host_process_mono_ports(
 void apg_v2_host_destroy(apg_v2_host_unit_t *host);
 
 uc_status apg_v2_host_project_load_file(
-    const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_project_t *out, uc_error *err
+    const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_project_t **out, uc_error *err
 );
 
 bool        apg_v2_host_project_set_param(apg_v2_host_project_t *host, const char *name, float value);
