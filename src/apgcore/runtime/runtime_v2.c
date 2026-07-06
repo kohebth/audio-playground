@@ -75,7 +75,7 @@ apg_v2_runtime_audio_port_by_name(const apg_v2_registry_audio_port_t *ports, siz
     return NULL;
 }
 
-bool apg_v2_runtime_resolve_input_audio_port_index(
+    bool apg_v2_runtime_resolve_input_audio_port_index(
     const apg_v2_runtime_t *runtime, const char *port_name, size_t *out_port_index
 ) {
     return runtime ? runtime_audio_port_index_by_name(
@@ -621,57 +621,6 @@ apg_v2_runtime_create_from_registry(const apg_v2_registry_t *registry, apg_v2_ru
     }
     *out = runtime;
     return UC_OK;
-}
-
-float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name) {
-    if (!runtime || !name)
-        return NULL;
-    int index = name_index(runtime->signal_names, runtime->signals_len, name);
-    if (index < 0 || (size_t)index >= runtime->signals_len)
-        return NULL;
-    return runtime->signals[index];
-}
-
-float *apg_v2_runtime_find_input_port_signal(apg_v2_runtime_t *runtime, const char *port_name) {
-    if (!runtime || !port_name)
-        return NULL;
-    const apg_v2_registry_audio_port_t *port =
-        apg_v2_runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, port_name);
-    if (!port || port->channel_count == 0u || port->signal_indices[0] >= runtime->signals_len)
-        return NULL;
-    return runtime->signals[port->signal_indices[0]];
-}
-
-float *apg_v2_runtime_find_output_port_signal(apg_v2_runtime_t *runtime, const char *port_name) {
-    if (!runtime || !port_name)
-        return NULL;
-    const apg_v2_registry_audio_port_t *port =
-        apg_v2_runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, port_name);
-    if (!port || port->channel_count == 0u || port->signal_indices[0] >= runtime->signals_len)
-        return NULL;
-    return runtime->signals[port->signal_indices[0]];
-}
-
-float *
-apg_v2_runtime_find_input_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index) {
-    if (!runtime || !port_name)
-        return NULL;
-    const apg_v2_registry_audio_port_t *port =
-        apg_v2_runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, port_name);
-    if (!port || channel_index >= port->channel_count || port->signal_indices[channel_index] >= runtime->signals_len)
-        return NULL;
-    return runtime->signals[port->signal_indices[channel_index]];
-}
-
-float *
-apg_v2_runtime_find_output_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index) {
-    if (!runtime || !port_name)
-        return NULL;
-    const apg_v2_registry_audio_port_t *port =
-        apg_v2_runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, port_name);
-    if (!port || channel_index >= port->channel_count || port->signal_indices[channel_index] >= runtime->signals_len)
-        return NULL;
-    return runtime->signals[port->signal_indices[channel_index]];
 }
 
 bool apg_v2_runtime_resolve_input_port_channel_signal(

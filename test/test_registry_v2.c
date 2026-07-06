@@ -14,6 +14,16 @@ static int fail(const char *msg) {
     return 1;
 }
 
+static float *runtime_signal_by_name_for_test(apg_v2_runtime_t *runtime, const char *name) {
+    if (!runtime || !name)
+        return NULL;
+    for (size_t i = 0; i < runtime->signals_len; i++) {
+        if (runtime->signal_names[i] && strcmp(runtime->signal_names[i], name) == 0)
+            return apg_v2_runtime_signal_buffer_at_mut(runtime, i);
+    }
+    return NULL;
+}
+
 static int load_compile_fixture(const char *path, uc_arena *arena, apg_unit_v2_t *unit, apg_v2_compiled_unit_t *plan) {
     uc_error  err    = {0};
     uc_status status = apg_unit_v2_load_file(path, arena, unit, &err);
@@ -150,7 +160,7 @@ static int test_registry_layout(void) {
         runtime.nodes[1].signal_bindings_len != registry.node_layouts[1].signal_bindings_len)
         return fail("runtime did not adopt signal binding plan");
 
-    if (!apg_v2_runtime_find_signal(&runtime, "input") || !apg_v2_runtime_set_param(&runtime, "gain", 1.0f))
+    if (!runtime_signal_by_name_for_test(&runtime, "input") || !apg_v2_runtime_set_param(&runtime, "gain", 1.0f))
         return fail("registry lookup metadata failed");
     if (!apg_v2_runtime_reset(&runtime))
         return fail("registry reset failed");

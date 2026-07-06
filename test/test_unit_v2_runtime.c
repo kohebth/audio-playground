@@ -81,6 +81,38 @@ static int expect_finite_samples(const float *actual, size_t frames, const char 
     return 0;
 }
 
+static float *runtime_signal_by_name_for_test(apg_v2_runtime_t *runtime, const char *name) {
+    if (!runtime || !name)
+        return NULL;
+    for (size_t i = 0; i < runtime->signals_len; i++) {
+        if (runtime->signal_names[i] && strcmp(runtime->signal_names[i], name) == 0)
+            return apg_v2_runtime_signal_buffer_at_mut(runtime, i);
+    }
+    return NULL;
+}
+
+static float *
+runtime_port_channel_for_test(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, bool output) {
+    size_t port_index   = 0u;
+    size_t signal_index = 0u;
+    bool   ok           = output ? apg_v2_runtime_resolve_output_audio_port_index(runtime, port_name, &port_index)
+                                 : apg_v2_runtime_resolve_input_audio_port_index(runtime, port_name, &port_index);
+    if (!ok)
+        return NULL;
+    ok = output
+             ? apg_v2_runtime_output_port_channel_signal_index(runtime, port_index, channel_index, &signal_index, NULL)
+             : apg_v2_runtime_input_port_channel_signal_index(runtime, port_index, channel_index, &signal_index, NULL);
+    return ok ? apg_v2_runtime_signal_buffer_at_mut(runtime, signal_index) : NULL;
+}
+
+static float *runtime_input_port_signal_for_test(apg_v2_runtime_t *runtime, const char *port_name) {
+    return runtime_port_channel_for_test(runtime, port_name, 0u, false);
+}
+
+static float *runtime_output_port_signal_for_test(apg_v2_runtime_t *runtime, const char *port_name) {
+    return runtime_port_channel_for_test(runtime, port_name, 0u, true);
+}
+
 static int test_runtime_init_simple_gain(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -347,17 +379,16 @@ static int test_named_public_port_signal_lookup(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    float *a      = apg_v2_runtime_find_input_port_signal(&runtime, "a");
-    float *b      = apg_v2_runtime_find_input_port_signal(&runtime, "b");
-    float *output = apg_v2_runtime_find_output_port_signal(&runtime, "output");
+    float *a      = runtime_input_port_signal_for_test(&runtime, "a");
+    float *b      = runtime_input_port_signal_for_test(&runtime, "b");
+    float *output = runtime_output_port_signal_for_test(&runtime, "output");
     if (!a || !b || !output)
         return fail("failed to find named public port signals");
-    if (a != apg_v2_runtime_find_signal(&runtime, "a") || b != apg_v2_runtime_find_signal(&runtime, "b") ||
-        output != apg_v2_runtime_find_signal(&runtime, "output"))
+    if (a != runtime_signal_by_name_for_test(&runtime, "a") || b != runtime_signal_by_name_for_test(&runtime, "b") ||
+        output != runtime_signal_by_name_for_test(&runtime, "output"))
         return fail("named public port lookup returned unexpected signal buffer");
-    if (apg_v2_runtime_find_input_port_signal(&runtime, "output") ||
-        apg_v2_runtime_find_output_port_signal(&runtime, "a") ||
-        apg_v2_runtime_find_input_port_signal(&runtime, "missing"))
+    if (runtime_input_port_signal_for_test(&runtime, "output") || runtime_output_port_signal_for_test(&runtime, "a") ||
+        runtime_input_port_signal_for_test(&runtime, "missing"))
         return fail("named public port lookup accepted invalid port name or direction");
 
     a[0] = 0.25f;
@@ -435,9 +466,9 @@ static int test_multi_output_public_port_process(void) {
         return fail("failed to initialize multi-output runtime");
     }
 
-    float *input = apg_v2_runtime_find_input_port_signal(&runtime, "input");
-    float *left  = apg_v2_runtime_find_output_port_signal(&runtime, "left");
-    float *right = apg_v2_runtime_find_output_port_signal(&runtime, "right");
+    float *input = runtime_input_port_signal_for_test(&runtime, "input");
+    float *left  = runtime_output_port_signal_for_test(&runtime, "left");
+    float *right = runtime_output_port_signal_for_test(&runtime, "right");
     if (!input || !left || !right)
         return fail("failed to find multi-output public port signals");
 
@@ -570,13 +601,13 @@ static int test_interleaved_stereo_public_port_process(void) {
         return fail("failed to initialize stereo runtime");
     }
 
-    if (apg_v2_runtime_find_input_port_channel_signal(&runtime, "input", 1u) !=
-        apg_v2_runtime_find_signal(&runtime, "input_r"))
+    if (runtime_port_channel_for_test(&runtime, "input", 1u, false) !=
+        runtime_signal_by_name_for_test(&runtime, "input_r"))
         return fail("stereo input channel lookup returned unexpected signal");
-    if (apg_v2_runtime_find_output_port_channel_signal(&runtime, "output", 1u) !=
-        apg_v2_runtime_find_signal(&runtime, "output_r"))
+    if (runtime_port_channel_for_test(&runtime, "output", 1u, true) !=
+        runtime_signal_by_name_for_test(&runtime, "output_r"))
         return fail("stereo output channel lookup returned unexpected signal");
-    if (apg_v2_runtime_find_input_port_channel_signal(&runtime, "input", 2u))
+    if (runtime_port_channel_for_test(&runtime, "input", 2u, false))
         return fail("stereo input channel lookup accepted out-of-range channel");
     size_t input_port_index  = 0u;
     size_t output_port_index = 0u;
@@ -588,8 +619,10 @@ static int test_interleaved_stereo_public_port_process(void) {
     if (!apg_v2_runtime_input_port_channel_signal_index(&runtime, input_port_index, 1u, &input_r_index, NULL) ||
         !apg_v2_runtime_output_port_channel_signal_index(&runtime, output_port_index, 1u, &output_r_index, NULL))
         return fail("stereo channel signal index resolution failed");
-    if (apg_v2_runtime_signal_buffer_at(&runtime, input_r_index) != apg_v2_runtime_find_signal(&runtime, "input_r") ||
-        apg_v2_runtime_signal_buffer_at(&runtime, output_r_index) != apg_v2_runtime_find_signal(&runtime, "output_r"))
+    if (apg_v2_runtime_signal_buffer_at(&runtime, input_r_index) !=
+            runtime_signal_by_name_for_test(&runtime, "input_r") ||
+        apg_v2_runtime_signal_buffer_at(&runtime, output_r_index) !=
+            runtime_signal_by_name_for_test(&runtime, "output_r"))
         return fail("stereo channel indices mapped unexpected signal buffers");
 
     const float input[4]  = {1.0f, 10.0f, -2.0f, -20.0f};
@@ -866,8 +899,8 @@ static int test_simple_clip_process_generic(void) {
 
     if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
         return fail("failed to set simple_clip param");
-    float *input  = apg_v2_runtime_find_signal(&runtime, "input");
-    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    float *input  = runtime_signal_by_name_for_test(&runtime, "input");
+    float *output = runtime_signal_by_name_for_test(&runtime, "output");
     if (!input || !output)
         return fail("failed to find simple_clip signals");
 
@@ -883,7 +916,7 @@ static int test_simple_clip_process_generic(void) {
         if (output[i] != expected[i])
             return fail("unexpected simple_clip output sample");
     }
-    if (apg_v2_runtime_find_signal(&runtime, "missing"))
+    if (runtime_signal_by_name_for_test(&runtime, "missing"))
         return fail("missing signal lookup unexpectedly succeeded");
     if (apg_v2_runtime_set_param(&runtime, "missing", 1.0f))
         return fail("missing param update unexpectedly succeeded");
@@ -914,9 +947,9 @@ static int test_simple_mix_process_generic(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    float *a      = apg_v2_runtime_find_signal(&runtime, "a");
-    float *b      = apg_v2_runtime_find_signal(&runtime, "b");
-    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    float *a      = runtime_signal_by_name_for_test(&runtime, "a");
+    float *b      = runtime_signal_by_name_for_test(&runtime, "b");
+    float *output = runtime_signal_by_name_for_test(&runtime, "output");
     if (!a || !b || !output)
         return fail("failed to find simple_mix signals");
 
@@ -1010,10 +1043,10 @@ static int test_mix_matrix_process_generic(void) {
         return fail("failed to initialize mix_matrix runtime");
     }
 
-    float *a    = apg_v2_runtime_find_signal(&runtime, "a");
-    float *b    = apg_v2_runtime_find_signal(&runtime, "b");
-    float *sum  = apg_v2_runtime_find_signal(&runtime, "sum");
-    float *diff = apg_v2_runtime_find_signal(&runtime, "diff");
+    float *a    = runtime_signal_by_name_for_test(&runtime, "a");
+    float *b    = runtime_signal_by_name_for_test(&runtime, "b");
+    float *sum  = runtime_signal_by_name_for_test(&runtime, "sum");
+    float *diff = runtime_signal_by_name_for_test(&runtime, "diff");
     if (!a || !b || !sum || !diff)
         return fail("failed to find mix_matrix signals");
 
@@ -1099,8 +1132,8 @@ static int test_delay_line_state_buffer_process(void) {
     if (runtime.nodes_len != 1u || runtime.nodes[0].state_buffers_len != 1u || !runtime.nodes[0].state_buffers[0])
         return fail("delay_line state buffer was not allocated");
 
-    float *input  = apg_v2_runtime_find_signal(&runtime, "input");
-    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    float *input  = runtime_signal_by_name_for_test(&runtime, "input");
+    float *output = runtime_signal_by_name_for_test(&runtime, "output");
     if (!input || !output)
         return fail("failed to find delay state signals");
 
@@ -1256,8 +1289,8 @@ static int test_delay_tap_scalar_input_refresh(void) {
         return fail("failed to initialize delay tap runtime");
     }
 
-    float *input  = apg_v2_runtime_find_signal(&runtime, "input");
-    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    float *input  = runtime_signal_by_name_for_test(&runtime, "input");
+    float *output = runtime_signal_by_name_for_test(&runtime, "output");
     if (!input || !output)
         return fail("failed to find delay tap signals");
 
@@ -1345,9 +1378,9 @@ static int test_product_fixture_library_runtime_smoke(void) {
         return fail("failed to initialize wet/dry fixture runtime");
     }
 
-    float *dry    = apg_v2_runtime_find_input_port_signal(&runtime, "dry");
-    float *wet    = apg_v2_runtime_find_input_port_signal(&runtime, "wet");
-    float *output = apg_v2_runtime_find_output_port_signal(&runtime, "output");
+    float *dry    = runtime_input_port_signal_for_test(&runtime, "dry");
+    float *wet    = runtime_input_port_signal_for_test(&runtime, "wet");
+    float *output = runtime_output_port_signal_for_test(&runtime, "output");
     if (!dry || !wet || !output)
         return fail("wet/dry fixture public ports are missing");
     dry[0] = 0.0f;
@@ -1384,8 +1417,8 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return fail("failed to initialize delay fixture runtime");
     }
-    float *input  = apg_v2_runtime_find_signal(&runtime, "input");
-    float *output = apg_v2_runtime_find_signal(&runtime, "output");
+    float *input  = runtime_signal_by_name_for_test(&runtime, "input");
+    float *output = runtime_signal_by_name_for_test(&runtime, "output");
     if (!input || !output)
         return fail("delay fixture signals are missing");
     input[0] = 1.0f;
@@ -1419,8 +1452,8 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return fail("failed to initialize filter fixture runtime");
     }
-    input  = apg_v2_runtime_find_signal(&runtime, "input");
-    output = apg_v2_runtime_find_signal(&runtime, "output");
+    input  = runtime_signal_by_name_for_test(&runtime, "input");
+    output = runtime_signal_by_name_for_test(&runtime, "output");
     if (!input || !output)
         return fail("filter fixture signals are missing");
     input[0] = 1.0f;
@@ -1456,9 +1489,9 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return fail("failed to initialize modulation fixture runtime");
     }
-    input            = apg_v2_runtime_find_signal(&runtime, "input");
-    float *modulator = apg_v2_runtime_find_signal(&runtime, "modulator");
-    output           = apg_v2_runtime_find_signal(&runtime, "output");
+    input            = runtime_signal_by_name_for_test(&runtime, "input");
+    float *modulator = runtime_signal_by_name_for_test(&runtime, "modulator");
+    output           = runtime_signal_by_name_for_test(&runtime, "output");
     if (!input || !modulator || !output)
         return fail("modulation fixture signals are missing");
     for (size_t i = 0; i < 4u; i++) {
@@ -1492,9 +1525,9 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return fail("failed to initialize stereo fixture runtime");
     }
-    input        = apg_v2_runtime_find_input_port_signal(&runtime, "input");
-    float *left  = apg_v2_runtime_find_output_port_signal(&runtime, "left");
-    float *right = apg_v2_runtime_find_output_port_signal(&runtime, "right");
+    input        = runtime_input_port_signal_for_test(&runtime, "input");
+    float *left  = runtime_output_port_signal_for_test(&runtime, "left");
+    float *right = runtime_output_port_signal_for_test(&runtime, "right");
     if (!input || !left || !right)
         return fail("stereo fixture public ports are missing");
     input[0] = 2.0f;

@@ -18,19 +18,6 @@ uc_status apg_v2_runtime_init_from_registry(const apg_v2_registry_t *registry, a
 /* Allocate and initialize a runtime from a prebuilt registry descriptor. */
 uc_status apg_v2_runtime_create_from_registry(const apg_v2_registry_t *registry, apg_v2_runtime_t **out, uc_error *err);
 
-/* Return the mutable internal signal buffer for a graph signal name, or NULL if missing. */
-float *apg_v2_runtime_find_signal(apg_v2_runtime_t *runtime, const char *name);
-
-/* Return channel 0 for a named public audio input/output port, or NULL for non-audio or missing ports. */
-float *apg_v2_runtime_find_input_port_signal(apg_v2_runtime_t *runtime, const char *port_name);
-float *apg_v2_runtime_find_output_port_signal(apg_v2_runtime_t *runtime, const char *port_name);
-
-/* Return the mapped signal buffer for an explicit public audio port channel, or NULL if out of range. */
-float *
-apg_v2_runtime_find_input_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index);
-float *
-apg_v2_runtime_find_output_port_channel_signal(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index);
-
 bool apg_v2_runtime_resolve_input_port_channel_signal(
     const apg_v2_runtime_t *runtime,
     const char             *port_name,
