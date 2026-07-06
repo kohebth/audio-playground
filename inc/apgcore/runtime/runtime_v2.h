@@ -45,13 +45,39 @@ bool apg_v2_runtime_resolve_output_port_channel_signal(
     size_t                 *out_signal_index,
     size_t                 *out_meter_index
 );
+
+bool apg_v2_runtime_resolve_input_audio_port_index(
+    const apg_v2_runtime_t *runtime, const char *port_name, size_t *out_port_index
+);
+bool apg_v2_runtime_resolve_output_audio_port_index(
+    const apg_v2_runtime_t *runtime, const char *port_name, size_t *out_port_index
+);
+
 const float *apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, size_t signal_index);
+float       *apg_v2_runtime_signal_buffer_at_mut(apg_v2_runtime_t *runtime, size_t signal_index);
+
+bool apg_v2_runtime_input_port_channel_signal_index(
+    const apg_v2_runtime_t *runtime,
+    size_t                  port_index,
+    size_t                  channel_index,
+    size_t                 *out_signal_index,
+    size_t                 *out_meter_index
+);
+bool apg_v2_runtime_output_port_channel_signal_index(
+    const apg_v2_runtime_t *runtime,
+    size_t                  port_index,
+    size_t                  channel_index,
+    size_t                 *out_signal_index,
+    size_t                 *out_meter_index
+);
 
 /* Update a compiled parameter value used by config bindings on the next process call. */
 bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value);
+bool apg_v2_runtime_set_param_index(apg_v2_runtime_t *runtime, size_t index, float value);
 
 /* Update the parameter targeted by a public control input port. */
 bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value);
+bool apg_v2_runtime_set_control_port_index(apg_v2_runtime_t *runtime, size_t control_target_index, float value);
 
 /* Bypass a compiled project unit instance by copying its first external input signal to its first public output signal.
  */
@@ -76,6 +102,16 @@ bool apg_v2_runtime_process_interleaved_ports(
     uint32_t          frames
 );
 
+/* Process interleaved external buffers through pre-resolved public audio port indices. */
+bool apg_v2_runtime_process_interleaved_port_indices(
+    apg_v2_runtime_t *runtime,
+    size_t            input_port_index,
+    const float      *input,
+    size_t            output_port_index,
+    float            *output,
+    uint32_t          frames
+);
+
 /* Process the first public mono input and output ports. */
 bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames);
 
@@ -85,6 +121,16 @@ bool apg_v2_runtime_process_mono_ports(
     const char       *input_port_name,
     const float      *input,
     const char       *output_port_name,
+    float            *output,
+    uint32_t          frames
+);
+
+/* Process pre-resolved public mono audio port indices; rejects multi-channel ports. */
+bool apg_v2_runtime_process_mono_port_indices(
+    apg_v2_runtime_t *runtime,
+    size_t            input_port_index,
+    const float      *input,
+    size_t            output_port_index,
     float            *output,
     uint32_t          frames
 );

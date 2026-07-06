@@ -578,11 +578,26 @@ static int test_interleaved_stereo_public_port_process(void) {
         return fail("stereo output channel lookup returned unexpected signal");
     if (apg_v2_runtime_find_input_port_channel_signal(&runtime, "input", 2u))
         return fail("stereo input channel lookup accepted out-of-range channel");
+    size_t input_port_index  = 0u;
+    size_t output_port_index = 0u;
+    if (!apg_v2_runtime_resolve_input_audio_port_index(&runtime, "input", &input_port_index) ||
+        !apg_v2_runtime_resolve_output_audio_port_index(&runtime, "output", &output_port_index))
+        return fail("stereo port index resolution failed");
+    size_t input_r_index  = 0u;
+    size_t output_r_index = 0u;
+    if (!apg_v2_runtime_input_port_channel_signal_index(&runtime, input_port_index, 1u, &input_r_index, NULL) ||
+        !apg_v2_runtime_output_port_channel_signal_index(&runtime, output_port_index, 1u, &output_r_index, NULL))
+        return fail("stereo channel signal index resolution failed");
+    if (apg_v2_runtime_signal_buffer_at(&runtime, input_r_index) != apg_v2_runtime_find_signal(&runtime, "input_r") ||
+        apg_v2_runtime_signal_buffer_at(&runtime, output_r_index) != apg_v2_runtime_find_signal(&runtime, "output_r"))
+        return fail("stereo channel indices mapped unexpected signal buffers");
 
     const float input[4]  = {1.0f, 10.0f, -2.0f, -20.0f};
     float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    if (!apg_v2_runtime_process_interleaved_ports(&runtime, "input", input, "output", output, 2u))
-        return fail("stereo interleaved processing failed");
+    if (!apg_v2_runtime_process_interleaved_port_indices(
+            &runtime, input_port_index, input, output_port_index, output, 2u
+        ))
+        return fail("stereo interleaved index processing failed");
     const float expected[4] = {2.0f, 20.0f, -4.0f, -40.0f};
     for (size_t i = 0; i < 4u; i++) {
         if (output[i] != expected[i])
@@ -615,12 +630,17 @@ static int test_named_mono_port_process(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    if (!apg_v2_runtime_set_param(&runtime, "gain", 3.0f))
-        return fail("failed to set simple_gain param");
-    const float input[3]  = {0.25f, -0.5f, 1.0f};
-    float       output[3] = {0.0f, 0.0f, 0.0f};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u))
-        return fail("named simple_gain processing failed");
+    if (!apg_v2_runtime_set_param_index(&runtime, 0u, 3.0f))
+        return fail("failed to set simple_gain param by index");
+    const float input[3]          = {0.25f, -0.5f, 1.0f};
+    float       output[3]         = {0.0f, 0.0f, 0.0f};
+    size_t      input_port_index  = 0u;
+    size_t      output_port_index = 0u;
+    if (!apg_v2_runtime_resolve_input_audio_port_index(&runtime, "input", &input_port_index) ||
+        !apg_v2_runtime_resolve_output_audio_port_index(&runtime, "output", &output_port_index))
+        return fail("simple_gain port index resolution failed");
+    if (!apg_v2_runtime_process_mono_port_indices(&runtime, input_port_index, input, output_port_index, output, 3u))
+        return fail("indexed simple_gain processing failed");
     if (output[0] != 0.75f || output[1] != -1.5f || output[2] != 3.0f)
         return fail("unexpected named simple_gain output sample");
 
@@ -715,8 +735,10 @@ static int test_control_port_sets_matching_param(void) {
 
     if (!apg_v2_runtime_set_control_port(&runtime, "gain", 2.0f))
         return fail("failed to set matching control port");
-    if (!apg_v2_runtime_set_control_port(&runtime, "amount", 4.0f))
-        return fail("failed to set targeted control port");
+    if (!apg_v2_runtime_set_control_port_index(&runtime, 1u, 4.0f))
+        return fail("failed to set targeted control port by index");
+    if (apg_v2_runtime_set_control_port_index(&runtime, 2u, 1.0f))
+        return fail("accepted invalid control target index");
     if (apg_v2_runtime_set_control_port(&runtime, "input", 2.0f) ||
         apg_v2_runtime_set_control_port(&runtime, "missing", 2.0f))
         return fail("accepted invalid control port update");

@@ -25,8 +25,6 @@ typedef struct {
     uint32_t                            frames;
     apg_runtime_process_state_t         state;
     apg_runtime_process_io_t            io;
-    const char                         *input_port_name;
-    const char                         *output_port_name;
     const apg_v2_registry_audio_port_t *input_port;
     const apg_v2_registry_audio_port_t *output_port;
     const float                        *input;
@@ -44,21 +42,6 @@ static bool process_context_fail(apg_runtime_process_context_t *ctx, const char 
     return false;
 }
 
-static void process_resolve_named_ports(apg_runtime_process_context_t *ctx) {
-    if (!ctx || !ctx->runtime)
-        return;
-    if (!ctx->input_port && ctx->input_port_name) {
-        ctx->input_port = apg_v2_runtime_audio_port_by_name(
-            ctx->runtime->input_audio_ports, ctx->runtime->input_audio_ports_len, ctx->input_port_name
-        );
-    }
-    if (!ctx->output_port && ctx->output_port_name) {
-        ctx->output_port = apg_v2_runtime_audio_port_by_name(
-            ctx->runtime->output_audio_ports, ctx->runtime->output_audio_ports_len, ctx->output_port_name
-        );
-    }
-}
-
 static bool process_resolve_ports(apg_runtime_process_context_t *ctx) {
     if (!ctx || !ctx->runtime)
         return false;
@@ -68,7 +51,6 @@ static bool process_resolve_ports(apg_runtime_process_context_t *ctx) {
         return true;
     }
 
-    process_resolve_named_ports(ctx);
     if (ctx->io == APG_RUNTIME_PROCESS_IO_MONO) {
         if (!ctx->input || !ctx->output)
             return process_context_fail(ctx, "v2 runtime mono input/output buffers are required");
@@ -233,22 +215,22 @@ bool apg_v2_runtime_dispatch_process(apg_v2_runtime_t *runtime, uint32_t frames)
 }
 
 bool apg_v2_runtime_dispatch_process_interleaved_ports(
-    apg_v2_runtime_t *runtime,
-    const char       *input_port_name,
-    const float      *input,
-    const char       *output_port_name,
-    float            *output,
-    uint32_t          frames
+    apg_v2_runtime_t                   *runtime,
+    const apg_v2_registry_audio_port_t *input_port,
+    const float                        *input,
+    const apg_v2_registry_audio_port_t *output_port,
+    float                              *output,
+    uint32_t                            frames
 ) {
     apg_runtime_process_context_t ctx = {
-        .runtime          = runtime,
-        .frames           = frames,
-        .state            = APG_RUNTIME_PROCESS_BEGIN,
-        .io               = APG_RUNTIME_PROCESS_IO_INTERLEAVED,
-        .input_port_name  = input_port_name,
-        .output_port_name = output_port_name,
-        .input            = input,
-        .output           = output,
+        .runtime     = runtime,
+        .frames      = frames,
+        .state       = APG_RUNTIME_PROCESS_BEGIN,
+        .io          = APG_RUNTIME_PROCESS_IO_INTERLEAVED,
+        .input_port  = input_port,
+        .output_port = output_port,
+        .input       = input,
+        .output      = output,
     };
     return process_dispatch(&ctx);
 }

@@ -102,12 +102,12 @@ bool apg_v2_runtime_run_node(apg_v2_runtime_t *runtime, size_t node_index, uint3
 
 bool apg_v2_runtime_dispatch_process(apg_v2_runtime_t *runtime, uint32_t frames);
 bool apg_v2_runtime_dispatch_process_interleaved_ports(
-    apg_v2_runtime_t *runtime,
-    const char       *input_port_name,
-    const float      *input,
-    const char       *output_port_name,
-    float            *output,
-    uint32_t          frames
+    apg_v2_runtime_t                   *runtime,
+    const apg_v2_registry_audio_port_t *input_port,
+    const float                        *input,
+    const apg_v2_registry_audio_port_t *output_port,
+    float                              *output,
+    uint32_t                            frames
 );
 bool apg_v2_runtime_dispatch_process_mono_audio_ports(
     apg_v2_runtime_t                   *runtime,
