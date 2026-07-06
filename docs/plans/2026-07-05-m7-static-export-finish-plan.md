@@ -16,7 +16,7 @@ Done:
 
 ## Remaining Implementation
 
-- [ ] Configure and require ARM syntax/stack gates with installed `arm-none-eabi-gcc` in production runs.
+- [x] Configure and require ARM syntax/stack gates with installed `arm-none-eabi-gcc` in production runs.
 - [ ] Add or receive a minimal STM32H7 linker script and enable `APG_M7_LINKER_SCRIPT`.
 - [ ] Define and wire `APG_M7_BOARD_TIMING_COMMAND` for real board timing output.
 - [x] Improve export output-directory behavior with either auto-create or a clearer diagnostic; prefer clearer diagnostic unless auto-create already exists nearby.
