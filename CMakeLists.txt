@@ -147,7 +147,7 @@ set_tests_properties(test_apg_v2_cli_wasm_export PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
         DEPENDS test_apg_v2_cli_wasm_export_prepare
-        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v2\".*\"ok\":true.*\"target\":\"wasm_realtime\".*\"files\":\\[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\"\\]"
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.export.v2\".*\"ok\":true.*\"target\":\"wasm_realtime\".*\"files\":\\[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\",\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\"\\]"
 )
 
 add_test(
@@ -157,7 +157,7 @@ add_test(
 set_tests_properties(test_apg_v2_cli_wasm_export_manifest PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.wasm_realtime.v2\".*\"project\":\"guitar-pedalboard\".*\"status\":\"generated\""
+        PASS_REGULAR_EXPRESSION "\"schema\":\"apg.project.wasm_realtime.v2\".*\"project\":\"guitar-pedalboard\".*\"runtime\":\"audio_worklet_stub\".*\"status\":\"generated\".*\"artifacts\":\\{.*\"adapter_js\":\"apg_project_wasm_adapter.mjs\".*\"worklet_processor_js\":\"apg_project_wasm_processor.js\".*\"wasm_module\":\"apg_project_wasm.wasm\".*\"wasm_module_available\":false"
         DEPENDS test_apg_v2_cli_wasm_export
 )
 
@@ -168,7 +168,29 @@ add_test(
 set_tests_properties(test_apg_v2_cli_wasm_export_js PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "audio-worklet-stub"
+        PASS_REGULAR_EXPRESSION "audio-worklet-contract.*apg_project_wasm_adapter\\.mjs"
+        DEPENDS test_apg_v2_cli_wasm_export
+)
+
+add_test(
+        NAME test_apg_v2_cli_wasm_export_adapter_js
+        COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export/apg_project_wasm_adapter.mjs
+)
+set_tests_properties(test_apg_v2_cli_wasm_export_adapter_js PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "runtimeMethods.*compile.*start.*stop.*setParam.*setBypass.*pollMeters.*getLastError"
+        DEPENDS test_apg_v2_cli_wasm_export
+)
+
+add_test(
+        NAME test_apg_v2_cli_wasm_export_processor_js
+        COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_BINARY_DIR}/test-artifacts/wasm-export/apg_project_wasm_processor.js
+)
+set_tests_properties(test_apg_v2_cli_wasm_export_processor_js PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "registerProcessor\\(\"apg-project-wasm-processor\""
         DEPENDS test_apg_v2_cli_wasm_export
 )
 

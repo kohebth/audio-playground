@@ -287,7 +287,10 @@ static bool write_wasm_runtime_js(
     if (!out)
         return false;
     fputs("export const profile = \"wasm_realtime\";\n", out);
-    fputs("export const command = \"audio-worklet-stub\";\n", out);
+    fputs("export const command = \"audio-worklet-contract\";\n", out);
+    fputs(
+        "export {createRuntime, runtimeMethods, workletProcessorName} from \"./apg_project_wasm_adapter.mjs\";\n", out
+    );
     if (project && project->project.name)
         fprintf(out, "export const projectName = \"%s\";\n", project->project.name);
     else
@@ -304,29 +307,74 @@ static bool write_wasm_runtime_js(
     if (registry)
         fprintf(out, "  nodes: %zu,\n  schedule: %zu,\n", registry->nodes_len, registry->schedule_len);
     fputs("};\n", out);
+    return fclose(out) == 0;
+}
+
+static bool write_wasm_runtime_adapter_js(const char *path) {
+    FILE *out = fopen(path, "w");
+    if (!out)
+        return false;
+    fputs("export const workletProcessorName = \"apg-project-wasm-processor\";\n", out);
     fputs(
+        "export const runtimeMethods = [\"compile\", \"start\", \"stop\", \"setParam\", \"setBypass\", "
+        "\"pollMeters\", \"getLastError\"];\n",
+        out
+    );
+    fputs(
+        "const pendingRuntimeMessage = \"WASM AudioWorklet runtime execution not yet implemented\";\n"
         "export function createRuntime() {\n"
+        "  let lastError = null;\n"
         "  return {\n"
         "    compile() {\n"
-        "      return Promise.resolve({ok: true, message: \"stub compile complete\"});\n"
+        "      return Promise.resolve({ok: true, runtime: \"audio_worklet_contract\"});\n"
         "    },\n"
         "    start() {\n"
-        "      return Promise.reject(new Error(\"WASM AudioWorklet runtime execution not yet implemented\"));\n"
+        "      lastError = pendingRuntimeMessage;\n"
+        "      return Promise.reject(new Error(pendingRuntimeMessage));\n"
         "    },\n"
         "    stop() {\n"
         "      return Promise.resolve({ok: true});\n"
         "    },\n"
-        "    setParam() {\n"
+        "    setParam(name, value) {\n"
+        "      void name;\n"
+        "      void value;\n"
         "      return Promise.resolve({ok: true});\n"
         "    },\n"
-        "    setBypass() {\n"
+        "    setBypass(instanceId, bypassed) {\n"
+        "      void instanceId;\n"
+        "      void bypassed;\n"
         "      return Promise.resolve({ok: true});\n"
         "    },\n"
         "    pollMeters() {\n"
         "      return Promise.resolve({peak: [], rms: []});\n"
+        "    },\n"
+        "    getLastError() {\n"
+        "      return lastError;\n"
         "    }\n"
         "  };\n"
         "}\n",
+        out
+    );
+    return fclose(out) == 0;
+}
+
+static bool write_wasm_runtime_processor_js(const char *path) {
+    FILE *out = fopen(path, "w");
+    if (!out)
+        return false;
+    fputs(
+        "class ApgProjectWasmProcessor extends AudioWorkletProcessor {\n"
+        "  process(inputs, outputs) {\n"
+        "    const input = inputs[0] || [];\n"
+        "    const output = outputs[0] || [];\n"
+        "    const channels = Math.min(input.length, output.length);\n"
+        "    for (let channel = 0; channel < channels; channel += 1) {\n"
+        "      output[channel].set(input[channel]);\n"
+        "    }\n"
+        "    return true;\n"
+        "  }\n"
+        "}\n"
+        "registerProcessor(\"apg-project-wasm-processor\", ApgProjectWasmProcessor);\n",
         out
     );
     return fclose(out) == 0;
@@ -346,11 +394,23 @@ static bool write_wasm_runtime_manifest(
     fprintf(
         out,
         ",\"sample_rate\":%u,\"block_frames\":%u,\"runtime\":\"audio_worklet_stub\","
-        "\"layout\":{\"params\":%zu,\"signals\":%zu,\"nodes\":%zu,\"schedule\":%zu},\"status\":\"generated\"}\n",
+        "\"layout\":{\"params\":%zu,\"signals\":%zu,\"nodes\":%zu,\"schedule\":%zu},\"status\":\"generated\"",
         options ? options->sample_rate : APG_WASM_DEFAULT_SAMPLE_RATE,
         options ? options->block_frames : APG_WASM_DEFAULT_BLOCK_FRAMES, registry ? registry->params_len : 0u,
         registry ? registry->signals_len : 0u, registry ? registry->nodes_len : 0u,
         registry ? registry->schedule_len : 0u
+    );
+    fputs(
+        ",\"artifacts\":{\"manifest\":\"apg_project_wasm.json\",\"entry_js\":\"apg_project_wasm.mjs\","
+        "\"adapter_js\":\"apg_project_wasm_adapter.mjs\","
+        "\"worklet_processor_js\":\"apg_project_wasm_processor.js\","
+        "\"wasm_module\":\"apg_project_wasm.wasm\",\"wasm_module_available\":false}",
+        out
+    );
+    fputs(
+        ",\"files\":[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\","
+        "\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\"]}\n",
+        out
     );
     return fclose(out) == 0;
 }
@@ -775,8 +835,12 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
 
     char manifest_path[512];
     char js_path[512];
+    char adapter_path[512];
+    char processor_path[512];
     if (!join_path(manifest_path, sizeof(manifest_path), out_dir, "apg_project_wasm.json") ||
-        !join_path(js_path, sizeof(js_path), out_dir, "apg_project_wasm.mjs")) {
+        !join_path(js_path, sizeof(js_path), out_dir, "apg_project_wasm.mjs") ||
+        !join_path(adapter_path, sizeof(adapter_path), out_dir, "apg_project_wasm_adapter.mjs") ||
+        !join_path(processor_path, sizeof(processor_path), out_dir, "apg_project_wasm_processor.js")) {
         uc_error_set(&err, UC_E_RANGE, (uc_loc){0, 0}, "export output path is too long");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&registry_arena);
@@ -785,7 +849,8 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     }
 
     if (!write_wasm_runtime_manifest(manifest_path, &project, &registry, options) ||
-        !write_wasm_runtime_js(js_path, &project, &registry, options)) {
+        !write_wasm_runtime_js(js_path, &project, &registry, options) || !write_wasm_runtime_adapter_js(adapter_path) ||
+        !write_wasm_runtime_processor_js(processor_path)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write wasm_realtime export files");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&registry_arena);
@@ -797,7 +862,11 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     write_json_string(stdout, project_path);
     fputs(",\"target\":\"wasm_realtime\",\"out_dir\":", stdout);
     write_json_string(stdout, out_dir);
-    fputs(",\"status\":\"stub\",\"files\":[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\"],\"nodes\":", stdout);
+    fputs(
+        ",\"status\":\"stub\",\"files\":[\"apg_project_wasm.json\",\"apg_project_wasm.mjs\","
+        "\"apg_project_wasm_adapter.mjs\",\"apg_project_wasm_processor.js\"],\"nodes\":",
+        stdout
+    );
     fprintf(stdout, "%zu,\"schedule\":%zu", registry.nodes_len, registry.schedule_len);
     fprintf(
         stdout, ",\"execution\":{\"sample_rate\":%u,\"block_frames\":%u,\"atom_calls_per_block\":%zu,",
