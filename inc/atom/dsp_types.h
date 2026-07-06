@@ -340,41 +340,47 @@ typedef struct {
 
 typedef struct {
     float *signal;
-} filter_biquad_out_t;
+} filter_biquad_coefficients_out_t;
 typedef struct {
     float *signal;
-} filter_biquad_in_t;
+} filter_biquad_coefficients_in_t;
 typedef struct {
     float b0;
     float b1;
     float b2;
     float a1;
     float a2;
-} filter_biquad_params_t;
+} filter_biquad_coefficients_params_t;
 typedef struct {
     float z1;
     float z2;
-} filter_biquad_state_t;
+} filter_biquad_coefficients_state_t;
 
 typedef struct {
     float *signal;
-} filter_biquad_lowpass_out_t;
+} filter_biquad_out_t;
 typedef struct {
     float *signal;
     float *cutoff;
-} filter_biquad_lowpass_in_t;
+} filter_biquad_in_t;
 typedef struct {
     float cutoff;
     float q;
+    int   mode;
     float sample_rate;
     float smoothing_ms;
-} filter_biquad_lowpass_params_t;
+} filter_biquad_params_t;
 typedef struct {
     float z1;
     float z2;
     float current_cutoff;
     float current_q;
-} filter_biquad_lowpass_state_t;
+    float current_b0;
+    float current_b1;
+    float current_b2;
+    float current_a1;
+    float current_a2;
+} filter_biquad_state_t;
 
 typedef struct {
     float *signal;

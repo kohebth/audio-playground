@@ -148,10 +148,10 @@ static int test_route_style_unit_compile(void) {
     return 0;
 }
 
-static int test_route_style_lowpass_cutoff_input_compile(void) {
+static int test_route_style_biquad_cutoff_input_compile(void) {
     const char *yaml = "kind: apg.unit\n"
                        "schema: apg.unit.v2\n"
-                       "name: route_style_lowpass\n"
+                       "name: route_style_biquad\n"
                        "version: 2.0.0\n"
                        "params: {}\n"
                        "ports:\n"
@@ -172,10 +172,11 @@ static int test_route_style_lowpass_cutoff_input_compile(void) {
                        "      params:\n"
                        "        value: 1800.0\n"
                        "    filter:\n"
-                       "      atom: filter_biquad_lowpass\n"
+                       "      atom: filter_biquad\n"
                        "      params:\n"
                        "        cutoff: 5800.0\n"
                        "        q: 0.707\n"
+                       "        mode: 0\n"
                        "        sample_rate: 48000.0\n"
                        "        smoothing_ms: 12.0\n"
                        "    output:\n"
@@ -195,26 +196,26 @@ static int test_route_style_lowpass_cutoff_input_compile(void) {
     uc_error      err    = {0};
     uc_status     status = apg_unit_v2_load_string(yaml, strlen(yaml), &arena, &unit, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "route lowpass load error: %s\n", err.msg);
+        fprintf(stderr, "route biquad load error: %s\n", err.msg);
         uc_arena_free(&arena);
-        return fail("failed to load route-style lowpass unit");
+        return fail("failed to load route-style biquad unit");
     }
 
     apg_v2_compiled_unit_t plan;
     status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
     if (status != UC_OK) {
-        fprintf(stderr, "route lowpass compile error: %s\n", err.msg);
+        fprintf(stderr, "route biquad compile error: %s\n", err.msg);
         uc_arena_free(&arena);
-        return fail("failed to compile route-style lowpass unit");
+        return fail("failed to compile route-style biquad unit");
     }
 
-    if (plan.nodes_len != 2u || strcmp(plan.nodes[1].atom_name, "filter_biquad_lowpass") != 0)
-        return fail("unexpected route-style lowpass compiled nodes");
+    if (plan.nodes_len != 2u || strcmp(plan.nodes[1].atom_name, "filter_biquad") != 0)
+        return fail("unexpected route-style biquad compiled nodes");
     if (plan.nodes[1].in_len != 2u || strcmp(plan.nodes[1].in[0].key, "signal") != 0 ||
         strcmp(plan.nodes[1].in[1].key, "cutoff") != 0)
-        return fail("route-style lowpass cutoff input did not compile");
-    if (plan.nodes[1].config_len != 4u)
-        return fail("route-style lowpass config did not compile");
+        return fail("route-style biquad cutoff input did not compile");
+    if (plan.nodes[1].config_len != 5u)
+        return fail("route-style biquad config did not compile");
 
     uc_arena_free(&arena);
     return 0;
@@ -1062,7 +1063,7 @@ static int test_filter_binding_metadata_compile(void) {
                                "    - output\n"
                                "  nodes:\n"
                                "    - id: biquad\n"
-                               "      atom: filter_biquad\n"
+                               "      atom: filter_biquad_coefficients\n"
                                "      in:\n"
                                "        signal: input\n"
                                "      out:\n"
@@ -1240,7 +1241,7 @@ static int test_filter_binding_metadata_compile(void) {
                              "    - output\n"
                              "  nodes:\n"
                              "    - id: biquad\n"
-                             "      atom: filter_biquad\n"
+                             "      atom: filter_biquad_coefficients\n"
                              "      in:\n"
                              "        signal: input\n"
                              "      out:\n"
@@ -1252,7 +1253,7 @@ static int test_filter_binding_metadata_compile(void) {
                              "        a2: 0.0\n"
                              "compatibility:\n"
                              "  desktop_full: true\n";
-    if (expect_compile_invalid_contains(missing_b2, "missing filter_biquad b2", "biquad", "config", "b2"))
+    if (expect_compile_invalid_contains(missing_b2, "missing filter_biquad_coefficients b2", "biquad", "config", "b2"))
         return 1;
 
     const char *bad_allpass_key = "kind: apg.unit\n"
@@ -1917,7 +1918,7 @@ int main(void) {
         return 1;
     if (test_route_style_unit_compile())
         return 1;
-    if (test_route_style_lowpass_cutoff_input_compile())
+    if (test_route_style_biquad_cutoff_input_compile())
         return 1;
     if (test_unknown_signal_rejected())
         return 1;

@@ -109,8 +109,8 @@ The compiler currently validates required keys for these MVP atoms:
 - `delay_line`: `in.signal`, `out.signal`, `config.length`
 - `delay_fractional`: `in.signal`, `out.signal`, `config.delay_samples`, `config.interpolation`
 - `delay_tap_feedback`, `delay_tap_feedforward`: `in.buffer`, scalar `in.tap_position`, `out.signal`, `config.coefficient`
-- `filter_biquad`: `in.signal`, `out.signal`, `config.b0`, `config.b1`, `config.b2`, `config.a1`, `config.a2`
-- `filter_biquad_lowpass`: `in.signal`, optional `in.cutoff`, `out.signal`, `config.cutoff`, `config.q`, `config.sample_rate`, `config.smoothing_ms`
+- `filter_biquad`: `in.signal`, optional `in.cutoff`, `out.signal`, `config.cutoff`, `config.q`, `config.mode`, `config.sample_rate`, `config.smoothing_ms`
+- `filter_biquad_coefficients`: `in.signal`, `out.signal`, `config.b0`, `config.b1`, `config.b2`, `config.a1`, `config.a2`
 - `filter_allpass`, `filter_comb_ff`: `in.signal`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_comb_fb`: `in.signal`, optional `in.delay`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_dc_block`: `in.signal`, `out.signal`, `config.coefficient`
@@ -127,14 +127,22 @@ The compiler currently validates required keys for these MVP atoms:
 
 Atoms without explicit metadata may still compile without key-level validation until their contracts are added.
 
-`filter_biquad` is the raw coefficient form. For pedal-style cutoff controls, prefer `filter_biquad_lowpass`; it computes stable lowpass coefficients from cutoff/Q, accepts a routed cutoff signal, and smooths cutoff/Q changes using `smoothing_ms`:
+`filter_biquad` is the pedal-style cutoff/Q form. It supports multiple biquad response modes through `mode`, computes stable coefficients from cutoff/Q, accepts a routed cutoff signal, and smooths coefficient changes using `smoothing_ms`. Use `filter_biquad_coefficients` only when a unit needs to provide raw normalized coefficients directly.
+
+`filter_biquad.mode` values:
+
+- `0`: lowpass
+- `1`: highpass
+- `2`: bandpass
+- `3`: notch
 
 ```yaml
 filter:
-  atom: filter_biquad_lowpass
+  atom: filter_biquad
   params:
     cutoff: 5800.0
     q: 0.707
+    mode: 0
     sample_rate: 48000.0
     smoothing_ms: 12.0
 routes:

@@ -92,7 +92,7 @@ graph:
         curve: 0
 
     - id: tone_filter
-      atom: filter_biquad
+      atom: filter_biquad_coefficients
       in:
         signal: clipped
       out:

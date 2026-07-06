@@ -61,15 +61,17 @@ int test_process_info_frame_limits(void) {
 
         for (int i = 0; i < 1024; i++)
             y[i] = -99.0f;
-        filter_biquad_out_t    bq_out    = {.signal = y};
-        filter_biquad_in_t     bq_in     = {.signal = x};
-        filter_biquad_params_t bq_params = {.b0 = 0.30f, .b1 = 0.30f, .b2 = 0.0f, .a1 = -0.40f, .a2 = 0.0f};
-        filter_biquad_state_t  bq_state  = {0};
-        filter_biquad_process(&bq_out, &bq_in, &bq_params, &bq_state, &info);
-        if (assert_finite_buffer(y, frames, "filter_biquad_process"))
+        filter_biquad_coefficients_out_t    bq_out    = {.signal = y};
+        filter_biquad_coefficients_in_t     bq_in     = {.signal = x};
+        filter_biquad_coefficients_params_t bq_params = {
+            .b0 = 0.30f, .b1 = 0.30f, .b2 = 0.0f, .a1 = -0.40f, .a2 = 0.0f
+        };
+        filter_biquad_coefficients_state_t bq_state = {0};
+        filter_biquad_coefficients_process(&bq_out, &bq_in, &bq_params, &bq_state, &info);
+        if (assert_finite_buffer(y, frames, "filter_biquad_coefficients_process"))
             return 1;
         if (frames < 1024 && y[frames] != -99.0f)
-            return fail("filter_biquad_process wrote past info.frames");
+            return fail("filter_biquad_coefficients_process wrote past info.frames");
     }
 
     return 0;

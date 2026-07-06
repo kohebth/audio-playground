@@ -65,7 +65,7 @@ graph:
 
   nodes:
     - id: bass_stage
-      atom: filter_biquad
+      atom: filter_biquad_coefficients
       in:
         signal: input
       out:
@@ -78,7 +78,7 @@ graph:
         a2: 0.0
 
     - id: mid_stage
-      atom: filter_biquad
+      atom: filter_biquad_coefficients
       in:
         signal: bass_stage
       out:
@@ -91,7 +91,7 @@ graph:
         a2: 0.0
 
     - id: treble_stage
-      atom: filter_biquad
+      atom: filter_biquad_coefficients
       in:
         signal: mid_stage
       out:

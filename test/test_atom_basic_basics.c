@@ -82,17 +82,17 @@ int test_biquad_impulse_stability(void) {
     memset(y, 0, sizeof(y));
     x[0] = 1.0f;
 
-    filter_biquad_out_t    out    = {.signal = y};
-    filter_biquad_in_t     in     = {.signal = x};
-    filter_biquad_params_t params = {
+    filter_biquad_coefficients_out_t    out    = {.signal = y};
+    filter_biquad_coefficients_in_t     in     = {.signal = x};
+    filter_biquad_coefficients_params_t params = {
         .b0 = 0.30f,
         .b1 = 0.30f,
         .b2 = 0.0f,
         .a1 = -0.40f,
         .a2 = 0.0f,
     };
-    filter_biquad_state_t state = {0};
-    filter_biquad(&out, &in, &params, &state);
+    filter_biquad_coefficients_state_t state = {0};
+    filter_biquad_coefficients(&out, &in, &params, &state);
 
     if (assert_finite_buffer(y, TEST_CHUNK, "filter_biquad"))
         return 1;
@@ -109,7 +109,7 @@ int test_biquad_impulse_stability(void) {
     return 0;
 }
 
-int test_biquad_lowpass_cutoff_smoothing(void) {
+int test_biquad_cutoff_smoothing(void) {
     float x[TEST_CHUNK];
     float cutoff[TEST_CHUNK];
     float y[TEST_CHUNK];
@@ -120,26 +120,57 @@ int test_biquad_lowpass_cutoff_smoothing(void) {
         y[i]      = 0.0f;
     }
 
-    filter_biquad_lowpass_out_t    out    = {.signal = y};
-    filter_biquad_lowpass_in_t     in     = {.signal = x, .cutoff = cutoff};
-    filter_biquad_lowpass_params_t params = {
+    filter_biquad_out_t    out    = {.signal = y};
+    filter_biquad_in_t     in     = {.signal = x, .cutoff = cutoff};
+    filter_biquad_params_t params = {
         .cutoff       = 400.0f,
         .q            = 0.70710678f,
+        .mode         = 0,
         .sample_rate  = 48000.0f,
         .smoothing_ms = 5.0f,
     };
-    filter_biquad_lowpass_state_t state = {0};
-    apg_process_info_t            info  = {
-                    .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
+    filter_biquad_state_t state = {0};
+    apg_process_info_t    info  = {
+            .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
     };
 
-    filter_biquad_lowpass_process(&out, &in, &params, &state, &info);
+    filter_biquad_process(&out, &in, &params, &state, &info);
 
-    if (assert_finite_buffer(y, TEST_CHUNK, "filter_biquad_lowpass"))
+    if (assert_finite_buffer(y, TEST_CHUNK, "filter_biquad"))
         return 1;
     if (state.current_cutoff <= 400.0f || state.current_cutoff >= 6000.0f)
-        return fail("filter_biquad_lowpass cutoff did not smooth toward target");
+        return fail("filter_biquad cutoff did not smooth toward target");
     if (state.current_q <= 0.0f)
-        return fail("filter_biquad_lowpass q state was not initialized");
+        return fail("filter_biquad q state was not initialized");
+    return 0;
+}
+
+int test_biquad_modes_are_finite(void) {
+    float x[TEST_CHUNK];
+    float y[TEST_CHUNK];
+
+    for (int mode = 0; mode <= 3; mode++) {
+        memset(x, 0, sizeof(x));
+        memset(y, 0, sizeof(y));
+        x[0] = 1.0f;
+
+        filter_biquad_out_t    out    = {.signal = y};
+        filter_biquad_in_t     in     = {.signal = x, .cutoff = NULL};
+        filter_biquad_params_t params = {
+            .cutoff       = 1200.0f,
+            .q            = 0.70710678f,
+            .mode         = mode,
+            .sample_rate  = 48000.0f,
+            .smoothing_ms = 0.0f,
+        };
+        filter_biquad_state_t state = {0};
+
+        filter_biquad(&out, &in, &params, &state);
+
+        if (assert_finite_buffer(y, TEST_CHUNK, "filter_biquad mode"))
+            return 1;
+        if (state.current_b0 == 0.0f && state.current_b1 == 0.0f && state.current_b2 == 0.0f)
+            return fail("filter_biquad mode coefficients were not initialized");
+    }
     return 0;
 }

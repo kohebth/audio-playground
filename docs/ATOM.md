@@ -170,9 +170,16 @@ void filter_fir(
 
 void filter_biquad(
     filter_biquad_out_t              out,      // { float *signal; }
-    filter_biquad_in_t               in,      // { float *signal; }
-    filter_biquad_params_t           params,      // { float b0; float b1; float b2; float a1; float a2; }
-    filter_biquad_state_t *          state       // { float z1; float z2; }
+    filter_biquad_in_t               in,      // { float *signal; float *cutoff; }
+    filter_biquad_params_t           params,      // { float cutoff; float q; int mode; float sample_rate; float smoothing_ms; }
+    filter_biquad_state_t *          state       // { float z1; float z2; float current_cutoff; float current_q; }
+);
+
+void filter_biquad_coefficients(
+    filter_biquad_coefficients_out_t              out,      // { float *signal; }
+    filter_biquad_coefficients_in_t               in,      // { float *signal; }
+    filter_biquad_coefficients_params_t           params,      // { float b0; float b1; float b2; float a1; float a2; }
+    filter_biquad_coefficients_state_t *          state       // { float z1; float z2; }
 );
 
 void filter_dc_block(
