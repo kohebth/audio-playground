@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 static int usage(const char *argv0) {
     fprintf(
@@ -204,6 +205,21 @@ static bool join_path(char *out, size_t out_size, const char *dir, const char *n
     int    written =
         snprintf(out, out_size, "%s%s%s", dir ? dir : "", dir_len > 0u && dir[dir_len - 1u] == '/' ? "" : "/", name);
     return written >= 0 && (size_t)written < out_size;
+}
+
+static bool validate_export_output_dir(const char *out_dir, uc_error *err) {
+    struct stat info;
+    if (!out_dir || out_dir[0] == '\0' || stat(out_dir, &info) != 0) {
+        uc_error_set(
+            err, UC_E_IO, (uc_loc){0, 0}, "export output directory does not exist: '%s'", out_dir ? out_dir : ""
+        );
+        return false;
+    }
+    if (!S_ISDIR(info.st_mode)) {
+        uc_error_set(err, UC_E_IO, (uc_loc){0, 0}, "export output path is not a directory: '%s'", out_dir);
+        return false;
+    }
+    return true;
 }
 
 enum {
@@ -750,6 +766,13 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
         return rc;
     }
 
+    if (!validate_export_output_dir(out_dir, &err)) {
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
     char manifest_path[512];
     char js_path[512];
     if (!join_path(manifest_path, sizeof(manifest_path), out_dir, "apg_project_wasm.json") ||
@@ -843,6 +866,13 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
             &err, UC_E_RANGE, (uc_loc){0, 0}, "m7_static static RAM budget exceeded: %zu > %zu bytes",
             memory.static_ram_bytes, options->static_ram_budget
         );
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
+    if (!validate_export_output_dir(out_dir, &err)) {
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
