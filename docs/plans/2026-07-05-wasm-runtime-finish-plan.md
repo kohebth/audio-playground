@@ -27,6 +27,11 @@ Done:
 - [x] Reject unsupported atoms/features for `wasm_realtime` with stable diagnostics.
 - [ ] Generate/load a real `apg_project_wasm.wasm` DSP module and invoke registry/runtime processing from the AudioWorklet processor.
 
+Blocked external input:
+
+- A WASM C toolchain is not currently available in the local environment (`emcc`, `clang`, and `wasm-ld` are absent).
+- Ubuntu `emscripten` is available through apt, but installing it requires sudo/password access that this session does not have.
+
 ## Tests
 
 - Export rejects unsupported atoms.

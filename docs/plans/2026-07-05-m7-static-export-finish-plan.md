@@ -22,6 +22,11 @@ Done:
 - [x] Improve export output-directory behavior with either auto-create or a clearer diagnostic; prefer clearer diagnostic unless auto-create already exists nearby.
 - [x] Confirm M7 export consumes registry layout facts after registry/compiler finalization.
 
+Blocked external input:
+
+- `APG_M7_BOARD_TIMING_COMMAND` must be a board/BSP command that runs the generated bundle on target hardware or an equivalent board harness and prints `m7_static_board_block_us=<value> budget_us=<value>`.
+- The repository cannot invent this measurement locally; the current fallback test only reports that the board timing command is unconfigured.
+
 ## Tests
 
 - `test_apg_v2_cli_m7_export_arm_syntax`
