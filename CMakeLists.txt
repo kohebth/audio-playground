@@ -383,6 +383,10 @@ if(NOT APG_M7_C_COMPILER)
                 "Optional ARM/M7 C compiler used to syntax-check generated m7_static bundles" FORCE)
     endif()
 endif()
+if(APG_M7_C_COMPILER AND NOT APG_M7_LINKER_SCRIPT)
+    set(APG_M7_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/test/fixtures/m7/stm32h7_smoke.ld" CACHE FILEPATH
+            "Optional STM32H7/M7 linker script used to link generated m7_static bundles" FORCE)
+endif()
 
 if(APG_M7_C_COMPILER)
     add_test(
@@ -416,10 +420,11 @@ endif()
 if(APG_M7_C_COMPILER AND APG_M7_LINKER_SCRIPT)
     add_test(
             NAME test_apg_v2_cli_m7_export_arm_link
-            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -T ${APG_M7_LINKER_SCRIPT} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_link_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} -Wl,-Map=${APG_M7_CLI_TEST_DIR}/apg_m7_static.map -Wl,--gc-sections -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static.elf
+            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -D_GNU_SOURCE -DM_PI=3.14159265358979323846 -DM_SQRT1_2=0.70710678118654752440 -ffreestanding -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -T ${APG_M7_LINKER_SCRIPT} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_link_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -Wl,-Map=${APG_M7_CLI_TEST_DIR}/apg_m7_static.map -Wl,--gc-sections -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static.elf
     )
     set_tests_properties(test_apg_v2_cli_m7_export_arm_link PROPERTIES
             LABELS v2
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             DEPENDS test_apg_v2_cli_m7_export_bundle
     )
 else()
