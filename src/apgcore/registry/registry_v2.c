@@ -13,6 +13,28 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
     return status;
 }
 
+static uc_status copy_registry_string_len(
+    uc_arena *arena, const char *text, size_t len, const char **out, uc_error *err, const char *msg
+) {
+    *out = NULL;
+    if (!text)
+        return UC_OK;
+    if (len == SIZE_MAX)
+        return set_error(err, UC_E_RANGE, "v2 registry string is too large");
+    char *copy = uc_arena_alloc(arena, len + 1u, 1u);
+    if (!copy)
+        return set_error(err, UC_E_OOM, msg);
+    memcpy(copy, text, len);
+    copy[len] = '\0';
+    *out      = copy;
+    return UC_OK;
+}
+
+static uc_status
+copy_registry_string(uc_arena *arena, const char *text, const char **out, uc_error *err, const char *msg) {
+    return copy_registry_string_len(arena, text, text ? strlen(text) : 0u, out, err, msg);
+}
+
 static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
 
 static size_t runtime_storage_align(void) { return _Alignof(max_align_t); }
@@ -131,8 +153,14 @@ static uc_status fill_audio_port_map(
             indices[ch] = (size_t)signal_index;
         }
 
+        const char *port_name = NULL;
+        uc_status   status =
+            copy_registry_string(arena, port->name, &port_name, err, "v2 registry audio port name allocation failed");
+        if (status != UC_OK)
+            return status;
+
         items[port_index++] = (apg_v2_registry_audio_port_t){
-            .port_name      = port->name,
+            .port_name      = port_name,
             .channel_count  = channels,
             .meter_index    = meter_index,
             .signal_indices = indices,
@@ -187,8 +215,16 @@ fill_bypass_metadata(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2
 
         if (bypass_count >= plan->instances_len)
             return set_error(err, UC_E_RANGE, "v2 registry bypass metadata overflow");
+        const char *instance_id = NULL;
+        uc_status   status      = copy_registry_string_len(
+            arena, instance->id, instance->id_len, &instance_id, err,
+            "v2 registry bypass instance name allocation failed"
+        );
+        if (status != UC_OK)
+            return status;
+
         entries[bypass_count++] = (apg_v2_registry_bypass_entry_t){
-            .instance_id     = instance->id,
+            .instance_id     = instance_id,
             .instance_id_len = instance->id_len,
             .input_index     = instance->input_signal_index,
             .output_index    = instance->output_signal_index,
@@ -300,8 +336,13 @@ static uc_status fill_signal_names(uc_arena *arena, const apg_unit_v2_t *unit, a
     out->signal_names = uc_arena_alloc(arena, out->signals_len * sizeof(*out->signal_names), sizeof(void *));
     if (!out->signal_names)
         return set_error(err, UC_E_OOM, "v2 registry signal name allocation failed");
-    for (size_t i = 0; i < out->signals_len; i++)
-        out->signal_names[i] = unit->signals[i];
+    for (size_t i = 0; i < out->signals_len; i++) {
+        uc_status status = copy_registry_string(
+            arena, unit->signals[i], &out->signal_names[i], err, "v2 registry signal name allocation failed"
+        );
+        if (status != UC_OK)
+            return status;
+    }
     return UC_OK;
 }
 
@@ -311,8 +352,13 @@ static uc_status fill_param_names(uc_arena *arena, const apg_unit_v2_t *unit, ap
     out->param_names = uc_arena_alloc(arena, out->params_len * sizeof(*out->param_names), sizeof(void *));
     if (!out->param_names)
         return set_error(err, UC_E_OOM, "v2 registry param name allocation failed");
-    for (size_t i = 0; i < out->params_len; i++)
-        out->param_names[i] = unit->params[i].name;
+    for (size_t i = 0; i < out->params_len; i++) {
+        uc_status status = copy_registry_string(
+            arena, unit->params[i].name, &out->param_names[i], err, "v2 registry param name allocation failed"
+        );
+        if (status != UC_OK)
+            return status;
+    }
     return UC_OK;
 }
 
@@ -446,7 +492,11 @@ static uc_status fill_scalar_refreshes(
         }
         if (!scalar_refresh_field(field))
             return set_error(err, UC_E_TYPE, "v2 registry scalar refresh field type is unsupported");
-        items[item_index].key            = bindings[i].key;
+        uc_status status = copy_registry_string(
+            arena, bindings[i].key, &items[item_index].key, err, "v2 registry scalar refresh key allocation failed"
+        );
+        if (status != UC_OK)
+            return status;
         items[item_index].kind           = bindings[i].kind;
         items[item_index].param_index    = bindings[i].index;
         items[item_index].number         = bindings[i].number;
@@ -500,10 +550,14 @@ static uc_status fill_signal_bindings(
             continue;
 
         apg_v2_registry_signal_binding_t item = {0};
-        item.key                              = binding->key;
         item.is_input                         = is_input;
         item.storage_offset                   = i * sizeof(float *);
         item.signal_array_len                 = 0u;
+        uc_status status                      = copy_registry_string(
+            arena, binding->key, &item.key, err, "v2 registry signal binding key allocation failed"
+        );
+        if (status != UC_OK)
+            return status;
 
         if (is_input) {
             const atom_field_desc_t *field =
@@ -647,8 +701,19 @@ fill_control_targets(uc_arena *arena, const apg_unit_v2_t *unit, apg_v2_registry
         int index = param_index_by_name(unit, target);
         if (index < 0)
             return set_error(err, UC_E_MISSING, "v2 registry control target param is missing");
-        out->control_targets[target_index].port_name   = port->name;
-        out->control_targets[target_index].param_name  = target;
+        const char *port_name = NULL;
+        uc_status   status =
+            copy_registry_string(arena, port->name, &port_name, err, "v2 registry control port name allocation failed");
+        if (status != UC_OK)
+            return status;
+        const char *param_name = NULL;
+        status =
+            copy_registry_string(arena, target, &param_name, err, "v2 registry control param name allocation failed");
+        if (status != UC_OK)
+            return status;
+
+        out->control_targets[target_index].port_name   = port_name;
+        out->control_targets[target_index].param_name  = param_name;
         out->control_targets[target_index].param_index = (size_t)index;
         target_index++;
     }
@@ -677,8 +742,15 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
 
         memset(layout, 0, sizeof(*layout));
 
-        layout->node_id        = node->id;
-        layout->atom_name      = node->atom_name;
+        uc_status status =
+            copy_registry_string(arena, node->id, &layout->node_id, err, "v2 registry node id allocation failed");
+        if (status != UC_OK)
+            return status;
+        status = copy_registry_string(
+            arena, node->atom_name, &layout->atom_name, err, "v2 registry atom name allocation failed"
+        );
+        if (status != UC_OK)
+            return status;
         layout->thunk          = node->thunk;
         layout->state_fields   = node->state_fields;
         layout->n_state_fields = node->state_fields_len > (size_t)INT_MAX ? INT_MAX : (int)node->state_fields_len;
@@ -686,7 +758,7 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
         layout->in_size        = atom_storage_size(node->in_size);
         layout->config_size    = atom_storage_size(node->config_size);
         layout->state_size     = atom_storage_size(node->state_size);
-        uc_status status       = reserve_storage(layout->out_size, &atom_storage_cursor, &layout->out_offset, err);
+        status                 = reserve_storage(layout->out_size, &atom_storage_cursor, &layout->out_offset, err);
         if (status != UC_OK)
             return status;
         status = reserve_storage(layout->in_size, &atom_storage_cursor, &layout->in_offset, err);

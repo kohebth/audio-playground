@@ -273,6 +273,9 @@ static int test_registry_control_targets(void) {
         strcmp(registry.control_targets[0].param_name, "gain") != 0 || registry.control_targets[0].param_index != 0u)
         return fail("unexpected registry control target");
 
+    unit.input_ports[0].name = "mutated_amount";
+    unit.params[0].name      = "mutated_gain";
+
     apg_v2_runtime_t runtime;
     status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
     if (status != UC_OK) {
@@ -533,6 +536,11 @@ static int test_registry_uses_compiler_instance_metadata(void) {
         return fail("registry did not use compiler instance bypass metadata");
     if (!registry.bypass_index_by_node || registry.bypass_index_by_node[1] != 0u)
         return fail("registry did not use compiler node-to-instance metadata");
+    plan.instances[0].id     = "mutated_instance";
+    plan.instances[0].id_len = strlen(plan.instances[0].id);
+    if (strncmp(registry.bypass_instances[0].instance_id, "apply_gain", registry.bypass_instances[0].instance_id_len) !=
+        0)
+        return fail("registry bypass metadata borrowed compiler instance strings");
 
     uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
@@ -567,6 +575,16 @@ static int test_runtime_init_from_registry_ignores_plan_mutation(void) {
         return fail("failed to build registry");
     }
 
+    unit.signals[0]             = "mutated_input_signal";
+    unit.signals[1]             = "mutated_output_signal";
+    unit.params[0].name         = "mutated_gain";
+    unit.input_ports[0].name    = "mutated_input_port";
+    unit.output_ports[0].name   = "mutated_output_port";
+    plan.nodes[0].id            = "mutated_node_id";
+    plan.nodes[0].atom_name     = "mutated_atom_name";
+    plan.nodes[0].config[0].key = "mutated_value_key";
+    plan.nodes[1].in[0].key     = "mutated_signal_key";
+
     plan.nodes_len            = 0;
     plan.schedule_len         = 0;
     plan.signal_producers     = NULL;
@@ -584,6 +602,13 @@ static int test_runtime_init_from_registry_ignores_plan_mutation(void) {
         uc_arena_free(&arena);
         return fail("runtime should initialize from built registry regardless of plan mutation");
     }
+    if (strcmp(runtime.signal_names[0], "input") != 0 || strcmp(runtime.param_names[0], "gain") != 0 ||
+        strcmp(runtime.nodes[0].node_id, "gain_value") != 0 ||
+        strcmp(runtime.nodes[0].atom_name, "generation_dc") != 0 ||
+        strcmp(runtime.nodes[0].config_refreshes[0].key, "value") != 0)
+        return fail("runtime lookup metadata borrowed mutated compiler strings");
+    if (!apg_v2_runtime_set_param(&runtime, "gain", 1.0f))
+        return fail("runtime param lookup failed after plan string mutation");
 
     float input[4]  = {0.25f, -0.5f, 1.0f, -1.0f};
     float output[4] = {0.0f, 0.0f, 0.0f, 0.0f};

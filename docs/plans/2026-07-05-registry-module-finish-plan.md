@@ -20,7 +20,7 @@ Done:
 - [x] After compiler atom-layout materialization, remove raw atom registry dependency from normal node layout construction.
 - [x] Keep registry as layout/registration only; do not add DSP execution logic.
 - [x] Confirm M7 export uses registry facts instead of recalculating conflicting layout.
-- [ ] Keep documented borrowed strings stable, or copy them if lifetime tests prove borrowing unsafe.
+- [x] Keep documented borrowed strings stable, or copy them if lifetime tests prove borrowing unsafe.
 
 ## Tests
 
