@@ -444,6 +444,13 @@ static void write_m7_scalar_value(FILE *out, const apg_v2_registry_scalar_refres
     }
 }
 
+static void write_m7_node_storage_ptr(FILE *out, const char *atom_name, const char *suffix, size_t offset) {
+    fprintf(
+        out, "((%s_%s_t *)(void *)&apg_m7_project_atom_storage[%zuu])", atom_name ? atom_name : "void",
+        suffix ? suffix : "out", offset
+    );
+}
+
 static bool
 write_m7_source(const char *path, const apg_project_v2_resolved_t *project, const apg_v2_registry_t *registry) {
     FILE *out = fopen(path, "w");
@@ -549,20 +556,13 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         }
         fputs("};\n\n", out);
     }
-    fputs("typedef struct {\n", out);
-    for (size_t i = 0; i < registry->nodes_len; i++) {
-        const char *atom_name = registry->node_layouts[i].atom_name;
-        fprintf(out, "    %s_out_t node%zu_out;\n", atom_name, i);
-        fprintf(out, "    %s_in_t node%zu_in;\n", atom_name, i);
-        fprintf(out, "    %s_params_t node%zu_config;\n", atom_name, i);
-        fprintf(out, "    %s_state_t node%zu_state;\n", atom_name, i);
-    }
+    fputs("#if APG_M7_PROJECT_ATOM_STORAGE_BYTES > 0u\n", out);
     fputs(
-        "} apg_m7_project_atom_storage_t;\n\n"
-        "apg_m7_project_atom_storage_t apg_m7_project_atom_storage "
-        "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_STORAGE);\n\n",
+        "uint8_t apg_m7_project_atom_storage[APG_M7_PROJECT_ATOM_STORAGE_BYTES] "
+        "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_STORAGE);\n",
         out
     );
+    fputs("#endif\n\n", out);
     fputs(
         "atom_call_t apg_m7_project_atom_calls[APG_M7_PROJECT_NODE_COUNT] "
         "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_CALLS) = {",
@@ -571,12 +571,13 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     for (size_t i = 0; i < registry->nodes_len; i++) {
         if (i > 0u)
             fputs(", ", out);
+        const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
         fprintf(
             out,
-            "{.out = &apg_m7_project_atom_storage.node%zu_out, .in = &apg_m7_project_atom_storage.node%zu_in, "
-            ".config = &apg_m7_project_atom_storage.node%zu_config, "
-            ".state = &apg_m7_project_atom_storage.node%zu_state, .info = &apg_m7_project_process_info}",
-            i, i, i, i
+            "{.out = (void *)&apg_m7_project_atom_storage[%zuu], .in = (void *)&apg_m7_project_atom_storage[%zuu], "
+            ".config = (void *)&apg_m7_project_atom_storage[%zuu], "
+            ".state = (void *)&apg_m7_project_atom_storage[%zuu], .info = &apg_m7_project_process_info}",
+            layout->out_offset, layout->in_offset, layout->config_offset, layout->state_offset
         );
     }
     fputs("};\n\n", out);
@@ -598,7 +599,9 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
             const char                             *key  = item->key;
             if (!key)
                 continue;
-            fprintf(out, "    apg_m7_project_atom_storage.node%zu_config.%s = ", i, key);
+            fputs("    ", out);
+            write_m7_node_storage_ptr(out, layout->atom_name, "params", layout->config_offset);
+            fprintf(out, "->%s = ", key);
             write_m7_scalar_value(out, item);
             fputs(";\n", out);
         }
@@ -607,13 +610,17 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
             const char                             *key  = item->key;
             if (!key)
                 continue;
-            fprintf(out, "    apg_m7_project_atom_storage.node%zu_in.%s = ", i, key);
+            fputs("    ", out);
+            write_m7_node_storage_ptr(out, layout->atom_name, "in", layout->in_offset);
+            fprintf(out, "->%s = ", key);
             write_m7_scalar_value(out, item);
             fputs(";\n", out);
         }
     }
     fputs("}\n\nvoid apg_m7_project_init(void) {\n", out);
-    fputs("    memset(&apg_m7_project_atom_storage, 0, sizeof(apg_m7_project_atom_storage));\n", out);
+    fputs("#if APG_M7_PROJECT_ATOM_STORAGE_BYTES > 0u\n", out);
+    fputs("    memset(apg_m7_project_atom_storage, 0, APG_M7_PROJECT_ATOM_STORAGE_BYTES);\n", out);
+    fputs("#endif\n", out);
     fputs("#if APG_M7_PROJECT_SIGNAL_BUFFER_BYTES > 0u\n", out);
     fputs("    memset(apg_m7_project_signal_buffers, 0, APG_M7_PROJECT_SIGNAL_BUFFER_BYTES);\n", out);
     fputs("#endif\n#if APG_M7_PROJECT_PARAM_BYTES > 0u\n", out);
@@ -631,7 +638,6 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         const apg_v2_registry_node_layout_t *layout = &registry->node_layouts[i];
         for (size_t j = 0; j < layout->signal_bindings_len; j++) {
             const apg_v2_registry_signal_binding_t *binding = &layout->signal_bindings[j];
-            const char                             *side    = binding->is_input ? "in" : "out";
             const char                             *key     = binding->key;
             if (!key)
                 continue;
@@ -643,17 +649,22 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
                         binding->signal_array_indices[k]
                     );
                 }
+                fputs("    ", out);
+                write_m7_node_storage_ptr(
+                    out, layout->atom_name, binding->is_input ? "in" : "out",
+                    binding->is_input ? layout->in_offset : layout->out_offset
+                );
                 fprintf(
-                    out,
-                    "    apg_m7_project_atom_storage.node%zu_%s.%s = "
-                    "&apg_m7_project_signal_array_pool[%zuu];\n",
-                    i, side, key, layout->signal_array_pool_offset + binding->signal_array_offset
+                    out, "->%s = &apg_m7_project_signal_array_pool[%zuu];\n", key,
+                    layout->signal_array_pool_offset + binding->signal_array_offset
                 );
             } else {
-                fprintf(
-                    out, "    apg_m7_project_atom_storage.node%zu_%s.%s = apg_m7_signal(%zuu);\n", i, side, key,
-                    binding->signal_index
+                fputs("    ", out);
+                write_m7_node_storage_ptr(
+                    out, layout->atom_name, binding->is_input ? "in" : "out",
+                    binding->is_input ? layout->in_offset : layout->out_offset
                 );
+                fprintf(out, "->%s = apg_m7_signal(%zuu);\n", key, binding->signal_index);
             }
         }
         size_t state_buffer_index = 0u;
@@ -661,24 +672,24 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
             const atom_field_desc_t *field = &layout->state_fields[field_index];
             if (field->type != FIELD_BUFFER)
                 continue;
+            fputs("    ", out);
+            write_m7_node_storage_ptr(out, layout->atom_name, "state", layout->state_offset);
             fprintf(
-                out,
-                "    apg_m7_project_atom_storage.node%zu_state.%s = "
-                "(float *)(void *)&apg_m7_project_state_buffers[%zuu];\n",
-                i, field->name, layout->state_buffer_sample_offsets_by_index[state_buffer_index] * sizeof(float)
+                out, "->%s = (float *)(void *)&apg_m7_project_state_buffers[%zuu];\n", field->name,
+                layout->state_buffer_sample_offsets_by_index[state_buffer_index] * sizeof(float)
             );
             state_buffer_index++;
         }
         if (layout->mix_matrix_coefficients_len > 0u) {
-            fprintf(
-                out, "    apg_m7_project_atom_storage.node%zu_config.coefficients = apg_m7_node%zu_mix_rows;\n", i, i
-            );
-            fprintf(
-                out, "    apg_m7_project_atom_storage.node%zu_config.num_in = %zu;\n", i, layout->mix_matrix_num_in
-            );
-            fprintf(
-                out, "    apg_m7_project_atom_storage.node%zu_config.num_out = %zu;\n", i, layout->mix_matrix_num_out
-            );
+            fputs("    ", out);
+            write_m7_node_storage_ptr(out, layout->atom_name, "params", layout->config_offset);
+            fprintf(out, "->coefficients = apg_m7_node%zu_mix_rows;\n", i);
+            fputs("    ", out);
+            write_m7_node_storage_ptr(out, layout->atom_name, "params", layout->config_offset);
+            fprintf(out, "->num_in = %zu;\n", layout->mix_matrix_num_in);
+            fputs("    ", out);
+            write_m7_node_storage_ptr(out, layout->atom_name, "params", layout->config_offset);
+            fprintf(out, "->num_out = %zu;\n", layout->mix_matrix_num_out);
         }
     }
     fputs("    apg_m7_project_refresh_params();\n}\n\n", out);

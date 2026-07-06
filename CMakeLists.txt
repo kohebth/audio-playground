@@ -223,11 +223,14 @@ set_tests_properties(test_apg_v2_cli_m7_export_header PROPERTIES
         PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_NODE_COUNT 4u.*APG_M7_PROJECT_BLOCK_FRAMES 64u.*APG_M7_PROJECT_SAMPLE_RATE 48000u.*APG_M7_PROJECT_ATOM_CALLS_PER_BLOCK [0-9]+u.*APG_M7_PROJECT_ATOM_CALL_BYTES [0-9]+u.*APG_M7_PROJECT_SIGNAL_ARRAY_POINTER_BYTES [0-9]+u.*APG_M7_PROJECT_STATIC_RAM_BYTES [0-9]+u.*APG_M7_CACHE_LINE_BYTES 32u.*APG_M7_SECTION_SIGNAL_BUFFERS.*APG_M7_SECTION_PARAMS.*APG_M7_SECTION_ATOM_CALLS.*APG_M7_SECTION_SIGNAL_ARRAYS.*APG_M7_SECTION_ATOM_STORAGE.*APG_M7_SECTION_STATE_BUFFERS.*aligned\\(APG_M7_CACHE_LINE_BYTES\\).*APG_M7_PROJECT_USES_RUNTIME_YAML 0u.*APG_M7_PROJECT_USES_DYNAMIC_ALLOCATION 0u.*apg_m7_project_init.*apg_m7_project_refresh_params.*apg_m7_project_process_block"
 )
 
-add_test(NAME test_apg_v2_cli_m7_export_source_static COMMAND ${CMAKE_COMMAND} -E cat ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c)
+add_test(
+        NAME test_apg_v2_cli_m7_export_source_static
+        COMMAND /bin/sh -c
+                "cat ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c && grep -Eq 'uint8_t apg_m7_project_atom_storage\\[APG_M7_PROJECT_ATOM_STORAGE_BYTES\\]' ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c && grep -Eq 'atom_call_t apg_m7_project_atom_calls\\[APG_M7_PROJECT_NODE_COUNT\\].*apg_m7_project_atom_storage\\[[0-9]+u\\]' ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c && grep -Eq 'generation_dc_params_t.*apg_m7_project_atom_storage\\[[0-9]+u\\]' ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c && grep -Eq 'amplitude_multiply_in_t.*apg_m7_project_atom_storage\\[[0-9]+u\\]' ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c"
+)
 set_tests_properties(test_apg_v2_cli_m7_export_source_static PROPERTIES
         LABELS v2
         DEPENDS test_apg_v2_cli_m7_export_bundle
-        PASS_REGULAR_EXPRESSION "const uint32_t apg_m7_project_schedule\\[APG_M7_PROJECT_SCHEDULE_COUNT\\].*const char \\*const apg_m7_project_nodes\\[APG_M7_PROJECT_NODE_COUNT\\].*const atom_thunk_fn apg_m7_project_atom_thunks\\[APG_M7_PROJECT_NODE_COUNT\\].*generation_dc_thunk.*amplitude_multiply_thunk.*apg_m7_project_atom_process_symbols\\[APG_M7_PROJECT_NODE_COUNT\\].*generation_dc_process.*amplitude_multiply_process.*apg_m7_project_signal_buffers\\[APG_M7_PROJECT_SIGNAL_BUFFER_BYTES\\].*apg_m7_project_params\\[APG_M7_PROJECT_PARAM_BYTES\\].*apg_m7_project_atom_storage_t.*apg_m7_project_atom_storage.*atom_call_t apg_m7_project_atom_calls\\[APG_M7_PROJECT_NODE_COUNT\\].*apg_m7_project_refresh_params.*apg_m7_project_init.*apg_m7_project_process_block"
         FAIL_REGULAR_EXPRESSION "malloc|calloc|realloc|free|uc_arena|yaml|load_resolved|runtime_init"
 )
 

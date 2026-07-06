@@ -6,7 +6,8 @@ Registry is the registration and memory-layout stage. Runtime consumes it withou
 
 ## Current Status
 
-Mostly complete; compiler atom-layout materialization is done and normal node layout construction no longer needs raw atom registry entries.
+Mostly complete; compiler atom-layout materialization is done, normal node layout construction no longer needs raw atom
+registry entries, and M7 export consumes registry layout facts for static atom storage.
 
 Done:
 
@@ -18,7 +19,7 @@ Done:
 
 - [x] After compiler atom-layout materialization, remove raw atom registry dependency from normal node layout construction.
 - [x] Keep registry as layout/registration only; do not add DSP execution logic.
-- [ ] Confirm M7 export uses registry facts instead of recalculating conflicting layout.
+- [x] Confirm M7 export uses registry facts instead of recalculating conflicting layout.
 - [ ] Keep documented borrowed strings stable, or copy them if lifetime tests prove borrowing unsafe.
 
 ## Tests
