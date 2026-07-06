@@ -310,7 +310,39 @@ static bool write_wasm_runtime_js(
     return fclose(out) == 0;
 }
 
-static bool write_wasm_runtime_adapter_js(const char *path) {
+static void write_wasm_string_array(FILE *out, const char *const *names, size_t names_len) {
+    fputc('[', out);
+    for (size_t i = 0; i < names_len; i++) {
+        if (i > 0u)
+            fputc(',', out);
+        write_c_string(out, names[i] ? names[i] : "");
+    }
+    fputc(']', out);
+}
+
+static void write_wasm_bypass_names(FILE *out, const apg_v2_registry_t *registry) {
+    fputc('[', out);
+    for (size_t i = 0; registry && i < registry->bypassed_instances_len; i++) {
+        if (i > 0u)
+            fputc(',', out);
+        write_c_string(out, registry->bypass_instances[i].instance_id ? registry->bypass_instances[i].instance_id : "");
+    }
+    fputc(']', out);
+}
+
+static void write_wasm_meter_ports(FILE *out, const apg_v2_registry_audio_port_t *ports, size_t ports_len) {
+    fputc('[', out);
+    for (size_t i = 0; i < ports_len; i++) {
+        if (i > 0u)
+            fputc(',', out);
+        fputs("{\"name\":", out);
+        write_c_string(out, ports[i].port_name ? ports[i].port_name : "");
+        fprintf(out, ",\"channels\":%zu,\"meter_index\":%zu}", ports[i].channel_count, ports[i].meter_index);
+    }
+    fputc(']', out);
+}
+
+static bool write_wasm_runtime_adapter_js(const char *path, const apg_v2_registry_t *registry) {
     FILE *out = fopen(path, "w");
     if (!out)
         return false;
@@ -320,12 +352,36 @@ static bool write_wasm_runtime_adapter_js(const char *path) {
         "\"pollMeters\", \"getLastError\"];\n",
         out
     );
+    fputs("export const runtimeNames = {\n  params: ", out);
+    write_wasm_string_array(
+        out, registry ? (const char *const *)registry->param_names : NULL, registry ? registry->params_len : 0u
+    );
+    fputs(",\n  bypassInstances: ", out);
+    write_wasm_bypass_names(out, registry);
+    fputs(",\n  inputMeters: ", out);
+    write_wasm_meter_ports(
+        out, registry ? registry->input_audio_ports : NULL, registry ? registry->input_audio_ports_len : 0u
+    );
+    fputs(",\n  outputMeters: ", out);
+    write_wasm_meter_ports(
+        out, registry ? registry->output_audio_ports : NULL, registry ? registry->output_audio_ports_len : 0u
+    );
+    fputs("\n};\n", out);
     fputs(
         "const pendingRuntimeMessage = \"WASM AudioWorklet runtime execution not yet implemented\";\n"
+        "function hasName(items, name) {\n"
+        "  return items.includes(name);\n"
+        "}\n"
+        "function emptyMeterSnapshot(port) {\n"
+        "  return {name: port.name, peak: Array(port.channels).fill(0), rms: Array(port.channels).fill(0)};\n"
+        "}\n"
         "export function createRuntime() {\n"
         "  let lastError = null;\n"
+        "  const paramValues = new Map(runtimeNames.params.map((name) => [name, 0]));\n"
+        "  const bypassStates = new Map(runtimeNames.bypassInstances.map((name) => [name, false]));\n"
         "  return {\n"
         "    compile() {\n"
+        "      lastError = null;\n"
         "      return Promise.resolve({ok: true, runtime: \"audio_worklet_contract\"});\n"
         "    },\n"
         "    start() {\n"
@@ -333,20 +389,35 @@ static bool write_wasm_runtime_adapter_js(const char *path) {
         "      return Promise.reject(new Error(pendingRuntimeMessage));\n"
         "    },\n"
         "    stop() {\n"
+        "      lastError = null;\n"
         "      return Promise.resolve({ok: true});\n"
         "    },\n"
         "    setParam(name, value) {\n"
-        "      void name;\n"
-        "      void value;\n"
-        "      return Promise.resolve({ok: true});\n"
+        "      if (!hasName(runtimeNames.params, name)) {\n"
+        "        lastError = `unknown param '${name}'`;\n"
+        "        return Promise.reject(new Error(lastError));\n"
+        "      }\n"
+        "      paramValues.set(name, Number(value));\n"
+        "      lastError = null;\n"
+        "      return Promise.resolve({ok: true, name, value: paramValues.get(name)});\n"
         "    },\n"
         "    setBypass(instanceId, bypassed) {\n"
-        "      void instanceId;\n"
-        "      void bypassed;\n"
-        "      return Promise.resolve({ok: true});\n"
+        "      if (!hasName(runtimeNames.bypassInstances, instanceId)) {\n"
+        "        lastError = `unknown bypass instance '${instanceId}'`;\n"
+        "        return Promise.reject(new Error(lastError));\n"
+        "      }\n"
+        "      bypassStates.set(instanceId, Boolean(bypassed));\n"
+        "      lastError = null;\n"
+        "      return Promise.resolve({ok: true, instanceId, bypassed: bypassStates.get(instanceId)});\n"
         "    },\n"
         "    pollMeters() {\n"
-        "      return Promise.resolve({peak: [], rms: []});\n"
+        "      lastError = null;\n"
+        "      return Promise.resolve({\n"
+        "        inputs: runtimeNames.inputMeters.map(emptyMeterSnapshot),\n"
+        "        outputs: runtimeNames.outputMeters.map(emptyMeterSnapshot),\n"
+        "        peak: [],\n"
+        "        rms: []\n"
+        "      });\n"
         "    },\n"
         "    getLastError() {\n"
         "      return lastError;\n"
@@ -849,8 +920,8 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     }
 
     if (!write_wasm_runtime_manifest(manifest_path, &project, &registry, options) ||
-        !write_wasm_runtime_js(js_path, &project, &registry, options) || !write_wasm_runtime_adapter_js(adapter_path) ||
-        !write_wasm_runtime_processor_js(processor_path)) {
+        !write_wasm_runtime_js(js_path, &project, &registry, options) ||
+        !write_wasm_runtime_adapter_js(adapter_path, &registry) || !write_wasm_runtime_processor_js(processor_path)) {
         uc_error_set(&err, UC_E_IO, (uc_loc){0, 0}, "failed to write wasm_realtime export files");
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&registry_arena);

@@ -179,7 +179,7 @@ add_test(
 set_tests_properties(test_apg_v2_cli_wasm_export_adapter_js PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "runtimeMethods.*compile.*start.*stop.*setParam.*setBypass.*pollMeters.*getLastError"
+        PASS_REGULAR_EXPRESSION "runtimeMethods.*compile.*start.*stop.*setParam.*setBypass.*pollMeters.*getLastError.*runtimeNames.*gate1\\.threshold.*drive1\\.drive.*inputMeters.*input.*outputMeters.*output.*unknown param.*unknown bypass instance"
         DEPENDS test_apg_v2_cli_wasm_export
 )
 
