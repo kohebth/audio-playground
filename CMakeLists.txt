@@ -173,6 +173,16 @@ set_tests_properties(test_apg_v2_cli_wasm_export_js PROPERTIES
 )
 
 add_test(
+        NAME test_apg_v2_cli_wasm_export_rejects_unsupported_atom
+        COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime test/fixtures/projects-v2/wasm-unsupported-freq.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
+)
+set_tests_properties(test_apg_v2_cli_wasm_export_rejects_unsupported_atom PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        PASS_REGULAR_EXPRESSION "\"target\":\"wasm_realtime\".*atom 'freq_fft' does not support wasm_realtime"
+)
+
+add_test(
         NAME test_apg_v2_cli_m7_export_rejects_unsupported
         COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target m7_static test/fixtures/projects-v2/m7-unsupported-profile.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
 )

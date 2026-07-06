@@ -1,0 +1,24 @@
+kind: apg.project
+schema: apg.project.v2
+name: wasm-unsupported-freq
+version: 2.0.0
+
+units:
+  - id: freq_unit
+    file: ../units-v2/wasm_unsupported_freq.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: fft1
+      unit: freq_unit
+
+  routes:
+    - from: system.input
+      to: fft1.input
+    - from: fft1.real
+      to: system.output
+
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime

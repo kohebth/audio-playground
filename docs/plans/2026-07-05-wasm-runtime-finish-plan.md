@@ -23,7 +23,7 @@ Done:
 - [ ] Preserve current scaffold manifest fields where possible.
 - [ ] Implement compile/start/stop lifecycle in the browser adapter.
 - [ ] Wire param updates, bypass updates, meter polling, and error reporting to stable runtime names.
-- [ ] Reject unsupported atoms/features for `wasm_realtime` with stable diagnostics.
+- [x] Reject unsupported atoms/features for `wasm_realtime` with stable diagnostics.
 
 ## Tests
 
