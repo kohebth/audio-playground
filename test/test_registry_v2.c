@@ -6,6 +6,8 @@
 #include <apgcore/validator/unit_v2.h>
 #include <atom/dsp_types.h>
 
+#include "test_runtime_v2_harness.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -160,14 +162,14 @@ static int test_registry_layout(void) {
         runtime.nodes[1].signal_bindings_len != registry.node_layouts[1].signal_bindings_len)
         return fail("runtime did not adopt signal binding plan");
 
-    if (!runtime_signal_by_name_for_test(&runtime, "input") || !apg_v2_runtime_set_param(&runtime, "gain", 1.0f))
+    if (!runtime_signal_by_name_for_test(&runtime, "input") || !test_runtime_set_param_by_name(&runtime, "gain", 1.0f))
         return fail("registry lookup metadata failed");
     if (!apg_v2_runtime_reset(&runtime))
         return fail("registry reset failed");
 
     float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
     float output[4] = {0};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
         return fail("registry process failed");
     for (size_t i = 0; i < 4u; i++) {
         if (output[i] != input[i])
@@ -297,7 +299,7 @@ static int test_registry_control_targets(void) {
     if (runtime.control_targets_len != 1u || !runtime.control_targets ||
         strcmp(runtime.control_targets[0].port_name, "amount") != 0)
         return fail("runtime did not copy control target registry");
-    if (!apg_v2_runtime_set_control_port(&runtime, "amount", 2.0f) || runtime.params[0] != 2.0f)
+    if (!test_runtime_set_control_port_by_name(&runtime, "amount", 2.0f) || runtime.params[0] != 2.0f)
         return fail("runtime control target did not update param");
 
     apg_v2_runtime_destroy(&runtime);
@@ -617,12 +619,12 @@ static int test_runtime_init_from_registry_ignores_plan_mutation(void) {
         strcmp(runtime.nodes[0].atom_name, "generation_dc") != 0 ||
         strcmp(runtime.nodes[0].config_refreshes[0].key, "value") != 0)
         return fail("runtime lookup metadata borrowed mutated compiler strings");
-    if (!apg_v2_runtime_set_param(&runtime, "gain", 1.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "gain", 1.0f))
         return fail("runtime param lookup failed after plan string mutation");
 
     float input[4]  = {0.25f, -0.5f, 1.0f, -1.0f};
     float output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
         fprintf(stderr, "runtime process error: %s\n", apg_v2_measure_last_error(&runtime));
         apg_v2_runtime_destroy(&runtime);
         uc_arena_free(&registry_arena);
@@ -733,7 +735,7 @@ static int test_runtime_create_owned_lifecycle(void) {
 
     const float input[4]  = {0.25f, -0.5f, 1.0f, -1.0f};
     float       output[4] = {0.0f};
-    if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, 4u)) {
+    if (!test_runtime_process_mono_ports(runtime, "input", input, "output", output, 4u)) {
         fprintf(stderr, "runtime process failed: %s\n", apg_v2_measure_last_error(runtime));
         apg_v2_runtime_destroy_owned(&runtime);
         uc_arena_free(&registry_arena);

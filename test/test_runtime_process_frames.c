@@ -86,7 +86,7 @@ int main(void) {
         for (uint32_t k = 0; k < TEST_CAPACITY; k++)
             output[k] = SENTINEL;
 
-        if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, frames[i]))
+        if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, frames[i]))
             return fail("v2 runtime rejected a valid explicit frame count");
         if (assert_output(output, frames[i]))
             return 1;
@@ -94,7 +94,7 @@ int main(void) {
 
     for (uint32_t k = 0; k < TEST_CAPACITY; k++)
         output[k] = SENTINEL;
-    if (apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, TEST_CAPACITY + 1u))
+    if (test_runtime_process_mono_ports(&runtime, "input", input, "output", output, TEST_CAPACITY + 1u))
         return fail("v2 runtime accepted a frame count beyond capacity");
     if (output[0] != SENTINEL)
         return fail("rejected explicit-frame process modified output");

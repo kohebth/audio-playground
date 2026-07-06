@@ -18,28 +18,6 @@ uc_status apg_v2_runtime_init_from_registry(const apg_v2_registry_t *registry, a
 /* Allocate and initialize a runtime from a prebuilt registry descriptor. */
 uc_status apg_v2_runtime_create_from_registry(const apg_v2_registry_t *registry, apg_v2_runtime_t **out, uc_error *err);
 
-bool apg_v2_runtime_resolve_input_port_channel_signal(
-    const apg_v2_runtime_t *runtime,
-    const char             *port_name,
-    size_t                  channel_index,
-    size_t                 *out_signal_index,
-    size_t                 *out_meter_index
-);
-bool apg_v2_runtime_resolve_output_port_channel_signal(
-    const apg_v2_runtime_t *runtime,
-    const char             *port_name,
-    size_t                  channel_index,
-    size_t                 *out_signal_index,
-    size_t                 *out_meter_index
-);
-
-bool apg_v2_runtime_resolve_input_audio_port_index(
-    const apg_v2_runtime_t *runtime, const char *port_name, size_t *out_port_index
-);
-bool apg_v2_runtime_resolve_output_audio_port_index(
-    const apg_v2_runtime_t *runtime, const char *port_name, size_t *out_port_index
-);
-
 const float *apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, size_t signal_index);
 float       *apg_v2_runtime_signal_buffer_at_mut(apg_v2_runtime_t *runtime, size_t signal_index);
 
@@ -59,16 +37,14 @@ bool apg_v2_runtime_output_port_channel_signal_index(
 );
 
 /* Update a compiled parameter value used by config bindings on the next process call. */
-bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value);
 bool apg_v2_runtime_set_param_index(apg_v2_runtime_t *runtime, size_t index, float value);
 
 /* Update the parameter targeted by a public control input port. */
-bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value);
 bool apg_v2_runtime_set_control_port_index(apg_v2_runtime_t *runtime, size_t control_target_index, float value);
 
-/* Bypass a compiled project unit instance by copying its first external input signal to its first public output signal.
+/* Bypass a compiled project unit instance by registry bypass entry index.
  */
-bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *instance_id, bool enabled);
+bool apg_v2_runtime_set_instance_bypass_index(apg_v2_runtime_t *runtime, size_t bypass_index, bool enabled);
 
 /* Mute silences public output ports after processing. */
 bool apg_v2_runtime_set_project_mute(apg_v2_runtime_t *runtime, bool muted);
@@ -78,16 +54,6 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime);
 
 /* Execute the compiled schedule using internal graph signal buffers for frames <= frame_capacity. */
 bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames);
-
-/* Process interleaved external buffers through named public audio ports with any valid channel count. */
-bool apg_v2_runtime_process_interleaved_ports(
-    apg_v2_runtime_t *runtime,
-    const char       *input_port_name,
-    const float      *input,
-    const char       *output_port_name,
-    float            *output,
-    uint32_t          frames
-);
 
 /* Process interleaved external buffers through pre-resolved public audio port indices. */
 bool apg_v2_runtime_process_interleaved_port_indices(
@@ -101,16 +67,6 @@ bool apg_v2_runtime_process_interleaved_port_indices(
 
 /* Process the first public mono input and output ports. */
 bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames);
-
-/* Process named public mono audio ports; rejects multi-channel ports. */
-bool apg_v2_runtime_process_mono_ports(
-    apg_v2_runtime_t *runtime,
-    const char       *input_port_name,
-    const float      *input,
-    const char       *output_port_name,
-    float            *output,
-    uint32_t          frames
-);
 
 /* Process pre-resolved public mono audio port indices; rejects multi-channel ports. */
 bool apg_v2_runtime_process_mono_port_indices(

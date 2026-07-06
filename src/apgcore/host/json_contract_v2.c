@@ -399,6 +399,20 @@ static void fill_deterministic_render_input(float *input, uint32_t frames) {
         input[i] = pattern[i % APG_RENDER_FRAMES];
 }
 
+static bool json_registry_audio_port_index_by_name(
+    const apg_v2_registry_audio_port_t *ports, size_t ports_len, const char *port_name, size_t *out_index
+) {
+    if (!ports || !port_name || !out_index)
+        return false;
+    for (size_t i = 0; i < ports_len; i++) {
+        if (ports[i].port_name && strcmp(ports[i].port_name, port_name) == 0) {
+            *out_index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
 static void write_project_render(FILE *out, const char *path, const float *output, uint32_t frames) {
     float  peak       = 0.0f;
     double sum        = 0.0;
@@ -466,8 +480,18 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
     float input[APG_RENDER_FRAMES];
     float output[APG_RENDER_FRAMES] = {0};
     if (status == UC_OK) {
+        size_t input_port_index  = 0u;
+        size_t output_port_index = 0u;
         fill_deterministic_render_input(input, APG_RENDER_FRAMES);
-        if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, APG_RENDER_FRAMES)) {
+        if (!json_registry_audio_port_index_by_name(
+                registry.input_audio_ports, registry.input_audio_ports_len, "input", &input_port_index
+            ) ||
+            !json_registry_audio_port_index_by_name(
+                registry.output_audio_ports, registry.output_audio_ports_len, "output", &output_port_index
+            ) ||
+            !apg_v2_runtime_process_mono_port_indices(
+                runtime, input_port_index, input, output_port_index, output, APG_RENDER_FRAMES
+            )) {
             const char *msg = apg_v2_measure_last_error(runtime);
             uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "%s", msg ? msg : "project render failed");
             status = UC_E_TYPE;

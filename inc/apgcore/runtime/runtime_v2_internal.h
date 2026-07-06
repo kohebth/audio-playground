@@ -91,9 +91,6 @@ struct apg_v2_runtime_node_t {
     size_t                                  state_size;
 };
 
-const apg_v2_registry_audio_port_t *
-apg_v2_runtime_audio_port_by_name(const apg_v2_registry_audio_port_t *ports, size_t ports_len, const char *port_name);
-
 void apg_v2_runtime_set_error(apg_v2_runtime_t *runtime, const char *msg);
 bool apg_v2_runtime_execution_metadata_ready(const apg_v2_runtime_t *runtime);
 void apg_v2_runtime_advance_smoothed_params(apg_v2_runtime_t *runtime, uint32_t frames);

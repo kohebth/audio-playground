@@ -67,6 +67,59 @@ static uc_status build_runtime_from_plan(
     return UC_OK;
 }
 
+static bool registry_param_index_by_name(const apg_v2_registry_t *registry, const char *name, size_t *out_index) {
+    if (!registry || !name || !out_index)
+        return false;
+    for (size_t i = 0; i < registry->params_len; i++) {
+        if (registry->param_names[i] && strcmp(registry->param_names[i], name) == 0) {
+            *out_index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool registry_audio_port_index_by_name(
+    const apg_v2_registry_audio_port_t *ports, size_t ports_len, const char *port_name, size_t *out_index
+) {
+    if (!ports || !port_name || !out_index)
+        return false;
+    for (size_t i = 0; i < ports_len; i++) {
+        if (ports[i].port_name && strcmp(ports[i].port_name, port_name) == 0) {
+            *out_index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool
+host_runtime_set_param(const apg_v2_registry_t *registry, apg_v2_runtime_t *runtime, const char *name, float value) {
+    size_t param_index = 0u;
+    return registry_param_index_by_name(registry, name, &param_index) &&
+           apg_v2_runtime_set_param_index(runtime, param_index, value);
+}
+
+static bool host_runtime_process_mono_ports(
+    const apg_v2_registry_t *registry,
+    apg_v2_runtime_t        *runtime,
+    const char              *input_port_name,
+    const float             *input,
+    const char              *output_port_name,
+    float                   *output,
+    uint32_t                 frames
+) {
+    size_t input_index  = 0u;
+    size_t output_index = 0u;
+    return registry_audio_port_index_by_name(
+               registry->input_audio_ports, registry->input_audio_ports_len, input_port_name, &input_index
+           ) &&
+           registry_audio_port_index_by_name(
+               registry->output_audio_ports, registry->output_audio_ports_len, output_port_name, &output_index
+           ) &&
+           apg_v2_runtime_process_mono_port_indices(runtime, input_index, input, output_index, output, frames);
+}
+
 uc_status apg_v2_host_load_file(
     const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_unit_t **out, uc_error *err
 ) {
@@ -116,7 +169,7 @@ fail:
 bool apg_v2_host_set_param(apg_v2_host_unit_t *host, const char *name, float value) {
     if (!host || !host->runtime_ready)
         return false;
-    return apg_v2_runtime_set_param(host->runtime, name, value);
+    return host_runtime_set_param(&host->registry, host->runtime, name, value);
 }
 
 const char *apg_v2_host_last_error(const apg_v2_host_unit_t *host) {
@@ -133,7 +186,9 @@ bool apg_v2_host_process_mono_ports(
 ) {
     if (!host || !host->runtime_ready)
         return false;
-    return apg_v2_runtime_process_mono_ports(host->runtime, input_port_name, input, output_port_name, output, frames);
+    return host_runtime_process_mono_ports(
+        &host->registry, host->runtime, input_port_name, input, output_port_name, output, frames
+    );
 }
 
 void apg_v2_host_destroy(apg_v2_host_unit_t *host) {
@@ -198,7 +253,7 @@ fail:
 bool apg_v2_host_project_set_param(apg_v2_host_project_t *host, const char *name, float value) {
     if (!host || !host->runtime_ready)
         return false;
-    return apg_v2_runtime_set_param(host->runtime, name, value);
+    return host_runtime_set_param(&host->registry, host->runtime, name, value);
 }
 
 const char *apg_v2_host_project_last_error(const apg_v2_host_project_t *host) {
@@ -215,7 +270,9 @@ bool apg_v2_host_project_process_mono_ports(
 ) {
     if (!host || !host->runtime_ready)
         return false;
-    return apg_v2_runtime_process_mono_ports(host->runtime, input_port_name, input, output_port_name, output, frames);
+    return host_runtime_process_mono_ports(
+        &host->registry, host->runtime, input_port_name, input, output_port_name, output, frames
+    );
 }
 
 void apg_v2_host_project_destroy(apg_v2_host_project_t *host) {

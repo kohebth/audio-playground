@@ -62,7 +62,7 @@ static int test_measure_snapshot_and_meters(void) {
 
     float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
     float output[4] = {0};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
         return fail("runtime process failed");
 
     if (!apg_v2_measure_runtime_snapshot(&runtime, &snapshot) || !snapshot.has_processed)
@@ -93,7 +93,7 @@ static int test_measure_last_error(void) {
 
     float input[4]  = {0};
     float output[4] = {0};
-    if (apg_v2_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 4u))
+    if (test_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 4u))
         return fail("runtime accepted missing input port");
     const char *error = apg_v2_measure_last_error(&runtime);
     if (!error || !strstr(error, "input audio port"))
@@ -126,7 +126,7 @@ static int test_measure_snapshot_is_non_mutating(void) {
 
     float input[4]  = {0.25f, -0.5f, 0.75f, -1.0f};
     float output[4] = {0};
-    if (apg_v2_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 4u)) {
+    if (test_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 4u)) {
         apg_v2_runtime_destroy(&runtime);
         uc_arena_free(&arena);
         return fail("runtime accepted missing input port");

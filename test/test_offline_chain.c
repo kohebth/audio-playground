@@ -35,7 +35,7 @@ static int process_chunk(apg_v2_runtime_t *runtime, int chunk, float *output, fl
         input[i] = 0.15f * sinf(2.0f * 3.14159265358979323846f * 110.0f * (float)n / 48000.0f);
     }
 
-    if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, TEST_CHUNK)) {
+    if (!test_runtime_process_mono_ports(runtime, "input", input, "output", output, TEST_CHUNK)) {
         fprintf(stderr, "runtime error: %s\n", apg_v2_measure_last_error(runtime));
         return fail("v2 offline chain processing failed");
     }
@@ -72,8 +72,8 @@ int main(void) {
         return fail("failed to initialize v2 offline chain");
     }
 
-    if (!apg_v2_runtime_set_param(&runtime, "gain1.gain", 1.5f) ||
-        !apg_v2_runtime_set_param(&runtime, "gain2.gain", 2.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "gain1.gain", 1.5f) ||
+        !test_runtime_set_param_by_name(&runtime, "gain2.gain", 2.0f))
         return fail("failed to set v2 offline chain params");
 
     float  output[TEST_CHUNK];

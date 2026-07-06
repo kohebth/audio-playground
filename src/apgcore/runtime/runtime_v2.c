@@ -40,69 +40,6 @@ void apg_v2_runtime_set_error(apg_v2_runtime_t *runtime, const char *msg) {
     snprintf(runtime->last_error, sizeof(runtime->last_error), "%s", msg);
 }
 
-static int name_index(const char *const *names, size_t names_len, const char *name) {
-    if (!names || !name)
-        return -1;
-    for (size_t i = 0; i < names_len; i++) {
-        if (names[i] && strcmp(names[i], name) == 0)
-            return (int)i;
-    }
-    return -1;
-}
-
-static bool runtime_audio_port_index_by_name(
-    const apg_v2_registry_audio_port_t *ports, size_t ports_len, const char *port_name, size_t *out_port_index
-) {
-    if (!ports || !port_name || !out_port_index)
-        return false;
-    for (size_t i = 0; i < ports_len; i++) {
-        if (ports[i].port_name && strcmp(ports[i].port_name, port_name) == 0) {
-            *out_port_index = i;
-            return true;
-        }
-    }
-    return false;
-}
-
-const apg_v2_registry_audio_port_t *
-apg_v2_runtime_audio_port_by_name(const apg_v2_registry_audio_port_t *ports, size_t ports_len, const char *port_name) {
-    if (!ports || !port_name)
-        return NULL;
-    for (size_t i = 0; i < ports_len; i++) {
-        if (ports[i].port_name && strcmp(ports[i].port_name, port_name) == 0)
-            return &ports[i];
-    }
-    return NULL;
-}
-
-    bool apg_v2_runtime_resolve_input_audio_port_index(
-    const apg_v2_runtime_t *runtime, const char *port_name, size_t *out_port_index
-) {
-    return runtime ? runtime_audio_port_index_by_name(
-                         runtime->input_audio_ports, runtime->input_audio_ports_len, port_name, out_port_index
-                     )
-                   : false;
-}
-
-bool apg_v2_runtime_resolve_output_audio_port_index(
-    const apg_v2_runtime_t *runtime, const char *port_name, size_t *out_port_index
-) {
-    return runtime ? runtime_audio_port_index_by_name(
-                         runtime->output_audio_ports, runtime->output_audio_ports_len, port_name, out_port_index
-                     )
-                   : false;
-}
-
-static bool
-runtime_bypass_entry_matches_instance_id(const apg_v2_runtime_bypass_entry_t *entry, const char *instance_id) {
-    if (!entry || !entry->instance_id || !instance_id || entry->instance_id_len == 0u)
-        return false;
-    size_t instance_len = strlen(instance_id);
-    if (instance_len != entry->instance_id_len)
-        return false;
-    return strncmp(entry->instance_id, instance_id, instance_len) == 0;
-}
-
 bool apg_v2_runtime_execution_metadata_ready(const apg_v2_runtime_t *runtime) {
     return runtime && (runtime->schedule || runtime->schedule_len == 0u) &&
            (runtime->nodes || runtime->nodes_len == 0u);
@@ -623,56 +560,6 @@ apg_v2_runtime_create_from_registry(const apg_v2_registry_t *registry, apg_v2_ru
     return UC_OK;
 }
 
-bool apg_v2_runtime_resolve_input_port_channel_signal(
-    const apg_v2_runtime_t *runtime,
-    const char             *port_name,
-    size_t                  channel_index,
-    size_t                 *out_signal_index,
-    size_t                 *out_meter_index
-) {
-    if (!runtime || !port_name)
-        return false;
-
-    const apg_v2_registry_audio_port_t *port =
-        apg_v2_runtime_audio_port_by_name(runtime->input_audio_ports, runtime->input_audio_ports_len, port_name);
-    if (!port || !port->signal_indices || port->channel_count == 0u || channel_index >= port->channel_count)
-        return false;
-
-    if (port->signal_indices[channel_index] >= runtime->signals_len)
-        return false;
-
-    if (out_signal_index)
-        *out_signal_index = port->signal_indices[channel_index];
-    if (out_meter_index)
-        *out_meter_index = port->meter_index + channel_index;
-    return true;
-}
-
-bool apg_v2_runtime_resolve_output_port_channel_signal(
-    const apg_v2_runtime_t *runtime,
-    const char             *port_name,
-    size_t                  channel_index,
-    size_t                 *out_signal_index,
-    size_t                 *out_meter_index
-) {
-    if (!runtime || !port_name)
-        return false;
-
-    const apg_v2_registry_audio_port_t *port =
-        apg_v2_runtime_audio_port_by_name(runtime->output_audio_ports, runtime->output_audio_ports_len, port_name);
-    if (!port || !port->signal_indices || port->channel_count == 0u || channel_index >= port->channel_count)
-        return false;
-
-    if (port->signal_indices[channel_index] >= runtime->signals_len)
-        return false;
-
-    if (out_signal_index)
-        *out_signal_index = port->signal_indices[channel_index];
-    if (out_meter_index)
-        *out_meter_index = port->meter_index + channel_index;
-    return true;
-}
-
 const float *apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, size_t signal_index) {
     if (!runtime || signal_index >= runtime->signals_len || !runtime->signals)
         return NULL;
@@ -725,16 +612,6 @@ bool apg_v2_runtime_output_port_channel_signal_index(
     if (out_meter_index)
         *out_meter_index = port->meter_index + channel_index;
     return true;
-}
-
-static size_t runtime_instance_bypass_index(const apg_v2_runtime_t *runtime, const char *instance_id) {
-    if (!runtime || !instance_id || !runtime->bypassed_instances)
-        return INVALID_BYPASS_INDEX;
-    for (size_t i = 0; i < runtime->bypassed_instances_len; i++) {
-        if (runtime_bypass_entry_matches_instance_id(&runtime->bypassed_instances[i], instance_id))
-            return i;
-    }
-    return INVALID_BYPASS_INDEX;
 }
 
 static size_t runtime_node_bypass_index(const apg_v2_runtime_t *runtime, size_t node_index) {
@@ -817,48 +694,17 @@ bool apg_v2_runtime_set_param_index(apg_v2_runtime_t *runtime, size_t index, flo
     return true;
 }
 
-bool apg_v2_runtime_set_param(apg_v2_runtime_t *runtime, const char *name, float value) {
-    if (!runtime || !name)
-        return false;
-    int index = name_index(runtime->param_names, runtime->params_len, name);
-    return index >= 0 ? apg_v2_runtime_set_param_index(runtime, (size_t)index, value) : false;
-}
-
-bool apg_v2_runtime_set_control_port(apg_v2_runtime_t *runtime, const char *port_name, float value) {
-    if (!runtime || !port_name)
-        return false;
-    for (size_t i = 0; i < runtime->control_targets_len; i++) {
-        const apg_v2_registry_control_target_t *target = &runtime->control_targets[i];
-        if (!target->port_name || strcmp(target->port_name, port_name) != 0)
-            continue;
-        return apg_v2_runtime_set_param_index(runtime, target->param_index, value);
-    }
-    return false;
-}
-
 bool apg_v2_runtime_set_control_port_index(apg_v2_runtime_t *runtime, size_t control_target_index, float value) {
     if (!runtime || control_target_index >= runtime->control_targets_len)
         return false;
     return apg_v2_runtime_set_param_index(runtime, runtime->control_targets[control_target_index].param_index, value);
 }
 
-bool apg_v2_runtime_set_instance_bypass(apg_v2_runtime_t *runtime, const char *instance_id, bool enabled) {
-    if (!runtime || !instance_id || instance_id[0] == '\0')
+bool apg_v2_runtime_set_instance_bypass_index(apg_v2_runtime_t *runtime, size_t bypass_index, bool enabled) {
+    if (!runtime || bypass_index >= runtime->bypassed_instances_len)
         return false;
-    size_t index = runtime_instance_bypass_index(runtime, instance_id);
-    if (!enabled) {
-        if (index == INVALID_BYPASS_INDEX)
-            return true;
-        runtime->bypassed_instances[index].enabled = false;
-        return true;
-    }
-    if (index != INVALID_BYPASS_INDEX) {
-        runtime->bypassed_instances[index].enabled = true;
-        return true;
-    }
-
-    apg_v2_runtime_set_error(runtime, "v2 runtime cannot bypass unknown or unsupported instance");
-    return false;
+    runtime->bypassed_instances[bypass_index].enabled = enabled;
+    return true;
 }
 
 bool apg_v2_runtime_set_project_mute(apg_v2_runtime_t *runtime, bool muted) {
@@ -960,29 +806,6 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
     return apg_v2_runtime_dispatch_process(runtime, frames);
 }
 
-bool apg_v2_runtime_process_interleaved_ports(
-    apg_v2_runtime_t *runtime,
-    const char       *input_port_name,
-    const float      *input,
-    const char       *output_port_name,
-    float            *output,
-    uint32_t          frames
-) {
-    size_t input_port_index  = 0u;
-    size_t output_port_index = 0u;
-    if (!apg_v2_runtime_resolve_input_audio_port_index(runtime, input_port_name, &input_port_index)) {
-        apg_v2_runtime_set_error(runtime, "v2 runtime input audio port signal lookup failed");
-        return false;
-    }
-    if (!apg_v2_runtime_resolve_output_audio_port_index(runtime, output_port_name, &output_port_index)) {
-        apg_v2_runtime_set_error(runtime, "v2 runtime output audio port signal lookup failed");
-        return false;
-    }
-    return apg_v2_runtime_process_interleaved_port_indices(
-        runtime, input_port_index, input, output_port_index, output, frames
-    );
-}
-
 bool apg_v2_runtime_process_interleaved_port_indices(
     apg_v2_runtime_t *runtime,
     size_t            input_port_index,
@@ -1009,29 +832,6 @@ static bool runtime_process_mono_audio_ports(
     uint32_t                            frames
 ) {
     return apg_v2_runtime_dispatch_process_mono_audio_ports(runtime, input_port, input, output_port, output, frames);
-}
-
-bool apg_v2_runtime_process_mono_ports(
-    apg_v2_runtime_t *runtime,
-    const char       *input_port_name,
-    const float      *input,
-    const char       *output_port_name,
-    float            *output,
-    uint32_t          frames
-) {
-    size_t input_port_index  = 0u;
-    size_t output_port_index = 0u;
-    if (!apg_v2_runtime_resolve_input_audio_port_index(runtime, input_port_name, &input_port_index)) {
-        apg_v2_runtime_set_error(runtime, "v2 runtime input audio port signal lookup failed");
-        return false;
-    }
-    if (!apg_v2_runtime_resolve_output_audio_port_index(runtime, output_port_name, &output_port_index)) {
-        apg_v2_runtime_set_error(runtime, "v2 runtime output audio port signal lookup failed");
-        return false;
-    }
-    return apg_v2_runtime_process_mono_port_indices(
-        runtime, input_port_index, input, output_port_index, output, frames
-    );
 }
 
 bool apg_v2_runtime_process_mono_port_indices(

@@ -2,6 +2,7 @@
 #include <apgcore/runtime/runtime_v2_internal.h>
 
 #include <math.h>
+#include <string.h>
 
 static apg_v2_meter_snapshot_t meter_snapshot_from_signal(const float *signal, uint32_t frames) {
     apg_v2_meter_snapshot_t snapshot = {0};
@@ -22,6 +23,34 @@ static apg_v2_meter_snapshot_t meter_snapshot_from_signal(const float *signal, u
     snapshot.frames = frames;
     snapshot.valid  = true;
     return snapshot;
+}
+
+static bool measure_resolve_port_channel_signal(
+    const apg_v2_registry_audio_port_t *ports,
+    size_t                              ports_len,
+    size_t                              signals_len,
+    const char                         *port_name,
+    size_t                              channel_index,
+    size_t                             *out_signal_index,
+    size_t                             *out_meter_index
+) {
+    if (!ports || !port_name)
+        return false;
+    for (size_t i = 0; i < ports_len; i++) {
+        const apg_v2_registry_audio_port_t *port = &ports[i];
+        if (!port->port_name || strcmp(port->port_name, port_name) != 0)
+            continue;
+        if (!port->signal_indices || port->channel_count == 0u || channel_index >= port->channel_count)
+            return false;
+        if (port->signal_indices[channel_index] >= signals_len)
+            return false;
+        if (out_signal_index)
+            *out_signal_index = port->signal_indices[channel_index];
+        if (out_meter_index)
+            *out_meter_index = port->meter_index + channel_index;
+        return true;
+    }
+    return false;
 }
 
 bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_measure_runtime_snapshot_t *out) {
@@ -48,8 +77,9 @@ bool apg_v2_measure_get_input_meter(
         return false;
     size_t signal_index = 0u;
     size_t meter_index  = 0u;
-    if (!apg_v2_runtime_resolve_input_port_channel_signal(
-            runtime, port_name, channel_index, &signal_index, &meter_index
+    if (!measure_resolve_port_channel_signal(
+            runtime->input_audio_ports, runtime->input_audio_ports_len, runtime->signals_len, port_name, channel_index,
+            &signal_index, &meter_index
         ) ||
         meter_index >= runtime->input_meters_len)
         return false;
@@ -70,8 +100,9 @@ bool apg_v2_measure_get_output_meter(
         return false;
     size_t signal_index = 0u;
     size_t meter_index  = 0u;
-    if (!apg_v2_runtime_resolve_output_port_channel_signal(
-            runtime, port_name, channel_index, &signal_index, &meter_index
+    if (!measure_resolve_port_channel_signal(
+            runtime->output_audio_ports, runtime->output_audio_ports_len, runtime->signals_len, port_name,
+            channel_index, &signal_index, &meter_index
         ) ||
         meter_index >= runtime->output_meters_len)
         return false;

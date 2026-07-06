@@ -47,7 +47,7 @@ static int process_render(apg_v2_runtime_t *runtime, float *peak, double *sum_sq
 
     for (uint32_t chunk = 0; chunk < CHUNKS; chunk++) {
         fill_guitar_like_input(input, chunk);
-        if (!apg_v2_runtime_process_mono_ports(runtime, "input", input, "output", output, CHUNK)) {
+        if (!test_runtime_process_mono_ports(runtime, "input", input, "output", output, CHUNK)) {
             fprintf(stderr, "pedalboard runtime error: %s\n", apg_v2_measure_last_error(runtime));
             return fail("pedalboard offline render failed");
         }
@@ -86,9 +86,9 @@ int main(void) {
         return fail("failed to initialize pedalboard runtime");
     }
 
-    if (!apg_v2_runtime_set_param(&runtime, "drive1.drive", 3.0f) ||
-        !apg_v2_runtime_set_param(&runtime, "delay1.mix", 0.45f) ||
-        !apg_v2_runtime_set_param(&runtime, "blend1.mix", 0.35f))
+    if (!test_runtime_set_param_by_name(&runtime, "drive1.drive", 3.0f) ||
+        !test_runtime_set_param_by_name(&runtime, "delay1.mix", 0.45f) ||
+        !test_runtime_set_param_by_name(&runtime, "blend1.mix", 0.35f))
         return fail("failed to set pedalboard render params");
 
     float  peak   = 0.0f;

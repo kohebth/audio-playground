@@ -133,7 +133,7 @@ static int test_simple_project_compiles_and_runs(void) {
 
     const float input[3]  = {0.25f, -0.5f, 1.0f};
     float       output[3] = {0.0f, 0.0f, 0.0f};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u)) {
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u)) {
         fprintf(stderr, "runtime error: %s\n", apg_v2_measure_last_error(&runtime));
         return fail("project runtime processing failed");
     }
@@ -141,11 +141,11 @@ static int test_simple_project_compiles_and_runs(void) {
     if (expect_samples(output, expected_default, 3u, "project default gain"))
         return 1;
 
-    if (!apg_v2_runtime_set_param(&runtime, "gain1.gain", 3.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "gain1.gain", 3.0f))
         return fail("project runtime did not accept namespaced param");
-    if (apg_v2_runtime_set_param(&runtime, "gain", 3.0f))
+    if (test_runtime_set_param_by_name(&runtime, "gain", 3.0f))
         return fail("project runtime accepted unqualified param");
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u))
         return fail("project runtime processing after param update failed");
     const float expected_updated[3] = {0.5015625f, -1.003125f, 2.00625f};
     if (expect_samples_near(output, expected_updated, 3u, 0.00001f, "project updated gain"))
@@ -203,7 +203,7 @@ static int test_two_instance_project_compiles_and_runs(void) {
 
     const float input[2]  = {0.25f, -0.5f};
     float       output[2] = {0.0f, 0.0f};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("two-instance project processing failed");
     const float expected_default[2] = {1.5f, -3.0f};
     if (expect_samples(output, expected_default, 2u, "two-instance project default"))
@@ -215,9 +215,9 @@ static int test_two_instance_project_compiles_and_runs(void) {
         expect_meter_near(&meter, 3.0f, 2.3717082f, 2u, "two-instance project output"))
         return 1;
 
-    if (!apg_v2_runtime_set_instance_bypass(&runtime, "gain1", true))
+    if (!test_runtime_set_instance_bypass_by_name(&runtime, "gain1", true))
         return fail("two-instance runtime did not accept first instance bypass");
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("two-instance project processing with bypass failed");
     const float expected_bypassed[2] = {0.75f, -1.5f};
     if (expect_samples(output, expected_bypassed, 2u, "two-instance project bypassed"))
@@ -228,7 +228,7 @@ static int test_two_instance_project_compiles_and_runs(void) {
 
     if (!apg_v2_runtime_set_project_mute(&runtime, true))
         return fail("two-instance runtime did not accept project mute");
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("two-instance project processing with mute failed");
     const float expected_muted[2] = {0.0f, 0.0f};
     if (expect_samples(output, expected_muted, 2u, "two-instance project muted"))
@@ -238,16 +238,16 @@ static int test_two_instance_project_compiles_and_runs(void) {
         return 1;
 
     if (!apg_v2_runtime_set_project_mute(&runtime, false) ||
-        !apg_v2_runtime_set_instance_bypass(&runtime, "gain1", false))
+        !test_runtime_set_instance_bypass_by_name(&runtime, "gain1", false))
         return fail("two-instance runtime did not disable project controls");
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("two-instance project processing after disabling controls failed");
     if (expect_samples(output, expected_default, 2u, "two-instance project restored"))
         return 1;
 
-    if (!apg_v2_runtime_set_param(&runtime, "gain2.gain", 4.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "gain2.gain", 4.0f))
         return fail("two-instance runtime did not accept second instance param");
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("two-instance project processing after update failed");
     const float expected_updated[2] = {1.5020833f, -3.0041666f};
     if (expect_samples_near(output, expected_updated, 2u, 0.00001f, "two-instance project updated"))
@@ -299,12 +299,12 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
         return fail("failed to initialize pedalboard runtime");
     }
 
-    if (!apg_v2_runtime_set_param(&runtime, "blend1.mix", 0.5f))
+    if (!test_runtime_set_param_by_name(&runtime, "blend1.mix", 0.5f))
         return fail("pedalboard runtime did not accept namespaced mix param");
 
     const float input[4]  = {0.3f, 0.6f, -0.2f, 0.1f};
     float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
         fprintf(stderr, "runtime error: %s\n", apg_v2_measure_last_error(&runtime));
         return fail("pedalboard project processing failed");
     }

@@ -237,7 +237,7 @@ int main(void) {
     for (size_t offset = 0u; offset < frame_count;) {
         uint32_t frames =
             (uint32_t)((frame_count - offset < CHAIN_TEST_CHUNK) ? (frame_count - offset) : CHAIN_TEST_CHUNK);
-        if (!apg_v2_runtime_process_mono_ports(&runtime, "input", &samples[offset], "output", output, frames)) {
+        if (!test_runtime_process_mono_ports(&runtime, "input", &samples[offset], "output", output, frames)) {
             fprintf(stderr, "runtime error: %s\n", apg_v2_measure_last_error(&runtime));
             free(samples);
             apg_v2_runtime_destroy(&runtime);

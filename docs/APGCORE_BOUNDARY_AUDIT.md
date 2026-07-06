@@ -139,7 +139,7 @@ Runtime reset and process entry checks now operate from runtime-owned buffers, r
 
 ## PD11 Progress
 
-Registry now exposes signal and parameter name maps, and runtime signal/param lookup APIs use those registry-owned maps instead of traversing the source compiled plan.
+Registry exposes signal and parameter name maps for host/tooling setup. Runtime public APIs no longer resolve names; they operate on compiled signal, param, control, bypass, and port indices.
 
 ## PD12 Progress
 

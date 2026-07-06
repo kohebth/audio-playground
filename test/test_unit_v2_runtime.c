@@ -95,8 +95,8 @@ static float *
 runtime_port_channel_for_test(apg_v2_runtime_t *runtime, const char *port_name, size_t channel_index, bool output) {
     size_t port_index   = 0u;
     size_t signal_index = 0u;
-    bool   ok           = output ? apg_v2_runtime_resolve_output_audio_port_index(runtime, port_name, &port_index)
-                                 : apg_v2_runtime_resolve_input_audio_port_index(runtime, port_name, &port_index);
+    bool   ok           = output ? test_runtime_output_audio_port_index_by_name(runtime, port_name, &port_index)
+                                 : test_runtime_input_audio_port_index_by_name(runtime, port_name, &port_index);
     if (!ok)
         return NULL;
     ok = output
@@ -258,7 +258,7 @@ static int test_simple_gain_process_mono(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "gain", 2.0f))
         return fail("failed to set simple_gain param");
     const float input[4]  = {0.25f, -0.5f, 1.5f, -2.0f};
     float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -311,7 +311,7 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
         output[i] = 0.0f;
     }
 
-    if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "gain", 2.0f))
         return fail("failed to set initial smoothed param");
     if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
         return fail("initial immediate smoothing process failed");
@@ -329,7 +329,7 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
             return 1;
     }
 
-    if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "gain", 2.0f))
         return fail("failed to set live smoothed param");
     if (runtime.param_targets[0] != 2.0f || runtime.param_smoothing_remaining_frames[0] != 480u)
         return fail("live smoothed param did not capture target and duration");
@@ -507,13 +507,13 @@ static int test_named_mono_port_rejects_bad_buffer_layouts(void) {
 
     const float input[2]  = {1.0f, 2.0f};
     float       output[2] = {0.0f, 0.0f};
-    if (apg_v2_runtime_process_mono_ports(&runtime, "input", NULL, "output", output, 2u))
+    if (test_runtime_process_mono_ports(&runtime, "input", NULL, "output", output, 2u))
         return fail("named mono processing accepted null input buffer");
     const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "buffers"))
         return fail("null buffer rejection did not expose a useful error");
 
-    if (apg_v2_runtime_process_mono_ports(&runtime, "input", input, "input", output, 2u))
+    if (test_runtime_process_mono_ports(&runtime, "input", input, "input", output, 2u))
         return fail("named mono processing accepted input port as output");
     last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "output audio port"))
@@ -611,8 +611,8 @@ static int test_interleaved_stereo_public_port_process(void) {
         return fail("stereo input channel lookup accepted out-of-range channel");
     size_t input_port_index  = 0u;
     size_t output_port_index = 0u;
-    if (!apg_v2_runtime_resolve_input_audio_port_index(&runtime, "input", &input_port_index) ||
-        !apg_v2_runtime_resolve_output_audio_port_index(&runtime, "output", &output_port_index))
+    if (!test_runtime_input_audio_port_index_by_name(&runtime, "input", &input_port_index) ||
+        !test_runtime_output_audio_port_index_by_name(&runtime, "output", &output_port_index))
         return fail("stereo port index resolution failed");
     size_t input_r_index  = 0u;
     size_t output_r_index = 0u;
@@ -669,15 +669,15 @@ static int test_named_mono_port_process(void) {
     float       output[3]         = {0.0f, 0.0f, 0.0f};
     size_t      input_port_index  = 0u;
     size_t      output_port_index = 0u;
-    if (!apg_v2_runtime_resolve_input_audio_port_index(&runtime, "input", &input_port_index) ||
-        !apg_v2_runtime_resolve_output_audio_port_index(&runtime, "output", &output_port_index))
+    if (!test_runtime_input_audio_port_index_by_name(&runtime, "input", &input_port_index) ||
+        !test_runtime_output_audio_port_index_by_name(&runtime, "output", &output_port_index))
         return fail("simple_gain port index resolution failed");
     if (!apg_v2_runtime_process_mono_port_indices(&runtime, input_port_index, input, output_port_index, output, 3u))
         return fail("indexed simple_gain processing failed");
     if (output[0] != 0.75f || output[1] != -1.5f || output[2] != 3.0f)
         return fail("unexpected named simple_gain output sample");
 
-    if (apg_v2_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 3u))
+    if (test_runtime_process_mono_ports(&runtime, "missing", input, "output", output, 3u))
         return fail("named simple_gain accepted missing input port");
     const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "input audio port"))
@@ -766,19 +766,19 @@ static int test_control_port_sets_matching_param(void) {
         return fail("failed to initialize control port runtime");
     }
 
-    if (!apg_v2_runtime_set_control_port(&runtime, "gain", 2.0f))
+    if (!test_runtime_set_control_port_by_name(&runtime, "gain", 2.0f))
         return fail("failed to set matching control port");
     if (!apg_v2_runtime_set_control_port_index(&runtime, 1u, 4.0f))
         return fail("failed to set targeted control port by index");
     if (apg_v2_runtime_set_control_port_index(&runtime, 2u, 1.0f))
         return fail("accepted invalid control target index");
-    if (apg_v2_runtime_set_control_port(&runtime, "input", 2.0f) ||
-        apg_v2_runtime_set_control_port(&runtime, "missing", 2.0f))
+    if (test_runtime_set_control_port_by_name(&runtime, "input", 2.0f) ||
+        test_runtime_set_control_port_by_name(&runtime, "missing", 2.0f))
         return fail("accepted invalid control port update");
 
     const float input[2]  = {0.25f, -0.5f};
     float       output[2] = {0.0f, 0.0f};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("control port fixture processing failed");
     if (output[0] != 1.0f || output[1] != -2.0f)
         return fail("control port did not update matching param");
@@ -865,7 +865,7 @@ static int test_named_mono_port_rejects_multichannel_port(void) {
 
     const float input[2]  = {1.0f, 2.0f};
     float       output[2] = {0.0f, 0.0f};
-    if (apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
+    if (test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 2u))
         return fail("named mono processing accepted a multi-channel input port");
     const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "mono audio ports"))
@@ -897,7 +897,7 @@ static int test_simple_clip_process_generic(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    if (!apg_v2_runtime_set_param(&runtime, "gain", 2.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "gain", 2.0f))
         return fail("failed to set simple_clip param");
     float *input  = runtime_signal_by_name_for_test(&runtime, "input");
     float *output = runtime_signal_by_name_for_test(&runtime, "output");
@@ -918,7 +918,7 @@ static int test_simple_clip_process_generic(void) {
     }
     if (runtime_signal_by_name_for_test(&runtime, "missing"))
         return fail("missing signal lookup unexpectedly succeeded");
-    if (apg_v2_runtime_set_param(&runtime, "missing", 1.0f))
+    if (test_runtime_set_param_by_name(&runtime, "missing", 1.0f))
         return fail("missing param update unexpectedly succeeded");
 
     apg_v2_runtime_destroy(&runtime);
@@ -1304,7 +1304,7 @@ static int test_delay_tap_scalar_input_refresh(void) {
     if (expect_samples(output, expected_tap_2, 4u, "delay tap default"))
         return 1;
 
-    if (!apg_v2_runtime_set_param(&runtime, "tap", 1.0f))
+    if (!test_runtime_set_param_by_name(&runtime, "tap", 1.0f))
         return fail("failed to update delay tap param");
     input[0] = 1.0f;
     input[1] = 2.0f;
@@ -1350,7 +1350,7 @@ static int test_product_fixture_library_runtime_smoke(void) {
         }
 
         float output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-        if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
+        if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u))
             return fail("product fixture processing failed");
         if (expect_finite_samples(output, 4u, mono_fixtures[i]))
             return 1;
@@ -1553,11 +1553,11 @@ static int test_runtime_capable_fixture_library(void) {
         uc_arena_free(&arena);
         return fail("failed to initialize control fixture runtime");
     }
-    if (!apg_v2_runtime_set_control_port(&runtime, "amount", 3.0f))
+    if (!test_runtime_set_control_port_by_name(&runtime, "amount", 3.0f))
         return fail("control fixture did not accept target control port");
     const float control_input[2]  = {0.25f, -0.5f};
     float       control_output[2] = {0.0f, 0.0f};
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", control_input, "output", control_output, 2u))
+    if (!test_runtime_process_mono_ports(&runtime, "input", control_input, "output", control_output, 2u))
         return fail("control fixture processing failed");
     const float control_expected[2] = {0.75f, -1.5f};
     if (expect_samples(control_output, control_expected, 2u, "control fixture"))

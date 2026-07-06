@@ -104,16 +104,16 @@ int main(void) {
         output[i] = 0.0f;
     }
 
-    if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, TEST_CHUNK))
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, TEST_CHUNK))
         return fail("initial v2 control transition processing failed");
-    if (!apg_v2_runtime_set_control_port(&runtime, "amount", 3.0f))
+    if (!test_runtime_set_control_port_by_name(&runtime, "amount", 3.0f))
         return fail("failed to set v2 control target");
     if (runtime.param_targets[0] != 3.0f || runtime.param_smoothing_remaining_frames[0] != 2880u)
         return fail("v2 control transition did not capture target and duration");
 
     float previous = runtime.params[0];
     for (int i = 0; i < 6; i++) {
-        if (!apg_v2_runtime_process_mono_ports(&runtime, "input", input, "output", output, TEST_CHUNK))
+        if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, TEST_CHUNK))
             return fail("v2 control transition processing failed");
         if (!isfinite(runtime.params[0]))
             return fail("v2 control transition became non-finite");
