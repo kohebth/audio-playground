@@ -91,4 +91,31 @@ struct apg_v2_runtime_node_t {
     size_t                                  state_size;
 };
 
+const apg_v2_registry_audio_port_t *
+apg_v2_runtime_audio_port_by_name(const apg_v2_registry_audio_port_t *ports, size_t ports_len, const char *port_name);
+
+void apg_v2_runtime_set_error(apg_v2_runtime_t *runtime, const char *msg);
+bool apg_v2_runtime_execution_metadata_ready(const apg_v2_runtime_t *runtime);
+void apg_v2_runtime_advance_smoothed_params(apg_v2_runtime_t *runtime, uint32_t frames);
+void apg_v2_runtime_apply_project_mute(apg_v2_runtime_t *runtime, uint32_t frames);
+bool apg_v2_runtime_run_node(apg_v2_runtime_t *runtime, size_t node_index, uint32_t frames);
+
+bool apg_v2_runtime_dispatch_process(apg_v2_runtime_t *runtime, uint32_t frames);
+bool apg_v2_runtime_dispatch_process_interleaved_ports(
+    apg_v2_runtime_t *runtime,
+    const char       *input_port_name,
+    const float      *input,
+    const char       *output_port_name,
+    float            *output,
+    uint32_t          frames
+);
+bool apg_v2_runtime_dispatch_process_mono_audio_ports(
+    apg_v2_runtime_t                   *runtime,
+    const apg_v2_registry_audio_port_t *input_port,
+    const float                        *input,
+    const apg_v2_registry_audio_port_t *output_port,
+    float                              *output,
+    uint32_t                            frames
+);
+
 #endif // AUDIO_PLAYGROUND_APGCORE_RUNTIME_V2_INTERNAL_H
