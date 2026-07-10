@@ -1,4 +1,6 @@
 #include <atom/dsp_atoms.h>
+#include <apgcore/dsp/dsp_safety.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -9,11 +11,14 @@ void generation_impulse_process(
     generation_impulse_state_t  *state,
     const apg_process_info_t    *info
 ) {
-    if (out->signal == NULL || state == NULL)
+    (void)in;
+    if (out == NULL || out->signal == NULL || params == NULL || state == NULL)
         return;
 
-    const uint32_t frames           = apg_process_frames_or_default(info);
-    int            interval_samples = (int)(params->interval * params->sample_rate);
+    const uint32_t frames      = apg_process_frames_or_default(info);
+    const float    sample_rate = apg_sample_rate_or_default(info);
+    const float    interval    = apg_clamp_float(params->interval, 0.0f, (float)INT_MAX / sample_rate);
+    int            interval_samples = (int)(interval * sample_rate);
     if (interval_samples < 1)
         interval_samples = 1;
 
