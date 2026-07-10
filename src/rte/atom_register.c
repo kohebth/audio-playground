@@ -1,3 +1,4 @@
+#include "atom/atom_capability.h"
 #include "atom/atom_field_descriptors.h"
 #include "atom/dsp_atoms.h"
 #include <atom_registry.h>
@@ -14,89 +15,95 @@
 #define REGISTRY_FIELDS_4(atom_name, kind)             .kind##_fields = atom_name##_##kind##_fields, .n_##kind##_fields = 4
 #define REGISTRY_FIELDS_5(atom_name, kind)             .kind##_fields = atom_name##_##kind##_fields, .n_##kind##_fields = 5
 
-#define REGISTRY_ATOMS(_)               \
-    _(amplitude_accumulate, 0, 1)       \
-    _(amplitude_latch, 1, 2)            \
-    _(amplitude_add, 0, 0)              \
-    _(amplitude_clip_hard, 1, 0)        \
-    _(amplitude_clip_soft, 2, 0)        \
-    _(amplitude_divide, 1, 0)           \
-    _(amplitude_multiply, 0, 0)         \
-    _(amplitude_normalize, 2, 1)        \
-    _(amplitude_smooth, 3, 1)           \
-    _(amplitude_subtract, 0, 0)         \
-    _(delay_fractional, 2, 2)           \
-    _(delay_line, 1, 2)                 \
-    _(delay_tap_feedback, 1, 0)         \
-    _(delay_tap_feedforward, 1, 0)      \
-    _(delay_unit, 0, 1)                 \
-    _(detect_autocorrelate, 1, 2)       \
-    _(detect_pitch, 2, 2)               \
-    _(detect_envelope, 3, 1)            \
-    _(detect_peak, 3, 1)                \
-    _(detect_rms, 1, 3)                 \
-    _(detect_slope, 0, 1)               \
-    _(detect_threshold, 1, 0)           \
-    _(detect_zero_crossing, 0, 1)       \
-    _(filter_allpass, 2, 2)             \
-    _(filter_biquad_coefficients, 5, 2) \
-    _(filter_biquad, 5, 4)              \
-    _(filter_comb_fb, 2, 2)             \
-    _(filter_comb_ff, 2, 2)             \
-    _(filter_dc_block, 1, 2)            \
-    _(filter_differentiate, 0, 1)       \
-    _(filter_fir, 2, 2)                 \
-    _(filter_integrate, 0, 1)           \
-    _(freq_fft, 1, 0)                   \
-    _(freq_ifft, 1, 0)                  \
-    _(freq_multiply, 1, 0)              \
-    _(freq_overlap_add, 2, 1)           \
-    _(freq_overlap_save, 2, 2)          \
-    _(freq_overlap_add, 2, 1)           \
-    _(freq_overlap_save, 2, 2)          \
-    _(freq_window, 2, 0)                \
-    _(freq_shift, 1, 5)                 \
-    _(generation_dc, 1, 0)              \
-    _(generation_envelope, 5, 2)        \
-    _(generation_impulse, 2, 1)         \
-    _(generation_lfo, 4, 1)             \
-    _(generation_noise, 2, 2)           \
-    _(generation_oscillator, 4, 1)      \
-    _(interpolation_cubic, 0, 0)        \
-    _(interpolation_lagrange, 1, 2)     \
-    _(interpolation_linear, 0, 0)       \
-    _(interpolation_sinc, 1, 1)         \
-    _(mix_crossfade, 1, 0)              \
-    _(mix_decode_ms, 0, 0)              \
-    _(mix_encode_ms, 0, 0)              \
-    _(mix_matrix, 2, 0)                 \
-    _(mix_pan_stereo, 1, 0)             \
-    _(mix_wet_dry, 1, 0)                \
-    _(modulation_amplitude, 1, 0)       \
-    _(modulation_frequency, 1, 3)       \
-    _(modulation_phase, 1, 2)           \
-    _(modulation_ring, 0, 0)            \
-    _(modulation_scrub, 1, 0)           \
-    _(nonlinear_bitcrush, 1, 0)         \
-    _(nonlinear_sample_hold, 1, 2)      \
-    _(nonlinear_waveshape, 2, 0)        \
-    _(src_antialias, 2, 2)              \
-    _(src_antiimage, 2, 2)              \
-    _(src_convert_format, 2, 0)         \
-    _(src_downsample, 1, 0)             \
-    _(src_upsample, 1, 0)               \
-    _(freq_quantize, 0, 0)
+#define ATOM_FLAGS_COMMON (APG_ATOM_RT_SAFE | APG_ATOM_NO_HEAP | APG_ATOM_BOUNDED_CPU)
+#define ATOM_FLAGS_PORTABLE (ATOM_FLAGS_COMMON | APG_ATOM_WASM_SAFE | APG_ATOM_M7_SAFE)
+#define ATOM_FLAGS_WASM (ATOM_FLAGS_COMMON | APG_ATOM_WASM_SAFE)
+#define ATOM_FLAGS_EXPERIMENTAL (APG_ATOM_EXPERIMENTAL | APG_ATOM_LEGACY)
 
-#define REGISTRY_ATOM(atom_name, config_count, state_count) \
-    {                                                       \
-        .name        = #atom_name,                          \
-        .thunk       = atom_name##_thunk,                   \
-        .out_size    = sizeof(atom_name##_out_t),           \
-        .in_size     = sizeof(atom_name##_in_t),            \
-        .config_size = sizeof(atom_name##_params_t),        \
-        .state_size  = sizeof(atom_name##_state_t),         \
-        REGISTRY_FIELDS(atom_name, config, config_count),   \
-        REGISTRY_FIELDS(atom_name, state, state_count),     \
+#define REGISTRY_ATOMS(_)                                                                                         \
+    _(amplitude_accumulate, amplitude, 0, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                  \
+    _(amplitude_latch, amplitude, 1, 2, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                       \
+    _(amplitude_add, amplitude, 0, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                         \
+    _(amplitude_clip_hard, amplitude, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                       \
+    _(amplitude_clip_soft, amplitude, 2, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                           \
+    _(amplitude_divide, amplitude, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                      \
+    _(amplitude_multiply, amplitude, 0, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                    \
+    _(amplitude_normalize, amplitude, 2, 1, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                           \
+    _(amplitude_smooth, amplitude, 3, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                          \
+    _(amplitude_subtract, amplitude, 0, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                    \
+    _(delay_fractional, delay, 2, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                                  \
+    _(delay_line, delay, 1, 2, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                                    \
+    _(delay_tap_feedback, delay, 1, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                                \
+    _(delay_tap_feedforward, delay, 1, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                             \
+    _(delay_unit, delay, 0, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                                \
+    _(detect_autocorrelate, detect, 1, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)                        \
+    _(detect_pitch, detect, 2, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)                                \
+    _(detect_envelope, detect, 3, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                              \
+    _(detect_peak, detect, 3, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                                  \
+    _(detect_rms, detect, 1, 3, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                                   \
+    _(detect_slope, detect, 0, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                             \
+    _(detect_threshold, detect, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                         \
+    _(detect_zero_crossing, detect, 0, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                     \
+    _(filter_allpass, filter, 2, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                                   \
+    _(filter_biquad_coefficients, filter, 5, 2, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                   \
+    _(filter_biquad, filter, 5, 4, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                                \
+    _(filter_comb_fb, filter, 2, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                                   \
+    _(filter_comb_ff, filter, 2, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                                   \
+    _(filter_dc_block, filter, 1, 2, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                              \
+    _(filter_differentiate, filter, 0, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                     \
+    _(filter_fir, filter, 2, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                                       \
+    _(filter_integrate, filter, 0, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                         \
+    _(freq_fft, freq, 1, 0, ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL)                              \
+    _(freq_ifft, freq, 1, 0, ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL)                             \
+    _(freq_multiply, freq, 1, 0, ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL)                         \
+    _(freq_overlap_add, freq, 2, 1, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)                              \
+    _(freq_overlap_save, freq, 2, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)                             \
+    _(freq_window, freq, 2, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR)                                    \
+    _(freq_shift, freq, 1, 5, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)                                    \
+    _(generation_dc, generation, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                        \
+    _(generation_envelope, generation, 5, 2, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                      \
+    _(generation_impulse, generation, 2, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                   \
+    _(generation_lfo, generation, 4, 1, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                           \
+    _(generation_noise, generation, 2, 2, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                     \
+    _(generation_oscillator, generation, 4, 1, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                        \
+    _(interpolation_cubic, interpolation, 0, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                       \
+    _(interpolation_lagrange, interpolation, 1, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)               \
+    _(interpolation_linear, interpolation, 0, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)              \
+    _(interpolation_sinc, interpolation, 1, 1, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)                   \
+    _(mix_crossfade, mix, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                               \
+    _(mix_decode_ms, mix, 0, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                               \
+    _(mix_encode_ms, mix, 0, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                               \
+    _(mix_matrix, mix, 2, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR)                                      \
+    _(mix_pan_stereo, mix, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                              \
+    _(mix_wet_dry, mix, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                                 \
+    _(modulation_amplitude, modulation, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                     \
+    _(modulation_frequency, modulation, 1, 3, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)                    \
+    _(modulation_phase, modulation, 1, 2, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                             \
+    _(modulation_ring, modulation, 0, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                          \
+    _(modulation_scrub, modulation, 1, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)                        \
+    _(nonlinear_bitcrush, nonlinear, 1, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                        \
+    _(nonlinear_sample_hold, nonlinear, 1, 2, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL)                     \
+    _(nonlinear_waveshape, nonlinear, 2, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL)                           \
+    _(src_antialias, src, 2, 2, ATOM_FLAGS_WASM | APG_ATOM_ANTIALIASED, APG_ATOM_MATURITY_MUSICAL)                \
+    _(src_antiimage, src, 2, 2, ATOM_FLAGS_WASM | APG_ATOM_ANTIALIASED, APG_ATOM_MATURITY_MUSICAL)                \
+    _(src_convert_format, src, 2, 0, ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR)                          \
+    _(src_downsample, src, 1, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR)                                  \
+    _(src_upsample, src, 1, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR)                                    \
+    _(freq_quantize, freq, 0, 0, ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL)
+
+#define REGISTRY_ATOM(atom_name, category_name, config_count, state_count, atom_flags, atom_maturity) \
+    {                                                                                                 \
+        .name        = #atom_name,                                                                    \
+        .category    = #category_name,                                                                \
+        .thunk       = atom_name##_thunk,                                                             \
+        .out_size    = sizeof(atom_name##_out_t),                                                     \
+        .in_size     = sizeof(atom_name##_in_t),                                                      \
+        .config_size = sizeof(atom_name##_params_t),                                                  \
+        .state_size  = sizeof(atom_name##_state_t),                                                   \
+        REGISTRY_FIELDS(atom_name, config, config_count),                                             \
+        REGISTRY_FIELDS(atom_name, state, state_count),                                               \
+        .flags    = atom_flags,                                                                       \
+        .maturity = atom_maturity,                                                                    \
     },
 
 static atom_registry_entry_t g_registry[] = {REGISTRY_ATOMS(REGISTRY_ATOM)};
