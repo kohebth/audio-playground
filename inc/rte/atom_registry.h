@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <apgcore/runtime/process.h>
 
@@ -41,16 +42,19 @@ typedef struct {
 // ─────────────────────────────────────────────
 
 typedef struct {
-    const char              *name;         // atom name, e.g. "detect_envelope"
-    atom_thunk_fn            thunk;        // generic wrapper function
-    size_t                   out_size;     // sizeof(out struct)
-    size_t                   in_size;      // sizeof(in struct), 0 if void*
-    size_t                   config_size;  // sizeof(params struct), 0 if void*
-    size_t                   state_size;   // sizeof(state struct), 0 if void*
-    const atom_field_desc_t *state_fields; // layout descriptors for state
+    const char              *name;          // atom name, e.g. "detect_envelope"
+    const char              *category;      // atom category, e.g. "detect"
+    atom_thunk_fn            thunk;         // generic wrapper function
+    size_t                   out_size;      // sizeof(out struct)
+    size_t                   in_size;       // sizeof(in struct), 0 if void*
+    size_t                   config_size;   // sizeof(params struct), 0 if void*
+    size_t                   state_size;    // sizeof(state struct), 0 if void*
+    const atom_field_desc_t *state_fields;  // layout descriptors for state
     int                      n_state_fields;
     const atom_field_desc_t *config_fields; // layout descriptors for config
     int                      n_config_fields;
+    uint32_t                 flags;         // APG_ATOM_* capability flags
+    uint32_t                 maturity;      // apg_atom_maturity_t value
 } atom_registry_entry_t;
 
 // Return input-field descriptors for an atom registry entry.
