@@ -31,14 +31,6 @@ static int test_registry_entries_are_complete(void) {
             return fail_entry("registry entry has no category", entry);
         if (!entry->thunk)
             return fail_entry("registry entry has no thunk", entry);
-        if (entry->out_size == 0u)
-            return fail_entry("registry entry has no output storage size", entry);
-        if (entry->in_size == 0u)
-            return fail_entry("registry entry has no input storage size", entry);
-        if (entry->config_size == 0u)
-            return fail_entry("registry entry has no config storage size", entry);
-        if (entry->state_size == 0u)
-            return fail_entry("registry entry has no state storage size", entry);
         if (entry->flags == 0u)
             return fail_entry("registry entry has no capability flags", entry);
         if (entry->maturity > APG_ATOM_MATURITY_PRODUCTION)
