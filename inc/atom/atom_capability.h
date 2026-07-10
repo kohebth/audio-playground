@@ -1,0 +1,24 @@
+#ifndef AUDIO_PLAYGROUND_ATOM_CAPABILITY_H
+#define AUDIO_PLAYGROUND_ATOM_CAPABILITY_H
+
+#include <stdint.h>
+
+typedef enum {
+    APG_ATOM_MATURITY_EXPERIMENTAL = 0,
+    APG_ATOM_MATURITY_SAFE_SCALAR  = 1,
+    APG_ATOM_MATURITY_MUSICAL      = 2,
+    APG_ATOM_MATURITY_PRODUCTION   = 3,
+} apg_atom_maturity_t;
+
+enum {
+    APG_ATOM_RT_SAFE      = 1u << 0,
+    APG_ATOM_WASM_SAFE    = 1u << 1,
+    APG_ATOM_M7_SAFE      = 1u << 2,
+    APG_ATOM_NO_HEAP      = 1u << 3,
+    APG_ATOM_BOUNDED_CPU  = 1u << 4,
+    APG_ATOM_ANTIALIASED  = 1u << 5,
+    APG_ATOM_LEGACY       = 1u << 6,
+    APG_ATOM_EXPERIMENTAL = 1u << 7,
+};
+
+#endif // AUDIO_PLAYGROUND_ATOM_CAPABILITY_H
