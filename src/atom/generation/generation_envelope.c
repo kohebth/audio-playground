@@ -1,4 +1,5 @@
 #include <atom/dsp_atoms.h>
+#include <apgcore/dsp/dsp_safety.h>
 #include <stddef.h>
 
 void generation_envelope_process(
@@ -8,22 +9,26 @@ void generation_envelope_process(
     generation_envelope_state_t  *state,
     const apg_process_info_t     *info
 ) {
-    if (out->signal == NULL || in->gate == NULL || state == NULL)
+    if (out == NULL || in == NULL || out->signal == NULL || in->gate == NULL || params == NULL || state == NULL)
         return;
 
     const uint32_t frames        = apg_process_frames_or_default(info);
-    float          current_level = state->current_level;
-    int            stage         = state->stage;
+    const float    sample_rate   = apg_sample_rate_or_default(info);
+    const float    sustain       = apg_clamp_float(params->sustain, 0.0f, 1.0f);
+    const float    attack        = apg_clamp_float(params->attack, 0.0f, 60.0f);
+    const float    decay         = apg_clamp_float(params->decay, 0.0f, 60.0f);
+    const float    release       = apg_clamp_float(params->release, 0.0f, 60.0f);
+    float          current_level = apg_clamp_float(state->current_level, 0.0f, 1.0f);
+    int            stage         = state->stage >= 0 && state->stage <= 4 ? state->stage : 0;
 
-    float attack_step  = 1.0f / (params->attack * params->sample_rate + 1.0f);
-    float decay_step   = (1.0f - params->sustain) / (params->decay * params->sample_rate + 1.0f);
-    float release_step = params->sustain / (params->release * params->sample_rate + 1.0f);
+    const float attack_step  = 1.0f / (attack * sample_rate + 1.0f);
+    const float decay_step   = (1.0f - sustain) / (decay * sample_rate + 1.0f);
+    const float release_step = 1.0f / (release * sample_rate + 1.0f);
 
     for (uint32_t i = 0; i < frames; ++i) {
         if (in->gate[i] > 0.5f) {
             if (stage == 0 || stage == 4)
                 stage = 1;
-
             if (stage == 1) {
                 current_level += attack_step;
                 if (current_level >= 1.0f) {
@@ -32,17 +37,16 @@ void generation_envelope_process(
                 }
             } else if (stage == 2) {
                 current_level -= decay_step;
-                if (current_level <= params->sustain) {
-                    current_level = params->sustain;
+                if (current_level <= sustain) {
+                    current_level = sustain;
                     stage         = 3;
                 }
             } else if (stage == 3) {
-                current_level = params->sustain;
+                current_level = sustain;
             }
         } else {
             if (stage != 0)
                 stage = 4;
-
             if (stage == 4) {
                 current_level -= release_step;
                 if (current_level <= 0.0f) {
