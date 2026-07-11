@@ -16,7 +16,7 @@ void detect_autocorrelate_process(
         return;
 
     const uint32_t capacity        = state->buffer_len > 0u ? state->buffer_len : APG_DETECT_AUTOCORRELATION_CAPACITY;
-    const uint32_t frames          = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    const uint32_t frames          = apg_process_frames_or_default(info);
     const uint32_t analysis_frames = frames < capacity ? frames : capacity;
     int            max_lag         = params->max_lag;
     if (max_lag > (int)capacity)

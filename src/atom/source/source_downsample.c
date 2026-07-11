@@ -26,7 +26,7 @@ void src_downsample_process(
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL)
         return;
 
-    const uint32_t frames          = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    const uint32_t frames          = apg_process_frames_or_default(info);
     const uint32_t output_capacity = apg_process_output_frames_or_default(info);
     const uint32_t factor          = (uint32_t)clamp_downsample_factor(params);
     uint32_t       out_index       = 0u;

@@ -167,6 +167,12 @@ static void initialize_described_fields(
     }
 }
 
+static int atom_uses_spectral_context(const char *name) {
+    return name && (strcmp(name, "freq_fft") == 0 || strcmp(name, "freq_ifft") == 0 ||
+                    strcmp(name, "freq_multiply") == 0 || strcmp(name, "freq_window") == 0 ||
+                    strcmp(name, "freq_overlap_add") == 0 || strcmp(name, "freq_overlap_save") == 0);
+}
+
 static int test_all_atoms_accept_required_frame_sizes(void) {
     static const uint32_t     frame_sizes[]   = {0u, 1u, 64u, 128u, 256u, 512u, 1024u};
     static float              samples[192000] = {0};
@@ -221,7 +227,8 @@ static int test_all_atoms_accept_required_frame_sizes(void) {
 
         for (size_t frame_index = 0u; frame_index < sizeof(frame_sizes) / sizeof(frame_sizes[0]); frame_index++) {
             const uint32_t frames = frame_sizes[frame_index];
-            memset(samples, 0, 8192u * sizeof(*samples));
+            for (size_t sample_index = 0u; sample_index < 8192u; sample_index++)
+                samples[sample_index] = frames == 0u ? -99.0f : 0.0f;
             const apg_process_info_t info = {
                 .sample_rate   = 48000.0f,
                 .frames        = frames,
@@ -237,6 +244,17 @@ static int test_all_atoms_accept_required_frame_sizes(void) {
                 .spectral_info = &spectral,
             };
             entry->thunk(&call);
+            if (frames == 0u && !atom_uses_spectral_context(entry->name)) {
+                for (size_t sample_index = 0u; sample_index < 1024u; sample_index++) {
+                    if (samples[sample_index] != -99.0f) {
+                        free(out);
+                        free(in);
+                        free(config);
+                        free(state);
+                        return fail_entry("zero-frame dispatch modified sample storage", entry);
+                    }
+                }
+            }
         }
 
         free(out);

@@ -23,7 +23,7 @@ void src_antialias_process(
     const float    b2          = b0;
     const float    a1          = 2.0f * (1.0f - ita * ita) * b0;
     const float    a2          = (1.0f - ita / q + ita * ita) * b0;
-    const uint32_t frames      = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    const uint32_t frames      = apg_process_frames_or_default(info);
 
     if (!apg_biquad_coefficients_are_finite(b0, b1, b2, a1, a2) || !apg_biquad_denominator_is_stable(a1, a2)) {
         for (uint32_t i = 0; i < frames; ++i)

@@ -21,7 +21,7 @@ void detect_rms_process(
     if (w_size < 1)
         w_size = 1;
 
-    const uint32_t frames    = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    const uint32_t frames    = apg_process_frames_or_default(info);
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, (uint32_t)w_size);
     float          sum_sq    = state->sum;
     if (!isfinite(sum_sq)) {

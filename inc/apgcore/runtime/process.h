@@ -18,7 +18,7 @@ static inline apg_process_info_t apg_process_info_default(void) {
 }
 
 static inline uint32_t apg_process_frames_or_default(const apg_process_info_t *info) {
-    return info && info->frames > 0u ? info->frames : APG_DEFAULT_FRAMES;
+    return info ? info->frames : APG_DEFAULT_FRAMES;
 }
 
 static inline uint32_t apg_process_output_frames_or_default(const apg_process_info_t *info) {

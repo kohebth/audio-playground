@@ -26,7 +26,7 @@ void src_upsample_process(
         return;
 
     const int      factor = clamp_upsample_factor(params);
-    const uint32_t frames = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    const uint32_t frames = apg_process_frames_or_default(info);
     const uint32_t output_frames =
         info != NULL && info->output_frames > 0u ? info->output_frames : (factor == 1 ? frames : 0u);
     uint32_t out_index = 0u;
