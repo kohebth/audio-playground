@@ -1,4 +1,5 @@
 #include <atom/dsp_atoms.h>
+#include <apgcore/dsp/dsp_safety.h>
 #include <stddef.h>
 
 void interpolation_linear_process(
@@ -8,13 +9,18 @@ void interpolation_linear_process(
     interpolation_linear_state_t  *state,
     const apg_process_info_t      *info
 ) {
-    if (out->signal == NULL || in->signal_a == NULL || in->signal_b == NULL || in->t == NULL)
+    (void)params;
+    (void)state;
+    if (out == NULL || in == NULL || out->signal == NULL || in->signal_a == NULL || in->signal_b == NULL ||
+        in->t == NULL)
         return;
 
     const uint32_t frames = apg_process_frames_or_default(info);
-
     for (uint32_t i = 0; i < frames; ++i) {
-        out->signal[i] = in->signal_a[i] * (1.0f - in->t[i]) + in->signal_b[i] * in->t[i];
+        const float t = apg_clamp_float(in->t[i], 0.0f, 1.0f);
+        const float a = isfinite(in->signal_a[i]) ? in->signal_a[i] : 0.0f;
+        const float b = isfinite(in->signal_b[i]) ? in->signal_b[i] : 0.0f;
+        out->signal[i] = a * (1.0f - t) + b * t;
     }
 }
 
