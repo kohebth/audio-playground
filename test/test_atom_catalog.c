@@ -69,6 +69,9 @@ static int test_runtime_registry_contract(void) {
             return fail("runtime atom registry capability metadata is invalid");
         if (atom_registry_find(entry->name) != entry)
             return fail("runtime atom registry lookup is not canonical");
+        if (apg_atom_profile_supported(entry->name, "wasm_realtime") != ((entry->flags & APG_ATOM_WASM_SAFE) != 0u) ||
+            apg_atom_profile_supported(entry->name, "m7_static") != ((entry->flags & APG_ATOM_M7_SAFE) != 0u))
+            return fail("target profile compatibility is not derived from registry flags");
 
         for (int j = i + 1; j < count; ++j) {
             const atom_registry_entry_t *other = atom_registry_get(j);
@@ -76,6 +79,8 @@ static int test_runtime_registry_contract(void) {
                 return fail("runtime atom registry contains a duplicate name");
         }
     }
+    if (apg_atom_profile_supported("missing_atom", "desktop_full"))
+        return fail("desktop profile accepted an unknown atom");
 
     const char *legacy_names[] = {"freq_fft", "freq_ifft", "freq_multiply"};
     for (size_t i = 0; i < sizeof(legacy_names) / sizeof(legacy_names[0]); ++i) {

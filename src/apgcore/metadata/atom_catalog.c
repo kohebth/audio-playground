@@ -295,13 +295,15 @@ bool apg_atom_profile_supported(const char *name, const char *profile) {
         return false;
     if (!apg_atom_profile_known(profile))
         return false;
+    atom_registry_init();
+    const atom_registry_entry_t *entry = atom_registry_find(name);
+    if (!entry)
+        return false;
     if (strcmp(profile, "desktop_full") == 0 || strcmp(profile, "offline_render") == 0)
         return true;
-    if (strncmp(name, "freq_", 5) == 0)
-        return false;
-    if (strcmp(profile, "m7_static") == 0 && strncmp(name, "src_", 4) == 0)
-        return false;
-    return true;
+    if (strcmp(profile, "wasm_realtime") == 0)
+        return (entry->flags & APG_ATOM_WASM_SAFE) != 0u;
+    return (entry->flags & APG_ATOM_M7_SAFE) != 0u;
 }
 
 size_t apg_atom_contract_field_count(const char *atom, apg_atom_contract_section_t section) {
