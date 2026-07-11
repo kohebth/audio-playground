@@ -27,7 +27,12 @@ int test_process_info_remaining_interpolation_src_frame_limits(void) {
         for (int i = 1024; i < 2048; i++)
             samples[i] = 2.0f;
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_info_t info = {
+            .sample_rate = 48000.0f,
+            .frames = (uint32_t)frames,
+            .output_frames = (uint32_t)frames,
+            .channels = 1,
+        };
 
         interpolation_linear_out_t    lin_out = {.signal = y};
         interpolation_linear_in_t     lin_in  = {.signal_a = a, .signal_b = b, .t = t};
@@ -145,6 +150,49 @@ int test_process_info_remaining_interpolation_src_frame_limits(void) {
             return fail("src_antiimage_process state mismatch");
         if (frames < 1024 && y[frames] != -99.0f)
             return fail("src_antiimage_process wrote past info.frames");
+    }
+
+    {
+        const uint32_t frames = 16u;
+        float samples[16];
+        float positions[16];
+        float a[16];
+        float b[16];
+        float t[16];
+        float y[16];
+        for (uint32_t i = 0; i < frames; ++i) {
+            samples[i] = (float)i;
+            positions[i] = (i & 1u) ? 1000000.0f : -1000000.0f;
+            a[i] = 1.0f;
+            b[i] = 3.0f;
+            t[i] = i == 0u ? NAN : (i == 1u ? -4.0f : 4.0f);
+            y[i] = -99.0f;
+        }
+        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = frames, .output_frames = frames, .channels = 1u};
+
+        interpolation_linear_out_t linear_out = {.signal = y};
+        interpolation_linear_in_t linear_in = {.signal_a = a, .signal_b = b, .t = t};
+        interpolation_linear_params_t linear_params;
+        interpolation_linear_state_t linear_state;
+        interpolation_linear_process(&linear_out, &linear_in, &linear_params, &linear_state, &info);
+        if (assert_finite_buffer(y, frames, "interpolation_linear bounded controls"))
+            return 1;
+
+        interpolation_lagrange_out_t lagrange_out = {.signal = y};
+        interpolation_lagrange_in_t lagrange_in = {.samples = samples, .t = positions};
+        interpolation_lagrange_params_t lagrange_params = {.order = 1000};
+        interpolation_lagrange_state_t lagrange_state;
+        interpolation_lagrange_process(&lagrange_out, &lagrange_in, &lagrange_params, &lagrange_state, &info);
+        if (assert_finite_buffer(y, frames, "interpolation_lagrange bounded reads"))
+            return 1;
+
+        interpolation_sinc_out_t sinc_out = {.signal = y};
+        interpolation_sinc_in_t sinc_in = {.buffer = samples, .position = positions};
+        interpolation_sinc_params_t sinc_params = {.num_taps = 1000};
+        interpolation_sinc_state_t sinc_state;
+        interpolation_sinc_process(&sinc_out, &sinc_in, &sinc_params, &sinc_state, &info);
+        if (assert_finite_buffer(y, frames, "interpolation_sinc bounded reads"))
+            return 1;
     }
 
     return 0;
