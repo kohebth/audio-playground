@@ -751,14 +751,18 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
         );
         if (status != UC_OK)
             return status;
-        layout->thunk          = node->thunk;
-        layout->state_fields   = node->state_fields;
-        layout->n_state_fields = node->state_fields_len > (size_t)INT_MAX ? INT_MAX : (int)node->state_fields_len;
-        layout->out_size       = atom_storage_size(node->out_size);
-        layout->in_size        = atom_storage_size(node->in_size);
-        layout->config_size    = atom_storage_size(node->config_size);
-        layout->state_size     = atom_storage_size(node->state_size);
-        status                 = reserve_storage(layout->out_size, &atom_storage_cursor, &layout->out_offset, err);
+        layout->thunk             = node->thunk;
+        layout->state_fields      = node->state_fields;
+        layout->n_state_fields    = node->state_fields_len > (size_t)INT_MAX ? INT_MAX : (int)node->state_fields_len;
+        layout->out_size          = atom_storage_size(node->out_size);
+        layout->in_size           = atom_storage_size(node->in_size);
+        layout->config_size       = atom_storage_size(node->config_size);
+        layout->state_size        = atom_storage_size(node->state_size);
+        layout->spectral_info     = node->spectral_info;
+        layout->has_spectral_info = node->has_spectral_info;
+        if (layout->has_spectral_info && out->frame_capacity < layout->spectral_info.fft_size)
+            return set_error(err, UC_E_RANGE, "v2 registry frame capacity is smaller than spectral FFT size");
+        status = reserve_storage(layout->out_size, &atom_storage_cursor, &layout->out_offset, err);
         if (status != UC_OK)
             return status;
         status = reserve_storage(layout->in_size, &atom_storage_cursor, &layout->in_offset, err);

@@ -35,7 +35,7 @@ graph:
         real: real
         imag: imag
       config:
-        block_size: 64
+        block_size: 256
 
 compatibility:
   desktop_full: true

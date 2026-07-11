@@ -4,6 +4,7 @@
 
 #include <yaml/node.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -691,6 +692,69 @@ static uc_status validate_mix_matrix_shape(const apg_v2_compiled_node_t *node, u
     return UC_OK;
 }
 
+static bool spectral_atom_uses_hop(const char *atom_name) {
+    return atom_name && (strcmp(atom_name, "freq_overlap_add") == 0 || strcmp(atom_name, "freq_overlap_save") == 0);
+}
+
+static bool spectral_atom_uses_context(const char *atom_name) {
+    return atom_name && (strcmp(atom_name, "freq_fft") == 0 || strcmp(atom_name, "freq_ifft") == 0 ||
+                         strcmp(atom_name, "freq_multiply") == 0 || strcmp(atom_name, "freq_window") == 0 ||
+                         spectral_atom_uses_hop(atom_name));
+}
+
+static uc_status
+spectral_literal_u32(const apg_v2_compiled_node_t *node, const char *key, uint32_t *out, uc_error *err) {
+    const apg_v2_compiled_binding_t *binding = find_compiled_binding(node->config, node->config_len, key);
+    if (!binding || binding->kind != APG_BIND_LITERAL || !isfinite(binding->number) || binding->number < 1.0f ||
+        binding->number > 65536.0f || floorf(binding->number) != binding->number) {
+        char msg[192];
+        snprintf(
+            msg, sizeof(msg), "node '%s' atom '%s' spectral config '%s' must be a positive integer literal",
+            node->id ? node->id : "", node->atom_name ? node->atom_name : "", key
+        );
+        return set_error(err, UC_E_RANGE, msg);
+    }
+    *out = (uint32_t)binding->number;
+    return UC_OK;
+}
+
+static uc_status populate_spectral_info(apg_v2_compiled_node_t *node, uc_error *err) {
+    node->has_spectral_info = false;
+    node->spectral_info     = (apg_spectral_info_t){0};
+    if (!spectral_atom_uses_context(node->atom_name))
+        return UC_OK;
+
+    uint32_t  fft_size = 0u;
+    uc_status status   = spectral_literal_u32(node, "block_size", &fft_size, err);
+    if (status != UC_OK)
+        return status;
+    if (!apg_spectral_fft_size_supported(fft_size)) {
+        char msg[192];
+        snprintf(
+            msg, sizeof(msg), "node '%s' atom '%s' spectral block_size must be one of 256, 512, 1024, or 2048",
+            node->id ? node->id : "", node->atom_name ? node->atom_name : ""
+        );
+        return set_error(err, UC_E_RANGE, msg);
+    }
+
+    uint32_t hop_size = fft_size;
+    if (spectral_atom_uses_hop(node->atom_name)) {
+        status = spectral_literal_u32(node, "hop_size", &hop_size, err);
+        if (status != UC_OK)
+            return status;
+        if (hop_size > fft_size)
+            return set_error(err, UC_E_RANGE, "spectral hop_size must not exceed block_size");
+    }
+
+    node->spectral_info = (apg_spectral_info_t){
+        .fft_size  = fft_size,
+        .bin_count = fft_size / 2u + 1u,
+        .hop_size  = hop_size,
+    };
+    node->has_spectral_info = true;
+    return UC_OK;
+}
+
 static void populate_atom_layout(apg_v2_compiled_node_t *node, const atom_registry_entry_t *atom) {
     size_t input_fields_len = 0u;
 
@@ -923,6 +987,9 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
         if (status != UC_OK)
             return status;
         status = validate_mix_matrix_shape(&nodes[i], err);
+        if (status != UC_OK)
+            return status;
+        status = populate_spectral_info(&nodes[i], err);
         if (status != UC_OK)
             return status;
     }

@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TEST_CHUNK 64u
+#define TEST_CHUNK 256u
 
 static int has_unit_v2_yaml_suffix(const char *name) {
     size_t n = name ? strlen(name) : 0u;

@@ -1913,6 +1913,82 @@ static int test_scalar_literals_must_be_numeric(void) {
     return expect_compile_invalid_contains(bad_literal, "bad scalar literal", "value", "config", "numeric literal");
 }
 
+static int test_spectral_context_validation(void) {
+    const char *unsupported_size = "kind: apg.unit\n"
+                                   "schema: apg.unit.v2\n"
+                                   "name: unsupported_fft_size\n"
+                                   "version: 2.0.0\n"
+                                   "params: {}\n"
+                                   "ports:\n"
+                                   "  inputs:\n"
+                                   "    - name: input\n"
+                                   "      type: audio\n"
+                                   "      channels: 1\n"
+                                   "  outputs:\n"
+                                   "    - name: real\n"
+                                   "      type: audio\n"
+                                   "      channels: 1\n"
+                                   "graph:\n"
+                                   "  signals:\n"
+                                   "    - input\n"
+                                   "    - real\n"
+                                   "    - imag\n"
+                                   "  nodes:\n"
+                                   "    - id: fft\n"
+                                   "      atom: freq_fft\n"
+                                   "      in:\n"
+                                   "        signal: input\n"
+                                   "      out:\n"
+                                   "        real: real\n"
+                                   "        imag: imag\n"
+                                   "      config:\n"
+                                   "        block_size: 64\n"
+                                   "compatibility:\n"
+                                   "  desktop_full: true\n";
+    if (expect_compile_invalid_contains(unsupported_size, "unsupported spectral size", "fft", "block_size", "256"))
+        return 1;
+
+    const char *dynamic_size = "kind: apg.unit\n"
+                               "schema: apg.unit.v2\n"
+                               "name: dynamic_fft_size\n"
+                               "version: 2.0.0\n"
+                               "params:\n"
+                               "  fft_size:\n"
+                               "    type: int\n"
+                               "    default: 256\n"
+                               "    min: 256\n"
+                               "    max: 2048\n"
+                               "ports:\n"
+                               "  inputs:\n"
+                               "    - name: input\n"
+                               "      type: audio\n"
+                               "      channels: 1\n"
+                               "  outputs:\n"
+                               "    - name: real\n"
+                               "      type: audio\n"
+                               "      channels: 1\n"
+                               "graph:\n"
+                               "  signals:\n"
+                               "    - input\n"
+                               "    - real\n"
+                               "    - imag\n"
+                               "  nodes:\n"
+                               "    - id: fft\n"
+                               "      atom: freq_fft\n"
+                               "      in:\n"
+                               "        signal: input\n"
+                               "      out:\n"
+                               "        real: real\n"
+                               "        imag: imag\n"
+                               "      config:\n"
+                               "        block_size: ${params.fft_size}\n"
+                               "compatibility:\n"
+                               "  desktop_full: true\n";
+    return expect_compile_invalid_contains(
+        dynamic_size, "dynamic spectral size", "fft", "block_size", "integer literal"
+    );
+}
+
 int main(void) {
     if (test_simple_gain_compile())
         return 1;
@@ -1943,6 +2019,8 @@ int main(void) {
     if (test_signal_dependencies_rejected())
         return 1;
     if (test_scalar_literals_must_be_numeric())
+        return 1;
+    if (test_spectral_context_validation())
         return 1;
     if (test_compile_all_unit_v2_fixtures())
         return 1;

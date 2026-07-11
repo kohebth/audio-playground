@@ -45,6 +45,8 @@ typedef struct {
     size_t                       out_len;
     apg_v2_compiled_binding_t   *config;
     size_t                       config_len;
+    apg_spectral_info_t          spectral_info;
+    bool                         has_spectral_info;
 } apg_v2_compiled_node_t;
 
 typedef struct {

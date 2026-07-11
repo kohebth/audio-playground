@@ -439,11 +439,12 @@ static uc_status init_node_calls(const apg_v2_registry_t *registry, apg_v2_runti
         node->n_state_fields         = layout->n_state_fields;
         node->state_size             = layout->state_size;
 
-        node->call.out    = node->out_storage;
-        node->call.in     = node->in_storage;
-        node->call.config = node->config_storage;
-        node->call.state  = node->state_storage;
-        node->call.info   = &out->process_info;
+        node->call.out           = node->out_storage;
+        node->call.in            = node->in_storage;
+        node->call.config        = node->config_storage;
+        node->call.state         = node->state_storage;
+        node->call.info          = &out->process_info;
+        node->call.spectral_info = layout->has_spectral_info ? &layout->spectral_info : NULL;
 
         status = init_state_buffers(layout, out, node, err);
         if (status != UC_OK)

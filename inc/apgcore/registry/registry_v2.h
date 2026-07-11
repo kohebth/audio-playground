@@ -81,6 +81,8 @@ typedef struct {
     size_t                            mix_matrix_coefficients_len;
     size_t                            mix_matrix_num_out;
     size_t                            mix_matrix_num_in;
+    apg_spectral_info_t               spectral_info;
+    bool                              has_spectral_info;
 } apg_v2_registry_node_layout_t;
 
 typedef struct {

@@ -191,9 +191,9 @@ first_unsupported_unit(const apg_project_v2_resolved_t *project, const char *tar
     return NULL;
 }
 
-static const char *first_unsupported_atom(const apg_v2_registry_t *registry, const char *target) {
-    for (size_t i = 0; registry && i < registry->nodes_len; i++) {
-        const char *atom_name = registry->node_layouts[i].atom_name;
+static const char *first_unsupported_atom(const apg_v2_compiled_unit_t *plan, const char *target) {
+    for (size_t i = 0; plan && i < plan->nodes_len; i++) {
+        const char *atom_name = plan->nodes[i].atom_name;
         if (!apg_atom_profile_supported(atom_name, target))
             return atom_name;
     }
@@ -828,6 +828,16 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         out
     );
     fputs("#endif\n\n", out);
+    fputs("static const apg_spectral_info_t apg_m7_project_spectral_info[APG_M7_PROJECT_NODE_COUNT] = {", out);
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        if (i > 0u)
+            fputs(", ", out);
+        const apg_spectral_info_t *info = &registry->node_layouts[i].spectral_info;
+        fprintf(
+            out, "{.fft_size = %uu, .bin_count = %uu, .hop_size = %uu}", info->fft_size, info->bin_count, info->hop_size
+        );
+    }
+    fputs("};\n\n", out);
     fputs(
         "atom_call_t apg_m7_project_atom_calls[APG_M7_PROJECT_NODE_COUNT] "
         "APG_M7_SECTION_ATTR(APG_M7_SECTION_ATOM_CALLS) = {",
@@ -841,9 +851,15 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
             out,
             "{.out = (void *)&apg_m7_project_atom_storage[%zuu], .in = (void *)&apg_m7_project_atom_storage[%zuu], "
             ".config = (void *)&apg_m7_project_atom_storage[%zuu], "
-            ".state = (void *)&apg_m7_project_atom_storage[%zuu], .info = &apg_m7_project_process_info}",
+            ".state = (void *)&apg_m7_project_atom_storage[%zuu], .info = &apg_m7_project_process_info, "
+            ".spectral_info = ",
             layout->out_offset, layout->in_offset, layout->config_offset, layout->state_offset
         );
+        if (layout->has_spectral_info)
+            fprintf(out, "&apg_m7_project_spectral_info[%zuu]", i);
+        else
+            fputs("NULL", out);
+        fputc('}', out);
     }
     fputs("};\n\n", out);
     fputs("#if APG_M7_PROJECT_SIGNAL_BUFFER_BYTES > 0u\n", out);
@@ -1088,6 +1104,16 @@ write_wasm_source(const char *path, const apg_project_v2_resolved_t *project, co
         }
         fputs("};\n\n", out);
     }
+    fputs("static const apg_spectral_info_t apg_wasm_project_spectral_info[APG_WASM_PROJECT_NODE_COUNT] = {", out);
+    for (size_t i = 0; i < registry->nodes_len; i++) {
+        if (i > 0u)
+            fputs(", ", out);
+        const apg_spectral_info_t *info = &registry->node_layouts[i].spectral_info;
+        fprintf(
+            out, "{.fft_size = %uu, .bin_count = %uu, .hop_size = %uu}", info->fft_size, info->bin_count, info->hop_size
+        );
+    }
+    fputs("};\n\n", out);
     fputs("atom_call_t apg_wasm_project_atom_calls[APG_WASM_PROJECT_NODE_COUNT] = {", out);
     for (size_t i = 0; i < registry->nodes_len; i++) {
         if (i > 0u)
@@ -1098,9 +1124,14 @@ write_wasm_source(const char *path, const apg_project_v2_resolved_t *project, co
             "{.out = (void *)&apg_wasm_project_atom_storage[%zuu], .in = (void "
             "*)&apg_wasm_project_atom_storage[%zuu], .config = (void "
             "*)&apg_wasm_project_atom_storage[%zuu], .state = (void "
-            "*)&apg_wasm_project_atom_storage[%zuu], .info = &apg_wasm_project_process_info}",
+            "*)&apg_wasm_project_atom_storage[%zuu], .info = &apg_wasm_project_process_info, .spectral_info = ",
             layout->out_offset, layout->in_offset, layout->config_offset, layout->state_offset
         );
+        if (layout->has_spectral_info)
+            fprintf(out, "&apg_wasm_project_spectral_info[%zuu]", i);
+        else
+            fputs("NULL", out);
+        fputc('}', out);
     }
     fputs("};\n\n", out);
     fputs("static float *apg_wasm_signal(size_t index) {\n", out);
@@ -1413,6 +1444,14 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
         return rc;
     }
 
+    const char *unsupported_atom = first_unsupported_atom(&compiled.plan, "wasm_realtime");
+    if (unsupported_atom) {
+        uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support wasm_realtime", unsupported_atom);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
     uc_arena          registry_arena = {0};
     apg_v2_registry_t registry       = {0};
     status                           = apg_v2_registry_build_with_growth(
@@ -1420,15 +1459,6 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
     );
     if (status != UC_OK) {
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
-        uc_arena_free(&arena);
-        return rc;
-    }
-
-    const char *unsupported_atom = first_unsupported_atom(&registry, "wasm_realtime");
-    if (unsupported_atom) {
-        uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support wasm_realtime", unsupported_atom);
-        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
-        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }
@@ -1540,6 +1570,14 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         return rc;
     }
 
+    const char *unsupported_atom = first_unsupported_atom(&compiled.plan, "m7_static");
+    if (unsupported_atom) {
+        uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support m7_static", unsupported_atom);
+        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
+        uc_arena_free(&arena);
+        return rc;
+    }
+
     uc_arena          registry_arena = {0};
     apg_v2_registry_t registry       = {0};
     status                           = apg_v2_registry_build_with_growth(
@@ -1547,14 +1585,6 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
     );
     if (status != UC_OK) {
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
-        uc_arena_free(&arena);
-        return rc;
-    }
-    const char *unsupported_atom = first_unsupported_atom(&registry, "m7_static");
-    if (unsupported_atom) {
-        uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "atom '%s' does not support m7_static", unsupported_atom);
-        int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
-        uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return rc;
     }

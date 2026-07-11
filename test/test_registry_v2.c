@@ -58,6 +58,69 @@ static int load_compile_string(const char *yaml, uc_arena *arena, apg_unit_v2_t 
     return 0;
 }
 
+static int test_registry_spectral_context(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_fixture("test/fixtures/units-v2/wasm_unsupported_freq.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+    if (plan.nodes_len != 1u || !plan.nodes[0].has_spectral_info || plan.nodes[0].spectral_info.fft_size != 256u ||
+        plan.nodes[0].spectral_info.bin_count != 129u || plan.nodes[0].spectral_info.hop_size != 256u) {
+        uc_arena_free(&arena);
+        return fail("compiler did not derive spectral context");
+    }
+
+    uc_arena          registry_arena;
+    apg_v2_registry_t registry;
+    uc_error          err = {0};
+    uc_status status      = apg_v2_registry_build_with_growth(&plan, 64u, 48000.0f, &registry_arena, &registry, &err);
+    if (status != UC_E_RANGE || strstr(err.msg, "frame capacity") == NULL) {
+        if (status == UC_OK)
+            uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("registry accepted undersized spectral signal buffers");
+    }
+
+    err    = (uc_error){0};
+    status = apg_v2_registry_build_with_growth(&plan, 256u, 48000.0f, &registry_arena, &registry, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to build spectral registry");
+    }
+    if (registry.nodes_len != 1u || !registry.node_layouts[0].has_spectral_info ||
+        !apg_spectral_info_valid(&registry.node_layouts[0].spectral_info)) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("registry did not preserve spectral context");
+    }
+
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("failed to initialize spectral runtime");
+    }
+    if (runtime.nodes_len != 1u || runtime.nodes[0].call.spectral_info != &registry.node_layouts[0].spectral_info) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("runtime call does not reference registry-owned spectral context");
+    }
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&registry_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_registry_layout(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -763,6 +826,8 @@ static int test_runtime_create_owned_lifecycle(void) {
 }
 
 int main(void) {
+    if (test_registry_spectral_context())
+        return 1;
     if (test_registry_layout())
         return 1;
     if (test_registry_state_buffer_samples())

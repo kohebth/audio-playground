@@ -165,6 +165,8 @@ static int test_runtime_init_simple_gain(void) {
             return fail("runtime atom call does not reference owned storage");
         if (node->call.info != &runtime.process_info)
             return fail("runtime atom call does not reference process info");
+        if (node->call.spectral_info != NULL)
+            return fail("non-spectral runtime atom call has spectral context");
     }
 
     apg_v2_runtime_destroy(&runtime);
