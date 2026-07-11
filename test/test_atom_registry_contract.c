@@ -3,6 +3,7 @@
 #include <atom_registry.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int fail(const char *msg) {
@@ -139,6 +140,113 @@ static int test_legacy_atoms_are_marked_experimental(void) {
     return 0;
 }
 
+static void initialize_pointer_slots(void *storage, size_t size, float *samples) {
+    for (size_t offset = 0u; offset + sizeof(samples) <= size; offset += sizeof(samples))
+        memcpy((char *)storage + offset, &samples, sizeof(samples));
+}
+
+static void initialize_described_fields(
+    void *storage, const atom_field_desc_t *fields, int field_count, float *samples, float **signal_array
+) {
+    for (int i = 0; storage && fields && i < field_count; i++) {
+        const atom_field_desc_t *field = &fields[i];
+        if (field->type == FIELD_SIGNAL || field->type == FIELD_BUFFER || field->type == FIELD_FLOAT_PTR) {
+            memcpy((char *)storage + field->offset, &samples, sizeof(samples));
+        } else if (field->type == FIELD_FLOAT_PP) {
+            memcpy((char *)storage + field->offset, &signal_array, sizeof(signal_array));
+        } else if (field->type == FIELD_INT && field->name && strcmp(field->name, "buffer_len") == 0) {
+            const uint32_t buffer_len = 4096u;
+            memcpy((char *)storage + field->offset, &buffer_len, sizeof(buffer_len));
+        } else if (field->type == FIELD_INT) {
+            const int value = 0;
+            memcpy((char *)storage + field->offset, &value, sizeof(value));
+        } else if (field->type == FIELD_FLOAT) {
+            const float value = 0.0f;
+            memcpy((char *)storage + field->offset, &value, sizeof(value));
+        }
+    }
+}
+
+static int test_all_atoms_accept_required_frame_sizes(void) {
+    static const uint32_t     frame_sizes[]   = {0u, 1u, 64u, 128u, 256u, 512u, 1024u};
+    static float              samples[192000] = {0};
+    float                    *signal_array[2] = {samples, samples};
+    const apg_spectral_info_t spectral        = {.fft_size = 256u, .bin_count = 129u, .hop_size = 128u};
+
+    for (int atom_index = 0; atom_index < atom_registry_count(); atom_index++) {
+        const atom_registry_entry_t *entry       = atom_registry_get(atom_index);
+        size_t                       out_size    = entry->out_size ? entry->out_size : 1u;
+        size_t                       in_size     = entry->in_size ? entry->in_size : 1u;
+        size_t                       config_size = entry->config_size ? entry->config_size : 1u;
+        size_t                       state_size  = entry->state_size ? entry->state_size : 1u;
+        void                        *out         = calloc(1u, out_size);
+        void                        *in          = calloc(1u, in_size);
+        void                        *config      = calloc(1u, config_size);
+        void                        *state       = calloc(1u, state_size);
+        if (!out || !in || !config || !state) {
+            free(out);
+            free(in);
+            free(config);
+            free(state);
+            return fail_entry("frame smoke storage allocation failed", entry);
+        }
+
+        initialize_pointer_slots(out, out_size, samples);
+        initialize_pointer_slots(in, in_size, samples);
+        initialize_described_fields(in, entry->input_fields, entry->n_input_fields, samples, signal_array);
+        initialize_described_fields(config, entry->config_fields, entry->n_config_fields, samples, signal_array);
+        initialize_described_fields(state, entry->state_fields, entry->n_state_fields, samples, signal_array);
+
+        entry->thunk(NULL);
+        atom_call_t incomplete_call = {
+            .out           = out,
+            .in            = in,
+            .config        = config,
+            .state         = state,
+            .spectral_info = &spectral,
+        };
+        void **required_fields[] = {
+            &incomplete_call.out,
+            &incomplete_call.in,
+            &incomplete_call.config,
+            &incomplete_call.state,
+        };
+        for (size_t field_index = 0u; field_index < sizeof(required_fields) / sizeof(required_fields[0]);
+             field_index++) {
+            void *saved                   = *required_fields[field_index];
+            *required_fields[field_index] = NULL;
+            entry->thunk(&incomplete_call);
+            *required_fields[field_index] = saved;
+        }
+
+        for (size_t frame_index = 0u; frame_index < sizeof(frame_sizes) / sizeof(frame_sizes[0]); frame_index++) {
+            const uint32_t frames = frame_sizes[frame_index];
+            memset(samples, 0, 8192u * sizeof(*samples));
+            const apg_process_info_t info = {
+                .sample_rate   = 48000.0f,
+                .frames        = frames,
+                .output_frames = frames,
+                .channels      = 1u,
+            };
+            atom_call_t call = {
+                .out           = out,
+                .in            = in,
+                .config        = config,
+                .state         = state,
+                .info          = &info,
+                .spectral_info = &spectral,
+            };
+            entry->thunk(&call);
+        }
+
+        free(out);
+        free(in);
+        free(config);
+        free(state);
+    }
+    return 0;
+}
+
 int main(void) {
     if (test_registry_entries_are_complete())
         return 1;
@@ -151,6 +259,8 @@ int main(void) {
     if (test_registry_find_returns_canonical_entry())
         return 1;
     if (test_legacy_atoms_are_marked_experimental())
+        return 1;
+    if (test_all_atoms_accept_required_frame_sizes())
         return 1;
     return 0;
 }

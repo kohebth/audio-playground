@@ -169,5 +169,18 @@ int test_process_info_modulation_remaining_frame_limits(void) {
             return fail("modulation_scrub_process wrote past info.frames");
     }
 
+    float                     invalid_buffer[2]   = {NAN, INFINITY};
+    float                     invalid_position[3] = {NAN, -INFINITY, INFINITY};
+    float                     invalid_output[4]   = {-99.0f, -99.0f, -99.0f, -99.0f};
+    modulation_scrub_out_t    invalid_out         = {.signal = invalid_output};
+    modulation_scrub_in_t     invalid_in          = {.buffer = invalid_buffer, .position = invalid_position};
+    modulation_scrub_params_t invalid_params      = {.buffer_size = 0};
+    modulation_scrub_state_t  invalid_state;
+    apg_process_info_t invalid_info = {.sample_rate = 48000.0f, .frames = 3u, .output_frames = 3u, .channels = 1u};
+    modulation_scrub_process(&invalid_out, &invalid_in, &invalid_params, &invalid_state, &invalid_info);
+    if (invalid_output[0] != 0.0f || invalid_output[1] != 0.0f || invalid_output[2] != 0.0f ||
+        invalid_output[3] != -99.0f)
+        return fail("modulation_scrub_process invalid buffer size was not safe silence");
+
     return test_modulation_delay_safety();
 }
