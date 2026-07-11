@@ -1,7 +1,8 @@
+#include <apgcore/dsp/dsp_safety.h>
 #include <atom/dsp_atoms.h>
-#include <stdlib.h>
+#include <stddef.h>
 
-#define MAX_COMB_DELAY 48000
+#define MAX_COMB_DELAY 48000u
 
 void filter_comb_fb_process(
     filter_comb_fb_out_t     *out,
@@ -10,33 +11,36 @@ void filter_comb_fb_process(
     filter_comb_fb_state_t   *state,
     const apg_process_info_t *info
 ) {
-    if (out->signal == NULL || in->signal == NULL || state == NULL || state->buffer == NULL)
+    if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
+        state->buffer == NULL)
         return;
 
-    const uint32_t frames    = apg_process_frames_or_default(info);
-    int            write_pos = state->write_pos;
+    const uint32_t frames    = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, MAX_COMB_DELAY);
+    const float    coefficient =
+        isfinite(params->coefficient) ? apg_clamp_float(params->coefficient, -0.999f, 0.999f) : 0.0f;
 
     for (uint32_t i = 0; i < frames; ++i) {
-        float delay_val = (in->delay != NULL) ? in->delay[i] : (float)params->delay_samples;
-        if (delay_val != delay_val || delay_val < 1.0f)
-            delay_val = 1.0f;
+        float delay_val         = (in->delay != NULL) ? in->delay[i] : (float)params->delay_samples;
+        delay_val               = apg_clamp_float(delay_val, 1.0f, (float)MAX_COMB_DELAY);
+        const int64_t  delay    = (int64_t)delay_val;
+        const uint32_t read_pos = apg_wrap_index_i64((int64_t)write_pos - delay, MAX_COMB_DELAY);
+        float          delayed  = state->buffer[read_pos];
+        if (!isfinite(delayed)) {
+            delayed                 = 0.0f;
+            state->buffer[read_pos] = 0.0f;
+        }
 
-        int delay = (int)delay_val;
-        if (delay > MAX_COMB_DELAY)
-            delay = MAX_COMB_DELAY;
-
-        int read_pos = write_pos - delay;
-        if (read_pos < 0)
-            read_pos += MAX_COMB_DELAY;
-
-        float delayed = state->buffer[read_pos % MAX_COMB_DELAY];
-        float output  = in->signal[i] + params->coefficient * delayed;
+        const float input  = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
+        float       output = input + coefficient * delayed;
+        if (!isfinite(output))
+            output = 0.0f;
 
         out->signal[i]           = output;
-        state->buffer[write_pos] = output;
-        write_pos                = (write_pos + 1) % MAX_COMB_DELAY;
+        state->buffer[write_pos] = apg_denormal_kill(output);
+        write_pos                = write_pos + 1u == MAX_COMB_DELAY ? 0u : write_pos + 1u;
     }
-    state->write_pos = write_pos;
+    state->write_pos = (int)write_pos;
 }
 
 void filter_comb_fb(

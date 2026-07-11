@@ -1,7 +1,8 @@
+#include <apgcore/dsp/dsp_safety.h>
 #include <atom/dsp_atoms.h>
-#include <stdlib.h>
+#include <stddef.h>
 
-#define MAX_ALLPASS_DELAY 48000
+#define MAX_ALLPASS_DELAY 48000u
 
 void filter_allpass_process(
     filter_allpass_out_t     *out,
@@ -10,30 +11,42 @@ void filter_allpass_process(
     filter_allpass_state_t   *state,
     const apg_process_info_t *info
 ) {
-    if (out->signal == NULL || in->signal == NULL || state == NULL || state->buffer == NULL)
+    if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
+        state->buffer == NULL)
         return;
 
-    const uint32_t frames    = apg_process_frames_or_default(info);
-    int            write_pos = state->write_pos;
-    int            delay     = params->delay_samples;
-    if (delay > MAX_ALLPASS_DELAY)
+    const uint32_t frames    = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, MAX_ALLPASS_DELAY);
+    int64_t        delay     = params->delay_samples;
+    if (delay < 1)
+        delay = 1;
+    if (delay > (int64_t)MAX_ALLPASS_DELAY)
         delay = MAX_ALLPASS_DELAY;
-    float g = params->coefficient;
+    const float coefficient =
+        isfinite(params->coefficient) ? apg_clamp_float(params->coefficient, -0.999f, 0.999f) : 0.0f;
 
     for (uint32_t i = 0; i < frames; ++i) {
-        int read_pos = write_pos - delay;
-        if (read_pos < 0)
-            read_pos += MAX_ALLPASS_DELAY;
+        const uint32_t read_pos = apg_wrap_index_i64((int64_t)write_pos - delay, MAX_ALLPASS_DELAY);
+        float          delayed  = state->buffer[read_pos];
+        if (!isfinite(delayed)) {
+            delayed                 = 0.0f;
+            state->buffer[read_pos] = 0.0f;
+        }
 
-        float v_n = state->buffer[read_pos % MAX_ALLPASS_DELAY];
-        float y_n = -g * in->signal[i] + v_n;
+        const float input  = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
+        float       output = -coefficient * input + delayed;
+        float       next   = input + coefficient * output;
+        if (!isfinite(output) || !isfinite(next)) {
+            output = 0.0f;
+            next   = 0.0f;
+        }
 
-        out->signal[i]           = y_n;
-        state->buffer[write_pos] = in->signal[i] + g * y_n;
+        out->signal[i]           = output;
+        state->buffer[write_pos] = apg_denormal_kill(next);
 
-        write_pos = (write_pos + 1) % MAX_ALLPASS_DELAY;
+        write_pos = write_pos + 1u == MAX_ALLPASS_DELAY ? 0u : write_pos + 1u;
     }
-    state->write_pos = write_pos;
+    state->write_pos = (int)write_pos;
 }
 
 void filter_allpass(

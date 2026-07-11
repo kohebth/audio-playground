@@ -1,4 +1,69 @@
 #include "test_atom_basic_common.h"
+#include <limits.h>
+
+static int test_feedback_filter_safety(void) {
+    float        input[512] = {0};
+    float        delay[512] = {0};
+    float        output[513];
+    static float buffer[48000];
+    input[0] = 1.0f;
+    for (size_t i = 0; i < 513u; ++i)
+        output[i] = -99.0f;
+    for (size_t i = 0; i < 512u; ++i)
+        delay[i] = i == 0u ? NAN : (i == 1u ? INFINITY : -100.0f);
+
+    apg_process_info_t info = {.sample_rate = 48000.0f, .frames = 512u, .output_frames = 512u, .channels = 1u};
+
+    memset(buffer, 0, sizeof(buffer));
+    buffer[47998]                     = NAN;
+    filter_comb_ff_out_t    ff_out    = {.signal = output};
+    filter_comb_ff_in_t     ff_in     = {.signal = input};
+    filter_comb_ff_params_t ff_params = {.delay_samples = -100, .coefficient = 100.0f};
+    filter_comb_ff_state_t  ff_state  = {.buffer = buffer, .write_pos = -1};
+    filter_comb_ff_process(&ff_out, &ff_in, &ff_params, &ff_state, &info);
+    if (assert_finite_buffer(output, 512, "filter_comb_ff_process invalid state"))
+        return 1;
+    if (ff_state.write_pos < 0 || ff_state.write_pos >= 48000 || output[512] != -99.0f)
+        return fail("filter_comb_ff_process did not normalize state or preserve sentinel");
+
+    memset(buffer, 0, sizeof(buffer));
+    for (size_t i = 0; i < 513u; ++i)
+        output[i] = -99.0f;
+    filter_comb_fb_out_t    fb_out    = {.signal = output};
+    filter_comb_fb_in_t     fb_in     = {.signal = input, .delay = delay};
+    filter_comb_fb_params_t fb_params = {.delay_samples = 1, .coefficient = 100.0f};
+    filter_comb_fb_state_t  fb_state  = {.buffer = buffer, .write_pos = -48001};
+    filter_comb_fb_process(&fb_out, &fb_in, &fb_params, &fb_state, &info);
+    if (assert_finite_buffer(output, 512, "filter_comb_fb_process invalid config"))
+        return 1;
+    if (fb_state.write_pos < 0 || fb_state.write_pos >= 48000 || output[512] != -99.0f)
+        return fail("filter_comb_fb_process did not normalize state or preserve sentinel");
+
+    memset(buffer, 0, sizeof(buffer));
+    memset(output, 0, sizeof(output));
+    filter_allpass_out_t    allpass_out    = {.signal = output};
+    filter_allpass_in_t     allpass_in     = {.signal = input};
+    filter_allpass_params_t allpass_params = {.delay_samples = 8, .coefficient = 0.5f};
+    filter_allpass_state_t  allpass_state  = {.buffer = buffer, .write_pos = 0};
+    filter_allpass_process(&allpass_out, &allpass_in, &allpass_params, &allpass_state, &info);
+    float energy = 0.0f;
+    for (size_t i = 0; i < 512u; ++i)
+        energy += output[i] * output[i];
+    if (fabsf(energy - 1.0f) > 1.0e-5f)
+        return fail("filter_allpass_process did not preserve impulse energy");
+
+    output[0]                    = -99.0f;
+    info.frames                  = 0u;
+    allpass_params.delay_samples = INT_MAX;
+    allpass_params.coefficient   = NAN;
+    allpass_state.write_pos      = -1;
+    allpass_state.buffer[47999]  = NAN;
+    filter_allpass_process(&allpass_out, &allpass_in, &allpass_params, &allpass_state, &info);
+    if (output[0] != -99.0f || allpass_state.write_pos != 47999)
+        return fail("filter_allpass_process mishandled zero frames");
+
+    return 0;
+}
 
 int test_process_info_remaining_filter_frame_limits(void) {
     const int frame_sizes[] = {64, 128, 256, 512, 1024};
@@ -142,5 +207,5 @@ int test_process_info_remaining_filter_frame_limits(void) {
             return fail("filter_allpass_process wrote past info.frames");
     }
 
-    return 0;
+    return test_feedback_filter_safety();
 }
