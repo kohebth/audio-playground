@@ -400,6 +400,9 @@ void src_convert_format(
 
 ## 🔷 Frequency Domain
 
+The spectral atoms below are legacy APIs. Their production frame, bin, layout, normalization, and latency semantics are
+defined in [SPECTRAL_PROCESSING_CONTRACT.md](SPECTRAL_PROCESSING_CONTRACT.md).
+
 ```c++
 void freq_fft(
     freq_fft_out_t                   out,      // { float *real; float *imag; }
