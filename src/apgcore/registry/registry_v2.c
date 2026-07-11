@@ -1,6 +1,7 @@
 #include <apgcore/registry/registry_builder_v2.h>
 
 #include <limits.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -38,6 +39,78 @@ copy_registry_string(uc_arena *arena, const char *text, const char **out, uc_err
 static size_t atom_storage_size(size_t size) { return size > 0u ? size : 1u; }
 
 static size_t runtime_storage_align(void) { return _Alignof(max_align_t); }
+
+static const apg_v2_compiled_binding_t *
+compiled_binding_by_key(const apg_v2_compiled_binding_t *bindings, size_t bindings_len, const char *key) {
+    for (size_t i = 0; bindings && i < bindings_len; i++) {
+        if (bindings[i].key && strcmp(bindings[i].key, key) == 0)
+            return &bindings[i];
+    }
+    return NULL;
+}
+
+static double configured_binding_max(
+    const apg_v2_compiled_unit_t *plan, const apg_v2_compiled_node_t *node, const char *key, double fallback
+) {
+    (void)plan;
+    const apg_v2_compiled_binding_t *binding = compiled_binding_by_key(node->config, node->config_len, key);
+    if (!binding)
+        return fallback;
+    double value = binding->number;
+    if (binding->kind == APG_BIND_PARAM && binding->has_maximum)
+        value = binding->maximum;
+    return isfinite(value) && value >= 0.0 ? value : fallback;
+}
+
+static size_t bounded_buffer_samples(double requested, size_t minimum, size_t maximum) {
+    if (!isfinite(requested) || requested < (double)minimum)
+        return minimum;
+    if (requested >= (double)maximum)
+        return maximum;
+    size_t rounded = (size_t)ceil(requested);
+    return rounded < minimum ? minimum : rounded;
+}
+
+static size_t runtime_state_buffer_samples(
+    const apg_v2_compiled_unit_t *plan,
+    const apg_v2_compiled_node_t *node,
+    size_t                        declared_samples,
+    uint32_t                      frame_capacity
+) {
+    if (!node || !node->atom_name)
+        return declared_samples;
+    if (node->has_spectral_info &&
+        (strcmp(node->atom_name, "freq_overlap_add") == 0 || strcmp(node->atom_name, "freq_overlap_save") == 0))
+        return node->spectral_info.fft_size;
+    if (strcmp(node->atom_name, "delay_line") == 0)
+        return bounded_buffer_samples(
+            configured_binding_max(plan, node, "length", declared_samples) + 1.0, 1u, declared_samples
+        );
+    if (strcmp(node->atom_name, "delay_fractional") == 0)
+        return bounded_buffer_samples(
+            configured_binding_max(plan, node, "delay_samples", declared_samples) + 2.0, 2u, declared_samples
+        );
+    if (strcmp(node->atom_name, "filter_fir") == 0)
+        return bounded_buffer_samples(
+            configured_binding_max(plan, node, "kernel_size", declared_samples), 1u, declared_samples
+        );
+    if (strcmp(node->atom_name, "filter_comb_fb") == 0 && compiled_binding_by_key(node->in, node->in_len, "delay"))
+        return declared_samples;
+    if (strcmp(node->atom_name, "filter_comb_ff") == 0 || strcmp(node->atom_name, "filter_comb_fb") == 0 ||
+        strcmp(node->atom_name, "filter_allpass") == 0)
+        return bounded_buffer_samples(
+            configured_binding_max(plan, node, "delay_samples", declared_samples), 1u, declared_samples
+        );
+    if (strcmp(node->atom_name, "detect_rms") == 0)
+        return bounded_buffer_samples(
+            configured_binding_max(plan, node, "window_size", declared_samples), 1u, declared_samples
+        );
+    if (strcmp(node->atom_name, "detect_autocorrelate") == 0 || strcmp(node->atom_name, "detect_pitch") == 0) {
+        double max_lag = configured_binding_max(plan, node, "max_lag", declared_samples);
+        return bounded_buffer_samples((double)frame_capacity + max_lag, 1u, declared_samples);
+    }
+    return declared_samples;
+}
 
 static bool parse_port_channel_count(const apg_unit_v2_port_t *port, size_t *out_count);
 
@@ -797,10 +870,9 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
         for (size_t field_index = 0; field_index < node->state_fields_len; field_index++) {
             if (node->state_fields[field_index].type != FIELD_BUFFER)
                 continue;
-            size_t buffer_samples = node->state_fields[field_index].buffer_samples;
-            if (node->has_spectral_info &&
-                (strcmp(node->atom_name, "freq_overlap_add") == 0 || strcmp(node->atom_name, "freq_overlap_save") == 0))
-                buffer_samples = node->spectral_info.fft_size;
+            size_t buffer_samples = runtime_state_buffer_samples(
+                plan, node, node->state_fields[field_index].buffer_samples, out->frame_capacity
+            );
             layout->state_buffer_samples_by_index[buffer_index++]           = buffer_samples;
             layout->state_buffer_sample_offsets_by_index[buffer_index - 1u] = state_buffer_cursor;
             if (buffer_samples > SIZE_MAX - state_buffer_cursor)

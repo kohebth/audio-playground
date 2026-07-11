@@ -17,6 +17,8 @@ typedef struct {
     size_t                index;
     const char           *literal;
     float                 number;
+    float                 maximum;
+    bool                  has_maximum;
     size_t               *indices;
     size_t                indices_len;
     float                *numbers;

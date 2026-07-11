@@ -17,6 +17,7 @@ FIELD_COUNT(modulation_frequency_config_fields);
 
 const atom_field_desc_t modulation_frequency_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(modulation_frequency_state_t, buffer), APG_MODULATION_DELAY_CAPACITY},
+    {"buffer_len", FIELD_INT, offsetof(modulation_frequency_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(modulation_frequency_state_t, write_pos)},
     {"current_delay", FIELD_FLOAT, offsetof(modulation_frequency_state_t, current_delay)},
 };
@@ -29,6 +30,7 @@ FIELD_COUNT(modulation_phase_config_fields);
 
 const atom_field_desc_t modulation_phase_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(modulation_phase_state_t, buffer), APG_MODULATION_DELAY_CAPACITY},
+    {"buffer_len", FIELD_INT, offsetof(modulation_phase_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(modulation_phase_state_t, write_pos)},
 };
 FIELD_COUNT(modulation_phase_state_fields);

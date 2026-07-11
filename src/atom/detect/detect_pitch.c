@@ -16,12 +16,12 @@ void detect_pitch_process(
         state->buffer == NULL)
         return;
 
-    const uint32_t frames = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
-    const uint32_t analysis_frames =
-        frames < APG_DETECT_AUTOCORRELATION_CAPACITY ? frames : APG_DETECT_AUTOCORRELATION_CAPACITY;
-    int max_lag = params->max_lag;
-    if (max_lag > (int)APG_DETECT_AUTOCORRELATION_CAPACITY)
-        max_lag = (int)APG_DETECT_AUTOCORRELATION_CAPACITY;
+    const uint32_t capacity        = state->buffer_len > 0u ? state->buffer_len : APG_DETECT_AUTOCORRELATION_CAPACITY;
+    const uint32_t frames          = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    const uint32_t analysis_frames = frames < capacity ? frames : capacity;
+    int            max_lag         = params->max_lag;
+    if (max_lag > (int)capacity)
+        max_lag = (int)capacity;
     if (max_lag < 0)
         max_lag = 0;
     if ((uint32_t)max_lag > analysis_frames)
@@ -29,19 +29,17 @@ void detect_pitch_process(
 
     const float sample_rate = apg_sample_rate_or_default(info);
 
-    uint32_t write_pos = apg_wrap_index_i64(state->write_pos, APG_DETECT_AUTOCORRELATION_CAPACITY);
+    uint32_t write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     for (uint32_t i = 0; i < frames; ++i) {
         state->buffer[write_pos] = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
-        write_pos                = write_pos + 1u == APG_DETECT_AUTOCORRELATION_CAPACITY ? 0u : write_pos + 1u;
+        write_pos                = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
     state->write_pos = (int)write_pos;
 
     double r0 = 0.0;
     for (uint32_t n = 0; n < analysis_frames; ++n) {
-        const uint32_t idx = apg_wrap_index_i64(
-            (int64_t)write_pos - (int64_t)analysis_frames + (int64_t)n, APG_DETECT_AUTOCORRELATION_CAPACITY
-        );
-        const double sample = state->buffer[idx];
+        const uint32_t idx = apg_wrap_index_i64((int64_t)write_pos - (int64_t)analysis_frames + (int64_t)n, capacity);
+        const double   sample = state->buffer[idx];
         r0 += sample * sample;
     }
 
@@ -58,10 +56,9 @@ void detect_pitch_process(
     for (uint32_t k = MIN_PITCH_LAG; k < (uint32_t)max_lag; ++k) {
         double r_k = 0.0;
         for (uint32_t n = 0; n < analysis_frames; ++n) {
-            const uint32_t idx1 = apg_wrap_index_i64(
-                (int64_t)write_pos - (int64_t)analysis_frames + (int64_t)n, APG_DETECT_AUTOCORRELATION_CAPACITY
-            );
-            const uint32_t idx2 = apg_wrap_index_i64((int64_t)idx1 - (int64_t)k, APG_DETECT_AUTOCORRELATION_CAPACITY);
+            const uint32_t idx1 =
+                apg_wrap_index_i64((int64_t)write_pos - (int64_t)analysis_frames + (int64_t)n, capacity);
+            const uint32_t idx2    = apg_wrap_index_i64((int64_t)idx1 - (int64_t)k, capacity);
             float          sample1 = state->buffer[idx1];
             float          sample2 = state->buffer[idx2];
             if (!isfinite(sample1)) {

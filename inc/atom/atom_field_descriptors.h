@@ -15,43 +15,43 @@
     _(amplitude_smooth_config_fields, 3)           \
     _(amplitude_smooth_state_fields, 1)            \
     _(delay_fractional_config_fields, 2)           \
-    _(delay_fractional_state_fields, 2)            \
+    _(delay_fractional_state_fields, 3)            \
     _(delay_line_config_fields, 1)                 \
-    _(delay_line_state_fields, 2)                  \
+    _(delay_line_state_fields, 3)                  \
     _(delay_tap_feedback_config_fields, 1)         \
     _(delay_tap_feedforward_config_fields, 1)      \
     _(delay_tap_feedback_in_fields, 2)             \
     _(delay_tap_feedforward_in_fields, 2)          \
     _(delay_unit_state_fields, 1)                  \
     _(detect_autocorrelate_config_fields, 1)       \
-    _(detect_autocorrelate_state_fields, 2)        \
+    _(detect_autocorrelate_state_fields, 3)        \
     _(detect_pitch_config_fields, 2)               \
-    _(detect_pitch_state_fields, 2)                \
+    _(detect_pitch_state_fields, 3)                \
     _(detect_envelope_config_fields, 3)            \
     _(detect_envelope_state_fields, 1)             \
     _(detect_peak_config_fields, 3)                \
     _(detect_peak_state_fields, 1)                 \
     _(detect_rms_config_fields, 1)                 \
-    _(detect_rms_state_fields, 3)                  \
+    _(detect_rms_state_fields, 4)                  \
     _(detect_slope_state_fields, 1)                \
     _(detect_threshold_config_fields, 1)           \
     _(detect_zero_crossing_state_fields, 1)        \
     _(filter_allpass_config_fields, 2)             \
-    _(filter_allpass_state_fields, 2)              \
+    _(filter_allpass_state_fields, 3)              \
     _(filter_biquad_coefficients_config_fields, 5) \
     _(filter_biquad_config_fields, 5)              \
     _(filter_biquad_in_fields, 2)                  \
     _(filter_biquad_state_fields, 4)               \
     _(filter_biquad_coefficients_state_fields, 2)  \
     _(filter_comb_fb_config_fields, 2)             \
-    _(filter_comb_fb_state_fields, 2)              \
+    _(filter_comb_fb_state_fields, 3)              \
     _(filter_comb_ff_config_fields, 2)             \
-    _(filter_comb_ff_state_fields, 2)              \
+    _(filter_comb_ff_state_fields, 3)              \
     _(filter_dc_block_config_fields, 1)            \
     _(filter_dc_block_state_fields, 2)             \
     _(filter_differentiate_state_fields, 1)        \
     _(filter_fir_config_fields, 2)                 \
-    _(filter_fir_state_fields, 2)                  \
+    _(filter_fir_state_fields, 3)                  \
     _(filter_integrate_state_fields, 1)            \
     _(freq_fft_config_fields, 1)                   \
     _(freq_ifft_config_fields, 1)                  \
@@ -84,9 +84,9 @@
     _(mix_wet_dry_config_fields, 1)                \
     _(modulation_amplitude_config_fields, 1)       \
     _(modulation_frequency_config_fields, 1)       \
-    _(modulation_frequency_state_fields, 3)        \
+    _(modulation_frequency_state_fields, 4)        \
     _(modulation_phase_config_fields, 1)           \
-    _(modulation_phase_state_fields, 2)            \
+    _(modulation_phase_state_fields, 3)            \
     _(modulation_scrub_config_fields, 1)           \
     _(nonlinear_bitcrush_config_fields, 1)         \
     _(nonlinear_sample_hold_config_fields, 1)      \

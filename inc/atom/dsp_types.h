@@ -276,8 +276,9 @@ typedef struct {
     int length;
 } delay_line_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } delay_line_state_t;
 
 typedef struct {
@@ -291,8 +292,9 @@ typedef struct {
     int   interpolation;
 } delay_fractional_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } delay_fractional_state_t;
 
 typedef struct {
@@ -334,8 +336,9 @@ typedef struct {
     int    kernel_size;
 } filter_fir_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } filter_fir_state_t;
 
 typedef struct {
@@ -407,8 +410,9 @@ typedef struct {
     float coefficient;
 } filter_comb_ff_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } filter_comb_ff_state_t;
 
 typedef struct {
@@ -423,8 +427,9 @@ typedef struct {
     float coefficient;
 } filter_comb_fb_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } filter_comb_fb_state_t;
 
 typedef struct {
@@ -438,8 +443,9 @@ typedef struct {
     float coefficient;
 } filter_allpass_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } filter_allpass_state_t;
 
 typedef struct {
@@ -523,9 +529,10 @@ typedef struct {
     int window_size;
 } detect_rms_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
-    float  sum;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
+    float    sum;
 } detect_rms_state_t;
 
 typedef struct {
@@ -562,8 +569,9 @@ typedef struct {
     int max_lag;
 } detect_autocorrelate_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } detect_autocorrelate_state_t;
 
 typedef struct {
@@ -577,8 +585,9 @@ typedef struct {
     float sample_rate;
 } detect_pitch_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } detect_pitch_state_t;
 
 /* 🔷 Modulation */
@@ -596,8 +605,9 @@ typedef struct {
     float depth;
 } modulation_phase_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
 } modulation_phase_state_t;
 
 typedef struct {
@@ -636,9 +646,10 @@ typedef struct {
     float depth;
 } modulation_frequency_params_t;
 typedef struct {
-    float *buffer;
-    int    write_pos;
-    float  current_delay;
+    float   *buffer;
+    uint32_t buffer_len;
+    int      write_pos;
+    float    current_delay;
 } modulation_frequency_state_t;
 
 typedef struct {

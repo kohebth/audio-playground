@@ -1133,6 +1133,9 @@ static int test_delay_line_state_buffer_process(void) {
     }
     if (runtime.nodes_len != 1u || runtime.nodes[0].state_buffers_len != 1u || !runtime.nodes[0].state_buffers[0])
         return fail("delay_line state buffer was not allocated");
+    const delay_line_state_t *delay_state = (const delay_line_state_t *)runtime.nodes[0].state_storage;
+    if (!delay_state || delay_state->buffer_len != 3u || runtime.nodes[0].state_buffer_samples[0] != 3u)
+        return fail("delay_line state buffer did not use configured maximum");
 
     float *input  = runtime_signal_by_name_for_test(&runtime, "input");
     float *output = runtime_signal_by_name_for_test(&runtime, "output");
@@ -1154,6 +1157,8 @@ static int test_delay_line_state_buffer_process(void) {
 
     if (!apg_v2_runtime_reset(&runtime))
         return fail("failed to reset delay_line runtime");
+    if (delay_state->buffer_len != 3u)
+        return fail("delay_line reset did not restore buffer length");
     input[0] = 1.0f;
     input[1] = 2.0f;
     input[2] = 3.0f;
@@ -1226,8 +1231,11 @@ static int test_filter_state_buffer_uses_descriptor_capacity(void) {
     }
     if (runtime.nodes_len != 1u || runtime.nodes[0].state_buffers_len != 1u || !runtime.nodes[0].state_buffers[0])
         return fail("filter_comb_ff state buffer was not allocated");
-    if (!runtime.nodes[0].state_buffer_samples || runtime.nodes[0].state_buffer_samples[0] != 48000u)
-        return fail("filter_comb_ff state buffer did not use descriptor capacity");
+    if (!runtime.nodes[0].state_buffer_samples || runtime.nodes[0].state_buffer_samples[0] != 2u)
+        return fail("filter_comb_ff state buffer did not use configured delay");
+    const filter_comb_ff_state_t *filter_state = (const filter_comb_ff_state_t *)runtime.nodes[0].state_storage;
+    if (!filter_state || filter_state->buffer_len != 2u)
+        return fail("filter_comb_ff state buffer length was not bound");
 
     apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);

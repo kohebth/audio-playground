@@ -210,6 +210,32 @@ add_test(
         NAME test_apg_v2_cli_wasm_export_rejects_unsupported_atom
         COMMAND /bin/sh -c "$<TARGET_FILE:apg-v2> export --target wasm_realtime test/fixtures/projects-v2/wasm-unsupported-freq.project.v2.yaml ${CMAKE_BINARY_DIR} || true"
 )
+
+set(APG_RUNTIME_SIZED_WASM_TEST_DIR ${CMAKE_BINARY_DIR}/test-artifacts/runtime-sized-wasm)
+add_test(NAME test_runtime_sized_wasm_prepare COMMAND ${CMAKE_COMMAND} -E make_directory ${APG_RUNTIME_SIZED_WASM_TEST_DIR})
+set_tests_properties(test_runtime_sized_wasm_prepare PROPERTIES LABELS v2)
+add_test(
+        NAME test_runtime_sized_wasm_export
+        COMMAND apg-v2 export --target wasm_realtime test/fixtures/projects-v2/runtime-sized-delay.project.v2.yaml ${APG_RUNTIME_SIZED_WASM_TEST_DIR}
+)
+set_tests_properties(test_runtime_sized_wasm_export PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        DEPENDS test_runtime_sized_wasm_prepare
+        PASS_REGULAR_EXPRESSION "\"ok\":true.*\"target\":\"wasm_realtime\""
+)
+add_test(NAME test_runtime_sized_wasm_manifest COMMAND ${CMAKE_COMMAND} -E cat ${APG_RUNTIME_SIZED_WASM_TEST_DIR}/apg_project_wasm.json)
+set_tests_properties(test_runtime_sized_wasm_manifest PROPERTIES
+        LABELS v2
+        DEPENDS test_runtime_sized_wasm_export
+        PASS_REGULAR_EXPRESSION "\"state_buffers\":\\[\\{\"node\":\"delay1.delay\",\"field\":\"buffer\",\"offset_bytes\":0,\"length\":33\\}\\]"
+)
+add_test(NAME test_runtime_sized_wasm_source COMMAND ${CMAKE_COMMAND} -E cat ${APG_RUNTIME_SIZED_WASM_TEST_DIR}/apg_project_wasm.c)
+set_tests_properties(test_runtime_sized_wasm_source PROPERTIES
+        LABELS v2
+        DEPENDS test_runtime_sized_wasm_export
+        PASS_REGULAR_EXPRESSION "delay_line_state_t.*->buffer_len = 33u"
+)
 set_tests_properties(test_apg_v2_cli_wasm_export_rejects_unsupported_atom PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
@@ -244,6 +270,33 @@ set_tests_properties(test_apg_v2_cli_m7_export_rejects_undeclared_compat PROPERT
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
         PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*does not declare m7_static compatibility"
+)
+
+set(APG_RUNTIME_SIZED_M7_TEST_DIR ${CMAKE_BINARY_DIR}/test-artifacts/runtime-sized-m7)
+add_test(NAME test_runtime_sized_m7_prepare COMMAND ${CMAKE_COMMAND} -E make_directory ${APG_RUNTIME_SIZED_M7_TEST_DIR})
+set_tests_properties(test_runtime_sized_m7_prepare PROPERTIES LABELS v2)
+add_test(
+        NAME test_runtime_sized_m7_export
+        COMMAND apg-v2 export --target m7_static test/fixtures/projects-v2/runtime-sized-delay.project.v2.yaml ${APG_RUNTIME_SIZED_M7_TEST_DIR}
+)
+set_tests_properties(test_runtime_sized_m7_export PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS v2
+        DEPENDS test_runtime_sized_m7_prepare
+        PASS_REGULAR_EXPRESSION "\"ok\":true.*\"state_buffer_bytes\":132"
+)
+add_test(NAME test_runtime_sized_m7_header COMMAND ${CMAKE_COMMAND} -E cat ${APG_RUNTIME_SIZED_M7_TEST_DIR}/apg_project_m7.h)
+set_tests_properties(test_runtime_sized_m7_header PROPERTIES
+        LABELS v2
+        DEPENDS test_runtime_sized_m7_export
+        PASS_REGULAR_EXPRESSION "APG_M7_PROJECT_STATE_BUFFER_BYTES 132u"
+)
+add_test(NAME test_runtime_sized_m7_source COMMAND ${CMAKE_COMMAND} -E cat ${APG_RUNTIME_SIZED_M7_TEST_DIR}/apg_project_m7.c)
+set_tests_properties(test_runtime_sized_m7_source PROPERTIES
+        LABELS v2
+        DEPENDS test_runtime_sized_m7_export
+        PASS_REGULAR_EXPRESSION "delay_line_state_t.*->buffer_len = 33u"
+        FAIL_REGULAR_EXPRESSION "malloc|calloc|realloc|free"
 )
 
 add_test(

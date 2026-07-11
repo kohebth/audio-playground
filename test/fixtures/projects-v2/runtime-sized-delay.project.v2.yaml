@@ -1,0 +1,28 @@
+kind: apg.project
+schema: apg.project.v2
+name: runtime-sized-delay
+version: 2.0.0
+
+units:
+  - id: delay_unit
+    file: ../units-v2/delay_line_state.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: delay1
+      unit: delay_unit
+      params:
+        delay_length: 2
+
+  routes:
+    - from: system.input
+      to: delay1.input
+    - from: delay1.output
+      to: system.output
+
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - m7_static
+    - offline_render

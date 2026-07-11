@@ -14,9 +14,10 @@ void detect_rms_process(
         state->buffer == NULL)
         return;
 
-    int w_size = params->window_size;
-    if (w_size > (int)APG_DETECT_RMS_CAPACITY)
-        w_size = (int)APG_DETECT_RMS_CAPACITY;
+    const uint32_t capacity = state->buffer_len > 0u ? state->buffer_len : APG_DETECT_RMS_CAPACITY;
+    int            w_size   = params->window_size;
+    if (w_size > (int)capacity)
+        w_size = (int)capacity;
     if (w_size < 1)
         w_size = 1;
 

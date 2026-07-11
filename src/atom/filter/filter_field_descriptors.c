@@ -13,6 +13,7 @@ FIELD_COUNT(filter_allpass_config_fields);
 
 const atom_field_desc_t filter_allpass_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(filter_allpass_state_t, buffer), 48000u},
+    {"buffer_len", FIELD_INT, offsetof(filter_allpass_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(filter_allpass_state_t, write_pos)},
 };
 FIELD_COUNT(filter_allpass_state_fields);
@@ -63,6 +64,7 @@ FIELD_COUNT(filter_comb_fb_config_fields);
 
 const atom_field_desc_t filter_comb_fb_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(filter_comb_fb_state_t, buffer), 48000u},
+    {"buffer_len", FIELD_INT, offsetof(filter_comb_fb_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(filter_comb_fb_state_t, write_pos)},
 };
 FIELD_COUNT(filter_comb_fb_state_fields);
@@ -75,6 +77,7 @@ FIELD_COUNT(filter_comb_ff_config_fields);
 
 const atom_field_desc_t filter_comb_ff_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(filter_comb_ff_state_t, buffer), 48000u},
+    {"buffer_len", FIELD_INT, offsetof(filter_comb_ff_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(filter_comb_ff_state_t, write_pos)},
 };
 FIELD_COUNT(filter_comb_ff_state_fields);
@@ -103,6 +106,7 @@ FIELD_COUNT(filter_fir_config_fields);
 
 const atom_field_desc_t filter_fir_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(filter_fir_state_t, buffer), 1024u},
+    {"buffer_len", FIELD_INT, offsetof(filter_fir_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(filter_fir_state_t, write_pos)},
 };
 FIELD_COUNT(filter_fir_state_fields);

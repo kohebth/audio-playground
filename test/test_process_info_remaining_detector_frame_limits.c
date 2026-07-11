@@ -16,15 +16,16 @@ static int test_detector_safety_and_pitch_accuracy(void) {
     output[1024] = -99.0f;
     for (size_t i = 0; i < APG_DETECT_RMS_CAPACITY; ++i)
         rms_buffer[i] = NAN;
+    rms_buffer[64]                 = -77.0f;
     detect_rms_out_t    rms_out    = {.level = output};
     detect_rms_in_t     rms_in     = {.signal = input};
     detect_rms_params_t rms_params = {.window_size = INT_MAX};
-    detect_rms_state_t  rms_state  = {.buffer = rms_buffer, .write_pos = -1, .sum = NAN};
+    detect_rms_state_t  rms_state  = {.buffer = rms_buffer, .buffer_len = 64u, .write_pos = -1, .sum = NAN};
     detect_rms_process(&rms_out, &rms_in, &rms_params, &rms_state, &info);
     if (assert_finite_buffer(output, 1024, "detect_rms_process invalid state"))
         return 1;
-    if (!isfinite(rms_state.sum) || rms_state.sum < 0.0f || rms_state.write_pos < 0 ||
-        rms_state.write_pos >= (int)APG_DETECT_RMS_CAPACITY || output[1024] != -99.0f)
+    if (!isfinite(rms_state.sum) || rms_state.sum < 0.0f || rms_state.write_pos < 0 || rms_state.write_pos >= 64 ||
+        output[1024] != -99.0f || rms_buffer[64] != -77.0f)
         return fail("detect_rms_process did not normalize state or preserve sentinel");
 
     memset(rms_buffer, 0, sizeof(rms_buffer));
@@ -46,17 +47,20 @@ static int test_detector_safety_and_pitch_accuracy(void) {
     output[256] = -99.0f;
     for (size_t i = 0; i < APG_DETECT_AUTOCORRELATION_CAPACITY; ++i)
         correlation_buffer[i] = NAN;
+    correlation_buffer[512]                          = -77.0f;
     detect_autocorrelate_out_t    correlation_out    = {.correlation = output};
     detect_autocorrelate_in_t     correlation_in     = {.signal = input};
     detect_autocorrelate_params_t correlation_params = {.max_lag = INT_MAX};
-    detect_autocorrelate_state_t  correlation_state  = {.buffer = correlation_buffer, .write_pos = -2049};
-    info.frames                                      = 256u;
-    info.output_frames                               = 256u;
+    detect_autocorrelate_state_t  correlation_state  = {
+          .buffer = correlation_buffer, .buffer_len = 512u, .write_pos = -2049
+    };
+    info.frames        = 256u;
+    info.output_frames = 256u;
     detect_autocorrelate_process(&correlation_out, &correlation_in, &correlation_params, &correlation_state, &info);
     if (assert_finite_buffer(output, 256, "detect_autocorrelate_process invalid state"))
         return 1;
-    if (correlation_state.write_pos < 0 || correlation_state.write_pos >= (int)APG_DETECT_AUTOCORRELATION_CAPACITY ||
-        output[256] != -99.0f)
+    if (correlation_state.write_pos < 0 || correlation_state.write_pos >= 512 || output[256] != -99.0f ||
+        correlation_buffer[512] != -77.0f)
         return fail("detect_autocorrelate_process did not normalize state or preserve sentinel");
 
     correlation_params.max_lag = 0;
@@ -75,14 +79,13 @@ static int test_detector_safety_and_pitch_accuracy(void) {
     detect_pitch_out_t    pitch_out    = {.pitch = output};
     detect_pitch_in_t     pitch_in     = {.signal = input};
     detect_pitch_params_t pitch_params = {.max_lag = 256, .sample_rate = 8000.0f};
-    detect_pitch_state_t  pitch_state  = {.buffer = pitch_buffer, .write_pos = -1};
+    detect_pitch_state_t  pitch_state  = {.buffer = pitch_buffer, .buffer_len = 1024u, .write_pos = -1};
     info.frames                        = 1024u;
     info.output_frames                 = 1024u;
     detect_pitch_process(&pitch_out, &pitch_in, &pitch_params, &pitch_state, &info);
     if (fabsf(output[0] - 1000.0f) > 25.0f)
         return fail("detect_pitch_process did not use runtime sample rate for known tone");
-    if (pitch_state.write_pos < 0 || pitch_state.write_pos >= (int)APG_DETECT_AUTOCORRELATION_CAPACITY ||
-        output[1024] != -99.0f)
+    if (pitch_state.write_pos < 0 || pitch_state.write_pos >= 1024 || output[1024] != -99.0f)
         return fail("detect_pitch_process did not normalize state or preserve sentinel");
 
     for (size_t i = 0; i < 64u; ++i)

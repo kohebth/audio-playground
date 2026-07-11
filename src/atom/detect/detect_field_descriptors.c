@@ -12,6 +12,7 @@ FIELD_COUNT(detect_autocorrelate_config_fields);
 
 const atom_field_desc_t detect_autocorrelate_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(detect_autocorrelate_state_t, buffer), APG_DETECT_AUTOCORRELATION_CAPACITY},
+    {"buffer_len", FIELD_INT, offsetof(detect_autocorrelate_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(detect_autocorrelate_state_t, write_pos)},
 };
 FIELD_COUNT(detect_autocorrelate_state_fields);
@@ -24,6 +25,7 @@ FIELD_COUNT(detect_pitch_config_fields);
 
 const atom_field_desc_t detect_pitch_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(detect_pitch_state_t, buffer), APG_DETECT_AUTOCORRELATION_CAPACITY},
+    {"buffer_len", FIELD_INT, offsetof(detect_pitch_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(detect_pitch_state_t, write_pos)},
 };
 FIELD_COUNT(detect_pitch_state_fields);
@@ -59,6 +61,7 @@ FIELD_COUNT(detect_rms_config_fields);
 
 const atom_field_desc_t detect_rms_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(detect_rms_state_t, buffer), APG_DETECT_RMS_CAPACITY},
+    {"buffer_len", FIELD_INT, offsetof(detect_rms_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(detect_rms_state_t, write_pos)},
     {"sum", FIELD_FLOAT, offsetof(detect_rms_state_t, sum)},
 };

@@ -1,5 +1,5 @@
-#include <atom/dsp_atoms.h>
 #include <apgcore/dsp/dsp_safety.h>
+#include <atom/dsp_atoms.h>
 #include <math.h>
 #include <stddef.h>
 
@@ -16,25 +16,26 @@ void delay_fractional_process(
         state->buffer == NULL)
         return;
 
-    uint32_t write_pos = apg_wrap_index_i64(state->write_pos, MAX_DELAY_SAMPLES);
-    float    delay     = apg_clamp_float(params->delay_samples, 0.0f, (float)MAX_DELAY_SAMPLES - 1.001f);
+    const uint32_t capacity  = state->buffer_len > 0u ? state->buffer_len : MAX_DELAY_SAMPLES;
+    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
+    float delay = capacity > 1u ? apg_clamp_float(params->delay_samples, 0.0f, (float)capacity - 1.001f) : 0.0f;
 
     const uint32_t frames = apg_process_frames_or_default(info);
     for (uint32_t i = 0; i < frames; ++i) {
         float read_pos = (float)write_pos - delay;
         while (read_pos < 0.0f)
-            read_pos += (float)MAX_DELAY_SAMPLES;
-        while (read_pos >= (float)MAX_DELAY_SAMPLES)
-            read_pos -= (float)MAX_DELAY_SAMPLES;
+            read_pos += (float)capacity;
+        while (read_pos >= (float)capacity)
+            read_pos -= (float)capacity;
 
         const float    base  = floorf(read_pos);
         const uint32_t idx_a = (uint32_t)base;
-        const uint32_t idx_b = idx_a + 1u == MAX_DELAY_SAMPLES ? 0u : idx_a + 1u;
+        const uint32_t idx_b = idx_a + 1u == capacity ? 0u : idx_a + 1u;
         const float    frac  = read_pos - base;
 
-        out->signal[i]            = state->buffer[idx_a] * (1.0f - frac) + state->buffer[idx_b] * frac;
-        state->buffer[write_pos]  = in->signal[i];
-        write_pos                 = write_pos + 1u == MAX_DELAY_SAMPLES ? 0u : write_pos + 1u;
+        out->signal[i]           = state->buffer[idx_a] * (1.0f - frac) + state->buffer[idx_b] * frac;
+        state->buffer[write_pos] = in->signal[i];
+        write_pos                = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
 
     state->write_pos = (int)write_pos;

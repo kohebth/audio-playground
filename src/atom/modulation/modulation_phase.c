@@ -14,9 +14,12 @@ void modulation_phase_process(
         in->modulator == NULL || state->buffer == NULL)
         return;
 
+    const uint32_t capacity = state->buffer_len > 0u ? state->buffer_len : APG_MODULATION_DELAY_CAPACITY;
+    if (capacity < 4u)
+        return;
     const uint32_t frames    = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
-    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, APG_MODULATION_DELAY_CAPACITY);
-    const float    max_delay = (float)APG_MODULATION_DELAY_CAPACITY - 2.0f;
+    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
+    const float    max_delay = (float)capacity - 2.0f;
     const float    depth     = isfinite(params->depth) ? apg_clamp_float(params->depth, 0.0f, max_delay) : 0.0f;
 
     for (uint32_t i = 0; i < frames; ++i) {
@@ -26,13 +29,13 @@ void modulation_phase_process(
 
         float read_pos = (float)write_pos - delay_samples;
         if (read_pos < 0.0f)
-            read_pos += (float)APG_MODULATION_DELAY_CAPACITY;
+            read_pos += (float)capacity;
 
         const float    read_floor = floorf(read_pos);
         const uint32_t idx1       = (uint32_t)read_floor;
-        const uint32_t idx0       = idx1 > 0u ? idx1 - 1u : APG_MODULATION_DELAY_CAPACITY - 1u;
-        const uint32_t idx2       = idx1 + 1u == APG_MODULATION_DELAY_CAPACITY ? 0u : idx1 + 1u;
-        const uint32_t idx3       = idx2 + 1u == APG_MODULATION_DELAY_CAPACITY ? 0u : idx2 + 1u;
+        const uint32_t idx0       = idx1 > 0u ? idx1 - 1u : capacity - 1u;
+        const uint32_t idx2       = idx1 + 1u == capacity ? 0u : idx1 + 1u;
+        const uint32_t idx3       = idx2 + 1u == capacity ? 0u : idx2 + 1u;
 
         float frac  = read_pos - read_floor;
         float frac2 = frac * frac;
@@ -71,7 +74,7 @@ void modulation_phase_process(
 
         out->signal[i]           = output;
         state->buffer[write_pos] = input;
-        write_pos                = write_pos + 1u == APG_MODULATION_DELAY_CAPACITY ? 0u : write_pos + 1u;
+        write_pos                = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
 
     state->write_pos = (int)write_pos;

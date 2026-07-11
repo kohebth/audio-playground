@@ -363,6 +363,17 @@ static uc_status init_state_buffers(
         buffer_index++;
         float **field_ptr = (float **)((char *)node->state_storage + field->offset);
         *field_ptr        = buffer;
+        for (int length_index = 0; length_index < layout->n_state_fields; length_index++) {
+            const atom_field_desc_t *length_field = &layout->state_fields[length_index];
+            if (length_field->type == FIELD_INT && length_field->name &&
+                strcmp(length_field->name, "buffer_len") == 0) {
+                if (buffer_samples > UINT32_MAX)
+                    return set_error(err, UC_E_RANGE, "v2 runtime state buffer length exceeds uint32 range");
+                uint32_t *length_ptr = (uint32_t *)((char *)node->state_storage + length_field->offset);
+                *length_ptr          = (uint32_t)buffer_samples;
+                break;
+            }
+        }
     }
     return UC_OK;
 }
@@ -733,6 +744,17 @@ static bool reset_node_state(apg_v2_runtime_node_t *node) {
         memset(node->state_buffers[buffer_index], 0, node->state_buffer_samples[buffer_index] * sizeof(float));
         float **field_ptr = (float **)((char *)node->state_storage + field->offset);
         *field_ptr        = node->state_buffers[buffer_index];
+        for (int length_index = 0; length_index < node->n_state_fields; length_index++) {
+            const atom_field_desc_t *length_field = &node->state_fields[length_index];
+            if (length_field->type == FIELD_INT && length_field->name &&
+                strcmp(length_field->name, "buffer_len") == 0) {
+                if (node->state_buffer_samples[buffer_index] > UINT32_MAX)
+                    return false;
+                uint32_t *length_ptr = (uint32_t *)((char *)node->state_storage + length_field->offset);
+                *length_ptr          = (uint32_t)node->state_buffer_samples[buffer_index];
+                break;
+            }
+        }
         buffer_index++;
     }
     return true;

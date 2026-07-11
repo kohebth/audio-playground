@@ -13,6 +13,7 @@ FIELD_COUNT(delay_fractional_config_fields);
 
 const atom_field_desc_t delay_fractional_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(delay_fractional_state_t, buffer), 192000u},
+    {"buffer_len", FIELD_INT, offsetof(delay_fractional_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(delay_fractional_state_t, write_pos)},
 };
 FIELD_COUNT(delay_fractional_state_fields);
@@ -24,6 +25,7 @@ FIELD_COUNT(delay_line_config_fields);
 
 const atom_field_desc_t delay_line_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(delay_line_state_t, buffer), 192000u},
+    {"buffer_len", FIELD_INT, offsetof(delay_line_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(delay_line_state_t, write_pos)},
 };
 FIELD_COUNT(delay_line_state_fields);

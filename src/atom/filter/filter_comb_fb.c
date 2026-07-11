@@ -15,16 +15,17 @@ void filter_comb_fb_process(
         state->buffer == NULL)
         return;
 
+    const uint32_t capacity  = state->buffer_len > 0u ? state->buffer_len : MAX_COMB_DELAY;
     const uint32_t frames    = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
-    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, MAX_COMB_DELAY);
+    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     const float    coefficient =
         isfinite(params->coefficient) ? apg_clamp_float(params->coefficient, -0.999f, 0.999f) : 0.0f;
 
     for (uint32_t i = 0; i < frames; ++i) {
         float delay_val         = (in->delay != NULL) ? in->delay[i] : (float)params->delay_samples;
-        delay_val               = apg_clamp_float(delay_val, 1.0f, (float)MAX_COMB_DELAY);
+        delay_val               = apg_clamp_float(delay_val, 1.0f, (float)capacity);
         const int64_t  delay    = (int64_t)delay_val;
-        const uint32_t read_pos = apg_wrap_index_i64((int64_t)write_pos - delay, MAX_COMB_DELAY);
+        const uint32_t read_pos = apg_wrap_index_i64((int64_t)write_pos - delay, capacity);
         float          delayed  = state->buffer[read_pos];
         if (!isfinite(delayed)) {
             delayed                 = 0.0f;
@@ -38,7 +39,7 @@ void filter_comb_fb_process(
 
         out->signal[i]           = output;
         state->buffer[write_pos] = apg_denormal_kill(output);
-        write_pos                = write_pos + 1u == MAX_COMB_DELAY ? 0u : write_pos + 1u;
+        write_pos                = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
     state->write_pos = (int)write_pos;
 }

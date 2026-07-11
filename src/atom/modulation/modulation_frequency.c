@@ -14,11 +14,14 @@ void modulation_frequency_process(
         in->modulator == NULL || state->buffer == NULL)
         return;
 
-    const uint32_t frames    = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
-    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, APG_MODULATION_DELAY_CAPACITY);
-    float current_delay      = apg_clamp_float(state->current_delay, 0.0f, (float)APG_MODULATION_DELAY_CAPACITY - 2.0f);
-    const float max_depth    = (float)APG_MODULATION_DELAY_CAPACITY - 2.0f;
-    const float depth        = isfinite(params->depth) ? apg_clamp_float(params->depth, -max_depth, max_depth) : 0.0f;
+    const uint32_t capacity = state->buffer_len > 0u ? state->buffer_len : APG_MODULATION_DELAY_CAPACITY;
+    if (capacity < 2u)
+        return;
+    const uint32_t frames        = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    uint32_t       write_pos     = apg_wrap_index_i64(state->write_pos, capacity);
+    float          current_delay = apg_clamp_float(state->current_delay, 0.0f, (float)capacity - 2.0f);
+    const float    max_depth     = (float)capacity - 2.0f;
+    const float    depth = isfinite(params->depth) ? apg_clamp_float(params->depth, -max_depth, max_depth) : 0.0f;
 
     for (uint32_t i = 0; i < frames; ++i) {
         const float modulator = isfinite(in->modulator[i]) ? apg_clamp_float(in->modulator[i], -1.0f, 1.0f) : 0.0f;
@@ -27,11 +30,11 @@ void modulation_frequency_process(
 
         float read_pos = (float)write_pos - current_delay;
         if (read_pos < 0.0f)
-            read_pos += (float)APG_MODULATION_DELAY_CAPACITY;
+            read_pos += (float)capacity;
 
         const float    read_floor = floorf(read_pos);
         const uint32_t idx_a      = (uint32_t)read_floor;
-        const uint32_t idx_b      = idx_a + 1u == APG_MODULATION_DELAY_CAPACITY ? 0u : idx_a + 1u;
+        const uint32_t idx_b      = idx_a + 1u == capacity ? 0u : idx_a + 1u;
         const float    frac       = read_pos - read_floor;
         float          sample_a   = state->buffer[idx_a];
         float          sample_b   = state->buffer[idx_b];
@@ -51,7 +54,7 @@ void modulation_frequency_process(
 
         out->signal[i]           = output;
         state->buffer[write_pos] = input;
-        write_pos                = write_pos + 1u == APG_MODULATION_DELAY_CAPACITY ? 0u : write_pos + 1u;
+        write_pos                = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
 
     state->write_pos     = (int)write_pos;

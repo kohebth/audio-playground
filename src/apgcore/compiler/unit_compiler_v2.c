@@ -441,6 +441,24 @@ static void init_compiled_binding(apg_v2_compiled_binding_t *binding, const char
     binding->key = key;
 }
 
+static float param_numeric_value(const apg_unit_v2_param_t *param, const char *text) {
+    if (!text)
+        return 0.0f;
+    if (param && param->type && strcmp(param->type, "bool") == 0)
+        return strcmp(text, "true") == 0 ? 1.0f : 0.0f;
+    return strtof(text, NULL);
+}
+
+static void compile_param_range(const apg_unit_v2_t *unit, size_t param_index, apg_v2_compiled_binding_t *binding) {
+    if (!unit || !binding || param_index >= unit->params_len)
+        return;
+    const apg_unit_v2_param_t *param = &unit->params[param_index];
+    binding->number                  = param_numeric_value(param, param->default_value);
+    const char *maximum              = param->max_value ? param->max_value : param->default_value;
+    binding->maximum                 = param_numeric_value(param, maximum);
+    binding->has_maximum             = maximum != NULL && isfinite(binding->maximum);
+}
+
 static uc_status validate_binding_key(
     const char *node_id, const char *atom, apg_bind_section_t section, const char *key, uc_error *err
 ) {
@@ -825,6 +843,7 @@ static uc_status compile_signal_bindings(
                 }
                 compiled[i].kind  = APG_BIND_PARAM;
                 compiled[i].index = (size_t)param_index;
+                compile_param_range(unit, compiled[i].index, &compiled[i]);
             } else {
                 status = compile_scalar_literal(node_id, section, &compiled[i], &bindings[i], err);
                 if (status != UC_OK)
@@ -913,6 +932,7 @@ static uc_status compile_config_bindings(
             }
             compiled[i].kind  = APG_BIND_PARAM;
             compiled[i].index = (size_t)param_index;
+            compile_param_range(unit, compiled[i].index, &compiled[i]);
         } else {
             status = compile_scalar_literal(node_id, APG_BIND_SECTION_CONFIG, &compiled[i], &bindings[i], err);
             if (status != UC_OK)

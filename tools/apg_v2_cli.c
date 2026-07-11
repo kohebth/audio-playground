@@ -582,6 +582,31 @@ static bool write_wasm_runtime_manifest(
         registry ? registry->signals_len : 0u, registry ? registry->nodes_len : 0u,
         registry ? registry->schedule_len : 0u
     );
+    fputs(",\"state_buffers\":[", out);
+    bool first_buffer = true;
+    for (size_t node_index = 0; registry && node_index < registry->nodes_len; node_index++) {
+        const apg_v2_registry_node_layout_t *layout       = &registry->node_layouts[node_index];
+        size_t                               buffer_index = 0u;
+        for (int field_index = 0; field_index < layout->n_state_fields; field_index++) {
+            const atom_field_desc_t *field = &layout->state_fields[field_index];
+            if (field->type != FIELD_BUFFER)
+                continue;
+            if (!first_buffer)
+                fputc(',', out);
+            first_buffer = false;
+            fputs("{\"node\":", out);
+            write_json_string(out, layout->node_id ? layout->node_id : "");
+            fputs(",\"field\":", out);
+            write_json_string(out, field->name ? field->name : "");
+            fprintf(
+                out, ",\"offset_bytes\":%zu,\"length\":%zu}",
+                layout->state_buffer_sample_offsets_by_index[buffer_index] * sizeof(float),
+                layout->state_buffer_samples_by_index[buffer_index]
+            );
+            buffer_index++;
+        }
+    }
+    fputc(']', out);
     fputs(
         ",\"artifacts\":{\"manifest\":\"apg_project_wasm.json\",\"entry_js\":\"apg_project_wasm.mjs\","
         "\"adapter_js\":\"apg_project_wasm_adapter.mjs\","
@@ -959,6 +984,16 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
                 out, "->%s = (float *)(void *)&apg_m7_project_state_buffers[%zuu];\n", field->name,
                 layout->state_buffer_sample_offsets_by_index[state_buffer_index] * sizeof(float)
             );
+            for (int length_index = 0; length_index < layout->n_state_fields; length_index++) {
+                const atom_field_desc_t *length_field = &layout->state_fields[length_index];
+                if (length_field->type != FIELD_INT || !length_field->name ||
+                    strcmp(length_field->name, "buffer_len") != 0)
+                    continue;
+                fputs("    ", out);
+                write_m7_node_storage_ptr(out, layout->atom_name, "state", layout->state_offset);
+                fprintf(out, "->buffer_len = %zuu;\n", layout->state_buffer_samples_by_index[state_buffer_index]);
+                break;
+            }
             state_buffer_index++;
         }
         if (layout->mix_matrix_coefficients_len > 0u) {
@@ -1253,6 +1288,16 @@ write_wasm_source(const char *path, const apg_project_v2_resolved_t *project, co
                 out, "->%s = (float *)(void *)&apg_wasm_project_state_buffers[%zuu];\n", field->name,
                 layout->state_buffer_sample_offsets_by_index[state_buffer_index] * sizeof(float)
             );
+            for (int length_index = 0; length_index < layout->n_state_fields; length_index++) {
+                const atom_field_desc_t *length_field = &layout->state_fields[length_index];
+                if (length_field->type != FIELD_INT || !length_field->name ||
+                    strcmp(length_field->name, "buffer_len") != 0)
+                    continue;
+                fputs("    ", out);
+                write_wasm_node_storage_ptr(out, layout->atom_name, "state", layout->state_offset);
+                fprintf(out, "->buffer_len = %zuu;\n", layout->state_buffer_samples_by_index[state_buffer_index]);
+                break;
+            }
             state_buffer_index++;
         }
         if (layout->mix_matrix_coefficients_len > 0u) {

@@ -15,18 +15,19 @@ void filter_allpass_process(
         state->buffer == NULL)
         return;
 
+    const uint32_t capacity  = state->buffer_len > 0u ? state->buffer_len : MAX_ALLPASS_DELAY;
     const uint32_t frames    = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
-    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, MAX_ALLPASS_DELAY);
+    uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     int64_t        delay     = params->delay_samples;
     if (delay < 1)
         delay = 1;
-    if (delay > (int64_t)MAX_ALLPASS_DELAY)
-        delay = MAX_ALLPASS_DELAY;
+    if (delay > (int64_t)capacity)
+        delay = capacity;
     const float coefficient =
         isfinite(params->coefficient) ? apg_clamp_float(params->coefficient, -0.999f, 0.999f) : 0.0f;
 
     for (uint32_t i = 0; i < frames; ++i) {
-        const uint32_t read_pos = apg_wrap_index_i64((int64_t)write_pos - delay, MAX_ALLPASS_DELAY);
+        const uint32_t read_pos = apg_wrap_index_i64((int64_t)write_pos - delay, capacity);
         float          delayed  = state->buffer[read_pos];
         if (!isfinite(delayed)) {
             delayed                 = 0.0f;
@@ -44,7 +45,7 @@ void filter_allpass_process(
         out->signal[i]           = output;
         state->buffer[write_pos] = apg_denormal_kill(next);
 
-        write_pos = write_pos + 1u == MAX_ALLPASS_DELAY ? 0u : write_pos + 1u;
+        write_pos = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
     state->write_pos = (int)write_pos;
 }

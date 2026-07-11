@@ -327,6 +327,9 @@ static int test_registry_state_buffer_samples(void) {
     }
     if (stateful_layouts == 0u || registry.state_buffers_len == 0u || registry.state_buffer_samples == 0u)
         return fail("expected stateful registry layout");
+    if (registry.state_buffers_len != 1u || registry.state_buffer_samples != 33u ||
+        registry.node_layouts[0].state_buffer_samples_by_index[0] != 33u)
+        return fail("delay_line buffer was not sized from parameter maximum");
 
     apg_v2_runtime_t runtime;
     status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
@@ -338,6 +341,9 @@ static int test_registry_state_buffer_samples(void) {
     }
     if (!runtime.state_buffer_pool || runtime.state_buffer_samples != registry.state_buffer_samples)
         return fail("runtime did not allocate registry state buffer pool");
+    const delay_line_state_t *delay_state = (const delay_line_state_t *)runtime.nodes[0].state_storage;
+    if (!delay_state || delay_state->buffer_len != 33u)
+        return fail("runtime did not bind delay_line buffer_len");
     for (size_t i = 0; i < runtime.nodes_len; i++) {
         for (size_t j = 0; j < runtime.nodes[i].state_buffers_len; j++) {
             const float *buffer = runtime.nodes[i].state_buffers[j];
