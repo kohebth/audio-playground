@@ -121,6 +121,43 @@ static int test_registry_spectral_context(void) {
     return 0;
 }
 
+static int test_registry_spectral_overlap_buffers(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_compile_fixture("test/fixtures/units-v2/spectral_overlap.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+    uc_arena          registry_arena;
+    apg_v2_registry_t registry;
+    uc_error          err = {0};
+    uc_status status      = apg_v2_registry_build_with_growth(&plan, 256u, 48000.0f, &registry_arena, &registry, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "registry error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to build spectral overlap registry");
+    }
+    if (registry.nodes_len != 2u || registry.state_buffers_len != 2u || registry.state_buffer_samples != 512u) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("spectral overlap registry buffer total mismatch");
+    }
+    for (size_t i = 0; i < registry.nodes_len; i++) {
+        if (registry.node_layouts[i].state_buffers_len != 1u ||
+            registry.node_layouts[i].state_buffer_samples_by_index[0] != 256u) {
+            uc_arena_free(&registry_arena);
+            uc_arena_free(&arena);
+            return fail("spectral overlap buffer was not sized from fft_size");
+        }
+    }
+    uc_arena_free(&registry_arena);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_registry_layout(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -827,6 +864,8 @@ static int test_runtime_create_owned_lifecycle(void) {
 
 int main(void) {
     if (test_registry_spectral_context())
+        return 1;
+    if (test_registry_spectral_overlap_buffers())
         return 1;
     if (test_registry_layout())
         return 1;

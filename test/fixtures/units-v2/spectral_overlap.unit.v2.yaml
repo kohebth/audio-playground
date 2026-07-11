@@ -1,0 +1,51 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: spectral_overlap
+version: 2.0.0
+
+meta:
+  title: Spectral Overlap
+  category: test
+  description: Exercises runtime-sized overlap-save and overlap-add state.
+
+params: {}
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - frame
+    - output
+
+  nodes:
+    - id: save
+      atom: freq_overlap_save
+      in:
+        signal: input
+      out:
+        frame: frame
+      config:
+        block_size: 256
+        hop_size: 64
+    - id: add
+      atom: freq_overlap_add
+      in:
+        frame: frame
+      out:
+        signal: output
+      config:
+        block_size: 256
+        hop_size: 64
+
+compatibility:
+  desktop_full: true
+  offline_render: true

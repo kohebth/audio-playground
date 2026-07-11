@@ -1,7 +1,33 @@
 #include <atom/dsp_atoms.h>
+#include <math.h>
 #include <string.h>
 
 #define MAX_OVERLAP_WINDOW 8192
+
+void freq_overlap_add_spectral_process(
+    freq_overlap_add_out_t    *out,
+    freq_overlap_add_in_t     *in,
+    freq_overlap_add_params_t *params,
+    freq_overlap_add_state_t  *state,
+    const apg_spectral_info_t *spectral_info
+) {
+    (void)params;
+    if (!out || !in || !state || !out->signal || !in->frame || !state->buffer ||
+        !apg_spectral_info_valid(spectral_info))
+        return;
+
+    const uint32_t n = spectral_info->fft_size;
+    const uint32_t h = spectral_info->hop_size;
+    for (uint32_t i = 0; i < n; i++) {
+        const float prior  = isfinite(state->buffer[i]) ? state->buffer[i] : 0.0f;
+        const float sample = isfinite(in->frame[i]) ? in->frame[i] : 0.0f;
+        state->buffer[i]   = prior + sample;
+    }
+    for (uint32_t i = 0; i < h; i++)
+        out->signal[i] = state->buffer[i];
+    memmove(state->buffer, state->buffer + h, (size_t)(n - h) * sizeof(float));
+    memset(state->buffer + (n - h), 0, (size_t)h * sizeof(float));
+}
 
 void freq_overlap_add_process(
     freq_overlap_add_out_t    *out,

@@ -65,6 +65,19 @@ int test_process_info_remaining_spectral_frame_limits(void) {
     if (real[BIN_COUNT] != -99.0f || imag[BIN_COUNT] != -99.0f)
         return fail("freq_fft_process wrote beyond half spectrum");
 
+    float spectral_window[FFT_SIZE + 1];
+    spectral_window[FFT_SIZE]                   = -99.0f;
+    freq_window_out_t    spectral_window_out    = {.signal = spectral_window};
+    freq_window_in_t     spectral_window_in     = {.signal = input};
+    freq_window_params_t spectral_window_params = {.block_size = 512, .window_type = WINDOW_HANN};
+    freq_window_state_t  spectral_window_state;
+    freq_window_spectral_process(
+        &spectral_window_out, &spectral_window_in, &spectral_window_params, &spectral_window_state, &spectral
+    );
+    if (spectral_window[FFT_SIZE] != -99.0f || spectral_window[0] != 0.0f ||
+        fabsf(spectral_window[FFT_SIZE - 1]) > 1e-6f)
+        return fail("freq_window spectral extent mismatch");
+
     freq_ifft_out_t    ifft_out    = {.signal = reconstructed};
     freq_ifft_in_t     ifft_in     = {.real = real, .imag = imag};
     freq_ifft_params_t ifft_params = {.block_size = 512};

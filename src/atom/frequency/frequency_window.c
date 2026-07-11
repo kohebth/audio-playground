@@ -2,6 +2,39 @@
 #include <math.h>
 #include <stddef.h>
 
+void freq_window_spectral_process(
+    freq_window_out_t         *out,
+    freq_window_in_t          *in,
+    freq_window_params_t      *params,
+    freq_window_state_t       *state,
+    const apg_spectral_info_t *spectral_info
+) {
+    (void)state;
+    if (!out || !in || !params || !out->signal || !in->signal || !apg_spectral_info_valid(spectral_info))
+        return;
+
+    const uint32_t n = spectral_info->fft_size;
+    for (uint32_t i = 0; i < n; i++) {
+        const float factor = n > 1u ? (float)i / (float)(n - 1u) : 0.0f;
+        float       w      = 1.0f;
+        switch (params->window_type) {
+        case WINDOW_HANN:
+            w = 0.5f * (1.0f - cosf(2.0f * (float)M_PI * factor));
+            break;
+        case WINDOW_HAMMING:
+            w = 0.54f - 0.46f * cosf(2.0f * (float)M_PI * factor);
+            break;
+        case WINDOW_BLACKMAN:
+            w = 0.42f - 0.5f * cosf(2.0f * (float)M_PI * factor) + 0.08f * cosf(4.0f * (float)M_PI * factor);
+            break;
+        default:
+            break;
+        }
+        const float sample = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
+        out->signal[i]     = sample * w;
+    }
+}
+
 void freq_window_process(
     freq_window_out_t        *out,
     freq_window_in_t         *in,

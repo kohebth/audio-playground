@@ -35,11 +35,8 @@
     _(filter_differentiate)       \
     _(filter_fir)                 \
     _(filter_integrate)           \
-    _(freq_overlap_add)           \
-    _(freq_overlap_save)          \
     _(freq_quantize)              \
     _(freq_shift)                 \
-    _(freq_window)                \
     _(generation_dc)              \
     _(generation_envelope)        \
     _(generation_impulse)         \
@@ -98,4 +95,16 @@ void freq_ifft_thunk(atom_call_t *call) {
 
 void freq_multiply_thunk(atom_call_t *call) {
     freq_multiply_process(call->out, call->in, call->config, call->state, call->spectral_info);
+}
+
+void freq_window_thunk(atom_call_t *call) {
+    freq_window_spectral_process(call->out, call->in, call->config, call->state, call->spectral_info);
+}
+
+void freq_overlap_add_thunk(atom_call_t *call) {
+    freq_overlap_add_spectral_process(call->out, call->in, call->config, call->state, call->spectral_info);
+}
+
+void freq_overlap_save_thunk(atom_call_t *call) {
+    freq_overlap_save_spectral_process(call->out, call->in, call->config, call->state, call->spectral_info);
 }

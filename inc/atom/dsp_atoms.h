@@ -102,6 +102,27 @@ void freq_multiply_process(
     freq_multiply_state_t     *state,
     const apg_spectral_info_t *spectral_info
 );
+void freq_window_spectral_process(
+    freq_window_out_t         *out,
+    freq_window_in_t          *in,
+    freq_window_params_t      *params,
+    freq_window_state_t       *state,
+    const apg_spectral_info_t *spectral_info
+);
+void freq_overlap_add_spectral_process(
+    freq_overlap_add_out_t    *out,
+    freq_overlap_add_in_t     *in,
+    freq_overlap_add_params_t *params,
+    freq_overlap_add_state_t  *state,
+    const apg_spectral_info_t *spectral_info
+);
+void freq_overlap_save_spectral_process(
+    freq_overlap_save_out_t    *out,
+    freq_overlap_save_in_t     *in,
+    freq_overlap_save_params_t *params,
+    freq_overlap_save_state_t  *state,
+    const apg_spectral_info_t  *spectral_info
+);
 
 void amplitude_multiply_process(
     amplitude_multiply_out_t    *out,

@@ -56,5 +56,56 @@ int test_process_info_remaining_overlap_frame_limits(void) {
             return fail("freq_overlap_save_process write_pos mismatch");
     }
 
+    enum { FFT_SIZE = 256, HOP_SIZE = 64 };
+    apg_spectral_info_t spectral = {.fft_size = FFT_SIZE, .bin_count = FFT_SIZE / 2 + 1, .hop_size = HOP_SIZE};
+    float               hop[HOP_SIZE];
+    float               frame[FFT_SIZE + 1];
+    float               output[HOP_SIZE + 1];
+    float               buffer[FFT_SIZE];
+    for (int i = 0; i < HOP_SIZE; i++)
+        hop[i] = (float)(i + 1);
+    memset(buffer, 0, sizeof(buffer));
+    frame[FFT_SIZE] = -99.0f;
+
+    freq_overlap_save_out_t    save_out    = {.frame = frame};
+    freq_overlap_save_in_t     save_in     = {.signal = hop};
+    freq_overlap_save_params_t save_params = {.block_size = 512, .hop_size = 512};
+    freq_overlap_save_state_t  save_state  = {.buffer = buffer, .write_pos = 37};
+    freq_overlap_save_spectral_process(&save_out, &save_in, &save_params, &save_state, &spectral);
+    for (int i = 0; i < FFT_SIZE - HOP_SIZE; i++) {
+        if (frame[i] != 0.0f)
+            return fail("freq_overlap_save spectral warm-up mismatch");
+    }
+    for (int i = 0; i < HOP_SIZE; i++) {
+        if (frame[FFT_SIZE - HOP_SIZE + i] != hop[i])
+            return fail("freq_overlap_save spectral hop mismatch");
+    }
+    if (frame[FFT_SIZE] != -99.0f || save_state.write_pos != 0)
+        return fail("freq_overlap_save spectral extent mismatch");
+
+    for (int i = 0; i < FFT_SIZE; i++)
+        frame[i] = 1.0f;
+    frame[FFT_SIZE] = output[HOP_SIZE] = -99.0f;
+    memset(buffer, 0, sizeof(buffer));
+    freq_overlap_add_out_t    add_out    = {.signal = output};
+    freq_overlap_add_in_t     add_in     = {.frame = frame};
+    freq_overlap_add_params_t add_params = {.block_size = 512, .hop_size = 512};
+    freq_overlap_add_state_t  add_state  = {.buffer = buffer};
+    freq_overlap_add_spectral_process(&add_out, &add_in, &add_params, &add_state, &spectral);
+    for (int i = 0; i < HOP_SIZE; i++) {
+        if (output[i] != 1.0f)
+            return fail("freq_overlap_add spectral output mismatch");
+    }
+    for (int i = 0; i < FFT_SIZE - HOP_SIZE; i++) {
+        if (buffer[i] != 1.0f)
+            return fail("freq_overlap_add spectral tail mismatch");
+    }
+    for (int i = FFT_SIZE - HOP_SIZE; i < FFT_SIZE; i++) {
+        if (buffer[i] != 0.0f)
+            return fail("freq_overlap_add spectral clear mismatch");
+    }
+    if (output[HOP_SIZE] != -99.0f)
+        return fail("freq_overlap_add wrote beyond hop_size");
+
     return 0;
 }

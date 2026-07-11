@@ -797,12 +797,16 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
         for (size_t field_index = 0; field_index < node->state_fields_len; field_index++) {
             if (node->state_fields[field_index].type != FIELD_BUFFER)
                 continue;
-            layout->state_buffer_samples_by_index[buffer_index++] = node->state_fields[field_index].buffer_samples;
+            size_t buffer_samples = node->state_fields[field_index].buffer_samples;
+            if (node->has_spectral_info &&
+                (strcmp(node->atom_name, "freq_overlap_add") == 0 || strcmp(node->atom_name, "freq_overlap_save") == 0))
+                buffer_samples = node->spectral_info.fft_size;
+            layout->state_buffer_samples_by_index[buffer_index++]           = buffer_samples;
             layout->state_buffer_sample_offsets_by_index[buffer_index - 1u] = state_buffer_cursor;
-            if (node->state_fields[field_index].buffer_samples > SIZE_MAX - state_buffer_cursor)
+            if (buffer_samples > SIZE_MAX - state_buffer_cursor)
                 return set_error(err, UC_E_RANGE, "v2 registry state buffer layout is too large");
-            state_buffer_cursor += node->state_fields[field_index].buffer_samples;
-            layout->state_buffer_samples += node->state_fields[field_index].buffer_samples;
+            state_buffer_cursor += buffer_samples;
+            layout->state_buffer_samples += buffer_samples;
         }
         if (state_buffer_table_offset > SIZE_MAX - layout->state_buffers_len)
             return set_error(err, UC_E_RANGE, "v2 registry state-buffer table is too large");
