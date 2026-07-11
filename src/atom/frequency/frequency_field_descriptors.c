@@ -10,10 +10,22 @@ const atom_field_desc_t freq_fft_config_fields[] = {
 };
 FIELD_COUNT(freq_fft_config_fields);
 
+const atom_field_desc_t freq_fft_state_fields[] = {
+    {"workspace", FIELD_BUFFER, offsetof(freq_fft_state_t, workspace), 4096u},
+    {"buffer_len", FIELD_INT, offsetof(freq_fft_state_t, buffer_len)},
+};
+FIELD_COUNT(freq_fft_state_fields);
+
 const atom_field_desc_t freq_ifft_config_fields[] = {
     {"block_size", FIELD_INT, offsetof(freq_ifft_params_t, block_size)},
 };
 FIELD_COUNT(freq_ifft_config_fields);
+
+const atom_field_desc_t freq_ifft_state_fields[] = {
+    {"workspace", FIELD_BUFFER, offsetof(freq_ifft_state_t, workspace), 4096u},
+    {"buffer_len", FIELD_INT, offsetof(freq_ifft_state_t, buffer_len)},
+};
+FIELD_COUNT(freq_ifft_state_fields);
 
 const atom_field_desc_t freq_multiply_config_fields[] = {
     {"block_size", FIELD_INT, offsetof(freq_multiply_params_t, block_size)},

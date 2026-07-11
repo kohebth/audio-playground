@@ -99,6 +99,12 @@ static int test_registry_spectral_context(void) {
         uc_arena_free(&arena);
         return fail("registry did not preserve spectral context");
     }
+    if (registry.state_buffers_len != 1u || registry.state_buffer_samples != 512u ||
+        registry.node_layouts[0].state_buffer_samples_by_index[0] != 512u) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("FFT workspace was not sized from fft_size");
+    }
 
     apg_v2_runtime_t runtime;
     status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
@@ -113,6 +119,13 @@ static int test_registry_spectral_context(void) {
         uc_arena_free(&registry_arena);
         uc_arena_free(&arena);
         return fail("runtime call does not reference registry-owned spectral context");
+    }
+    const freq_fft_state_t *fft_state = runtime.nodes[0].state_storage;
+    if (!fft_state->workspace || fft_state->buffer_len != 512u) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("runtime did not bind the FFT workspace");
     }
 
     apg_v2_runtime_destroy(&runtime);

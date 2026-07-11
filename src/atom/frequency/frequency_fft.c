@@ -3,8 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define MAX_FFT_SIZE 2048u
-
 static void bit_reverse(float *data, uint32_t n) {
     uint32_t j = 0;
     for (uint32_t i = 0; i < n; i++) {
@@ -33,14 +31,14 @@ void freq_fft_process(
     const apg_spectral_info_t *spectral_info
 ) {
     (void)params;
-    (void)state;
     if (!out || !in || out->real == NULL || out->imag == NULL || in->signal == NULL ||
-        !apg_spectral_info_valid(spectral_info) || spectral_info->fft_size > MAX_FFT_SIZE)
+        !apg_spectral_info_valid(spectral_info) || !state || !state->workspace ||
+        state->buffer_len < spectral_info->fft_size * 2u)
         return;
 
     uint32_t n = spectral_info->fft_size;
 
-    float temp[MAX_FFT_SIZE * 2];
+    float *temp = state->workspace;
     for (uint32_t i = 0; i < n; i++) {
         temp[2 * i]     = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
         temp[2 * i + 1] = 0.0f;

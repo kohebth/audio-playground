@@ -805,7 +805,9 @@ typedef struct {
 typedef struct {
     int block_size;
 } freq_fft_params_t;
-typedef struct { /* no members */
+typedef struct {
+    float   *workspace;
+    uint32_t buffer_len;
 } freq_fft_state_t;
 
 typedef struct {
@@ -818,7 +820,9 @@ typedef struct {
 typedef struct {
     int block_size;
 } freq_ifft_params_t;
-typedef struct { /* no members */
+typedef struct {
+    float   *workspace;
+    uint32_t buffer_len;
 } freq_ifft_state_t;
 
 typedef struct {

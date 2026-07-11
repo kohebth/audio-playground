@@ -79,9 +79,12 @@ static size_t runtime_state_buffer_samples(
 ) {
     if (!node || !node->atom_name)
         return declared_samples;
-    if (node->has_spectral_info &&
-        (strcmp(node->atom_name, "freq_overlap_add") == 0 || strcmp(node->atom_name, "freq_overlap_save") == 0))
-        return node->spectral_info.fft_size;
+    if (node->has_spectral_info) {
+        if (strcmp(node->atom_name, "freq_fft") == 0 || strcmp(node->atom_name, "freq_ifft") == 0)
+            return (size_t)node->spectral_info.fft_size * 2u;
+        if (strcmp(node->atom_name, "freq_overlap_add") == 0 || strcmp(node->atom_name, "freq_overlap_save") == 0)
+            return node->spectral_info.fft_size;
+    }
     if (strcmp(node->atom_name, "delay_line") == 0)
         return bounded_buffer_samples(
             configured_binding_max(plan, node, "length", declared_samples) + 1.0, 1u, declared_samples

@@ -42,8 +42,8 @@
     X(filter_differentiate, filter, 0, 0, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)        \
     X(filter_fir, filter, 0, 2, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)                          \
     X(filter_integrate, filter, 0, 0, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)            \
-    X(freq_fft, freq, 0, 1, 0, APG_ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL, FFT)                     \
-    X(freq_ifft, freq, 0, 1, 0, APG_ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL, IFFT)                   \
+    X(freq_fft, freq, 0, 1, 2, APG_ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL, FFT)                     \
+    X(freq_ifft, freq, 0, 1, 2, APG_ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL, IFFT)                   \
     X(freq_multiply, freq, 0, 1, 0, APG_ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL, MULTIPLY)           \
     X(freq_overlap_add, freq, 0, 2, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, OVERLAP_ADD)             \
     X(freq_overlap_save, freq, 0, 2, 2, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, OVERLAP_SAVE)           \

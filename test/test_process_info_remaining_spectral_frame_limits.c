@@ -60,10 +60,18 @@ int test_process_info_remaining_spectral_frame_limits(void) {
     freq_fft_out_t      fft_out    = {.real = real, .imag = imag};
     freq_fft_in_t       fft_in     = {.signal = input};
     freq_fft_params_t   fft_params = {.block_size = 512};
-    freq_fft_state_t    fft_state;
+    float               fft_workspace[FFT_SIZE * 2];
+    freq_fft_state_t    fft_state = {.workspace = fft_workspace, .buffer_len = FFT_SIZE * 2};
     freq_fft_process(&fft_out, &fft_in, &fft_params, &fft_state, &spectral);
     if (real[BIN_COUNT] != -99.0f || imag[BIN_COUNT] != -99.0f)
         return fail("freq_fft_process wrote beyond half spectrum");
+    real[0] = -99.0f;
+    fft_state.buffer_len--;
+    freq_fft_process(&fft_out, &fft_in, &fft_params, &fft_state, &spectral);
+    if (real[0] != -99.0f)
+        return fail("freq_fft_process accepted undersized workspace");
+    fft_state.buffer_len++;
+    freq_fft_process(&fft_out, &fft_in, &fft_params, &fft_state, &spectral);
 
     float spectral_window[FFT_SIZE + 1];
     spectral_window[FFT_SIZE]                   = -99.0f;
@@ -81,7 +89,8 @@ int test_process_info_remaining_spectral_frame_limits(void) {
     freq_ifft_out_t    ifft_out    = {.signal = reconstructed};
     freq_ifft_in_t     ifft_in     = {.real = real, .imag = imag};
     freq_ifft_params_t ifft_params = {.block_size = 512};
-    freq_ifft_state_t  ifft_state;
+    float              ifft_workspace[FFT_SIZE * 2];
+    freq_ifft_state_t  ifft_state = {.workspace = ifft_workspace, .buffer_len = FFT_SIZE * 2};
     freq_ifft_process(&ifft_out, &ifft_in, &ifft_params, &ifft_state, &spectral);
     for (int i = 0; i < FFT_SIZE; i++) {
         if (!isfinite(reconstructed[i]) || fabsf(reconstructed[i] - input[i]) > 2e-5f)
