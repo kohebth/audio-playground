@@ -1,4 +1,5 @@
 #include <atom/dsp_atoms.h>
+#include <apgcore/dsp/dsp_safety.h>
 #include <math.h>
 #include <stddef.h>
 
@@ -9,23 +10,29 @@ void modulation_scrub_process(
     modulation_scrub_state_t  *state,
     const apg_process_info_t  *info
 ) {
-    if (out->signal == NULL || in->buffer == NULL || in->position == NULL)
+    (void)state;
+    if (out == NULL || in == NULL || out->signal == NULL || in->buffer == NULL || in->position == NULL || params == NULL)
         return;
 
+    const int buffer_size = params->buffer_size;
     const uint32_t frames = apg_process_frames_or_default(info);
+    if (buffer_size < 2) {
+        for (uint32_t i = 0; i < frames; ++i)
+            out->signal[i] = 0.0f;
+        return;
+    }
 
+    const float max_pos = (float)buffer_size - 1.001f;
     for (uint32_t i = 0; i < frames; ++i) {
-        float pos = in->position[i];
-        if (pos < 0.0f)
-            pos = 0.0f;
-        if (pos > (float)params->buffer_size - 2.0f)
-            pos = (float)params->buffer_size - 2.0f;
-
-        uint32_t idx_a = (uint32_t)floorf(pos);
-        uint32_t idx_b = idx_a + 1;
-        float    frac  = pos - floorf(pos);
-
-        out->signal[i] = in->buffer[idx_a] * (1.0f - frac) + in->buffer[idx_b] * frac;
+        const float pos = apg_clamp_float(in->position[i], 0.0f, max_pos);
+        const float base = floorf(pos);
+        const uint32_t idx_a = (uint32_t)base;
+        const uint32_t idx_b = idx_a + 1u < (uint32_t)buffer_size ? idx_a + 1u : idx_a;
+        const float frac = pos - base;
+        const float a = isfinite(in->buffer[idx_a]) ? in->buffer[idx_a] : 0.0f;
+        const float b = isfinite(in->buffer[idx_b]) ? in->buffer[idx_b] : a;
+        const float sample = a * (1.0f - frac) + b * frac;
+        out->signal[i] = isfinite(sample) ? sample : 0.0f;
     }
 }
 
