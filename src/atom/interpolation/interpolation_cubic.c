@@ -8,6 +8,8 @@ void interpolation_cubic_process(
     interpolation_cubic_state_t  *state,
     const apg_process_info_t     *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->signal == NULL || in->signal_n1 == NULL || in->signal_a == NULL || in->signal_b == NULL ||
         in->signal_c == NULL || in->t == NULL)
         return;

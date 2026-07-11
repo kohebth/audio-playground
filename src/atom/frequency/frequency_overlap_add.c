@@ -11,6 +11,8 @@ void freq_overlap_add_spectral_process(
     freq_overlap_add_state_t  *state,
     const apg_spectral_info_t *spectral_info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)params;
     if (!out || !in || !state || !out->signal || !in->frame || !state->buffer ||
         !apg_spectral_info_valid(spectral_info))
@@ -36,6 +38,8 @@ void freq_overlap_add_process(
     freq_overlap_add_state_t  *state,
     const apg_process_info_t  *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->frame == NULL || state->buffer == NULL)

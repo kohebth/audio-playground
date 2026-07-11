@@ -9,6 +9,8 @@ void freq_multiply_process(
     freq_multiply_state_t     *state,
     const apg_spectral_info_t *spectral_info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)params;
     (void)state;
     if (!out || !in || out->real == NULL || out->imag == NULL || in->real_a == NULL || in->imag_a == NULL ||

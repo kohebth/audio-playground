@@ -1,5 +1,5 @@
-#include <atom/dsp_atoms.h>
 #include <apgcore/dsp/dsp_safety.h>
+#include <atom/dsp_atoms.h>
 #include <math.h>
 #include <stddef.h>
 
@@ -10,6 +10,8 @@ void amplitude_smooth_process(
     amplitude_smooth_state_t  *state,
     const apg_process_info_t  *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL)
         return;
 
@@ -25,7 +27,7 @@ void amplitude_smooth_process(
         const float input = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
         const float alpha = input > last_out ? alpha_att : alpha_rel;
         last_out += alpha * (input - last_out);
-        last_out      = apg_denormal_kill(last_out);
+        last_out       = apg_denormal_kill(last_out);
         out->signal[i] = last_out;
     }
 

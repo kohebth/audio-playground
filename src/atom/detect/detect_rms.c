@@ -10,6 +10,8 @@ void detect_rms_process(
     detect_rms_state_t       *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->level == NULL || in->signal == NULL ||
         state->buffer == NULL)
         return;

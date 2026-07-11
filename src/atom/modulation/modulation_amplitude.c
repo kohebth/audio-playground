@@ -8,6 +8,8 @@ void modulation_amplitude_process(
     modulation_amplitude_state_t  *state,
     const apg_process_info_t      *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)state;
     if (out->signal == NULL || in->signal == NULL || in->modulator == NULL || params == NULL)
         return;

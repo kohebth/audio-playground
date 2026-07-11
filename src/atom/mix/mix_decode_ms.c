@@ -9,6 +9,8 @@ void mix_decode_ms_process(
     mix_decode_ms_state_t    *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->left == NULL || out->right == NULL || in->mid == NULL || in->side == NULL)
         return;
 

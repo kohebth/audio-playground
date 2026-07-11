@@ -8,6 +8,8 @@ void detect_threshold_process(
     detect_threshold_state_t  *state,
     const apg_process_info_t  *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)state;
     if (out->gate == NULL || in->signal == NULL || params == NULL)
         return;

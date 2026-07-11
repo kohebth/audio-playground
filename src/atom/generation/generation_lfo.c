@@ -1,5 +1,5 @@
-#include <atom/dsp_atoms.h>
 #include <apgcore/dsp/dsp_safety.h>
+#include <atom/dsp_atoms.h>
 #include <math.h>
 #include <stddef.h>
 
@@ -14,6 +14,8 @@ void generation_lfo_process(
     generation_lfo_state_t   *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)in;
     if (out == NULL || out->signal == NULL || params == NULL || state == NULL)
         return;

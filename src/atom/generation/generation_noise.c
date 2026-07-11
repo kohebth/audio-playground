@@ -8,6 +8,8 @@ void generation_noise_process(
     generation_noise_state_t  *state,
     const apg_process_info_t  *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->signal == NULL || state == NULL)
         return;
 

@@ -10,6 +10,8 @@ void modulation_phase_process(
     modulation_phase_state_t  *state,
     const apg_process_info_t  *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
         in->modulator == NULL || state->buffer == NULL)
         return;

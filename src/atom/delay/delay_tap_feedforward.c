@@ -8,6 +8,8 @@ void delay_tap_feedforward_process(
     delay_tap_feedforward_state_t  *state,
     const apg_process_info_t       *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)state;
     if (out->signal == NULL || in->buffer == NULL || params == NULL)
         return;

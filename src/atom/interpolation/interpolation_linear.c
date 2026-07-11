@@ -8,6 +8,8 @@ void interpolation_linear_process(
     interpolation_linear_state_t  *state,
     const apg_process_info_t      *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->signal == NULL || in->signal_a == NULL || in->signal_b == NULL || in->t == NULL)
         return;
 

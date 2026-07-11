@@ -8,6 +8,8 @@ void amplitude_clip_hard_process(
     amplitude_clip_hard_state_t  *state,
     const apg_process_info_t     *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->signal == NULL || in->signal == NULL)
         return;
 

@@ -1,5 +1,5 @@
-#include <atom/dsp_atoms.h>
 #include <apgcore/dsp/dsp_safety.h>
+#include <atom/dsp_atoms.h>
 
 #include <math.h>
 #include <stddef.h>
@@ -74,27 +74,29 @@ void filter_biquad_process(
     filter_biquad_state_t    *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL)
         return;
 
     const uint32_t frames      = apg_process_frames_or_default(info);
     const float    sample_rate = apg_sample_rate_or_default(info);
     const float    max_cutoff  = sample_rate * 0.49f;
-    const float    smooth_ms   = isfinite(params->smoothing_ms) && params->smoothing_ms > 0.0f ? params->smoothing_ms : 0.0f;
-    const float    smooth      = smooth_ms > 0.0f ? expf(-1000.0f / (smooth_ms * sample_rate)) : 0.0f;
+    const float smooth_ms = isfinite(params->smoothing_ms) && params->smoothing_ms > 0.0f ? params->smoothing_ms : 0.0f;
+    const float smooth    = smooth_ms > 0.0f ? expf(-1000.0f / (smooth_ms * sample_rate)) : 0.0f;
 
-    float z1             = apg_denormal_kill(state->z1);
-    float z2             = apg_denormal_kill(state->z2);
-    float current_cutoff = state->current_cutoff;
-    float current_q      = state->current_q;
-    float current_b0     = state->current_b0;
-    float current_b1     = state->current_b1;
-    float current_b2     = state->current_b2;
-    float current_a1     = state->current_a1;
-    float current_a2     = state->current_a2;
-    float target_cutoff  = apg_clamp_float(params->cutoff, 1.0f, max_cutoff);
-    float target_q       = apg_clamp_float(params->q, 0.05f, 20.0f);
-    const int target_mode = clamp_mode(params->mode);
+    float     z1             = apg_denormal_kill(state->z1);
+    float     z2             = apg_denormal_kill(state->z2);
+    float     current_cutoff = state->current_cutoff;
+    float     current_q      = state->current_q;
+    float     current_b0     = state->current_b0;
+    float     current_b1     = state->current_b1;
+    float     current_b2     = state->current_b2;
+    float     current_a1     = state->current_a1;
+    float     current_a2     = state->current_a2;
+    float     target_cutoff  = apg_clamp_float(params->cutoff, 1.0f, max_cutoff);
+    float     target_q       = apg_clamp_float(params->q, 0.05f, 20.0f);
+    const int target_mode    = clamp_mode(params->mode);
 
     if (!isfinite(current_cutoff) || current_cutoff <= 0.0f) {
         current_cutoff = target_cutoff;

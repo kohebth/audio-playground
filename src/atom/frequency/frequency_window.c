@@ -9,6 +9,8 @@ void freq_window_spectral_process(
     freq_window_state_t       *state,
     const apg_spectral_info_t *spectral_info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)state;
     if (!out || !in || !params || !out->signal || !in->signal || !apg_spectral_info_valid(spectral_info))
         return;
@@ -42,6 +44,8 @@ void freq_window_process(
     freq_window_state_t      *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->signal == NULL || in->signal == NULL)
         return;
 

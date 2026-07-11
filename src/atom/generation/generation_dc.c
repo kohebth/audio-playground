@@ -8,6 +8,8 @@ void generation_dc_process(
     generation_dc_state_t    *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)in;
     (void)state;
     if (out->signal == NULL || params == NULL)

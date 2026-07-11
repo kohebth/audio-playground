@@ -8,6 +8,8 @@ void detect_slope_process(
     detect_slope_state_t     *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->slope == NULL || in->signal == NULL || state == NULL)
         return;
 

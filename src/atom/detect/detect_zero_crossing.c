@@ -8,6 +8,8 @@ void detect_zero_crossing_process(
     detect_zero_crossing_state_t  *state,
     const apg_process_info_t      *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->trigger == NULL || in->signal == NULL || state == NULL)
         return;
 

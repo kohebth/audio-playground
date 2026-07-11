@@ -11,6 +11,8 @@ void freq_shift_process(
     freq_shift_state_t       *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)params;
     if (!out || !in || !state || out->signal == NULL || in->signal == NULL || state->real == NULL)
         return;

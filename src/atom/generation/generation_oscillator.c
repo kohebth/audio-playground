@@ -1,5 +1,5 @@
-#include <atom/dsp_atoms.h>
 #include <apgcore/dsp/dsp_safety.h>
+#include <atom/dsp_atoms.h>
 #include <math.h>
 #include <stdlib.h>
 
@@ -30,6 +30,8 @@ void generation_oscillator_process(
     generation_oscillator_state_t  *state,
     const apg_process_info_t       *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || out->signal == NULL || params == NULL || state == NULL)
         return;
 
@@ -38,8 +40,8 @@ void generation_oscillator_process(
     float          phase       = isfinite(state->phase) ? state->phase - floorf(state->phase) : 0.0f;
 
     for (uint32_t i = 0; i < frames; ++i) {
-        float frequency = in && in->frequency ? in->frequency[i] : params->frequency;
-        frequency       = apg_clamp_float(frequency, 0.0f, sample_rate * 0.45f);
+        float frequency       = in && in->frequency ? in->frequency[i] : params->frequency;
+        frequency             = apg_clamp_float(frequency, 0.0f, sample_rate * 0.45f);
         const float phase_inc = frequency / sample_rate;
 
         float p = phase + (isfinite(params->phase_offset) ? params->phase_offset : 0.0f);

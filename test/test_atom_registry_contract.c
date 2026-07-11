@@ -1,5 +1,6 @@
 #include <atom/atom_capability.h>
 #include <atom/atom_definitions.h>
+#include <atom/dsp_atoms.h>
 #include <atom_registry.h>
 
 #include <stdio.h>
@@ -265,6 +266,17 @@ static int test_all_atoms_accept_required_frame_sizes(void) {
     return 0;
 }
 
+static int test_all_process_entries_accept_null_abi(void) {
+#define CALL_PROCESS_WITH_NULL_ABI(name, category, input_count, config_count, state_count, flags, maturity, dispatch) \
+    name##_process(NULL, NULL, NULL, NULL, NULL);
+    APG_ATOM_DEFINITIONS(CALL_PROCESS_WITH_NULL_ABI)
+#undef CALL_PROCESS_WITH_NULL_ABI
+    freq_window_spectral_process(NULL, NULL, NULL, NULL, NULL);
+    freq_overlap_add_spectral_process(NULL, NULL, NULL, NULL, NULL);
+    freq_overlap_save_spectral_process(NULL, NULL, NULL, NULL, NULL);
+    return 0;
+}
+
 int main(void) {
     if (test_registry_entries_are_complete())
         return 1;
@@ -279,6 +291,8 @@ int main(void) {
     if (test_legacy_atoms_are_marked_experimental())
         return 1;
     if (test_all_atoms_accept_required_frame_sizes())
+        return 1;
+    if (test_all_process_entries_accept_null_abi())
         return 1;
     return 0;
 }

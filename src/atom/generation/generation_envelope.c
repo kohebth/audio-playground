@@ -1,5 +1,5 @@
-#include <atom/dsp_atoms.h>
 #include <apgcore/dsp/dsp_safety.h>
+#include <atom/dsp_atoms.h>
 #include <stddef.h>
 
 void generation_envelope_process(
@@ -9,6 +9,8 @@ void generation_envelope_process(
     generation_envelope_state_t  *state,
     const apg_process_info_t     *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || out->signal == NULL || in->gate == NULL || params == NULL || state == NULL)
         return;
 

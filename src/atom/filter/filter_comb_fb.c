@@ -11,6 +11,8 @@ void filter_comb_fb_process(
     filter_comb_fb_state_t   *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
         state->buffer == NULL)
         return;

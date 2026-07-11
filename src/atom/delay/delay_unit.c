@@ -8,6 +8,8 @@ void delay_unit_process(
     delay_unit_state_t       *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)params;
     if (out->signal == NULL || in->signal == NULL || state == NULL)
         return;

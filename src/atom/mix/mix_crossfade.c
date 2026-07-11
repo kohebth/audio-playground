@@ -8,6 +8,8 @@ void mix_crossfade_process(
     mix_crossfade_state_t    *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)state;
     if (out->signal == NULL || in->signal_a == NULL || in->signal_b == NULL || params == NULL)
         return;

@@ -8,6 +8,8 @@ void amplitude_multiply_process(
     amplitude_multiply_state_t  *state,
     const apg_process_info_t    *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)params;
     (void)state;
     if (out->signal == NULL || in->signal_a == NULL || in->signal_b == NULL)

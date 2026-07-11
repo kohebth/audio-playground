@@ -8,6 +8,8 @@ void mix_pan_stereo_process(
     mix_pan_stereo_state_t   *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out->left == NULL || out->right == NULL || in->signal == NULL)
         return;
 

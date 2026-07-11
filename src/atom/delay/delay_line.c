@@ -11,6 +11,8 @@ void delay_line_process(
     delay_line_state_t       *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL ||
         state->buffer == NULL)
         return;

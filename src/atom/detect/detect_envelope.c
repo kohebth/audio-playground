@@ -1,5 +1,5 @@
-#include <atom/dsp_atoms.h>
 #include <apgcore/dsp/dsp_safety.h>
+#include <atom/dsp_atoms.h>
 #include <math.h>
 #include <stddef.h>
 
@@ -10,6 +10,8 @@ void detect_envelope_process(
     detect_envelope_state_t  *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     if (out == NULL || in == NULL || out->envelope == NULL || in->signal == NULL || params == NULL || state == NULL)
         return;
 

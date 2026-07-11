@@ -30,6 +30,8 @@ void freq_ifft_process(
     freq_ifft_state_t         *state,
     const apg_spectral_info_t *spectral_info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)params;
     if (!out || !in || out->signal == NULL || in->real == NULL || in->imag == NULL ||
         !apg_spectral_info_valid(spectral_info) || !state || !state->workspace ||

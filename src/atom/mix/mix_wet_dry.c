@@ -8,6 +8,8 @@ void mix_wet_dry_process(
     mix_wet_dry_state_t      *state,
     const apg_process_info_t *info
 ) {
+    if (out == NULL || in == NULL || params == NULL || state == NULL)
+        return;
     (void)state;
     if (out->signal == NULL || in->dry == NULL || in->wet == NULL || params == NULL)
         return;
