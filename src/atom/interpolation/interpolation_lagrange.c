@@ -1,6 +1,9 @@
 #include <atom/dsp_atoms.h>
+#include <apgcore/dsp/dsp_safety.h>
 #include <math.h>
 #include <stddef.h>
+
+#define APG_LAGRANGE_MAX_ORDER 8
 
 void interpolation_lagrange_process(
     interpolation_lagrange_out_t    *out,
@@ -9,27 +12,50 @@ void interpolation_lagrange_process(
     interpolation_lagrange_state_t  *state,
     const apg_process_info_t        *info
 ) {
-    if (out->signal == NULL || in->samples == NULL || in->t == NULL)
+    (void)state;
+    if (out == NULL || in == NULL || out->signal == NULL || in->samples == NULL || in->t == NULL || params == NULL)
         return;
 
-    int            n      = params->order;
     const uint32_t frames = apg_process_frames_or_default(info);
+    if (frames == 0u)
+        return;
+
+    int order = params->order;
+    if (order < 0)
+        order = 0;
+    if (order > APG_LAGRANGE_MAX_ORDER)
+        order = APG_LAGRANGE_MAX_ORDER;
+    if ((uint32_t)order >= frames)
+        order = (int)frames - 1;
+
+    const int sample_count = order + 1;
+    const int max_base     = (int)frames - sample_count;
+
     for (uint32_t i = 0; i < frames; ++i) {
-        float pos  = in->t[i];
-        int   base = (int)floorf(pos) - n / 2;
-        float frac = pos - floorf(pos) + (float)(n / 2);
+        float position = in->t[i];
+        if (!isfinite(position))
+            position = 0.0f;
+        position = apg_clamp_float(position, 0.0f, (float)(frames - 1u));
+
+        int base = (int)floorf(position) - order / 2;
+        if (base < 0)
+            base = 0;
+        if (base > max_base)
+            base = max_base;
+        const float x = position - (float)base;
 
         float result = 0.0f;
-        for (int k = 0; k <= n; ++k) {
-            float l_k = 1.0f;
-            for (int j = 0; j <= n; ++j) {
+        for (int k = 0; k <= order; ++k) {
+            float basis = 1.0f;
+            for (int j = 0; j <= order; ++j) {
                 if (k == j)
                     continue;
-                l_k *= (frac - (float)j) / ((float)k - (float)j);
+                basis *= (x - (float)j) / ((float)k - (float)j);
             }
-            result += in->samples[base + k] * l_k;
+            const float sample = isfinite(in->samples[base + k]) ? in->samples[base + k] : 0.0f;
+            result += sample * basis;
         }
-        out->signal[i] = result;
+        out->signal[i] = isfinite(result) ? result : 0.0f;
     }
 }
 
