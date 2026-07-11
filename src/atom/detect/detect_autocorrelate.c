@@ -1,7 +1,8 @@
+#include <apgcore/dsp/dsp_safety.h>
 #include <atom/dsp_atoms.h>
-#include <stdlib.h>
-
-#define MAX_AUTOCORR_LAG 1024
+#include <float.h>
+#include <math.h>
+#include <stddef.h>
 
 void detect_autocorrelate_process(
     detect_autocorrelate_out_t    *out,
@@ -10,39 +11,54 @@ void detect_autocorrelate_process(
     detect_autocorrelate_state_t  *state,
     const apg_process_info_t      *info
 ) {
-    if (out->correlation == NULL || in->signal == NULL || state == NULL || state->buffer == NULL)
+    if (out == NULL || in == NULL || params == NULL || state == NULL || out->correlation == NULL ||
+        in->signal == NULL || state->buffer == NULL)
         return;
 
-    const uint32_t frames  = apg_process_frames_or_default(info);
-    int            max_lag = params->max_lag;
-    if (max_lag > MAX_AUTOCORR_LAG)
-        max_lag = MAX_AUTOCORR_LAG;
+    const uint32_t frames = info != NULL ? info->frames : APG_DEFAULT_FRAMES;
+    const uint32_t analysis_frames =
+        frames < APG_DETECT_AUTOCORRELATION_CAPACITY ? frames : APG_DETECT_AUTOCORRELATION_CAPACITY;
+    int max_lag = params->max_lag;
+    if (max_lag > (int)APG_DETECT_AUTOCORRELATION_CAPACITY)
+        max_lag = (int)APG_DETECT_AUTOCORRELATION_CAPACITY;
     if (max_lag < 0)
         max_lag = 0;
-    if ((uint32_t)max_lag > frames)
-        max_lag = (int)frames;
+    if ((uint32_t)max_lag > analysis_frames)
+        max_lag = (int)analysis_frames;
 
-    int write_pos = state->write_pos;
+    uint32_t write_pos = apg_wrap_index_i64(state->write_pos, APG_DETECT_AUTOCORRELATION_CAPACITY);
     for (uint32_t i = 0; i < frames; ++i) {
-        state->buffer[write_pos] = in->signal[i];
-        write_pos                = (write_pos + 1) % MAX_AUTOCORR_LAG;
+        state->buffer[write_pos] = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
+        write_pos                = write_pos + 1u == APG_DETECT_AUTOCORRELATION_CAPACITY ? 0u : write_pos + 1u;
     }
 
     for (int k = 0; k < max_lag; ++k) {
-        float r_k = 0.0f;
-        for (uint32_t n = 0; n < frames; ++n) {
-            int idx1 = (write_pos - (int)frames + (int)n + MAX_AUTOCORR_LAG) % MAX_AUTOCORR_LAG;
-            int idx2 = (idx1 - k + MAX_AUTOCORR_LAG) % MAX_AUTOCORR_LAG;
-            r_k += state->buffer[idx1] * state->buffer[idx2];
+        double r_k = 0.0;
+        for (uint32_t n = 0; n < analysis_frames; ++n) {
+            const uint32_t idx1 = apg_wrap_index_i64(
+                (int64_t)write_pos - (int64_t)analysis_frames + (int64_t)n, APG_DETECT_AUTOCORRELATION_CAPACITY
+            );
+            const uint32_t idx2 = apg_wrap_index_i64((int64_t)idx1 - (int64_t)k, APG_DETECT_AUTOCORRELATION_CAPACITY);
+            float          sample1 = state->buffer[idx1];
+            float          sample2 = state->buffer[idx2];
+            if (!isfinite(sample1)) {
+                sample1             = 0.0f;
+                state->buffer[idx1] = 0.0f;
+            }
+            if (!isfinite(sample2)) {
+                sample2             = 0.0f;
+                state->buffer[idx2] = 0.0f;
+            }
+            r_k += (double)sample1 * (double)sample2;
         }
-        out->correlation[k] = r_k;
+        out->correlation[k] = r_k > (double)FLT_MAX ? FLT_MAX : (r_k < -(double)FLT_MAX ? -FLT_MAX : (float)r_k);
     }
 
     for (uint32_t k = (uint32_t)max_lag; k < frames; ++k) {
         out->correlation[k] = 0.0f;
     }
 
-    state->write_pos = write_pos;
+    state->write_pos = (int)write_pos;
 }
 
 void detect_autocorrelate(

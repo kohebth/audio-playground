@@ -498,6 +498,9 @@ typedef struct {
     float prev_envelope;
 } detect_envelope_state_t;
 
+#define APG_DETECT_RMS_CAPACITY             4096u
+#define APG_DETECT_AUTOCORRELATION_CAPACITY 1024u
+
 typedef struct {
     float *gate;
 } detect_threshold_out_t;
