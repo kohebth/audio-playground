@@ -2,8 +2,9 @@
 
 ## Status
 
-This document defines the production contract for Audio Playground spectral atoms. The handwritten legacy implementations
-remain experimental until they are migrated to this contract and their registry capabilities are updated.
+This document defines the production contract for Audio Playground spectral atoms. FFT, IFFT, multiply, window, and
+overlap processing use this contract on desktop. FFT/IFFT remain experimental and are rejected for WASM and Cortex-M7
+until target-specific transform implementations and memory accounting are complete.
 
 ## Processing context
 
@@ -77,7 +78,8 @@ unbounded work.
 
 ## Target policy
 
-- Desktop and WASM use preallocated transform plans and scratch memory with the supported sizes above.
-- Cortex-M7 uses CMSIS-DSP transforms with statically declared plan and scratch requirements.
+- Desktop FFT/IFFT use registry-owned, preallocated scratch memory with the supported sizes above.
+- WASM uses only spectral atoms carrying `APG_ATOM_WASM_SAFE`; FFT/IFFT remain rejected.
+- Cortex-M7 FFT/IFFT will use CMSIS-DSP with statically declared plan and scratch requirements; they remain rejected now.
 - An atom remains rejected for a target until its implementation, plan storage, numerical tests, and memory accounting for
   that target are complete.
