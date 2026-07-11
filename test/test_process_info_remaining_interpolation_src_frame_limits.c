@@ -1,5 +1,56 @@
 #include "test_atom_basic_common.h"
 
+static int test_src_filter_safety(void) {
+    float input[8] = {1.0f, NAN, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    float output_a[9];
+    float output_b[9];
+    for (size_t i = 0; i < 9u; ++i) {
+        output_a[i] = -99.0f;
+        output_b[i] = -99.0f;
+    }
+
+    apg_process_info_t     info     = {.sample_rate = 96000.0f, .frames = 8u, .output_frames = 8u, .channels = 1u};
+    src_antialias_out_t    out_a    = {.signal = output_a};
+    src_antialias_out_t    out_b    = {.signal = output_b};
+    src_antialias_in_t     in       = {.signal = input};
+    src_antialias_params_t params_a = {.cutoff = 12000.0f, .sample_rate = 8000.0f};
+    src_antialias_params_t params_b = {.cutoff = 12000.0f, .sample_rate = 192000.0f};
+    src_antialias_state_t  state_a  = {.z1 = NAN, .z2 = INFINITY};
+    src_antialias_state_t  state_b  = {.z1 = NAN, .z2 = INFINITY};
+
+    src_antialias_process(&out_a, &in, &params_a, &state_a, &info);
+    src_antialias_process(&out_b, &in, &params_b, &state_b, &info);
+    if (assert_finite_buffer(output_a, 8, "src_antialias_process invalid input"))
+        return 1;
+    for (size_t i = 0; i < 8u; ++i) {
+        if (fabsf(output_a[i] - output_b[i]) > 1e-7f)
+            return fail("src_antialias_process used legacy params sample rate");
+    }
+    if (!isfinite(state_a.z1) || !isfinite(state_a.z2) || output_a[8] != -99.0f)
+        return fail("src_antialias_process did not sanitize state or preserve sentinel");
+
+    for (size_t i = 0; i < 9u; ++i)
+        output_a[i] = -99.0f;
+    src_antiimage_out_t    image_out    = {.signal = output_a};
+    src_antiimage_in_t     image_in     = {.signal = input};
+    src_antiimage_params_t image_params = {.cutoff = NAN, .sample_rate = 1.0f};
+    src_antiimage_state_t  image_state  = {.z1 = -INFINITY, .z2 = NAN};
+    src_antiimage_process(&image_out, &image_in, &image_params, &image_state, &info);
+    if (assert_finite_buffer(output_a, 8, "src_antiimage_process invalid config"))
+        return 1;
+    if (!isfinite(image_state.z1) || !isfinite(image_state.z2) || output_a[8] != -99.0f)
+        return fail("src_antiimage_process did not sanitize state or preserve sentinel");
+
+    output_a[0]        = -99.0f;
+    info.frames        = 0u;
+    info.output_frames = 0u;
+    src_antiimage_process(&image_out, &image_in, &image_params, &image_state, &info);
+    if (output_a[0] != -99.0f)
+        return fail("src_antiimage_process wrote for zero frames");
+
+    return 0;
+}
+
 int test_process_info_remaining_interpolation_src_frame_limits(void) {
     const int frame_sizes[] = {64, 128, 256, 512, 1024};
 
@@ -147,5 +198,5 @@ int test_process_info_remaining_interpolation_src_frame_limits(void) {
             return fail("src_antiimage_process wrote past info.frames");
     }
 
-    return 0;
+    return test_src_filter_safety();
 }
