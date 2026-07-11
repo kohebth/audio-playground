@@ -1,4 +1,6 @@
 #include <apgcore/metadata/atom_catalog.h>
+#include <atom/atom_capability.h>
+#include <atom_registry.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +52,39 @@ static int expect_field(
         return fail("metadata required query is wrong");
     if (apg_atom_contract_field_type(atom, section, key) != type)
         return fail("metadata type query is wrong");
+    return 0;
+}
+
+static int test_runtime_registry_contract(void) {
+    atom_registry_init();
+    const int count = atom_registry_count();
+    if (count <= 0)
+        return fail("runtime atom registry is empty");
+
+    for (int i = 0; i < count; ++i) {
+        const atom_registry_entry_t *entry = atom_registry_get(i);
+        if (!entry || !entry->name || !entry->category || !entry->thunk)
+            return fail("runtime atom registry entry is incomplete");
+        if (entry->flags == 0u || entry->maturity > APG_ATOM_MATURITY_PRODUCTION)
+            return fail("runtime atom registry capability metadata is invalid");
+        if (atom_registry_find(entry->name) != entry)
+            return fail("runtime atom registry lookup is not canonical");
+
+        for (int j = i + 1; j < count; ++j) {
+            const atom_registry_entry_t *other = atom_registry_get(j);
+            if (other && other->name && strcmp(entry->name, other->name) == 0)
+                return fail("runtime atom registry contains a duplicate name");
+        }
+    }
+
+    const char *legacy_names[] = {"freq_fft", "freq_ifft", "freq_multiply"};
+    for (size_t i = 0; i < sizeof(legacy_names) / sizeof(legacy_names[0]); ++i) {
+        const atom_registry_entry_t *entry = atom_registry_find(legacy_names[i]);
+        if (!entry || (entry->flags & APG_ATOM_LEGACY) == 0u || (entry->flags & APG_ATOM_EXPERIMENTAL) == 0u ||
+            (entry->flags & APG_ATOM_RT_SAFE) != 0u || entry->maturity != APG_ATOM_MATURITY_EXPERIMENTAL)
+            return fail("legacy spectral atom capability classification is invalid");
+    }
+
     return 0;
 }
 
@@ -126,5 +161,5 @@ int main(void) {
         return fail("unknown atom metadata type lookup failed");
 
     free(json);
-    return 0;
+    return test_runtime_registry_contract();
 }
