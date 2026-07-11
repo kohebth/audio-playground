@@ -1038,7 +1038,6 @@ uc_status apg_v2_registry_build_with_growth(
     if (!plan || !out_arena || !out_registry || !err)
         return UC_E_TYPE;
 
-    *out_arena = (uc_arena){0};
     memset(out_registry, 0, sizeof(*out_registry));
 
     size_t registry_arena_size = 4096u;
@@ -1050,6 +1049,7 @@ uc_status apg_v2_registry_build_with_growth(
 
         uc_status status = apg_v2_registry_build(plan, frame_capacity, sample_rate, &registry_arena, out_registry, err);
         if (status == UC_OK) {
+            uc_arena_free(out_arena);
             *out_arena = registry_arena;
             return UC_OK;
         }

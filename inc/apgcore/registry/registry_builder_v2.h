@@ -23,8 +23,9 @@ uc_status apg_v2_registry_build(
 
 /*
  * Build a runtime layout descriptor, growing arena capacity as needed.
- * The caller owns both arena and descriptor storage; on success, out_arena
- * remains initialized and owns all registry heap memory until freed by caller.
+ * The caller owns both arena and descriptor storage. out_arena must be zeroed
+ * or initialized. On success, its previous storage is freed and replaced with
+ * the grown registry storage; on failure, its previous storage is preserved.
  */
 uc_status apg_v2_registry_build_with_growth(
     const apg_v2_compiled_unit_t *plan,

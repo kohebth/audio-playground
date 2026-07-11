@@ -75,7 +75,13 @@ static int test_registry_spectral_context(void) {
         return fail("compiler did not derive spectral context");
     }
 
-    uc_arena          registry_arena;
+    uc_arena registry_arena = {0};
+    if (uc_arena_init(&registry_arena, 128u) != 0) {
+        uc_arena_free(&arena);
+        return fail("registry replacement arena init failed");
+    }
+    void             *original_registry_base = registry_arena.base;
+    size_t            original_registry_used = registry_arena.used;
     apg_v2_registry_t registry;
     uc_error          err = {0};
     uc_status status      = apg_v2_registry_build_with_growth(&plan, 64u, 48000.0f, &registry_arena, &registry, &err);
@@ -85,6 +91,11 @@ static int test_registry_spectral_context(void) {
         uc_arena_free(&arena);
         return fail("registry accepted undersized spectral signal buffers");
     }
+    if (registry_arena.base != original_registry_base || registry_arena.used != original_registry_used) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("failed registry growth replaced the caller arena");
+    }
 
     err    = (uc_error){0};
     status = apg_v2_registry_build_with_growth(&plan, 256u, 48000.0f, &registry_arena, &registry, &err);
@@ -92,6 +103,11 @@ static int test_registry_spectral_context(void) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("failed to build spectral registry");
+    }
+    if (registry_arena.base == original_registry_base) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("successful registry growth did not replace the caller arena");
     }
     if (registry.nodes_len != 1u || !registry.node_layouts[0].has_spectral_info ||
         !apg_spectral_info_valid(&registry.node_layouts[0].spectral_info)) {
@@ -144,7 +160,7 @@ static int test_registry_spectral_overlap_buffers(void) {
         uc_arena_free(&arena);
         return 1;
     }
-    uc_arena          registry_arena;
+    uc_arena          registry_arena = {0};
     apg_v2_registry_t registry;
     uc_error          err = {0};
     uc_status status      = apg_v2_registry_build_with_growth(&plan, 256u, 48000.0f, &registry_arena, &registry, &err);
