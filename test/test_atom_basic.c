@@ -3,9 +3,12 @@
 int test_amplitude_multiply(void);
 int test_soft_clip_bounds_and_monotonicity(void);
 int test_delay_line_impulse_position(void);
+int test_delay_extreme_bounds(void);
 int test_biquad_impulse_stability(void);
+int test_biquad_invalid_coefficients_bypass(void);
 int test_biquad_cutoff_smoothing(void);
 int test_biquad_modes_are_finite(void);
+int test_runtime_sample_rate_overrides_legacy_params(void);
 int test_process_info_frame_limits(void);
 int test_process_info_modulation_frame_limits(void);
 int test_process_info_control_frame_limits(void);
@@ -30,11 +33,17 @@ int main(void) {
         return 1;
     if (test_delay_line_impulse_position())
         return 1;
+    if (test_delay_extreme_bounds())
+        return 1;
     if (test_biquad_impulse_stability())
+        return 1;
+    if (test_biquad_invalid_coefficients_bypass())
         return 1;
     if (test_biquad_cutoff_smoothing())
         return 1;
     if (test_biquad_modes_are_finite())
+        return 1;
+    if (test_runtime_sample_rate_overrides_legacy_params())
         return 1;
     if (test_process_info_frame_limits())
         return 1;
