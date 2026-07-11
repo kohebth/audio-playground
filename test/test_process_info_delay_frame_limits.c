@@ -14,7 +14,9 @@ int test_process_info_delay_frame_limits(void) {
             x[i] = (float)(i + 1) * 0.01f;
             y[i] = -99.0f;
         }
+        buffer[0] = 0.25f;
         buffer[7] = 0.80f;
+        buffer[191999] = 0.60f;
 
         apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
 
@@ -46,18 +48,24 @@ int test_process_info_delay_frame_limits(void) {
         if (frames < 1024 && y[frames] != -99.0f)
             return fail("delay_tap_feedback_process wrote past info.frames");
 
+        feedback_in.tap_position = -100;
+        feedback_params.coefficient = NAN;
+        delay_tap_feedback_process(&feedback_out, &feedback_in, &feedback_params, &feedback_state, &info);
+        for (int i = 0; i < frames; ++i) {
+            if (y[i] != 0.0f)
+                return fail("delay_tap_feedback_process did not sanitize invalid tap/coefficient");
+        }
+
         for (int i = 0; i < 1024; i++)
             y[i] = -99.0f;
         delay_tap_feedforward_out_t    feedforward_out    = {.signal = y};
-        delay_tap_feedforward_in_t     feedforward_in     = {.buffer = buffer, .tap_position = 7};
+        delay_tap_feedforward_in_t     feedforward_in     = {.buffer = buffer, .tap_position = 999999};
         delay_tap_feedforward_params_t feedforward_params = {.coefficient = 0.25f};
         delay_tap_feedforward_state_t  feedforward_state;
-        delay_tap_feedforward_process(
-            &feedforward_out, &feedforward_in, &feedforward_params, &feedforward_state, &info
-        );
+        delay_tap_feedforward_process(&feedforward_out, &feedforward_in, &feedforward_params, &feedforward_state, &info);
         for (int i = 0; i < frames; i++) {
-            if (fabsf(y[i] - 0.20f) > 1e-7f)
-                return fail("delay_tap_feedforward_process mismatch");
+            if (fabsf(y[i] - 0.15f) > 1e-7f)
+                return fail("delay_tap_feedforward_process did not clamp tap position");
         }
         if (frames < 1024 && y[frames] != -99.0f)
             return fail("delay_tap_feedforward_process wrote past info.frames");
