@@ -1,4 +1,80 @@
 #include "test_atom_basic_common.h"
+#include <apgcore/dsp/dsp_safety.h>
+#include <float.h>
+
+static int test_modulation_delay_safety(void) {
+    enum { BLOCK_FRAMES = 257, BLOCK_COUNT = 20 };
+    float        input[BLOCK_FRAMES];
+    float        modulator[BLOCK_FRAMES];
+    float        output[BLOCK_FRAMES + 1];
+    static float frequency_buffer[APG_MODULATION_DELAY_CAPACITY];
+    static float phase_buffer[APG_MODULATION_DELAY_CAPACITY];
+
+    for (size_t i = 0; i < BLOCK_FRAMES; ++i) {
+        input[i]     = i == 3u ? NAN : sinf((float)i * 0.01f);
+        modulator[i] = i % 3u == 0u ? FLT_MAX : (i % 3u == 1u ? -FLT_MAX : NAN);
+    }
+    for (size_t i = 0; i < APG_MODULATION_DELAY_CAPACITY; ++i) {
+        frequency_buffer[i] = NAN;
+        phase_buffer[i]     = NAN;
+    }
+
+    apg_process_info_t info = {
+        .sample_rate = 48000.0f, .frames = BLOCK_FRAMES, .output_frames = BLOCK_FRAMES, .channels = 1u
+    };
+    modulation_frequency_out_t    frequency_out    = {.signal = output};
+    modulation_frequency_in_t     frequency_in     = {.signal = input, .modulator = modulator};
+    modulation_frequency_params_t frequency_params = {.depth = FLT_MAX};
+    modulation_frequency_state_t  frequency_state = {.buffer = frequency_buffer, .write_pos = -1, .current_delay = NAN};
+
+    for (int block = 0; block < BLOCK_COUNT; ++block) {
+        for (size_t i = 0; i < BLOCK_FRAMES + 1u; ++i)
+            output[i] = -99.0f;
+        frequency_params.depth = block % 2 == 0 ? FLT_MAX : -FLT_MAX;
+        modulation_frequency_process(&frequency_out, &frequency_in, &frequency_params, &frequency_state, &info);
+        if (assert_finite_buffer(output, BLOCK_FRAMES, "modulation_frequency_process extreme modulation"))
+            return 1;
+        if (output[BLOCK_FRAMES] != -99.0f)
+            return fail("modulation_frequency_process wrote past info.frames");
+        if (!isfinite(frequency_state.current_delay) || frequency_state.current_delay < 0.0f ||
+            frequency_state.current_delay > (float)APG_MODULATION_DELAY_CAPACITY - 2.0f)
+            return fail("modulation_frequency_process left invalid delay state");
+    }
+    const int expected_frequency_pos =
+        (int)((APG_MODULATION_DELAY_CAPACITY - 1u + BLOCK_FRAMES * BLOCK_COUNT) % APG_MODULATION_DELAY_CAPACITY);
+    if (frequency_state.write_pos != expected_frequency_pos)
+        return fail("modulation_frequency_process did not preserve multi-block wrap state");
+
+    modulation_phase_out_t    phase_out            = {.signal = output};
+    modulation_phase_in_t     phase_in             = {.signal = input, .modulator = modulator};
+    modulation_phase_params_t phase_params         = {.depth = -FLT_MAX};
+    modulation_phase_state_t  phase_state          = {.buffer = phase_buffer, .write_pos = -5000};
+    const uint32_t            normalized_phase_pos = apg_wrap_index_i64(-5000, APG_MODULATION_DELAY_CAPACITY);
+
+    for (int block = 0; block < BLOCK_COUNT; ++block) {
+        for (size_t i = 0; i < BLOCK_FRAMES + 1u; ++i)
+            output[i] = -99.0f;
+        phase_params.depth = block % 2 == 0 ? -FLT_MAX : FLT_MAX;
+        modulation_phase_process(&phase_out, &phase_in, &phase_params, &phase_state, &info);
+        if (assert_finite_buffer(output, BLOCK_FRAMES, "modulation_phase_process extreme modulation"))
+            return 1;
+        if (output[BLOCK_FRAMES] != -99.0f)
+            return fail("modulation_phase_process wrote past info.frames");
+    }
+    const int expected_phase_pos =
+        (int)((normalized_phase_pos + BLOCK_FRAMES * BLOCK_COUNT) % APG_MODULATION_DELAY_CAPACITY);
+    if (phase_state.write_pos != expected_phase_pos)
+        return fail("modulation_phase_process did not preserve multi-block wrap state");
+
+    output[0]             = -99.0f;
+    info.frames           = 0u;
+    phase_state.write_pos = -1;
+    modulation_phase_process(&phase_out, &phase_in, &phase_params, &phase_state, &info);
+    if (output[0] != -99.0f || phase_state.write_pos != (int)APG_MODULATION_DELAY_CAPACITY - 1)
+        return fail("modulation_phase_process mishandled zero frames");
+
+    return 0;
+}
 
 int test_process_info_modulation_remaining_frame_limits(void) {
     const int frame_sizes[] = {64, 128, 256, 512, 1024};
@@ -10,8 +86,8 @@ int test_process_info_modulation_remaining_frame_limits(void) {
         float     pos[1024];
         float     source[2048];
         float     y[1024];
-        float     fm_buffer[4096];
-        float     phase_buffer[4096];
+        float     fm_buffer[APG_MODULATION_DELAY_CAPACITY];
+        float     phase_buffer[APG_MODULATION_DELAY_CAPACITY];
 
         for (int i = 0; i < 1024; i++) {
             x[i]   = (float)i * 0.01f;
@@ -52,7 +128,7 @@ int test_process_info_modulation_remaining_frame_limits(void) {
             if (fabsf(fm_buffer[i] - x[i]) > 1e-7f)
                 return fail("modulation_frequency_process buffer mismatch");
         }
-        if (fm_state.write_pos != frames % 4096 || fabsf(fm_state.current_delay) > 1e-7f)
+        if (fm_state.write_pos != frames % (int)APG_MODULATION_DELAY_CAPACITY || fabsf(fm_state.current_delay) > 1e-7f)
             return fail("modulation_frequency_process state mismatch");
         if (frames < 1024 && y[frames] != -99.0f)
             return fail("modulation_frequency_process wrote past info.frames");
@@ -70,7 +146,7 @@ int test_process_info_modulation_remaining_frame_limits(void) {
             if (fabsf(phase_buffer[i] - x[i]) > 1e-7f)
                 return fail("modulation_phase_process buffer mismatch");
         }
-        if (phase_state.write_pos != frames % 4096)
+        if (phase_state.write_pos != frames % (int)APG_MODULATION_DELAY_CAPACITY)
             return fail("modulation_phase_process state mismatch");
         if (frames < 1024 && y[frames] != -99.0f)
             return fail("modulation_phase_process wrote past info.frames");
@@ -92,5 +168,5 @@ int test_process_info_modulation_remaining_frame_limits(void) {
             return fail("modulation_scrub_process wrote past info.frames");
     }
 
-    return 0;
+    return test_modulation_delay_safety();
 }

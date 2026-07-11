@@ -580,6 +580,8 @@ typedef struct {
 
 /* 🔷 Modulation */
 
+#define APG_MODULATION_DELAY_CAPACITY 4096u
+
 typedef struct {
     float *signal;
 } modulation_phase_out_t;
