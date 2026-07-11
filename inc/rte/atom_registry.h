@@ -51,6 +51,8 @@ typedef struct {
     size_t                   in_size;      // sizeof(in struct), 0 if void*
     size_t                   config_size;  // sizeof(params struct), 0 if void*
     size_t                   state_size;   // sizeof(state struct), 0 if void*
+    const atom_field_desc_t *input_fields; // optional input layout descriptors
+    int                      n_input_fields;
     const atom_field_desc_t *state_fields; // layout descriptors for state
     int                      n_state_fields;
     const atom_field_desc_t *config_fields; // layout descriptors for config

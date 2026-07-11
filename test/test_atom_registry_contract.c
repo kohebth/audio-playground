@@ -1,4 +1,5 @@
 #include <atom/atom_capability.h>
+#include <atom/atom_definitions.h>
 #include <atom_registry.h>
 
 #include <stdio.h>
@@ -37,6 +38,53 @@ static int test_registry_entries_are_complete(void) {
             return fail_entry("registry entry has invalid maturity", entry);
     }
 
+    return 0;
+}
+
+typedef struct {
+    const char *name;
+    const char *category;
+    int         input_count;
+    int         config_count;
+    int         state_count;
+    uint32_t    flags;
+    uint32_t    maturity;
+} canonical_atom_t;
+
+#define CANONICAL_ATOM(name, category, input_count, config_count, state_count, flags, maturity, dispatch) \
+    {#name, #category, input_count, config_count, state_count, flags, maturity},
+static const canonical_atom_t canonical_atoms[] = {APG_ATOM_DEFINITIONS(CANONICAL_ATOM)};
+#undef CANONICAL_ATOM
+
+static int test_registry_matches_canonical_definitions(void) {
+    const size_t canonical_count = sizeof(canonical_atoms) / sizeof(canonical_atoms[0]);
+    if ((size_t)atom_registry_count() != canonical_count)
+        return fail("registry count differs from canonical atom definitions");
+    for (size_t i = 0; i < canonical_count; i++) {
+        const canonical_atom_t      *expected = &canonical_atoms[i];
+        const atom_registry_entry_t *actual   = atom_registry_get((int)i);
+        if (!actual || strcmp(actual->name, expected->name) != 0 || strcmp(actual->category, expected->category) != 0 ||
+            actual->n_input_fields != expected->input_count || actual->n_config_fields != expected->config_count ||
+            actual->n_state_fields != expected->state_count || actual->flags != expected->flags ||
+            actual->maturity != expected->maturity)
+            return fail_entry("registry row differs from canonical definition", actual);
+    }
+    return 0;
+}
+
+#define CONTRACT_ATOM_NAME(name, input_profile, output_profile, config_profile) #name,
+static const char *const contract_atom_names[] = {APG_ATOM_CONTRACT_DEFINITIONS(CONTRACT_ATOM_NAME)};
+#undef CONTRACT_ATOM_NAME
+
+static int test_contract_atoms_are_canonical(void) {
+    for (size_t i = 0; i < sizeof(contract_atom_names) / sizeof(contract_atom_names[0]); i++) {
+        if (!atom_registry_find(contract_atom_names[i]))
+            return fail("contract definition references an unregistered atom");
+        for (size_t j = i + 1u; j < sizeof(contract_atom_names) / sizeof(contract_atom_names[0]); j++) {
+            if (strcmp(contract_atom_names[i], contract_atom_names[j]) == 0)
+                return fail("canonical contract atom is duplicated");
+        }
+    }
     return 0;
 }
 
@@ -93,6 +141,10 @@ static int test_legacy_atoms_are_marked_experimental(void) {
 
 int main(void) {
     if (test_registry_entries_are_complete())
+        return 1;
+    if (test_registry_matches_canonical_definitions())
+        return 1;
+    if (test_contract_atoms_are_canonical())
         return 1;
     if (test_registry_names_are_unique())
         return 1;
