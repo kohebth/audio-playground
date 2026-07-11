@@ -85,7 +85,7 @@ int test_process_info_generator_frame_limits(void) {
         generation_oscillator_state_t osc_state = {.phase = 0.0f};
         generation_oscillator_process(&osc_out, &osc_in, &osc_params, &osc_state, &info);
         for (int i = 0; i < frames; i++) {
-            float expected = ((i % 4) < 2) ? 1.0f : -1.0f;
+            float expected = (i % 2) == 0 ? 0.0f : ((i % 4) == 1 ? 1.0f : -1.0f);
             if (fabsf(y[i] - expected) > 1e-7f)
                 return fail("generation_oscillator_process mismatch");
         }
