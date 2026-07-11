@@ -1,5 +1,6 @@
 #include <apgcore/metadata/atom_catalog.h>
 
+#include <atom/atom_capability.h>
 #include <atom_registry.h>
 
 #include <stdbool.h>
@@ -37,7 +38,7 @@ static const apg_atom_contract_field_t field_generation_lfo_config[] = {
     FIELD("frequency", APG_ATOM_FIELD_FLOAT),
     FIELD("waveform", APG_ATOM_FIELD_INT),
     FIELD("phase_offset", APG_ATOM_FIELD_FLOAT),
-    FIELD("sample_rate", APG_ATOM_FIELD_FLOAT),
+    FIELD_OPT("sample_rate", APG_ATOM_FIELD_FLOAT),
 };
 static const apg_atom_contract_field_t field_gate[] = {
     FIELD("gate", APG_ATOM_FIELD_SIGNAL),
@@ -67,16 +68,21 @@ static const apg_atom_contract_field_t field_delay_tap_config[] = {
     FIELD("coefficient", APG_ATOM_FIELD_FLOAT),
 };
 static const apg_atom_contract_field_t field_filter_biquad_coefficients_config[] = {
-    FIELD("b0", APG_ATOM_FIELD_FLOAT), FIELD("b1", APG_ATOM_FIELD_FLOAT), FIELD("b2", APG_ATOM_FIELD_FLOAT),
-    FIELD("a1", APG_ATOM_FIELD_FLOAT), FIELD("a2", APG_ATOM_FIELD_FLOAT),
+    FIELD("b0", APG_ATOM_FIELD_FLOAT),
+    FIELD("b1", APG_ATOM_FIELD_FLOAT),
+    FIELD("b2", APG_ATOM_FIELD_FLOAT),
+    FIELD("a1", APG_ATOM_FIELD_FLOAT),
+    FIELD("a2", APG_ATOM_FIELD_FLOAT),
 };
 static const apg_atom_contract_field_t field_filter_biquad_input[] = {
     FIELD("signal", APG_ATOM_FIELD_SIGNAL),
     FIELD_OPT("cutoff", APG_ATOM_FIELD_SIGNAL_OPTIONAL),
 };
 static const apg_atom_contract_field_t field_filter_biquad_config[] = {
-    FIELD("cutoff", APG_ATOM_FIELD_FLOAT),       FIELD("q", APG_ATOM_FIELD_FLOAT),
-    FIELD("mode", APG_ATOM_FIELD_INT),           FIELD("sample_rate", APG_ATOM_FIELD_FLOAT),
+    FIELD("cutoff", APG_ATOM_FIELD_FLOAT),
+    FIELD("q", APG_ATOM_FIELD_FLOAT),
+    FIELD("mode", APG_ATOM_FIELD_INT),
+    FIELD_OPT("sample_rate", APG_ATOM_FIELD_FLOAT),
     FIELD("smoothing_ms", APG_ATOM_FIELD_FLOAT),
 };
 static const apg_atom_contract_field_t field_filter_delay_config[] = {
@@ -141,66 +147,66 @@ static const apg_atom_contract_field_t field_pan_config[] = {
 };
 
 static const apg_catalog_contract_t catalog_contracts[] = {
-    {             "generation_dc",                       NULL,                                       0,        field_signal,FIELD_COUNT(field_signal),field_generation_dc_config,
-     FIELD_COUNT(field_generation_dc_config)                                                                                                                                                                                                    },
-    {            "generation_lfo",                       NULL,                                       0,        field_signal,        FIELD_COUNT(field_signal), field_generation_lfo_config,
-     FIELD_COUNT(field_generation_lfo_config)                                                                                                                                                                                                   },
-    {        "amplitude_multiply",                 field_pair,                 FIELD_COUNT(field_pair),        field_signal,        FIELD_COUNT(field_signal),                        NULL,                                                    0},
-    {             "amplitude_add",                 field_pair,                 FIELD_COUNT(field_pair),        field_signal,        FIELD_COUNT(field_signal),                        NULL,                                                    0},
-    {        "amplitude_subtract",                 field_pair,                 FIELD_COUNT(field_pair),        field_signal,        FIELD_COUNT(field_signal),                        NULL,                                                    0},
-    {       "amplitude_clip_hard",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),
-     field_clip_hard_config,                  FIELD_COUNT(field_clip_hard_config)                                                                                                                                                               },
-    {       "amplitude_clip_soft",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),
-     field_clip_soft_config,                  FIELD_COUNT(field_clip_soft_config)                                                                                                                                                               },
-    {                "delay_unit",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),                        NULL,                                                    0},
-    {                "delay_line",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),
-     field_delay_line_config,                 FIELD_COUNT(field_delay_line_config)                                                                                                                                                              },
-    {          "delay_fractional",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),
-     field_delay_fractional_config,           FIELD_COUNT(field_delay_fractional_config)                                                                                                                                                        },
-    {        "delay_tap_feedback",      field_delay_tap_input,      FIELD_COUNT(field_delay_tap_input),        field_signal,
-     FIELD_COUNT(field_signal),      field_delay_tap_config,                  FIELD_COUNT(field_delay_tap_config)                                                                                                                               },
-    {     "delay_tap_feedforward",      field_delay_tap_input,      FIELD_COUNT(field_delay_tap_input),        field_signal,
-     FIELD_COUNT(field_signal),      field_delay_tap_config,                  FIELD_COUNT(field_delay_tap_config)                                                                                                                               },
-    {"filter_biquad_coefficients",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),
-     field_filter_biquad_coefficients_config, FIELD_COUNT(field_filter_biquad_coefficients_config)                                                                                                                                              },
-    {             "filter_biquad",  field_filter_biquad_input,  FIELD_COUNT(field_filter_biquad_input),        field_signal,
-     FIELD_COUNT(field_signal),  field_filter_biquad_config,              FIELD_COUNT(field_filter_biquad_config)                                                                                                                               },
-    {            "filter_allpass",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),
-     field_filter_delay_config,               FIELD_COUNT(field_filter_delay_config)                                                                                                                                                            },
-    {            "filter_comb_ff",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),
-     field_filter_delay_config,               FIELD_COUNT(field_filter_delay_config)                                                                                                                                                            },
-    {            "filter_comb_fb", field_filter_comb_fb_input, FIELD_COUNT(field_filter_comb_fb_input),        field_signal,
-     FIELD_COUNT(field_signal),   field_filter_delay_config,               FIELD_COUNT(field_filter_delay_config)                                                                                                                               },
-    {           "filter_dc_block",               field_signal,               FIELD_COUNT(field_signal),        field_signal,        FIELD_COUNT(field_signal),
-     field_filter_dc_block_config,            FIELD_COUNT(field_filter_dc_block_config)                                                                                                                                                         },
-    {          "detect_threshold",               field_signal,               FIELD_COUNT(field_signal),          field_gate,          FIELD_COUNT(field_gate),
-     field_threshold_config,                  FIELD_COUNT(field_threshold_config)                                                                                                                                                               },
-    {      "modulation_amplitude",     field_signal_modulator,     FIELD_COUNT(field_signal_modulator),        field_signal,
-     FIELD_COUNT(field_signal),          field_depth_config,                      FIELD_COUNT(field_depth_config)                                                                                                                               },
-    {      "modulation_frequency",     field_signal_modulator,     FIELD_COUNT(field_signal_modulator),        field_signal,
-     FIELD_COUNT(field_signal),          field_depth_config,                      FIELD_COUNT(field_depth_config)                                                                                                                               },
-    {          "modulation_phase",     field_signal_modulator,     FIELD_COUNT(field_signal_modulator),        field_signal,
-     FIELD_COUNT(field_signal),          field_depth_config,                      FIELD_COUNT(field_depth_config)                                                                                                                               },
-    {           "modulation_ring",     field_signal_modulator,     FIELD_COUNT(field_signal_modulator),        field_signal,
-     FIELD_COUNT(field_signal),                        NULL,                                                    0                                                                                                                               },
-    {          "modulation_scrub",          field_scrub_input,          FIELD_COUNT(field_scrub_input),        field_signal,        FIELD_COUNT(field_signal),
-     field_scrub_config,                      FIELD_COUNT(field_scrub_config)                                                                                                                                                                   },
-    {             "mix_crossfade",                 field_pair,                 FIELD_COUNT(field_pair),        field_signal,        FIELD_COUNT(field_signal),
-     field_crossfade_config,                  FIELD_COUNT(field_crossfade_config)                                                                                                                                                               },
-    {               "mix_wet_dry",        field_wet_dry_input,        FIELD_COUNT(field_wet_dry_input),        field_signal,        FIELD_COUNT(field_signal),
-     field_wet_dry_config,                    FIELD_COUNT(field_wet_dry_config)                                                                                                                                                                 },
-    {                "mix_matrix",        field_mix_matrix_io,        FIELD_COUNT(field_mix_matrix_io), field_mix_matrix_io,
-     FIELD_COUNT(field_mix_matrix_io),     field_mix_matrix_config,                 FIELD_COUNT(field_mix_matrix_config)                                                                                                                        },
-    {            "mix_pan_stereo",               field_signal,               FIELD_COUNT(field_signal), field_stereo_output, FIELD_COUNT(field_stereo_output),
-     field_pan_config,                        FIELD_COUNT(field_pan_config)                                                                                                                                                                     },
-    {             "mix_encode_ms",         field_stereo_input,         FIELD_COUNT(field_stereo_input),     field_ms_output,
-     FIELD_COUNT(field_ms_output),                        NULL,                                                    0                                                                                                                            },
-    {             "mix_decode_ms",             field_ms_input,             FIELD_COUNT(field_ms_input), field_stereo_output,
-     FIELD_COUNT(field_stereo_output),                        NULL,                                                    0                                                                                                                        },
+    {"generation_dc", NULL, 0u, field_signal, FIELD_COUNT(field_signal), field_generation_dc_config,
+     FIELD_COUNT(field_generation_dc_config)},
+    {"generation_lfo", NULL, 0u, field_signal, FIELD_COUNT(field_signal), field_generation_lfo_config,
+     FIELD_COUNT(field_generation_lfo_config)},
+    {"amplitude_multiply", field_pair, FIELD_COUNT(field_pair), field_signal, FIELD_COUNT(field_signal), NULL, 0u},
+    {"amplitude_add", field_pair, FIELD_COUNT(field_pair), field_signal, FIELD_COUNT(field_signal), NULL, 0u},
+    {"amplitude_subtract", field_pair, FIELD_COUNT(field_pair), field_signal, FIELD_COUNT(field_signal), NULL, 0u},
+    {"amplitude_clip_hard", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal),
+     field_clip_hard_config, FIELD_COUNT(field_clip_hard_config)},
+    {"amplitude_clip_soft", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal),
+     field_clip_soft_config, FIELD_COUNT(field_clip_soft_config)},
+    {"delay_unit", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal), NULL, 0u},
+    {"delay_line", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal),
+     field_delay_line_config, FIELD_COUNT(field_delay_line_config)},
+    {"delay_fractional", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal),
+     field_delay_fractional_config, FIELD_COUNT(field_delay_fractional_config)},
+    {"delay_tap_feedback", field_delay_tap_input, FIELD_COUNT(field_delay_tap_input), field_signal,
+     FIELD_COUNT(field_signal), field_delay_tap_config, FIELD_COUNT(field_delay_tap_config)},
+    {"delay_tap_feedforward", field_delay_tap_input, FIELD_COUNT(field_delay_tap_input), field_signal,
+     FIELD_COUNT(field_signal), field_delay_tap_config, FIELD_COUNT(field_delay_tap_config)},
+    {"filter_biquad_coefficients", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal),
+     field_filter_biquad_coefficients_config, FIELD_COUNT(field_filter_biquad_coefficients_config)},
+    {"filter_biquad", field_filter_biquad_input, FIELD_COUNT(field_filter_biquad_input), field_signal,
+     FIELD_COUNT(field_signal), field_filter_biquad_config, FIELD_COUNT(field_filter_biquad_config)},
+    {"filter_allpass", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal),
+     field_filter_delay_config, FIELD_COUNT(field_filter_delay_config)},
+    {"filter_comb_ff", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal),
+     field_filter_delay_config, FIELD_COUNT(field_filter_delay_config)},
+    {"filter_comb_fb", field_filter_comb_fb_input, FIELD_COUNT(field_filter_comb_fb_input), field_signal,
+     FIELD_COUNT(field_signal), field_filter_delay_config, FIELD_COUNT(field_filter_delay_config)},
+    {"filter_dc_block", field_signal, FIELD_COUNT(field_signal), field_signal, FIELD_COUNT(field_signal),
+     field_filter_dc_block_config, FIELD_COUNT(field_filter_dc_block_config)},
+    {"detect_threshold", field_signal, FIELD_COUNT(field_signal), field_gate, FIELD_COUNT(field_gate),
+     field_threshold_config, FIELD_COUNT(field_threshold_config)},
+    {"modulation_amplitude", field_signal_modulator, FIELD_COUNT(field_signal_modulator), field_signal,
+     FIELD_COUNT(field_signal), field_depth_config, FIELD_COUNT(field_depth_config)},
+    {"modulation_frequency", field_signal_modulator, FIELD_COUNT(field_signal_modulator), field_signal,
+     FIELD_COUNT(field_signal), field_depth_config, FIELD_COUNT(field_depth_config)},
+    {"modulation_phase", field_signal_modulator, FIELD_COUNT(field_signal_modulator), field_signal,
+     FIELD_COUNT(field_signal), field_depth_config, FIELD_COUNT(field_depth_config)},
+    {"modulation_ring", field_signal_modulator, FIELD_COUNT(field_signal_modulator), field_signal,
+     FIELD_COUNT(field_signal), NULL, 0u},
+    {"modulation_scrub", field_scrub_input, FIELD_COUNT(field_scrub_input), field_signal, FIELD_COUNT(field_signal),
+     field_scrub_config, FIELD_COUNT(field_scrub_config)},
+    {"mix_crossfade", field_pair, FIELD_COUNT(field_pair), field_signal, FIELD_COUNT(field_signal),
+     field_crossfade_config, FIELD_COUNT(field_crossfade_config)},
+    {"mix_wet_dry", field_wet_dry_input, FIELD_COUNT(field_wet_dry_input), field_signal, FIELD_COUNT(field_signal),
+     field_wet_dry_config, FIELD_COUNT(field_wet_dry_config)},
+    {"mix_matrix", field_mix_matrix_io, FIELD_COUNT(field_mix_matrix_io), field_mix_matrix_io,
+     FIELD_COUNT(field_mix_matrix_io), field_mix_matrix_config, FIELD_COUNT(field_mix_matrix_config)},
+    {"mix_pan_stereo", field_signal, FIELD_COUNT(field_signal), field_stereo_output,
+     FIELD_COUNT(field_stereo_output), field_pan_config, FIELD_COUNT(field_pan_config)},
+    {"mix_encode_ms", field_stereo_input, FIELD_COUNT(field_stereo_input), field_ms_output,
+     FIELD_COUNT(field_ms_output), NULL, 0u},
+    {"mix_decode_ms", field_ms_input, FIELD_COUNT(field_ms_input), field_stereo_output,
+     FIELD_COUNT(field_stereo_output), NULL, 0u},
 };
 
 static const apg_catalog_contract_t *find_contract(const char *atom_name) {
-    for (size_t i = 0; i < FIELD_COUNT(catalog_contracts); i++) {
+    for (size_t i = 0u; i < FIELD_COUNT(catalog_contracts); ++i) {
         if (strcmp(catalog_contracts[i].atom, atom_name) == 0)
             return &catalog_contracts[i];
     }
@@ -306,17 +312,21 @@ bool apg_atom_known(const char *name) {
 }
 
 bool apg_atom_profile_supported(const char *name, const char *profile) {
-    if (!name || !profile)
+    if (!name || !apg_atom_profile_known(profile))
         return false;
-    if (!apg_atom_profile_known(profile))
+
+    atom_registry_init();
+    const atom_registry_entry_t *entry = atom_registry_find(name);
+    if (!entry)
         return false;
+
     if (strcmp(profile, "desktop_full") == 0 || strcmp(profile, "offline_render") == 0)
         return true;
-    if (strncmp(name, "freq_", 5) == 0)
-        return false;
-    if (strcmp(profile, "m7_static") == 0 && strncmp(name, "src_", 4) == 0)
-        return false;
-    return true;
+    if (strcmp(profile, "wasm_realtime") == 0)
+        return (entry->flags & APG_ATOM_WASM_SAFE) != 0u;
+    if (strcmp(profile, "m7_static") == 0)
+        return (entry->flags & APG_ATOM_M7_SAFE) != 0u;
+    return false;
 }
 
 size_t apg_atom_contract_field_count(const char *atom, apg_atom_contract_section_t section) {
@@ -364,8 +374,8 @@ bool apg_atom_contract_find_field(
 ) {
     if (!key)
         return false;
-    size_t fields_len = apg_atom_contract_field_count(atom, section);
-    for (size_t i = 0u; i < fields_len; i++) {
+    const size_t fields_len = apg_atom_contract_field_count(atom, section);
+    for (size_t i = 0u; i < fields_len; ++i) {
         apg_atom_contract_field_t field;
         if (apg_atom_contract_field(atom, section, i, &field) && field.name && strcmp(field.name, key) == 0) {
             if (out)
@@ -392,7 +402,7 @@ apg_atom_contract_field_type(const char *atom, apg_atom_contract_section_t secti
 static void write_json_string(FILE *out, const char *text) {
     fputc('"', out);
     if (text) {
-        for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
+        for (const unsigned char *p = (const unsigned char *)text; *p; ++p) {
             if (*p == '"' || *p == '\\')
                 fputc('\\', out);
             if (*p >= 0x20)
@@ -402,19 +412,9 @@ static void write_json_string(FILE *out, const char *text) {
     fputc('"', out);
 }
 
-static void write_category(FILE *out, const char *name) {
-    const char *sep = name ? strchr(name, '_') : NULL;
-    fputc('"', out);
-    if (name && sep && sep > name)
-        fprintf(out, "%.*s", (int)(sep - name), name);
-    else if (name)
-        fputs(name, out);
-    fputc('"', out);
-}
-
 static void write_catalog_fields(FILE *out, const apg_atom_contract_field_t *fields, size_t fields_len) {
     fputc('[', out);
-    for (size_t i = 0; i < fields_len; i++) {
+    for (size_t i = 0u; i < fields_len; ++i) {
         if (i > 0u)
             fputc(',', out);
         fputs("{\"name\":", out);
@@ -428,16 +428,15 @@ static void write_catalog_fields(FILE *out, const apg_atom_contract_field_t *fie
 
 static void write_registry_fields(FILE *out, const atom_field_desc_t *fields, int fields_len) {
     fputc('[', out);
-    for (int i = 0; i < fields_len; i++) {
+    for (int i = 0; i < fields_len; ++i) {
         if (i > 0)
             fputc(',', out);
         fputs("{\"name\":", out);
         write_json_string(out, fields[i].name);
         fputs(",\"type\":", out);
         write_json_string(out, field_type_name(fields[i].type));
-        if (fields[i].type == FIELD_BUFFER) {
+        if (fields[i].type == FIELD_BUFFER)
             fprintf(out, ",\"buffer_samples\":%zu", fields[i].buffer_samples);
-        }
         fputc('}', out);
     }
     fputc(']', out);
@@ -446,10 +445,11 @@ static void write_registry_fields(FILE *out, const atom_field_desc_t *fields, in
 void apg_atom_catalog_write_json(FILE *out) {
     if (!out)
         return;
+
     atom_registry_init();
     fputs("{\"schema\":\"apg.atom_catalog.v2\",\"atoms\":[", out);
-    int count = atom_registry_count();
-    for (int i = 0; i < count; i++) {
+    const int count = atom_registry_count();
+    for (int i = 0; i < count; ++i) {
         const atom_registry_entry_t  *entry    = atom_registry_get(i);
         const apg_catalog_contract_t *contract = entry ? find_contract(entry->name) : NULL;
         if (!entry)
@@ -459,10 +459,10 @@ void apg_atom_catalog_write_json(FILE *out) {
         fputs("{\"name\":", out);
         write_json_string(out, entry->name);
         fputs(",\"category\":", out);
-        write_category(out, entry->name);
+        write_json_string(out, entry->category);
         fprintf(
-            out, ",\"sizes\":{\"out\":%zu,\"in\":%zu,\"config\":%zu,\"state\":%zu}", entry->out_size, entry->in_size,
-            entry->config_size, entry->state_size
+            out, ",\"sizes\":{\"out\":%zu,\"in\":%zu,\"config\":%zu,\"state\":%zu}", entry->out_size,
+            entry->in_size, entry->config_size, entry->state_size
         );
         fputs(",\"stateful\":", out);
         fputs(entry->state_size > 0u ? "true" : "false", out);
