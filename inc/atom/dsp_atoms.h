@@ -2,6 +2,7 @@
 #define DSP_ATOMS_H
 
 #include <apgcore/runtime/process.h>
+#include <apgcore/runtime/spectral.h>
 
 #include "dsp_types.h"
 
@@ -79,6 +80,28 @@
     _(nonlinear_sample_hold)
 
 DECLARE_ALL(ATOM);
+
+void freq_fft_process(
+    freq_fft_out_t            *out,
+    freq_fft_in_t             *in,
+    freq_fft_params_t         *params,
+    freq_fft_state_t          *state,
+    const apg_spectral_info_t *spectral_info
+);
+void freq_ifft_process(
+    freq_ifft_out_t           *out,
+    freq_ifft_in_t            *in,
+    freq_ifft_params_t        *params,
+    freq_ifft_state_t         *state,
+    const apg_spectral_info_t *spectral_info
+);
+void freq_multiply_process(
+    freq_multiply_out_t       *out,
+    freq_multiply_in_t        *in,
+    freq_multiply_params_t    *params,
+    freq_multiply_state_t     *state,
+    const apg_spectral_info_t *spectral_info
+);
 
 void amplitude_multiply_process(
     amplitude_multiply_out_t    *out,

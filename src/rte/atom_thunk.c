@@ -70,11 +70,6 @@
     _(src_downsample)             \
     _(src_upsample)
 
-#define LEGACY_ATOMS(_) \
-    _(freq_fft)         \
-    _(freq_ifft)        \
-    _(freq_multiply)
-
 #define PROCESS_THUNK(atom_name)                                                                                \
     void atom_name##_thunk(atom_call_t *call) {                                                                 \
         atom_name##_process(                                                                                    \
@@ -92,4 +87,15 @@
     }
 
 PROCESS_ATOMS(PROCESS_THUNK)
-LEGACY_ATOMS(LEGACY_THUNK)
+
+void freq_fft_thunk(atom_call_t *call) {
+    freq_fft_process(call->out, call->in, call->config, call->state, call->spectral_info);
+}
+
+void freq_ifft_thunk(atom_call_t *call) {
+    freq_ifft_process(call->out, call->in, call->config, call->state, call->spectral_info);
+}
+
+void freq_multiply_thunk(atom_call_t *call) {
+    freq_multiply_process(call->out, call->in, call->config, call->state, call->spectral_info);
+}

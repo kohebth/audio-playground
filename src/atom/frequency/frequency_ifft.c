@@ -1,9 +1,9 @@
 #include <atom/dsp_atoms.h>
 #include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#define MAX_FFT_SIZE 4096
+#define MAX_FFT_SIZE 2048u
 
 static void bit_reverse(float *data, uint32_t n) {
     uint32_t j = 0;
@@ -25,32 +25,42 @@ static void bit_reverse(float *data, uint32_t n) {
     }
 }
 
-void freq_ifft(freq_ifft_out_t *out, freq_ifft_in_t *in, freq_ifft_params_t *params, freq_ifft_state_t *state) {
-    if (out->signal == NULL || in->real == NULL || in->imag == NULL)
+void freq_ifft_process(
+    freq_ifft_out_t           *out,
+    freq_ifft_in_t            *in,
+    freq_ifft_params_t        *params,
+    freq_ifft_state_t         *state,
+    const apg_spectral_info_t *spectral_info
+) {
+    (void)params;
+    (void)state;
+    if (!out || !in || out->signal == NULL || in->real == NULL || in->imag == NULL ||
+        !apg_spectral_info_valid(spectral_info) || spectral_info->fft_size > MAX_FFT_SIZE)
         return;
 
-    int n = params->block_size;
-    if (n > MAX_FFT_SIZE)
-        n = MAX_FFT_SIZE;
-    if ((n & (n - 1)) != 0)
-        n = 1 << (32 - __builtin_clz(n));
+    uint32_t n = spectral_info->fft_size;
 
     float work[MAX_FFT_SIZE * 2];
-    for (int i = 0; i < n; i++) {
-        work[2 * i]     = in->real[i];
-        work[2 * i + 1] = -in->imag[i]; // Conjugate
+    for (uint32_t i = 0; i < spectral_info->bin_count; i++) {
+        work[2 * i]     = isfinite(in->real[i]) ? in->real[i] : 0.0f;
+        work[2 * i + 1] = isfinite(in->imag[i]) ? -in->imag[i] : 0.0f;
+    }
+    for (uint32_t i = spectral_info->bin_count; i < n; i++) {
+        uint32_t mirror = n - i;
+        work[2 * i]     = work[2 * mirror];
+        work[2 * i + 1] = -work[2 * mirror + 1];
     }
 
     bit_reverse(work, n);
 
-    for (int len = 2; len <= n; len <<= 1) {
+    for (uint32_t len = 2; len <= n; len <<= 1) {
         float ang     = 2.0f * (float)M_PI / (float)len * -1.0f;
         float wlen_re = cosf(ang);
         float wlen_im = sinf(ang);
-        for (int i = 0; i < n; i += len) {
+        for (uint32_t i = 0; i < n; i += len) {
             float w_re = 1.0f;
             float w_im = 0.0f;
-            for (int j = 0; j < len / 2; j++) {
+            for (uint32_t j = 0; j < len / 2; j++) {
                 float u_re            = work[2 * (i + j)];
                 float u_im            = work[2 * (i + j) + 1];
                 float v_re            = work[2 * (i + j + len / 2)] * w_re - work[2 * (i + j + len / 2) + 1] * w_im;
@@ -66,7 +76,17 @@ void freq_ifft(freq_ifft_out_t *out, freq_ifft_in_t *in, freq_ifft_params_t *par
         }
     }
 
-    for (int i = 0; i < params->block_size; i++) {
+    for (uint32_t i = 0; i < n; i++) {
         out->signal[i] = work[2 * i] / (float)n;
     }
+}
+
+void freq_ifft(freq_ifft_out_t *out, freq_ifft_in_t *in, freq_ifft_params_t *params, freq_ifft_state_t *state) {
+    apg_spectral_info_t info = {0};
+    if (params && params->block_size > 0) {
+        info.fft_size  = (uint32_t)params->block_size;
+        info.bin_count = info.fft_size / 2u + 1u;
+        info.hop_size  = info.fft_size;
+    }
+    freq_ifft_process(out, in, params, state, &info);
 }

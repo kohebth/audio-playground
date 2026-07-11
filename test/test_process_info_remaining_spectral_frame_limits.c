@@ -47,5 +47,55 @@ int test_process_info_remaining_spectral_frame_limits(void) {
             return fail("freq_quantize_process wrote past info.frames");
     }
 
+    enum { FFT_SIZE = 256, BIN_COUNT = FFT_SIZE / 2 + 1 };
+    float input[FFT_SIZE];
+    float real[BIN_COUNT + 1];
+    float imag[BIN_COUNT + 1];
+    float reconstructed[FFT_SIZE + 1];
+    for (int i = 0; i < FFT_SIZE; i++)
+        input[i] = 0.25f * sinf(2.0f * (float)M_PI * 7.0f * (float)i / (float)FFT_SIZE) + (i == 0 ? 0.5f : 0.0f);
+    real[BIN_COUNT] = imag[BIN_COUNT] = reconstructed[FFT_SIZE] = -99.0f;
+
+    apg_spectral_info_t spectral   = {.fft_size = FFT_SIZE, .bin_count = BIN_COUNT, .hop_size = FFT_SIZE};
+    freq_fft_out_t      fft_out    = {.real = real, .imag = imag};
+    freq_fft_in_t       fft_in     = {.signal = input};
+    freq_fft_params_t   fft_params = {.block_size = 512};
+    freq_fft_state_t    fft_state;
+    freq_fft_process(&fft_out, &fft_in, &fft_params, &fft_state, &spectral);
+    if (real[BIN_COUNT] != -99.0f || imag[BIN_COUNT] != -99.0f)
+        return fail("freq_fft_process wrote beyond half spectrum");
+
+    freq_ifft_out_t    ifft_out    = {.signal = reconstructed};
+    freq_ifft_in_t     ifft_in     = {.real = real, .imag = imag};
+    freq_ifft_params_t ifft_params = {.block_size = 512};
+    freq_ifft_state_t  ifft_state;
+    freq_ifft_process(&ifft_out, &ifft_in, &ifft_params, &ifft_state, &spectral);
+    for (int i = 0; i < FFT_SIZE; i++) {
+        if (!isfinite(reconstructed[i]) || fabsf(reconstructed[i] - input[i]) > 2e-5f)
+            return fail("FFT/IFFT half-spectrum round trip mismatch");
+    }
+    if (reconstructed[FFT_SIZE] != -99.0f)
+        return fail("freq_ifft_process wrote beyond fft_size");
+
+    float a_real[BIN_COUNT], a_imag[BIN_COUNT], b_real[BIN_COUNT], b_imag[BIN_COUNT];
+    float product_real[BIN_COUNT + 1], product_imag[BIN_COUNT + 1];
+    for (int i = 0; i < BIN_COUNT; i++) {
+        a_real[i] = 2.0f;
+        a_imag[i] = 3.0f;
+        b_real[i] = 4.0f;
+        b_imag[i] = 5.0f;
+    }
+    a_real[3]               = NAN;
+    product_real[BIN_COUNT] = product_imag[BIN_COUNT] = -99.0f;
+    freq_multiply_out_t    multiply_out               = {.real = product_real, .imag = product_imag};
+    freq_multiply_in_t     multiply_in     = {.real_a = a_real, .imag_a = a_imag, .real_b = b_real, .imag_b = b_imag};
+    freq_multiply_params_t multiply_params = {.block_size = FFT_SIZE};
+    freq_multiply_state_t  multiply_state;
+    freq_multiply_process(&multiply_out, &multiply_in, &multiply_params, &multiply_state, &spectral);
+    if (fabsf(product_real[0] + 7.0f) > 1e-7f || fabsf(product_imag[0] - 22.0f) > 1e-7f ||
+        fabsf(product_real[3] + 15.0f) > 1e-7f || fabsf(product_imag[3] - 12.0f) > 1e-7f ||
+        product_real[BIN_COUNT] != -99.0f || product_imag[BIN_COUNT] != -99.0f)
+        return fail("freq_multiply_process contract mismatch");
+
     return 0;
 }
