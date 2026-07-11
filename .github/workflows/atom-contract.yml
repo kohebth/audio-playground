@@ -1,0 +1,33 @@
+name: Atom Contract
+
+on:
+  push:
+    branches:
+      - atom/enhance
+      - main
+  pull_request:
+    paths:
+      - 'inc/atom/**'
+      - 'inc/apgcore/dsp/**'
+      - 'inc/rte/atom_registry.h'
+      - 'src/atom/**'
+      - 'src/rte/atom_register.c'
+      - 'test/test_atom_basic*.c'
+      - 'test/test_atom_catalog.c'
+      - 'CMakeLists.txt'
+      - '.github/workflows/atom-contract.yml'
+
+jobs:
+  atom-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure with sanitizers
+        run: cmake -S . -B build -DAPG_ENABLE_SANITIZERS=ON -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build atom tests
+        run: cmake --build build --target test_atom_basic test_atom_catalog --parallel
+
+      - name: Run atom contract tests
+        run: ctest --test-dir build -R 'test_atom_basic|test_atom_catalog' --output-on-failure
