@@ -312,6 +312,12 @@ export function ProjectInspector({
           Contract
         </button>
       </div>
+      <PreviewPanel
+        entryProject={projectFile}
+        paramOverrides={paramOverrides}
+        selectedInstanceId={selectedNode?.kind === 'unit' ? selectedNode.instance.id : null}
+        workspaceFiles={workspaceFiles}
+      />
       {isProjectView && (
         <>
           <section className="inspector-block">
@@ -374,13 +380,6 @@ export function ProjectInspector({
               <code>{commands.renderProject}</code>
             </div>
           </section>
-
-          <PreviewPanel
-            entryProject={projectFile}
-            paramOverrides={paramOverrides}
-            selectedInstanceId={selectedNode?.kind === 'unit' ? selectedNode.instance.id : null}
-            workspaceFiles={workspaceFiles}
-          />
 
           <CompatibilityExportPanel project={project} commands={commands} />
 

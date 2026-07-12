@@ -126,26 +126,22 @@ export default function App() {
   }, []);
 
   const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
-    setParamDrafts(drafts => ({ ...drafts, [paramDraftKey(instanceId, paramKey)]: value }));
-    setWorkspaceFiles(files =>
-      files.map(file =>
-        file.role === 'project'
-          ? { ...file, content: updateProjectInstanceParam(file.content, instanceId, paramKey, value) }
-          : file,
-      ),
-    );
+    const key = paramDraftKey(instanceId, paramKey);
+    setParamDrafts(drafts => (drafts[key] === value ? drafts : { ...drafts, [key]: value }));
+    setWorkspaceFiles(files => {
+      let changed = false;
+      const next = files.map(file => {
+        if (file.role !== 'project') return file;
+        const content = updateProjectInstanceParam(file.content, instanceId, paramKey, value);
+        if (content === file.content) return file;
+        changed = true;
+        return { ...file, content };
+      });
+      return changed ? next : files;
+    });
   }, []);
 
-  const resetParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
-    setParamDrafts(drafts => ({ ...drafts, [paramDraftKey(instanceId, paramKey)]: value }));
-    setWorkspaceFiles(files =>
-      files.map(file =>
-        file.role === 'project'
-          ? { ...file, content: updateProjectInstanceParam(file.content, instanceId, paramKey, value) }
-          : file,
-      ),
-    );
-  }, []);
+  const resetParamDraft = updateParamDraft;
 
   const resetUnitParamDrafts = useCallback((instanceId: string) => {
     const instance = backendSamples.project.nodes.find(node => node.id === instanceId);

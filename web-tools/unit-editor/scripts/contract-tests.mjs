@@ -130,6 +130,14 @@ includesContent(previewPanel, 'createBufferSource', 'uploaded files must use a W
 includesContent(previewPanel, "type InputMode = 'file' | 'microphone'", 'file and microphone transports must remain separate');
 includesContent(previewPanel, 'backend.reset()', 'live preview reset must use the WASM backend');
 includesContent(previewPanel, 'backend.setParam', 'live parameter controls must use the WASM backend');
+includesContent(previewPanel, 'previousOverridesRef', 'live parameter synchronization must detect reset values');
+includesContent(previewPanel, 'override.originalValue', 'removed overrides must restore the original runtime value');
+includesContent(projectInspector, 'clampValue(parsed, minValue, maxValue)', 'typed parameter values must clamp to metadata bounds');
+includesContent(app, 'return changed ? next : files', 'equivalent parameter serialization must not create a new revision');
+assert(
+  projectInspector.indexOf('<PreviewPanel') < projectInspector.indexOf('{isProjectView && ('),
+  'live preview must remain mounted across inspector views',
+);
 includesContent(previewPanel, 'backend.setBypass', 'live bypass controls must use the WASM backend');
 includesContent(previewPanel, 'backend.getMeters()', 'preview meters must come from the WASM processor');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');

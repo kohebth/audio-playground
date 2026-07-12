@@ -42,6 +42,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const fileSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const previousOverridesRef = useRef<Map<string, ParamOverride>>(new Map());
   const firstOverride = paramOverrides[0];
 
   useEffect(() => {
@@ -138,9 +139,21 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
 
   useEffect(() => {
     if (!backend || !running) return;
-    for (const override of paramOverrides) {
-      const value = Number(override.value);
-      if (Number.isFinite(value)) void backend.setParam(override.path, value).catch(() => undefined);
+    const previous = previousOverridesRef.current;
+    const current = new Map(paramOverrides.map(override => [override.path, override]));
+    const commands = paramOverrides.map(override => ({ path: override.path, value: override.value }));
+    for (const [path, override] of previous) {
+      if (!current.has(path)) commands.push({ path, value: override.originalValue });
+    }
+    previousOverridesRef.current = current;
+    for (const command of commands) {
+      const value = Number(command.value);
+      if (Number.isFinite(value)) {
+        void backend.setParam(command.path, value).catch(error => {
+          setPhase('error');
+          setDiagnostic(error instanceof Error ? error.message : String(error));
+        });
+      }
     }
   }, [backend, paramOverrides, running]);
 

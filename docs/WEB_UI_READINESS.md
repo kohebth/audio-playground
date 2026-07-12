@@ -31,6 +31,10 @@ decode through WebAudio and feed the real processor Worklet; microphone capture 
 using the same runtime. Browser-managed storage/export and the remaining graph CRUD workflows are separate feature
 slices.
 
+Parameter edits clamp to unit metadata, update the project YAML, use the indexed Worklet control for immediate audible
+feedback, and then flow through the debounced replacement runtime. Resetting an override sends the original value over
+the same fast path before the synchronized YAML revision is prepared.
+
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.

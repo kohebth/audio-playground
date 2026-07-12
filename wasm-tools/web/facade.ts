@@ -252,6 +252,7 @@ export class WasmBackend {
 
   async setParam(name: string, value: number): Promise<void> {
     if (!this.prepared) throw new Error('No prepared runtime');
+    if (!Number.isFinite(value)) throw new Error(`Parameter ${name} must be finite`);
     const index = this.prepared.params.indexOf(name);
     if (index < 0) throw new Error(`Unknown parameter: ${name}`);
     await this.processorRequest({ type: 'setParam', index, value });
