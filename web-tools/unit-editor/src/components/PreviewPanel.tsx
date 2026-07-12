@@ -18,7 +18,14 @@ type Props = {
   selectedInstanceId: string | null;
 };
 
-const emptyMeter: MeterSnapshot = { peak: 0, rms: 0, frames: 0, valid: false };
+const emptyMeter: MeterSnapshot = {
+  peak: 0,
+  rms: 0,
+  frames: 0,
+  valid: false,
+  activeRevision: 0,
+  underruns: 0,
+};
 
 function moduleUrl(file: string): string {
   return new URL(`wasm/${file}`, `${window.location.origin}${import.meta.env.BASE_URL}`).href;
@@ -133,7 +140,21 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
 
   useEffect(() => {
     if (!backend || !running) return;
-    const timer = window.setInterval(() => setMeter(backend.getMeters()), 100);
+    let polling = false;
+    const timer = window.setInterval(() => {
+      if (polling) return;
+      polling = true;
+      void backend
+        .pollMeters()
+        .then(setMeter)
+        .catch(error => {
+          setPhase('error');
+          setDiagnostic(error instanceof Error ? error.message : String(error));
+        })
+        .finally(() => {
+          polling = false;
+        });
+    }, 100);
     return () => window.clearInterval(timer);
   }, [backend, running]);
 
@@ -354,6 +375,14 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
         <div>
           <span>Frames</span>
           <strong>{meter.frames}</strong>
+        </div>
+        <div>
+          <span>Active</span>
+          <strong>{meter.activeRevision || '-'}</strong>
+        </div>
+        <div>
+          <span>Underruns</span>
+          <strong>{meter.underruns}</strong>
         </div>
       </div>
 

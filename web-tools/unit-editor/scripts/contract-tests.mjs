@@ -139,7 +139,7 @@ assert(
   'live preview must remain mounted across inspector views',
 );
 includesContent(previewPanel, 'backend.setBypass', 'live bypass controls must use the WASM backend');
-includesContent(previewPanel, 'backend.getMeters()', 'preview meters must come from the WASM processor');
+includesContent(previewPanel, '.pollMeters()', 'preview meters must use throttled Worklet polling');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
 includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
 includesContent(wasmFacade, 'processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary }', 'WASM bytes must be transferred during Worklet construction');
@@ -150,6 +150,9 @@ includesContent(wasmFacade, "type: 'commit'", 'runtime commit must be a separate
 includesContent(wasmFacade, 'failedRevision: revision', 'runtime failures must identify their workspace revision');
 includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');
 includesContent(processorWorklet, 'request.type === "commit"', 'Worklet must commit only through an explicit message');
+includesContent(processorWorklet, 'request.type === "pollMeters"', 'meter snapshots must be copied outside process()');
+assert(!processorWorklet.slice(processorWorklet.indexOf('process(inputs, outputs)')).includes('this.reply('), 'process() must not allocate and post meter messages');
+assert(!processorWorklet.includes('HEAPF32.subarray'), 'process() must not allocate a typed-array view per block');
 assert(!processorWorklet.includes('import(moduleUrl)'), 'dynamic import must not run in WorkletGlobalScope');
 assert(!previewPanel.includes('createDeterministicPreviewAdapter'), 'deterministic preview adapter must not remain active');
 

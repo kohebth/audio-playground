@@ -45,6 +45,8 @@ export type MeterSnapshot = {
   rms: number;
   frames: number;
   valid: boolean;
+  activeRevision: number;
+  underruns: number;
 };
 
 export type BackendPhase = 'idle' | 'validating' | 'preparing' | 'ready' | 'running' | 'error';

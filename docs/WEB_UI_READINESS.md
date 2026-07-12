@@ -35,6 +35,9 @@ Parameter edits clamp to unit metadata, update the project YAML, use the indexed
 feedback, and then flow through the debounced replacement runtime. Resetting an override sends the original value over
 the same fast path before the synchronized YAML revision is prepared.
 
+Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
+and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
+
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.

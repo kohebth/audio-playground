@@ -19,7 +19,7 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     this.module = null;
     this.processor = 0;
     this.ready = false;
-    this.meterCountdown = 0;
+    this.underruns = 0;
     this.port.onmessage = (event) => void this.handle(event.data);
     const { moduleUrl, wasmBinary } = options?.processorOptions ?? {};
     if (!moduleUrl || !(wasmBinary instanceof ArrayBuffer)) {
@@ -96,6 +96,28 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
       this.command(request.id, this.module._apg_wasm_processor_reset(this.processor));
       return;
     }
+    if (request.type === "pollMeters") {
+      const meter = this.module._apg_wasm_processor_output_meter(this.processor);
+      if (!meter) {
+        this.reply({ id: request.id, ok: false, type: "error", message: "Processor meter is unavailable" });
+        return;
+      }
+      const floatWord = meter >>> 2;
+      this.reply({
+        id: request.id,
+        ok: true,
+        type: "meter",
+        meter: {
+          peak: this.module.HEAPF32[floatWord] ?? 0,
+          rms: this.module.HEAPF32[floatWord + 1] ?? 0,
+          frames: this.module.HEAPU32[floatWord + 2] ?? 0,
+          valid: (this.module.HEAPU32[floatWord + 3] ?? 0) !== 0,
+          activeRevision: Number(this.module._apg_wasm_processor_active_revision(this.processor)),
+          underruns: this.underruns,
+        },
+      });
+      return;
+    }
     this.module._apg_wasm_processor_destroy(this.processor);
     this.processor = 0;
     this.ready = false;
@@ -110,6 +132,7 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     }
     const frames = output.length;
     if (frames > this.module._apg_wasm_processor_frame_capacity(this.processor)) {
+      this.underruns += 1;
       output.fill(0);
       return true;
     }
@@ -119,31 +142,13 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     else this.module.HEAPF32.fill(0, inputPointer, inputPointer + frames);
     const status = this.module._apg_wasm_processor_process(this.processor, frames);
     if (status !== 0) {
+      this.underruns += 1;
       output.fill(0);
       return true;
     }
     const outputPointer = this.module._apg_wasm_processor_output_buffer(this.processor) >>> 2;
-    output.set(this.module.HEAPF32.subarray(outputPointer, outputPointer + frames));
+    for (let frame = 0; frame < frames; frame += 1) output[frame] = this.module.HEAPF32[outputPointer + frame];
     for (let channel = 1; channel < (outputs[0]?.length ?? 0); channel += 1) outputs[0]?.[channel]?.set(output);
-    this.meterCountdown -= 1;
-    if (this.meterCountdown <= 0) {
-      this.meterCountdown = Math.max(1, Math.round(sampleRate / frames / 30));
-      const meter = this.module._apg_wasm_processor_output_meter(this.processor);
-      if (meter) {
-        const floatWord = meter >>> 2;
-        this.reply({
-          id: 0,
-          ok: true,
-          type: "meter",
-          meter: {
-            peak: this.module.HEAPF32[floatWord] ?? 0,
-            rms: this.module.HEAPF32[floatWord + 1] ?? 0,
-            frames: this.module.HEAPU32[floatWord + 2] ?? 0,
-            valid: (this.module.HEAPU32[floatWord + 3] ?? 0) !== 0
-          }
-        });
-      }
-    }
     return true;
   }
 }

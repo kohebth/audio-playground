@@ -29,7 +29,7 @@ export class WasmBackend {
   private validatedRevision = 0;
   private processorReadyResolve: (() => void) | null = null;
   private processorReadyReject: ((error: Error) => void) | null = null;
-  private meter: MeterSnapshot = { peak: 0, rms: 0, frames: 0, valid: false };
+  private meter: MeterSnapshot = { peak: 0, rms: 0, frames: 0, valid: false, activeRevision: 0, underruns: 0 };
   private state: BackendState = {
     phase: 'idle',
     workspaceRevision: 0,
@@ -92,10 +92,6 @@ export class WasmBackend {
       this.processorReadyResolve?.();
       this.processorReadyResolve = null;
       this.processorReadyReject = null;
-      return;
-    }
-    if (response.type === 'meter') {
-      this.meter = response.meter;
       return;
     }
     const pending = this.processorPending.get(response.id);
@@ -275,6 +271,13 @@ export class WasmBackend {
 
   getMeters(): MeterSnapshot {
     return { ...this.meter };
+  }
+
+  async pollMeters(): Promise<MeterSnapshot> {
+    const response = await this.processorRequest({ type: 'pollMeters' });
+    if (response.type !== 'meter') throw new Error(`Unexpected processor response: ${response.type}`);
+    this.meter = response.meter;
+    return this.getMeters();
   }
 
   getState(): BackendState {
