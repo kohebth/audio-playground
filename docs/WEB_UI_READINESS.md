@@ -38,6 +38,10 @@ the same fast path before the synchronized YAML revision is prepared.
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
 
+Bypass and mute use indexed Worklet controls. The facade retains per-instance bypass and project mute shadows, applies
+them to a newly hydrated runtime before commit, and therefore preserves live control state across structural swaps.
+The current project schema has no persisted bypass field, so bypass does not invent a non-schema YAML property.
+
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.

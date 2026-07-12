@@ -27,6 +27,8 @@ export class WasmBackend {
   private prepared: PreparedRuntime | null = null;
   private preparedImage: ArrayBuffer | null = null;
   private validatedRevision = 0;
+  private readonly bypassShadows = new Map<string, boolean>();
+  private muteShadow = false;
   private processorReadyResolve: (() => void) | null = null;
   private processorReadyReject: ((error: Error) => void) | null = null;
   private meter: MeterSnapshot = { peak: 0, rms: 0, frames: 0, valid: false, activeRevision: 0, underruns: 0 };
@@ -199,6 +201,12 @@ export class WasmBackend {
       throw error;
     }
     if (revision !== this.state.workspaceRevision) throw new Error(`Staged revision ${revision} is stale`);
+    for (const [instanceId, enabled] of this.bypassShadows) {
+      const index = this.prepared.bypassInstances.indexOf(instanceId);
+      if (index >= 0) await this.processorRequest({ type: 'setBypass', index, enabled });
+    }
+    if (this.muteShadow) await this.processorRequest({ type: 'setMute', enabled: true });
+    if (revision !== this.state.workspaceRevision) throw new Error(`Controlled revision ${revision} is stale`);
     let response: ProcessorResponse;
     try {
       response = await this.processorRequest({ type: 'commit', revision });
@@ -259,10 +267,12 @@ export class WasmBackend {
     const index = this.prepared.bypassInstances.indexOf(instanceId);
     if (index < 0) throw new Error(`Unknown bypass instance: ${instanceId}`);
     await this.processorRequest({ type: 'setBypass', index, enabled });
+    this.bypassShadows.set(instanceId, enabled);
   }
 
   async setMute(enabled: boolean): Promise<void> {
     await this.processorRequest({ type: 'setMute', enabled });
+    this.muteShadow = enabled;
   }
 
   async reset(): Promise<void> {

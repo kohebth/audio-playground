@@ -36,7 +36,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
   const [phase, setPhase] = useState<BackendPhase>('idle');
   const [diagnostic, setDiagnostic] = useState('WASM backend is initializing.');
   const [meter, setMeter] = useState<MeterSnapshot>(emptyMeter);
-  const [bypass, setBypass] = useState(false);
+  const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [running, setRunning] = useState(false);
   const [inputMode, setInputMode] = useState<InputMode>('file');
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -298,15 +298,15 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
 
   const toggleBypass = useCallback(async () => {
     if (!backend || !selectedInstanceId) return;
-    const next = !bypass;
+    const next = !(bypassByInstance[selectedInstanceId] ?? false);
     try {
       await backend.setBypass(selectedInstanceId, next);
-      setBypass(next);
+      setBypassByInstance(current => ({ ...current, [selectedInstanceId]: next }));
       setDiagnostic(`${selectedInstanceId} bypass ${next ? 'enabled' : 'disabled'}.`);
     } catch (error) {
       setDiagnostic(error instanceof Error ? error.message : String(error));
     }
-  }, [backend, bypass, selectedInstanceId]);
+  }, [backend, bypassByInstance, selectedInstanceId]);
 
   return (
     <section className="inspector-block">
@@ -391,7 +391,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
           Send param
         </button>
         <button className="btn btn--ghost" disabled={!running || !selectedInstanceId} onClick={() => void toggleBypass()} type="button">
-          Toggle bypass
+          {selectedInstanceId && bypassByInstance[selectedInstanceId] ? 'Disable bypass' : 'Enable bypass'}
         </button>
       </div>
     </section>
