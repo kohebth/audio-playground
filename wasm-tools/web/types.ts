@@ -60,6 +60,8 @@ export type BackendState = {
 export type WasmBackendOptions = {
   controlModuleUrl: string;
   processorModuleUrl: string;
+  processorWasmUrl: string;
+  processorWorkletUrl: string;
   audioContext?: AudioContext;
 };
 

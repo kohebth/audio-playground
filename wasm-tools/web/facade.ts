@@ -1,5 +1,4 @@
 import ControlWorker from './control.worker?worker';
-import processorWorkletUrl from './processor.worklet?worker&url';
 
 import type { ControlRequest, ControlResponse, ProcessorRequest, ProcessorResponse } from './protocol';
 import type {
@@ -162,7 +161,13 @@ export class WasmBackend {
     if (this.node) return;
     const AudioContextConstructor = globalThis.AudioContext;
     this.context = this.options.audioContext ?? new AudioContextConstructor();
-    await this.context.audioWorklet.addModule(processorWorkletUrl);
+    if (this.context.state === 'suspended') await this.context.resume();
+    await this.context.audioWorklet.addModule(this.options.processorWorkletUrl);
+    const processorResponse = await fetch(this.options.processorWasmUrl);
+    if (!processorResponse.ok) {
+      throw new Error(`Could not load processor WASM: ${processorResponse.status} ${processorResponse.statusText}`);
+    }
+    const wasmBinary = await processorResponse.arrayBuffer();
     const processorReady = new Promise<void>((resolve, reject) => {
       this.processorReadyResolve = resolve;
       this.processorReadyReject = reject;
@@ -171,13 +176,12 @@ export class WasmBackend {
       numberOfInputs: 1,
       numberOfOutputs: 1,
       outputChannelCount: [1],
-      processorOptions: { moduleUrl: this.options.processorModuleUrl },
+      processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary },
     });
     this.node.port.onmessage = event => this.handleProcessorResponse(event.data as ProcessorResponse);
     await processorReady;
     options.input?.connect(this.node);
     this.node.connect(options.output ?? this.context.destination);
-    if (this.context.state === 'suspended') await this.context.resume();
     if (this.prepared) await this.stagePrepared();
     this.state = { ...this.state, phase: 'running' };
   }

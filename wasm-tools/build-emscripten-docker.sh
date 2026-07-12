@@ -20,4 +20,5 @@ install -m 0644 \
     "${repo_root}/${build_dir}/wasm-tools/apg_control.wasm" \
     "${repo_root}/${build_dir}/wasm-tools/apg_processor.mjs" \
     "${repo_root}/${build_dir}/wasm-tools/apg_processor.wasm" \
+    "${repo_root}/wasm-tools/web/processor.worklet.js" \
     "${repo_root}/web-tools/unit-editor/public/wasm/"

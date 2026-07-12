@@ -42,6 +42,8 @@ const projectInspector = read('web-tools/unit-editor/src/components/ProjectInspe
 const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/unit-editor/src/components/ContractGraphCanvas.tsx');
 const previewPanel = read('web-tools/unit-editor/src/components/PreviewPanel.tsx');
+const wasmFacade = read('wasm-tools/web/facade.ts');
+const processorWorklet = read('wasm-tools/web/processor.worklet.js');
 const compatibility = read('web-tools/unit-editor/src/components/CompatibilityExportPanel.tsx');
 
 // AC: Contract-accurate web data is sourced from a frozen backend atom catalog fixture.
@@ -123,9 +125,18 @@ includesContent(previewPanel, 'backend.prepare', 'valid revisions must prepare a
 includesContent(previewPanel, 'window.setTimeout', 'workspace synchronization must be debounced');
 includesContent(previewPanel, 'revision !== revisionRef.current', 'stale validation results must be ignored');
 includesContent(previewPanel, 'navigator.mediaDevices.getUserMedia', 'live preview must support microphone input');
+includesContent(previewPanel, 'decodeAudioData', 'live preview must decode uploaded audio files');
+includesContent(previewPanel, 'createBufferSource', 'uploaded files must use a WebAudio buffer source');
+includesContent(previewPanel, "type InputMode = 'file' | 'microphone'", 'file and microphone transports must remain separate');
+includesContent(previewPanel, 'backend.reset()', 'live preview reset must use the WASM backend');
 includesContent(previewPanel, 'backend.setParam', 'live parameter controls must use the WASM backend');
 includesContent(previewPanel, 'backend.setBypass', 'live bypass controls must use the WASM backend');
 includesContent(previewPanel, 'backend.getMeters()', 'preview meters must come from the WASM processor');
+includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
+includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
+includesContent(wasmFacade, 'processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary }', 'WASM bytes must be transferred during Worklet construction');
+includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');
+assert(!processorWorklet.includes('import(moduleUrl)'), 'dynamic import must not run in WorkletGlobalScope');
 assert(!previewPanel.includes('createDeterministicPreviewAdapter'), 'deterministic preview adapter must not remain active');
 
 // AG: Compatibility and export actionability.

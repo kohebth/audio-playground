@@ -1422,6 +1422,52 @@ body {
   margin: 10px 0;
 }
 
+.preview-panel__mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+}
+
+.preview-panel__mode button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 500 12px var(--font-sans);
+}
+
+.preview-panel__mode button[aria-pressed='true'] {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.preview-panel__file {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.preview-panel__file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-panel__file input {
+  width: 100%;
+  min-width: 0;
+  color: var(--text-muted);
+  font: 11px var(--font-sans);
+}
+
 .compat-matrix {
   overflow-x: auto;
 }

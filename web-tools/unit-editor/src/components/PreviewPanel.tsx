@@ -9,6 +9,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { WorkspaceFile } from '../lib/backendSamples';
 import type { ParamOverride } from '../lib/projectParams';
 
+type InputMode = 'file' | 'microphone';
+
 type Props = {
   entryProject: string;
   workspaceFiles: WorkspaceFile[];
@@ -29,6 +31,9 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
   const [meter, setMeter] = useState<MeterSnapshot>(emptyMeter);
   const [bypass, setBypass] = useState(false);
   const [running, setRunning] = useState(false);
+  const [inputMode, setInputMode] = useState<InputMode>('file');
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [audioFileName, setAudioFileName] = useState('No audio file selected');
   const revisionRef = useRef(0);
   const validRevisionRef = useRef(0);
   const backendRef = useRef<WasmBackend | null>(null);
@@ -36,6 +41,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
   const contextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const fileSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const firstOverride = paramOverrides[0];
 
   useEffect(() => {
@@ -45,6 +51,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
     void WasmBackend.create({
       controlModuleUrl: moduleUrl('apg_control.mjs'),
       processorModuleUrl: moduleUrl('apg_processor.mjs'),
+      processorWasmUrl: moduleUrl('apg_processor.wasm'),
+      processorWorkletUrl: moduleUrl('apg_processor.worklet.js'),
       audioContext: context,
     })
       .then(instance => {
@@ -64,6 +72,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       disposed = true;
       streamRef.current?.getTracks().forEach(track => track.stop());
       inputRef.current?.disconnect();
+      fileSourceRef.current?.disconnect();
       const instance = backendRef.current;
       if (instance) void instance.destroy().finally(() => context.close());
       else void context.close();
@@ -109,14 +118,14 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
     if (!backend) return;
     revisionRef.current += 1;
     const timer = window.setTimeout(() => {
-      void syncWorkspace(running).catch(error => {
+      void syncWorkspace(runningRef.current).catch(error => {
         if (revisionRef.current < 1) return;
         setPhase('error');
         setDiagnostic(error instanceof Error ? error.message : String(error));
       });
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [backend, running, syncWorkspace, workspaceFiles]);
+  }, [backend, syncWorkspace, workspaceFiles]);
 
   useEffect(() => {
     if (!backend || !running) return;
@@ -141,39 +150,102 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
     }
   }, [syncWorkspace]);
 
+  const stopPlayback = useCallback(async () => {
+    const fileSource = fileSourceRef.current;
+    if (fileSource) {
+      fileSource.onended = null;
+      try {
+        fileSource.stop();
+      } catch {
+        // The source already reached its natural end.
+      }
+      fileSource.disconnect();
+      fileSourceRef.current = null;
+    }
+    inputRef.current?.disconnect();
+    inputRef.current = null;
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
+    await backendRef.current?.stop();
+    runningRef.current = false;
+    setRunning(false);
+    setPhase('ready');
+    setMeter(emptyMeter);
+  }, []);
+
   const start = useCallback(async () => {
     if (!backend) return;
     try {
       if (validRevisionRef.current !== revisionRef.current && !(await syncWorkspace(true))) return;
       else if (backend.getState().preparedRevision !== revisionRef.current && !(await syncWorkspace(true))) return;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const context = contextRef.current;
       if (!context) return;
-      const input = context.createMediaStreamSource(stream);
-      streamRef.current = stream;
-      inputRef.current = input;
+      let input: AudioNode;
+      if (inputMode === 'file') {
+        if (!audioBuffer) throw new Error('Select an audio file before starting playback.');
+        const source = context.createBufferSource();
+        source.buffer = audioBuffer;
+        fileSourceRef.current = source;
+        input = source;
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = context.createMediaStreamSource(stream);
+        streamRef.current = stream;
+        inputRef.current = source;
+        input = source;
+      }
       await backend.start({ input });
       runningRef.current = true;
       setRunning(true);
       setPhase('running');
-      setDiagnostic(`Revision ${revisionRef.current} is processing microphone input.`);
+      if (fileSourceRef.current) {
+        fileSourceRef.current.onended = () => void stopPlayback();
+        fileSourceRef.current.start();
+      }
+      setDiagnostic(
+        inputMode === 'file'
+          ? `Revision ${revisionRef.current} is processing ${audioFileName}.`
+          : `Revision ${revisionRef.current} is processing microphone input.`,
+      );
+    } catch (error) {
+      await stopPlayback();
+      setPhase('error');
+      setDiagnostic(error instanceof Error ? error.message : String(error));
+    }
+  }, [audioBuffer, audioFileName, backend, inputMode, stopPlayback, syncWorkspace]);
+
+  const stop = useCallback(async () => {
+    await stopPlayback();
+    setDiagnostic(`Revision ${revisionRef.current} is ready.`);
+  }, [stopPlayback]);
+
+  const chooseAudioFile = useCallback(async (file: File | undefined) => {
+    if (!file || !contextRef.current) return;
+    try {
+      if (runningRef.current) await stopPlayback();
+      const encoded = await file.arrayBuffer();
+      const decoded = await contextRef.current.decodeAudioData(encoded.slice(0));
+      setAudioBuffer(decoded);
+      setAudioFileName(file.name);
+      setDiagnostic(`${file.name} ready (${decoded.duration.toFixed(2)} s).`);
+    } catch (error) {
+      setAudioBuffer(null);
+      setAudioFileName('No audio file selected');
+      setPhase('error');
+      setDiagnostic(error instanceof Error ? error.message : String(error));
+    }
+  }, [stopPlayback]);
+
+  const reset = useCallback(async () => {
+    if (!backend || !running) return;
+    try {
+      await backend.reset();
+      setDiagnostic(`Revision ${revisionRef.current} runtime reset.`);
     } catch (error) {
       setPhase('error');
       setDiagnostic(error instanceof Error ? error.message : String(error));
     }
-  }, [backend, syncWorkspace]);
-
-  const stop = useCallback(async () => {
-    await backend?.stop();
-    runningRef.current = false;
-    inputRef.current?.disconnect();
-    inputRef.current = null;
-    streamRef.current?.getTracks().forEach(track => track.stop());
-    streamRef.current = null;
-    setRunning(false);
-    setPhase('ready');
-    setMeter(emptyMeter);
-  }, [backend]);
+  }, [backend, running]);
 
   const sendFirstParam = useCallback(async () => {
     if (!backend || !firstOverride) return;
@@ -208,6 +280,37 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       </div>
       <p className="diagnostic-empty">{diagnostic}</p>
 
+      <div className="preview-panel__mode" aria-label="Audio input mode" role="group">
+        <button
+          aria-pressed={inputMode === 'file'}
+          disabled={running}
+          onClick={() => setInputMode('file')}
+          type="button"
+        >
+          Audio file
+        </button>
+        <button
+          aria-pressed={inputMode === 'microphone'}
+          disabled={running}
+          onClick={() => setInputMode('microphone')}
+          type="button"
+        >
+          Microphone
+        </button>
+      </div>
+
+      {inputMode === 'file' && (
+        <label className="preview-panel__file">
+          <span>{audioFileName}</span>
+          <input
+            accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a,.aac"
+            disabled={running}
+            onChange={event => void chooseAudioFile(event.target.files?.[0])}
+            type="file"
+          />
+        </label>
+      )}
+
       <div className="preview-panel__actions">
         <button className="btn btn--ghost" disabled={!backend} onClick={() => void compile()} type="button">
           Compile
@@ -217,6 +320,9 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
         </button>
         <button className="btn btn--ghost" disabled={!running} onClick={() => void stop()} type="button">
           Stop
+        </button>
+        <button className="btn btn--ghost" disabled={!running} onClick={() => void reset()} type="button">
+          Reset
         </button>
       </div>
 

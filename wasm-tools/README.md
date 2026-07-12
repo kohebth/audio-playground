@@ -41,5 +41,10 @@ ES module loaders and their corresponding `.wasm` binaries:
 ./wasm-tools/build-emscripten-docker.sh
 ```
 
+The build script also publishes the standalone `apg_processor.worklet.js` module beside the generated artifacts. Its
+URL is passed explicitly to the TypeScript facade so runtime loading never depends on development-server paths. The
+facade fetches the processor WASM on the main thread and supplies its bytes when constructing the Worklet node; the
+real-time global performs no network fetch or dynamic module import.
+
 Neither module uses Emscripten's virtual filesystem. YAML workspace files are supplied from browser memory through the
 control ABI.
