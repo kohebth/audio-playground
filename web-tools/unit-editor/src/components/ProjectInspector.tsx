@@ -35,6 +35,7 @@ type Props = {
   atomCatalog: AtomCatalog;
   atomCatalogManifest: Record<string, string>;
   projectFile: string;
+  workspaceFiles: WorkspaceFile[];
   hasDirtyParamDrafts: boolean;
   selectedUnitFile: WorkspaceFile;
   selectedUnitGraph: UnitGraphDraft | null;
@@ -251,6 +252,7 @@ export function ProjectInspector({
   atomCatalog,
   atomCatalogManifest,
   projectFile,
+  workspaceFiles,
   hasDirtyParamDrafts,
   selectedUnitFile,
   selectedUnitGraph,
@@ -374,9 +376,10 @@ export function ProjectInspector({
           </section>
 
           <PreviewPanel
-            render={render}
+            entryProject={projectFile}
             paramOverrides={paramOverrides}
             selectedInstanceId={selectedNode?.kind === 'unit' ? selectedNode.instance.id : null}
+            workspaceFiles={workspaceFiles}
           />
 
           <CompatibilityExportPanel project={project} commands={commands} />

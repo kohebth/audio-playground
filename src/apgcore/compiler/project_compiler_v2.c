@@ -104,7 +104,7 @@ static const char *remap_signal(
         if (!route)
             return endpoint;
         if (strcmp(route->from, APG_PROJECT_SYSTEM_INPUT) == 0)
-            return APG_PROJECT_SYSTEM_INPUT + 7;
+            return &APG_PROJECT_SYSTEM_INPUT[7];
         return route->from;
     }
 

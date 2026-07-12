@@ -42,7 +42,6 @@ const projectInspector = read('web-tools/unit-editor/src/components/ProjectInspe
 const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/unit-editor/src/components/ContractGraphCanvas.tsx');
 const previewPanel = read('web-tools/unit-editor/src/components/PreviewPanel.tsx');
-const previewAdapter = read('web-tools/unit-editor/src/lib/previewAdapter.ts');
 const compatibility = read('web-tools/unit-editor/src/components/CompatibilityExportPanel.tsx');
 
 // AC: Contract-accurate web data is sourced from a frozen backend atom catalog fixture.
@@ -115,25 +114,19 @@ includesContent(contractCanvas, 'onNodeDoubleClick', 'contract node interaction 
 includesContent(contractCanvas, 'onNodeClick', 'contract node click should select atom');
 includesContent(app, 'setGraphEditError', 'graph edit failures should be surfaced through workspace error feedback');
 
-// AF: Preview adapter and panel contract state machine.
+// AF: WASM preview facade and panel contract state machine.
 assert(render.ok && render.frames === render.output.samples.length, 'render fixture must include deterministic samples');
 assert(render.output.samples.length > 0, 'render fixture should include sample data');
-includesContent(
-  previewAdapter,
-  'type PreviewState = \'idle\' | \'ready\' | \'running\' | \'error\';',
-  'preview adapter should define the full preview state machine',
-);
-includesContent(previewAdapter, "compile: () => (render.ok ? 'ready' : 'error')", 'preview compile should transition to ready/error');
-includesContent(previewAdapter, "start: () => (render.ok ? 'running' : 'error')", 'preview start should transition to running/error');
-includesContent(previewAdapter, "stop: () => (render.ok ? 'ready' : 'error')", 'preview stop should transition to ready/error');
-includesContent(previewAdapter, 'setParam: (path, value) => `setParam ${path}=${value}`', 'preview adapter setParam command name changed');
-includesContent(previewAdapter, 'setBypass: (instanceId, enabled) => `setBypass ${instanceId}=${enabled}`', 'preview adapter setBypass command name changed');
-includesContent(previewPanel, "useState<PreviewState>('idle')", 'preview panel should track adapter state');
-includesContent(previewPanel, 'adapter.compile()', 'preview compile transition should be wired');
-includesContent(previewPanel, 'adapter.start()', 'preview start transition should be wired');
-includesContent(previewPanel, 'adapter.stop()', 'preview stop transition should be wired');
-includesContent(previewPanel, 'WASM AudioWorklet preview backend is pending', 'missing-backend state is not visible');
-includesContent(previewPanel, 'Preview command', 'preview command echo should be visible');
+includesContent(previewPanel, 'WasmBackend.create', 'preview must initialize the typed WASM facade');
+includesContent(previewPanel, 'backend.replaceWorkspace', 'workspace revisions must be sent to WASM validation');
+includesContent(previewPanel, 'backend.prepare', 'valid revisions must prepare a runtime image');
+includesContent(previewPanel, 'window.setTimeout', 'workspace synchronization must be debounced');
+includesContent(previewPanel, 'revision !== revisionRef.current', 'stale validation results must be ignored');
+includesContent(previewPanel, 'navigator.mediaDevices.getUserMedia', 'live preview must support microphone input');
+includesContent(previewPanel, 'backend.setParam', 'live parameter controls must use the WASM backend');
+includesContent(previewPanel, 'backend.setBypass', 'live bypass controls must use the WASM backend');
+includesContent(previewPanel, 'backend.getMeters()', 'preview meters must come from the WASM processor');
+assert(!previewPanel.includes('createDeterministicPreviewAdapter'), 'deterministic preview adapter must not remain active');
 
 // AG: Compatibility and export actionability.
 for (const profile of ['desktop_full', 'wasm_realtime', 'm7_static', 'offline_render']) {

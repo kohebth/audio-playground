@@ -489,6 +489,30 @@ const unsigned char *apg_wasm_control_prepared_image(const apg_wasm_control_t *c
     return control ? control->prepared_image : NULL;
 }
 
+uint32_t apg_wasm_control_param_count(const apg_wasm_control_t *control) {
+    return control && control->prepared_image && control->registry.params_len <= UINT32_MAX
+               ? (uint32_t)control->registry.params_len
+               : 0u;
+}
+
+const char *apg_wasm_control_param_name(const apg_wasm_control_t *control, uint32_t index) {
+    return control && control->prepared_image && index < control->registry.params_len
+               ? control->registry.param_names[index]
+               : NULL;
+}
+
+uint32_t apg_wasm_control_bypass_count(const apg_wasm_control_t *control) {
+    return control && control->prepared_image && control->registry.bypassed_instances_len <= UINT32_MAX
+               ? (uint32_t)control->registry.bypassed_instances_len
+               : 0u;
+}
+
+const char *apg_wasm_control_bypass_name(const apg_wasm_control_t *control, uint32_t index) {
+    return control && control->prepared_image && index < control->registry.bypassed_instances_len
+               ? control->registry.bypass_instances[index].instance_id
+               : NULL;
+}
+
 const apg_wasm_diagnostic_t *apg_wasm_control_last_diagnostic(const apg_wasm_control_t *control) {
     return control ? &control->diagnostic : NULL;
 }

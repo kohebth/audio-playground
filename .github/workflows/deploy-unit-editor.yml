@@ -32,7 +32,27 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web-tools/unit-editor/package-lock.json
+          cache-dependency-path: |
+            wasm-tools/package-lock.json
+            web-tools/unit-editor/package-lock.json
+
+      - name: Set up Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 5.0.1
+          actions-cache-folder: emsdk-cache
+
+      - name: Build WASM middleware
+        run: |
+          emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-wasm --target apg_control apg_processor -j2
+          mkdir -p web-tools/unit-editor/public/wasm
+          cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm web-tools/unit-editor/public/wasm/
+          cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm web-tools/unit-editor/public/wasm/
+
+      - name: Build WASM web facade
+        working-directory: wasm-tools
+        run: npm install && npm run build
 
       - name: Install dependencies
         working-directory: web-tools/unit-editor

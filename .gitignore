@@ -1,6 +1,7 @@
 bin
 cmake-build-debugs
 build
+build-wasm-container/
 .idea
 .vscode
 .codex

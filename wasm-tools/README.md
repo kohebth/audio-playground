@@ -38,8 +38,7 @@ Configure the repository with the Emscripten toolchain. The `apg_control` and `a
 ES module loaders and their corresponding `.wasm` binaries:
 
 ```sh
-emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
-cmake --build build-wasm --target apg_control apg_processor
+./wasm-tools/build-emscripten-docker.sh
 ```
 
 Neither module uses Emscripten's virtual filesystem. YAML workspace files are supplied from browser memory through the

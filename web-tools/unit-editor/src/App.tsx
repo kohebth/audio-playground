@@ -338,6 +338,7 @@ export default function App() {
           atomCatalog={backendSamples.atomCatalog}
           atomCatalogManifest={backendSamples.atomCatalogManifest}
           projectFile={backendSamples.project.file}
+          workspaceFiles={workspaceFiles}
           hasDirtyParamDrafts={hasDirtyDrafts}
           selectedUnitFile={selectedUnitWorkspaceFile}
           selectedUnitGraph={selectedUnitGraph}

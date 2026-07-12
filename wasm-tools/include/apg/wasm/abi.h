@@ -88,6 +88,10 @@ apg_wasm_status_t apg_wasm_control_compile_workspace(apg_wasm_control_t *control
 apg_wasm_status_t
 apg_wasm_control_prepare_workspace(apg_wasm_control_t *control, const apg_wasm_audio_config_t *config);
 const unsigned char         *apg_wasm_control_prepared_image(const apg_wasm_control_t *control, size_t *out_size);
+uint32_t                     apg_wasm_control_param_count(const apg_wasm_control_t *control);
+const char                  *apg_wasm_control_param_name(const apg_wasm_control_t *control, uint32_t index);
+uint32_t                     apg_wasm_control_bypass_count(const apg_wasm_control_t *control);
+const char                  *apg_wasm_control_bypass_name(const apg_wasm_control_t *control, uint32_t index);
 const apg_wasm_diagnostic_t *apg_wasm_control_last_diagnostic(const apg_wasm_control_t *control);
 const apg_wasm_workspace_summary_t *apg_wasm_control_workspace_summary(const apg_wasm_control_t *control);
 uint32_t                            apg_wasm_processor_abi_version(void);

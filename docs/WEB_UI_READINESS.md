@@ -14,7 +14,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 The APGCore v2 backend and web MVP surfaces are ready for production hardening. Final MVP backend verification passed with `./build-and-test.sh` across all 20 CTest targets. Web verification passed with `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/unit-editor/`.
 
-This is not a hardware readiness declaration. STM32H7/M7 production deployment is not ready yet: the `m7_static` path is a bounded C11 export surface for compatible/simple projects, not proof that the full guitar-pedalboard project runs on target hardware. `wasm_realtime` now emits a deterministic scaffold (`.json` + `.mjs`) for future AudioWorklet integration.
+This is not a hardware readiness declaration. STM32H7/M7 production deployment is not ready yet: the `m7_static` path is a bounded C11 export surface for compatible/simple projects, not proof that the full guitar-pedalboard project runs on target hardware. The generic browser runtime now lives in `wasm-tools/`; the older project-specific `wasm_realtime` export remains a compatibility scaffold.
 
 The real browser runtime is now tracked as the separate `wasm-tools/` project. Its versioned control ABI accepts
 revisioned in-memory project/unit YAML, resolves unit references without a filesystem, validates and compiles the entry
@@ -22,8 +22,10 @@ project, and reports structured diagnostics and schedule summaries. Emscripten b
 browser dependencies from entering APGCore. The control module now emits a checksummed pointer-free registry image;
 the processor hydrates it into an inactive runtime, commits matching revisions at block boundaries, crossfades runtime
 replacements, processes mono audio, applies indexed controls, and reads real output meters. Worker/AudioWorklet and
-typed frontend integration remain pending; the existing generated project-specific scaffold is not the frontend
-runtime authority.
+typed frontend integration are implemented through a versioned TypeScript facade. The editor debounces YAML workspace
+revisions, validates and prepares them in a Worker, stages valid images in an AudioWorklet, keeps failed edits away from
+the active runtime, and routes stable parameter/bypass names plus meter snapshots through the facade. Browser-managed
+storage/export and the remaining graph CRUD workflows are separate feature slices.
 
 ## Ready To Start Web UI When
 

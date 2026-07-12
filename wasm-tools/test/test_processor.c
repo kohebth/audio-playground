@@ -101,6 +101,9 @@ int main(void) {
     const unsigned char *image      = apg_wasm_control_prepared_image(control, &image_size);
     if (!image || image_size == 0u)
         return fail("prepared image is empty");
+    if (apg_wasm_control_param_count(control) == 0u || !apg_wasm_control_param_name(control, 0u) ||
+        apg_wasm_control_bypass_count(control) != 6u || !apg_wasm_control_bypass_name(control, 0u))
+        return fail("prepared runtime names are incomplete");
     unsigned char *corrupt = malloc(image_size);
     if (!corrupt)
         return fail("cannot allocate corrupt image copy");

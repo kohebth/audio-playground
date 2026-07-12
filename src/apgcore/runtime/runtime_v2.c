@@ -186,7 +186,7 @@ static uc_status refresh_scalar_plan(
     void                                   *storage,
     uc_error                               *err
 ) {
-    if (!runtime || !runtime->last_error || !node_id || !atom_name || !storage) {
+    if (!runtime || !node_id || !atom_name || !storage) {
         return set_error(err, UC_E_MISSING, "v2 runtime scalar refresh context is missing");
     }
     runtime->last_error[0] = '\0';

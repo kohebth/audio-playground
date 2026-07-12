@@ -1,0 +1,15 @@
+{
+  "name": "@audio-playground/wasm-tools",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./web/index.ts",
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}
