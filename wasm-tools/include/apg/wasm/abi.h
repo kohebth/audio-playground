@@ -1,0 +1,55 @@
+#ifndef AUDIO_PLAYGROUND_WASM_TOOLS_ABI_H
+#define AUDIO_PLAYGROUND_WASM_TOOLS_ABI_H
+
+#include <stdint.h>
+
+#define APG_WASM_ABI_VERSION 1u
+
+typedef enum {
+    APG_WASM_STATUS_OK = 0,
+    APG_WASM_STATUS_INVALID_ARGUMENT,
+    APG_WASM_STATUS_STALE_REVISION,
+    APG_WASM_STATUS_PARSE_ERROR,
+    APG_WASM_STATUS_VALIDATION_ERROR,
+    APG_WASM_STATUS_COMPILE_ERROR,
+    APG_WASM_STATUS_INCOMPATIBLE_IMAGE,
+    APG_WASM_STATUS_RUNTIME_ERROR,
+    APG_WASM_STATUS_OUT_OF_MEMORY,
+} apg_wasm_status_t;
+
+typedef enum {
+    APG_WASM_FILE_PROJECT = 1,
+    APG_WASM_FILE_UNIT    = 2,
+} apg_wasm_file_role_t;
+
+typedef enum {
+    APG_WASM_CAP_NONE           = 0,
+    APG_WASM_CAP_WORKSPACE      = 1u << 0,
+    APG_WASM_CAP_PREPARED_IMAGE = 1u << 1,
+    APG_WASM_CAP_PROCESS        = 1u << 2,
+    APG_WASM_CAP_CONTROLS       = 1u << 3,
+    APG_WASM_CAP_METERS         = 1u << 4,
+} apg_wasm_capability_t;
+
+typedef struct {
+    uint64_t revision;
+    uint32_t sample_rate;
+    uint32_t block_frames;
+} apg_wasm_audio_config_t;
+
+typedef struct {
+    uint64_t          revision;
+    apg_wasm_status_t status;
+    const char       *phase;
+    const char       *code;
+    const char       *file;
+    const char       *path;
+    const char       *message;
+} apg_wasm_diagnostic_t;
+
+uint32_t apg_wasm_control_abi_version(void);
+uint32_t apg_wasm_control_capabilities(void);
+uint32_t apg_wasm_processor_abi_version(void);
+uint32_t apg_wasm_processor_capabilities(void);
+
+#endif // AUDIO_PLAYGROUND_WASM_TOOLS_ABI_H

@@ -35,17 +35,22 @@ list(APPEND UTIL_SOURCES ${ATOM_REGISTRY_SOURCE})
 list(APPEND UTIL_SOURCES ${ATOM_THUNK_SOURCE})
 list(APPEND UTIL_SOURCES ${YAML_SOURCES})
 
-add_executable(test_runtime
-        src/test_runtime.c
-        ${UTIL_SOURCES}
+add_library(apgcore STATIC ${UTIL_SOURCES})
+target_include_directories(apgcore PUBLIC
+        ${CMAKE_SOURCE_DIR}/inc
+        ${CMAKE_SOURCE_DIR}/inc/rte
+        ${CMAKE_SOURCE_DIR}/inc/util
+        ${CMAKE_SOURCE_DIR}/inc/yaml
 )
-target_link_libraries(test_runtime m)
+target_link_libraries(apgcore PUBLIC m)
 
-add_executable(apg-v2
-        tools/apg_v2_cli.c
-        ${UTIL_SOURCES}
-)
-target_link_libraries(apg-v2 m)
+add_executable(test_runtime src/test_runtime.c)
+target_link_libraries(test_runtime apgcore)
+
+add_executable(apg-v2 tools/apg_v2_cli.c)
+target_link_libraries(apg-v2 apgcore)
+
+add_subdirectory(wasm-tools)
 
 set(TEST_TARGETS
         test_atom_basic
@@ -95,15 +100,11 @@ foreach(TEST_TARGET ${TEST_TARGETS})
         )
         add_executable(${TEST_TARGET}
                 ${TEST_ATOM_BASIC_SOURCES}
-                ${UTIL_SOURCES}
         )
     else()
-        add_executable(${TEST_TARGET}
-                test/${TEST_TARGET}.c
-                ${UTIL_SOURCES}
-        )
+        add_executable(${TEST_TARGET} test/${TEST_TARGET}.c)
     endif()
-    target_link_libraries(${TEST_TARGET} m)
+    target_link_libraries(${TEST_TARGET} apgcore)
     add_test(NAME ${TEST_TARGET} COMMAND ${TEST_TARGET})
     set_tests_properties(${TEST_TARGET} PROPERTIES
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
