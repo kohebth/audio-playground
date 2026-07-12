@@ -73,6 +73,16 @@ static int test_runtime_registry_contract(void) {
             apg_atom_profile_supported(entry->name, "m7_static") != ((entry->flags & APG_ATOM_M7_SAFE) != 0u))
             return fail("target profile compatibility is not derived from registry flags");
 
+        const bool expected_wasm = (entry->flags & APG_ATOM_WASM_SAFE) != 0u;
+        const bool expected_m7   = (entry->flags & APG_ATOM_M7_SAFE) != 0u;
+        if (apg_atom_profile_supported(entry->name, "wasm_realtime") != expected_wasm)
+            return fail("wasm profile support does not match registry flags");
+        if (apg_atom_profile_supported(entry->name, "m7_static") != expected_m7)
+            return fail("m7 profile support does not match registry flags");
+        if (!apg_atom_profile_supported(entry->name, "desktop_full") ||
+            !apg_atom_profile_supported(entry->name, "offline_render"))
+            return fail("desktop/offline profile support is unexpectedly disabled");
+
         for (int j = i + 1; j < count; ++j) {
             const atom_registry_entry_t *other = atom_registry_get(j);
             if (other && other->name && strcmp(entry->name, other->name) == 0)
@@ -130,8 +140,6 @@ int main(void) {
         return fail("state buffer capacity is missing");
     if (!strstr(json, "\"profiles\":{\"desktop_full\":true"))
         return fail("profile hints are missing");
-    if (!strstr(json, "\"m7_static\":false"))
-        return fail("restricted profile hint is missing");
     if (!apg_atom_profile_known("desktop_full") || !apg_atom_profile_known("wasm_realtime") ||
         !apg_atom_profile_known("m7_static") || !apg_atom_profile_known("offline_render"))
         return fail("known profile lookup failed");
@@ -153,6 +161,10 @@ int main(void) {
     if (apg_atom_contract_field_count("generation_dc", APG_ATOM_CONTRACT_CONFIG) != 1u)
         return fail("generation_dc metadata field count failed");
     if (expect_field("generation_dc", APG_ATOM_CONTRACT_CONFIG, "value", APG_ATOM_FIELD_SCALAR, true))
+        return 1;
+    if (expect_field("generation_lfo", APG_ATOM_CONTRACT_CONFIG, "sample_rate", APG_ATOM_FIELD_FLOAT, false))
+        return 1;
+    if (expect_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "sample_rate", APG_ATOM_FIELD_FLOAT, false))
         return 1;
     if (expect_field("mix_matrix", APG_ATOM_CONTRACT_IN, "signals", APG_ATOM_FIELD_SIGNAL_ARRAY, true))
         return 1;

@@ -1,3 +1,4 @@
+#include <apgcore/dsp/dsp_safety.h>
 #include <atom/dsp_atoms.h>
 #include <stddef.h>
 
@@ -15,23 +16,23 @@ void interpolation_cubic_process(
         return;
 
     const uint32_t frames = apg_process_frames_or_default(info);
-
     for (uint32_t i = 0; i < frames; ++i) {
-        float t  = in->t[i];
-        float t2 = t * t;
-        float t3 = t2 * t;
+        const float t  = apg_clamp_float(in->t[i], 0.0f, 1.0f);
+        const float t2 = t * t;
+        const float t3 = t2 * t;
 
-        float v0 = in->signal_n1[i];
-        float v1 = in->signal_a[i];
-        float v2 = in->signal_b[i];
-        float v3 = in->signal_c[i];
+        const float v0 = isfinite(in->signal_n1[i]) ? in->signal_n1[i] : 0.0f;
+        const float v1 = isfinite(in->signal_a[i]) ? in->signal_a[i] : 0.0f;
+        const float v2 = isfinite(in->signal_b[i]) ? in->signal_b[i] : 0.0f;
+        const float v3 = isfinite(in->signal_c[i]) ? in->signal_c[i] : 0.0f;
 
-        float a = -0.5f * v0 + 1.5f * v1 - 1.5f * v2 + 0.5f * v3;
-        float b = v0 - 2.5f * v1 + 2.0f * v2 - 0.5f * v3;
-        float c = -0.5f * v0 + 0.5f * v2;
-        float d = v1;
+        const float a = -0.5f * v0 + 1.5f * v1 - 1.5f * v2 + 0.5f * v3;
+        const float b = v0 - 2.5f * v1 + 2.0f * v2 - 0.5f * v3;
+        const float c = -0.5f * v0 + 0.5f * v2;
+        const float d = v1;
 
-        out->signal[i] = a * t3 + b * t2 + c * t + d;
+        const float sample = a * t3 + b * t2 + c * t + d;
+        out->signal[i]     = isfinite(sample) ? sample : 0.0f;
     }
 }
 

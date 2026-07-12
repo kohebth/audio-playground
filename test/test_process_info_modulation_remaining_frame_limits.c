@@ -167,6 +167,20 @@ int test_process_info_modulation_remaining_frame_limits(void) {
         }
         if (frames < 1024 && y[frames] != -99.0f)
             return fail("modulation_scrub_process wrote past info.frames");
+
+        pos[0] = -100.0f;
+        pos[1] = 999999.0f;
+        pos[2] = NAN;
+        modulation_scrub_process(&scrub_out, &scrub_in, &scrub_params, &scrub_state, &info);
+        if (!isfinite(y[0]) || !isfinite(y[1]) || !isfinite(y[2]))
+            return fail("modulation_scrub_process did not sanitize invalid positions");
+
+        scrub_params.buffer_size = 1;
+        modulation_scrub_process(&scrub_out, &scrub_in, &scrub_params, &scrub_state, &info);
+        for (int i = 0; i < frames; ++i) {
+            if (y[i] != 0.0f)
+                return fail("modulation_scrub_process invalid buffer size did not produce silence");
+        }
     }
 
     float                     invalid_buffer[2]   = {NAN, INFINITY};

@@ -1,3 +1,4 @@
+#include <apgcore/dsp/dsp_safety.h>
 #include <atom/dsp_atoms.h>
 #include <math.h>
 #include <stddef.h>
@@ -18,23 +19,23 @@ void nonlinear_waveshape_process(
 
     const uint32_t frames = apg_process_frames_or_default(info);
     int            size   = params->table_size;
-    if (size < 2)
+    if (size < 2) {
+        for (uint32_t i = 0; i < frames; ++i)
+            out->signal[i] = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
         return;
+    }
+    if (size > TABLE_SIZE)
+        size = TABLE_SIZE;
 
     for (uint32_t i = 0; i < frames; ++i) {
-        float x   = in->signal[i];
-        float pos = (x + 1.0f) * 0.5f * (float)(size - 1);
-
-        if (pos < 0.0f)
-            pos = 0.0f;
-        if (pos > (float)size - 2.0f)
-            pos = (float)size - 2.0f;
-
-        uint32_t idx_a = (uint32_t)floorf(pos);
-        uint32_t idx_b = idx_a + 1;
-        float    frac  = pos - floorf(pos);
-
-        out->signal[i] = params->transfer_table[idx_a] * (1.0f - frac) + params->transfer_table[idx_b] * frac;
+        const float    x     = apg_clamp_float(in->signal[i], -1.0f, 1.0f);
+        const float    pos   = apg_clamp_float((x + 1.0f) * 0.5f * (float)(size - 1), 0.0f, (float)(size - 2));
+        uint32_t       idx_a = (uint32_t)floorf(pos);
+        const uint32_t idx_b = idx_a + 1u;
+        const float    frac  = pos - (float)idx_a;
+        const float    a     = isfinite(params->transfer_table[idx_a]) ? params->transfer_table[idx_a] : 0.0f;
+        const float    b     = isfinite(params->transfer_table[idx_b]) ? params->transfer_table[idx_b] : a;
+        out->signal[i]       = a * (1.0f - frac) + b * frac;
     }
 }
 
