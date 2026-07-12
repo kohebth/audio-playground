@@ -12,8 +12,8 @@ int main(void) {
         apg_wasm_processor_abi_version() != APG_WASM_ABI_VERSION)
         return fail("control and processor ABI versions differ");
 
-    if (apg_wasm_control_capabilities() != APG_WASM_CAP_NONE)
-        return fail("control module advertises unfinished capabilities");
+    if (apg_wasm_control_capabilities() != APG_WASM_CAP_WORKSPACE)
+        return fail("control module workspace capability is incorrect");
     if (apg_wasm_processor_capabilities() != APG_WASM_CAP_NONE)
         return fail("processor module advertises unfinished capabilities");
 

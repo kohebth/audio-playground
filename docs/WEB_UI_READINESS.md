@@ -16,10 +16,11 @@ The APGCore v2 backend and web MVP surfaces are ready for production hardening. 
 
 This is not a hardware readiness declaration. STM32H7/M7 production deployment is not ready yet: the `m7_static` path is a bounded C11 export surface for compatible/simple projects, not proof that the full guitar-pedalboard project runs on target hardware. `wasm_realtime` now emits a deterministic scaffold (`.json` + `.mjs`) for future AudioWorklet integration.
 
-The real browser runtime is now tracked as the separate `wasm-tools/` project. Its foundation provides a versioned
-control/processor ABI, capability discovery, Emscripten build targets, and a build gate preventing browser dependencies
-from entering APGCore. Dynamic in-memory workspace compilation and AudioWorklet processing remain pending slices; the
-existing generated project-specific scaffold is not the frontend runtime authority.
+The real browser runtime is now tracked as the separate `wasm-tools/` project. Its versioned control ABI accepts
+revisioned in-memory project/unit YAML, resolves unit references without a filesystem, validates and compiles the entry
+project, and reports structured diagnostics and schedule summaries. Emscripten build targets and a build gate prevent
+browser dependencies from entering APGCore. Prepared runtime images and AudioWorklet processing remain pending slices;
+the existing generated project-specific scaffold is not the frontend runtime authority.
 
 ## Ready To Start Web UI When
 

@@ -8,8 +8,10 @@ The middleware is split into two modules:
 - `apg_control`: in-memory workspace validation, compilation, diagnostics, and prepared runtime images.
 - `apg_processor`: prepared-image hydration, real-time processing, controls, runtime swapping, and measurements.
 
-The current foundation exposes ABI version and capability discovery. Workspace and processor operations are added as
-independent vertical slices without adding browser dependencies to `inc/apgcore/` or `src/apgcore/`.
+The control module currently accepts a revisioned in-memory workspace, confines and resolves relative project unit
+paths within that workspace, validates all YAML through APGCore, and compiles the entry project. It exposes structured
+diagnostics and a compiled-workspace summary. Processor operations are added as independent vertical slices without
+adding browser dependencies to `inc/apgcore/` or `src/apgcore/`.
 
 ## Native verification
 

@@ -10,6 +10,12 @@ target_link_libraries(test_wasm_tools_abi apg_wasm_tools)
 add_test(NAME test_wasm_tools_abi COMMAND test_wasm_tools_abi)
 set_tests_properties(test_wasm_tools_abi PROPERTIES LABELS "v2;wasm-tools")
 
+add_executable(test_wasm_tools_workspace test/test_workspace.c)
+target_link_libraries(test_wasm_tools_workspace apg_wasm_tools)
+target_compile_definitions(test_wasm_tools_workspace PRIVATE APG_TEST_ROOT="${CMAKE_SOURCE_DIR}")
+add_test(NAME test_wasm_tools_workspace COMMAND test_wasm_tools_workspace)
+set_tests_properties(test_wasm_tools_workspace PROPERTIES LABELS "v2;wasm-tools")
+
 add_test(
         NAME test_wasm_tools_core_boundary
         COMMAND ${CMAKE_COMMAND} -DAPG_ROOT=${CMAKE_SOURCE_DIR}
@@ -23,7 +29,7 @@ if(EMSCRIPTEN)
     target_link_libraries(apg_control PRIVATE apgcore)
     target_link_options(apg_control PRIVATE
             "--no-entry"
-            "-sEXPORTED_FUNCTIONS=['_apg_wasm_control_abi_version','_apg_wasm_control_capabilities']"
+            "-sEXPORTED_FUNCTIONS=['_malloc','_free','_apg_wasm_control_abi_version','_apg_wasm_control_capabilities','_apg_wasm_control_create','_apg_wasm_control_destroy','_apg_wasm_control_begin_workspace','_apg_wasm_control_put_file','_apg_wasm_control_validate_workspace','_apg_wasm_control_compile_workspace','_apg_wasm_control_last_diagnostic','_apg_wasm_control_workspace_summary']"
             "-sFILESYSTEM=0"
             "-sMODULARIZE=1"
             "-sEXPORT_ES6=1"
