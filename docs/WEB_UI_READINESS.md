@@ -24,7 +24,9 @@ the processor hydrates it into an inactive runtime, commits matching revisions a
 replacements, processes mono audio, applies indexed controls, and reads real output meters. Worker/AudioWorklet and
 typed frontend integration are implemented through a versioned TypeScript facade. The editor debounces YAML workspace
 revisions, validates and prepares them in a Worker, stages valid images in an AudioWorklet, keeps failed edits away from
-the active runtime, and routes stable parameter/bypass names plus meter snapshots through the facade. Uploaded files
+the active runtime, and routes stable parameter/bypass names plus meter snapshots through the facade. Runtime image
+hydration and commit are separate Worklet messages; a newly announced editor revision invalidates stale preparation
+before commit, while failure state retains the affected revision and diagnostic. Uploaded files
 decode through WebAudio and feed the real processor Worklet; microphone capture remains a separate selectable input
 using the same runtime. Browser-managed storage/export and the remaining graph CRUD workflows are separate feature
 slices.

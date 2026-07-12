@@ -35,6 +35,7 @@ export class WasmBackend {
     workspaceRevision: 0,
     preparedRevision: 0,
     activeRevision: 0,
+    failedRevision: 0,
     lastError: null,
   };
 
@@ -110,7 +111,7 @@ export class WasmBackend {
     }
     this.processorPending.delete(response.id);
     if (response.ok) {
-      if (response.type === 'staged') {
+      if (response.type === 'committed') {
         this.state = { ...this.state, phase: 'running', activeRevision: response.revision };
       }
       pending.resolve(response);
@@ -119,13 +120,41 @@ export class WasmBackend {
     }
   }
 
+  private recordRuntimeError(revision: number, phase: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    this.state = {
+      ...this.state,
+      phase: 'error',
+      failedRevision: revision,
+      lastError: {
+        revision,
+        status: -1,
+        phase,
+        code: 'APG_WASM_PROCESSOR_ERROR',
+        file: '',
+        path: '',
+        message,
+      },
+    };
+  }
+
+  setCurrentRevision(revision: number): void {
+    if (!Number.isSafeInteger(revision) || revision <= 0) throw new Error('Workspace revision must be a positive integer');
+    if (revision < this.state.workspaceRevision) throw new Error('Workspace revision cannot move backwards');
+    if (revision === this.state.workspaceRevision) return;
+    this.state = { ...this.state, workspaceRevision: revision, lastError: null };
+  }
+
   async replaceWorkspace(snapshot: WorkspaceSnapshot): Promise<ValidationResult> {
-    this.state = { ...this.state, phase: 'validating', workspaceRevision: snapshot.revision, lastError: null };
+    this.setCurrentRevision(snapshot.revision);
+    this.state = { ...this.state, phase: 'validating', lastError: null };
     const response = await this.controlRequest({ type: 'replaceWorkspace', snapshot });
     if (response.type !== 'validated') throw new Error(`Unexpected control response: ${response.type}`);
+    if (snapshot.revision !== this.state.workspaceRevision) return response.result;
     this.state = {
       ...this.state,
       phase: response.result.ok ? 'idle' : 'error',
+      failedRevision: response.result.ok ? this.state.failedRevision : snapshot.revision,
       lastError: response.result.ok ? null : response.result.diagnostic,
     };
     if (response.result.ok) this.validatedRevision = snapshot.revision;
@@ -133,13 +162,22 @@ export class WasmBackend {
   }
 
   async prepare(revision: number, audio: AudioConfig): Promise<PreparedRuntime> {
+    if (revision !== this.state.workspaceRevision) throw new Error(`Workspace revision ${revision} is stale`);
     this.state = { ...this.state, phase: 'preparing', lastError: null };
-    const response = await this.controlRequest({ type: 'prepare', revision, audio });
+    let response: ControlResponse;
+    try {
+      response = await this.controlRequest({ type: 'prepare', revision, audio });
+    } catch (error) {
+      if (revision === this.state.workspaceRevision) {
+        this.state = { ...this.state, phase: 'error', failedRevision: revision };
+      }
+      throw error;
+    }
     if (response.type !== 'prepared') throw new Error(`Unexpected control response: ${response.type}`);
+    if (revision !== this.state.workspaceRevision) throw new Error(`Prepared revision ${revision} is stale`);
     this.prepared = response.runtime;
     this.preparedImage = response.image;
     this.state = { ...this.state, phase: 'ready', preparedRevision: revision };
-    if (this.node) await this.stagePrepared();
     return response.runtime;
   }
 
@@ -151,10 +189,28 @@ export class WasmBackend {
     return this.prepare(snapshot.revision, audio);
   }
 
-  private async stagePrepared() {
-    if (!this.prepared || !this.preparedImage) return;
+  async commitPrepared(revision: number): Promise<void> {
+    if (revision !== this.state.workspaceRevision) throw new Error(`Prepared revision ${revision} is stale`);
+    if (!this.prepared || !this.preparedImage || this.prepared.revision !== revision) {
+      throw new Error(`Revision ${revision} is not prepared`);
+    }
+    if (!this.node) throw new Error('AudioWorklet is not started');
     const image = this.preparedImage.slice(0);
-    await this.processorRequest({ type: 'stage', revision: this.prepared.revision, image }, [image]);
+    try {
+      await this.processorRequest({ type: 'stage', revision: this.prepared.revision, image }, [image]);
+    } catch (error) {
+      if (revision === this.state.workspaceRevision) this.recordRuntimeError(revision, 'hydrate', error);
+      throw error;
+    }
+    if (revision !== this.state.workspaceRevision) throw new Error(`Staged revision ${revision} is stale`);
+    let response: ProcessorResponse;
+    try {
+      response = await this.processorRequest({ type: 'commit', revision });
+    } catch (error) {
+      if (revision === this.state.workspaceRevision) this.recordRuntimeError(revision, 'commit', error);
+      throw error;
+    }
+    if (response.type !== 'committed') throw new Error(`Unexpected processor response: ${response.type}`);
   }
 
   async start(options: StartOptions = {}): Promise<void> {
@@ -182,7 +238,7 @@ export class WasmBackend {
     await processorReady;
     options.input?.connect(this.node);
     this.node.connect(options.output ?? this.context.destination);
-    if (this.prepared) await this.stagePrepared();
+    if (this.prepared) await this.commitPrepared(this.prepared.revision);
     this.state = { ...this.state, phase: 'running' };
   }
 

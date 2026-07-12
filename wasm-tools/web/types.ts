@@ -54,6 +54,7 @@ export type BackendState = {
   workspaceRevision: number;
   preparedRevision: number;
   activeRevision: number;
+  failedRevision: number;
   lastError: WasmDiagnostic | null;
 };
 

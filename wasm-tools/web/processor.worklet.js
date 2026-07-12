@@ -63,11 +63,17 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
         return;
       }
       this.module.HEAPU8.set(bytes, pointer);
-      let status = this.module._apg_wasm_processor_stage_image(this.processor, pointer, bytes.byteLength);
+      const status = this.module._apg_wasm_processor_stage_image(this.processor, pointer, bytes.byteLength);
       this.module._free(pointer);
-      if (status === 0) status = this.module._apg_wasm_processor_commit_staged(this.processor, BigInt(request.revision));
       this.reply(
         status === 0 ? { id: request.id, ok: true, type: "staged", revision: request.revision } : { id: request.id, ok: false, type: "error", message: `Runtime stage failed with status ${status}` }
+      );
+      return;
+    }
+    if (request.type === "commit") {
+      const status = this.module._apg_wasm_processor_commit_staged(this.processor, BigInt(request.revision));
+      this.reply(
+        status === 0 ? { id: request.id, ok: true, type: "committed", revision: request.revision } : { id: request.id, ok: false, type: "error", message: `Runtime commit failed with status ${status}` }
       );
       return;
     }

@@ -15,6 +15,7 @@ export type ControlResponse =
 
 export type ProcessorRequest =
   | { id: number; type: 'stage'; revision: number; image: ArrayBuffer }
+  | { id: number; type: 'commit'; revision: number }
   | { id: number; type: 'setParam'; index: number; value: number }
   | { id: number; type: 'setBypass'; index: number; enabled: boolean }
   | { id: number; type: 'setMute'; enabled: boolean }
@@ -24,6 +25,7 @@ export type ProcessorRequest =
 export type ProcessorResponse =
   | { id: 0; ok: true; type: 'initialized' }
   | { id: number; ok: true; type: 'staged'; revision: number }
+  | { id: number; ok: true; type: 'committed'; revision: number }
   | { id: number; ok: true; type: 'command' }
   | { id: number; ok: true; type: 'disposed' }
   | { id: 0; ok: true; type: 'meter'; meter: { peak: number; rms: number; frames: number; valid: boolean } }

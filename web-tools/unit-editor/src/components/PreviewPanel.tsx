@@ -106,6 +106,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
           blockFrames: 128,
         });
         if (revision !== revisionRef.current) return false;
+        if (runningRef.current) await backend.commitPrepared(revision);
+        if (revision !== revisionRef.current) return false;
         setDiagnostic(`Revision ${revision} prepared for live audio.`);
       }
       setPhase(runningRef.current ? 'running' : prepare ? 'ready' : 'idle');
@@ -117,6 +119,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
   useEffect(() => {
     if (!backend) return;
     revisionRef.current += 1;
+    backend.setCurrentRevision(revisionRef.current);
     const timer = window.setTimeout(() => {
       void syncWorkspace(runningRef.current).catch(error => {
         if (revisionRef.current < 1) return;

@@ -135,7 +135,13 @@ includesContent(previewPanel, 'backend.getMeters()', 'preview meters must come f
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
 includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
 includesContent(wasmFacade, 'processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary }', 'WASM bytes must be transferred during Worklet construction');
+includesContent(wasmFacade, 'setCurrentRevision(revision: number)', 'editor revisions must invalidate stale async work immediately');
+includesContent(wasmFacade, 'Prepared revision ${revision} is stale', 'stale prepared images must be rejected');
+includesContent(wasmFacade, "type: 'stage'", 'runtime hydration must be a separate processor message');
+includesContent(wasmFacade, "type: 'commit'", 'runtime commit must be a separate processor message');
+includesContent(wasmFacade, 'failedRevision: revision', 'runtime failures must identify their workspace revision');
 includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');
+includesContent(processorWorklet, 'request.type === "commit"', 'Worklet must commit only through an explicit message');
 assert(!processorWorklet.includes('import(moduleUrl)'), 'dynamic import must not run in WorkletGlobalScope');
 assert(!previewPanel.includes('createDeterministicPreviewAdapter'), 'deterministic preview adapter must not remain active');
 
