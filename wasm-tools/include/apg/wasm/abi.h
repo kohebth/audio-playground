@@ -48,7 +48,8 @@ typedef struct {
     const char       *message;
 } apg_wasm_diagnostic_t;
 
-typedef struct apg_wasm_control apg_wasm_control_t;
+typedef struct apg_wasm_control   apg_wasm_control_t;
+typedef struct apg_wasm_processor apg_wasm_processor_t;
 
 typedef struct {
     uint64_t revision;
@@ -59,6 +60,13 @@ typedef struct {
     uint32_t signal_count;
     uint32_t param_count;
 } apg_wasm_workspace_summary_t;
+
+typedef struct {
+    float    peak;
+    float    rms;
+    uint32_t frames;
+    uint32_t valid;
+} apg_wasm_meter_snapshot_t;
 
 uint32_t            apg_wasm_control_abi_version(void);
 uint32_t            apg_wasm_control_capabilities(void);
@@ -75,11 +83,30 @@ apg_wasm_status_t apg_wasm_control_put_file(
     const char          *content,
     size_t               content_len
 );
-apg_wasm_status_t                   apg_wasm_control_validate_workspace(apg_wasm_control_t *control);
-apg_wasm_status_t                   apg_wasm_control_compile_workspace(apg_wasm_control_t *control);
-const apg_wasm_diagnostic_t        *apg_wasm_control_last_diagnostic(const apg_wasm_control_t *control);
+apg_wasm_status_t apg_wasm_control_validate_workspace(apg_wasm_control_t *control);
+apg_wasm_status_t apg_wasm_control_compile_workspace(apg_wasm_control_t *control);
+apg_wasm_status_t
+apg_wasm_control_prepare_workspace(apg_wasm_control_t *control, const apg_wasm_audio_config_t *config);
+const unsigned char         *apg_wasm_control_prepared_image(const apg_wasm_control_t *control, size_t *out_size);
+const apg_wasm_diagnostic_t *apg_wasm_control_last_diagnostic(const apg_wasm_control_t *control);
 const apg_wasm_workspace_summary_t *apg_wasm_control_workspace_summary(const apg_wasm_control_t *control);
 uint32_t                            apg_wasm_processor_abi_version(void);
 uint32_t                            apg_wasm_processor_capabilities(void);
+apg_wasm_processor_t               *apg_wasm_processor_create(void);
+void                                apg_wasm_processor_destroy(apg_wasm_processor_t *processor);
+apg_wasm_status_t
+apg_wasm_processor_stage_image(apg_wasm_processor_t *processor, const unsigned char *image, size_t image_size);
+apg_wasm_status_t apg_wasm_processor_commit_staged(apg_wasm_processor_t *processor, uint64_t revision);
+float            *apg_wasm_processor_input_buffer(apg_wasm_processor_t *processor);
+const float      *apg_wasm_processor_output_buffer(const apg_wasm_processor_t *processor);
+uint32_t          apg_wasm_processor_frame_capacity(const apg_wasm_processor_t *processor);
+uint64_t          apg_wasm_processor_active_revision(const apg_wasm_processor_t *processor);
+apg_wasm_status_t apg_wasm_processor_process(apg_wasm_processor_t *processor, uint32_t frames);
+apg_wasm_status_t apg_wasm_processor_set_param(apg_wasm_processor_t *processor, uint32_t index, float value);
+apg_wasm_status_t apg_wasm_processor_set_bypass(apg_wasm_processor_t *processor, uint32_t index, uint32_t enabled);
+apg_wasm_status_t apg_wasm_processor_set_mute(apg_wasm_processor_t *processor, uint32_t enabled);
+apg_wasm_status_t apg_wasm_processor_reset(apg_wasm_processor_t *processor);
+const apg_wasm_meter_snapshot_t *apg_wasm_processor_output_meter(apg_wasm_processor_t *processor);
+const apg_wasm_diagnostic_t     *apg_wasm_processor_last_diagnostic(const apg_wasm_processor_t *processor);
 
 #endif // AUDIO_PLAYGROUND_WASM_TOOLS_ABI_H

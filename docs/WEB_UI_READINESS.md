@@ -19,8 +19,11 @@ This is not a hardware readiness declaration. STM32H7/M7 production deployment i
 The real browser runtime is now tracked as the separate `wasm-tools/` project. Its versioned control ABI accepts
 revisioned in-memory project/unit YAML, resolves unit references without a filesystem, validates and compiles the entry
 project, and reports structured diagnostics and schedule summaries. Emscripten build targets and a build gate prevent
-browser dependencies from entering APGCore. Prepared runtime images and AudioWorklet processing remain pending slices;
-the existing generated project-specific scaffold is not the frontend runtime authority.
+browser dependencies from entering APGCore. The control module now emits a checksummed pointer-free registry image;
+the processor hydrates it into an inactive runtime, commits matching revisions at block boundaries, crossfades runtime
+replacements, processes mono audio, applies indexed controls, and reads real output meters. Worker/AudioWorklet and
+typed frontend integration remain pending; the existing generated project-specific scaffold is not the frontend
+runtime authority.
 
 ## Ready To Start Web UI When
 

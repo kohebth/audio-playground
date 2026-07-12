@@ -12,10 +12,12 @@ int main(void) {
         apg_wasm_processor_abi_version() != APG_WASM_ABI_VERSION)
         return fail("control and processor ABI versions differ");
 
-    if (apg_wasm_control_capabilities() != APG_WASM_CAP_WORKSPACE)
-        return fail("control module workspace capability is incorrect");
-    if (apg_wasm_processor_capabilities() != APG_WASM_CAP_NONE)
-        return fail("processor module advertises unfinished capabilities");
+    if (apg_wasm_control_capabilities() != (APG_WASM_CAP_WORKSPACE | APG_WASM_CAP_PREPARED_IMAGE))
+        return fail("control module capabilities are incorrect");
+    const uint32_t processor_capabilities =
+        APG_WASM_CAP_PREPARED_IMAGE | APG_WASM_CAP_PROCESS | APG_WASM_CAP_CONTROLS | APG_WASM_CAP_METERS;
+    if (apg_wasm_processor_capabilities() != processor_capabilities)
+        return fail("processor module capabilities are incorrect");
 
     return 0;
 }

@@ -1,6 +1,7 @@
 #include <apg/wasm/abi.h>
 
 #include <apgcore/compiler/project_compiler_v2.h>
+#include <apgcore/registry/registry_builder_v2.h>
 #include <apgcore/validator/project_v2.h>
 #include <apgcore/validator/project_validator_v2.h>
 #include <apgcore/validator/unit_v2.h>
@@ -11,6 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "image.h"
 
 #define APG_WASM_DEFAULT_ARENA_BYTES (4u * 1024u * 1024u)
 #define APG_WASM_DIAGNOSTIC_TEXT     128u
@@ -32,6 +35,10 @@ struct apg_wasm_control {
     uc_arena                     arena;
     apg_project_v2_resolved_t    resolved;
     apg_project_v2_compiled_t    compiled;
+    uc_arena                     registry_arena;
+    apg_v2_registry_t            registry;
+    unsigned char               *prepared_image;
+    size_t                       prepared_image_size;
     bool                         validated;
     bool                         compiled_ok;
     apg_wasm_diagnostic_t        diagnostic;
@@ -116,14 +123,19 @@ static void clear_workspace(apg_wasm_control_t *control) {
     }
     free(control->files);
     free(control->entry_project);
-    control->files          = NULL;
-    control->files_len      = 0u;
-    control->files_capacity = 0u;
-    control->entry_project  = NULL;
-    control->validated      = false;
-    control->compiled_ok    = false;
+    free(control->prepared_image);
+    uc_arena_free(&control->registry_arena);
+    control->files               = NULL;
+    control->files_len           = 0u;
+    control->files_capacity      = 0u;
+    control->entry_project       = NULL;
+    control->prepared_image      = NULL;
+    control->prepared_image_size = 0u;
+    control->validated           = false;
+    control->compiled_ok         = false;
     memset(&control->resolved, 0, sizeof(control->resolved));
     memset(&control->compiled, 0, sizeof(control->compiled));
+    memset(&control->registry, 0, sizeof(control->registry));
     memset(&control->summary, 0, sizeof(control->summary));
     uc_arena_reset(&control->arena);
 }
@@ -318,7 +330,7 @@ static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
 
 uint32_t apg_wasm_control_abi_version(void) { return APG_WASM_ABI_VERSION; }
 
-uint32_t apg_wasm_control_capabilities(void) { return APG_WASM_CAP_WORKSPACE; }
+uint32_t apg_wasm_control_capabilities(void) { return APG_WASM_CAP_WORKSPACE | APG_WASM_CAP_PREPARED_IMAGE; }
 
 apg_wasm_control_t *apg_wasm_control_create(size_t arena_bytes) {
     apg_wasm_control_t *control = calloc(1u, sizeof(*control));
@@ -442,6 +454,39 @@ apg_wasm_status_t apg_wasm_control_compile_workspace(apg_wasm_control_t *control
     control->summary.signal_count   = (uint32_t)control->compiled.expanded_unit.signals_len;
     control->summary.param_count    = (uint32_t)control->compiled.expanded_unit.params_len;
     return set_diagnostic(control, APG_WASM_STATUS_OK, "compile", "APG_OK", control->entry_project, "$", "");
+}
+
+apg_wasm_status_t
+apg_wasm_control_prepare_workspace(apg_wasm_control_t *control, const apg_wasm_audio_config_t *config) {
+    if (!control || !config || config->revision != control->revision || config->sample_rate == 0u ||
+        config->block_frames == 0u)
+        return APG_WASM_STATUS_INVALID_ARGUMENT;
+    apg_wasm_status_t status = apg_wasm_control_compile_workspace(control);
+    if (status != APG_WASM_STATUS_OK)
+        return status;
+
+    uc_error        error = {0};
+    const uc_status uc    = apg_v2_registry_build_with_growth(
+        &control->compiled.plan, config->block_frames, (float)config->sample_rate, &control->registry_arena,
+        &control->registry, &error
+    );
+    if (uc != UC_OK)
+        return report_compile_error(control, control->entry_project, "$.registry", &error);
+
+    unsigned char *image      = NULL;
+    size_t         image_size = 0u;
+    if (!apg_wasm_image_build(&control->registry, control->revision, &image, &image_size, &error))
+        return report_compile_error(control, control->entry_project, "$.image", &error);
+    free(control->prepared_image);
+    control->prepared_image      = image;
+    control->prepared_image_size = image_size;
+    return set_diagnostic(control, APG_WASM_STATUS_OK, "prepare", "APG_OK", control->entry_project, "$", "");
+}
+
+const unsigned char *apg_wasm_control_prepared_image(const apg_wasm_control_t *control, size_t *out_size) {
+    if (out_size)
+        *out_size = control ? control->prepared_image_size : 0u;
+    return control ? control->prepared_image : NULL;
 }
 
 const apg_wasm_diagnostic_t *apg_wasm_control_last_diagnostic(const apg_wasm_control_t *control) {

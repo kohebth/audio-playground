@@ -13,6 +13,15 @@ paths within that workspace, validates all YAML through APGCore, and compiles th
 diagnostics and a compiled-workspace summary. Processor operations are added as independent vertical slices without
 adding browser dependencies to `inc/apgcore/` or `src/apgcore/`.
 
+`prepare` lowers the compiled registry into a checksummed, little-endian, pointer-free image. The processor hydrates
+that image in an inactive arena, resolves atom names against its own compiled registry, and constructs a separate
+runtime. A matching revision can then be committed at a process-block boundary. Replacing an active runtime processes
+both graphs for one block and crossfades their mono outputs before releasing the old runtime.
+
+The processor ABI currently provides fixed-capacity input/output buffers, block processing, indexed parameter and
+bypass updates, project mute/reset, active revision reads, structured errors, and an APGCore measure-backed output
+meter. Name-to-index mapping belongs in the TypeScript facade and never runs in the audio callback.
+
 ## Native verification
 
 Configure and test from the repository root:
