@@ -490,11 +490,13 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
         <button className="btn btn--ghost" disabled={!backend} onClick={() => void compile()} type="button">
           Compile
         </button>
-        <button className="btn btn--ghost" disabled={!backend || running} onClick={() => void start()} type="button">
-          Start
-        </button>
-        <button className="btn btn--ghost" disabled={!running} onClick={() => void stop()} type="button">
-          Stop
+        <button
+          className="btn btn--ghost"
+          disabled={!backend}
+          onClick={() => void (running ? stop() : start())}
+          type="button"
+        >
+          {running ? 'Stop' : 'Start'}
         </button>
         <button className="btn btn--ghost" disabled={!running} onClick={() => void reset()} type="button">
           Reset

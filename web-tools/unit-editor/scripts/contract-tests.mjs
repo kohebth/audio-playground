@@ -155,6 +155,7 @@ includesContent(previewPanel, 'decodeAudioData', 'live preview must decode uploa
 includesContent(previewPanel, 'createBufferSource', 'uploaded files must use a WebAudio buffer source');
 includesContent(previewPanel, "type InputMode = 'file' | 'microphone'", 'file and microphone transports must remain separate');
 includesContent(previewPanel, 'backend.reset()', 'live preview reset must use the WASM backend');
+includesContent(previewPanel, "running ? stop() : start()", 'live engine start and stop must share one control');
 includesContent(previewPanel, 'backend.setParam', 'live parameter controls must use the WASM backend');
 includesContent(previewPanel, 'previousOverridesRef', 'live parameter synchronization must detect reset values');
 includesContent(previewPanel, 'override.originalValue', 'removed overrides must restore the original runtime value');
