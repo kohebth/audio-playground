@@ -49,6 +49,14 @@ function outputLatencyMs(context: AudioContext): number | null {
   return base > 0 || device > 0 ? (base + device) * 1000 : null;
 }
 
+const lowLatencyMicrophoneConstraints = {
+  autoGainControl: false,
+  channelCount: 1,
+  echoCancellation: false,
+  latency: { ideal: 0 },
+  noiseSuppression: false,
+} as MediaTrackConstraints & { latency: { ideal: number } };
+
 export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: Props) {
   const { setController } = useLiveBypass();
   const [backend, setBackend] = useState<WasmBackend | null>(null);
@@ -102,7 +110,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
   }, [refreshBackendState]);
 
   useEffect(() => {
-    const context = new AudioContext();
+    const context = new AudioContext({ latencyHint: 'interactive' });
     contextRef.current = context;
     let disposed = false;
     void WasmBackend.create({
@@ -287,7 +295,9 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
         fileSourceRef.current = source;
         input = source;
       } else {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: lowLatencyMicrophoneConstraints,
+        });
         const source = context.createMediaStreamSource(stream);
         streamRef.current = stream;
         inputRef.current = source;

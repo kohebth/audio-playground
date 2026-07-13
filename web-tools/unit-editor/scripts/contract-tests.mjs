@@ -179,6 +179,8 @@ includesContent(previewPanel, '.pollMeters()', 'preview meters must use throttle
 includesContent(previewPanel, 'outputLatencyMs', 'live preview must calculate browser-reported output latency');
 includesContent(app, '<LiveLatencyBadge />', 'live output latency must remain visible outside the inspector');
 includesContent(liveLatencyBadge, 'Output est.', 'live output latency badge is missing its label');
+includesContent(previewPanel, "latencyHint: 'interactive'", 'live preview must request interactive browser latency');
+includesContent(previewPanel, 'latency: { ideal: 0 }', 'microphone preview must request the lowest available capture latency');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
 includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
 includesContent(wasmFacade, 'processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary }', 'WASM bytes must be transferred during Worklet construction');
