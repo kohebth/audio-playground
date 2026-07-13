@@ -29,6 +29,11 @@ export type UnitGraphDraft = {
   nodes: UnitGraphNode[];
 };
 
+export type UnitConnectionEndpoint = {
+  nodeId: string;
+  field: string;
+};
+
 type UnitDocument = Record<string, unknown> & {
   params?: Record<string, unknown>;
   graph?: {
@@ -156,6 +161,133 @@ function uniqueName(existing: Set<string>, base: string): string {
 
 function atomDefaultValue(type: string): string {
   return type === 'int' || type === 'uint' || type === 'bool' ? '0' : '0.0';
+}
+
+function catalogNode(catalog: AtomCatalog, node: UnitGraphNode): AtomCatalogAtom {
+  const atom = catalog.atoms.find(item => item.name === node.atom);
+  if (!atom) throw new Error(`Atom "${node.atom}" is not available in the catalog.`);
+  return atom;
+}
+
+function compatibleFields(source: AtomCatalogAtom['outputs'][number], target: AtomCatalogAtom['inputs'][number]): boolean {
+  return source.type === target.type &&
+    (source.buffer_samples === undefined || target.buffer_samples === undefined || source.buffer_samples === target.buffer_samples);
+}
+
+function wouldCreateCycle(nodes: UnitGraphNode[], sourceId: string, targetId: string, replacedTarget?: UnitConnectionEndpoint): boolean {
+  if (sourceId === targetId) return true;
+  const producerBySignal = new Map<string, string>();
+  for (const node of nodes) {
+    for (const signal of Object.values(node.out)) if (signal) producerBySignal.set(signal, node.id);
+  }
+  const adjacency = new Map<string, Set<string>>();
+  for (const node of nodes) {
+    for (const [field, signal] of Object.entries(node.in)) {
+      if (replacedTarget?.nodeId === node.id && replacedTarget.field === field) continue;
+      const producer = producerBySignal.get(signal);
+      if (!producer) continue;
+      const targets = adjacency.get(producer) ?? new Set<string>();
+      targets.add(node.id);
+      adjacency.set(producer, targets);
+    }
+  }
+  const pending = [targetId];
+  const visited = new Set<string>();
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current || visited.has(current)) continue;
+    if (current === sourceId) return true;
+    visited.add(current);
+    for (const next of adjacency.get(current) ?? []) pending.push(next);
+  }
+  return false;
+}
+
+function connectUnitNodesInternal(
+  content: string,
+  catalog: AtomCatalog,
+  source: UnitConnectionEndpoint,
+  target: UnitConnectionEndpoint,
+  replace: boolean,
+): string {
+  const doc = loadDocument(content);
+  const draft = parseGraphFromDocument(doc);
+  const sourceNode = draft.nodes.find(node => node.id === source.nodeId);
+  const targetNode = draft.nodes.find(node => node.id === target.nodeId);
+  if (!sourceNode) throw new Error(`Source atom node "${source.nodeId}" was not found.`);
+  if (!targetNode) throw new Error(`Target atom node "${target.nodeId}" was not found.`);
+  const sourceField = catalogNode(catalog, sourceNode).outputs.find(field => field.name === source.field);
+  const targetField = catalogNode(catalog, targetNode).inputs.find(field => field.name === target.field);
+  if (!sourceField) throw new Error(`"${source.nodeId}.${source.field}" is not an atom output.`);
+  if (!targetField) throw new Error(`"${target.nodeId}.${target.field}" is not an atom input.`);
+  if (!compatibleFields(sourceField, targetField)) {
+    throw new Error(`Cannot connect ${sourceField.type} output to ${targetField.type} input.`);
+  }
+  const signal = sourceNode.out[source.field];
+  if (!signal) throw new Error(`Source output "${source.nodeId}.${source.field}" has no signal.`);
+  if (!replace && targetNode.in[target.field]) {
+    throw new Error(`Target input "${target.nodeId}.${target.field}" is already connected.`);
+  }
+  if (wouldCreateCycle(draft.nodes, source.nodeId, target.nodeId, target)) {
+    throw new Error(`Connection ${source.nodeId}.${source.field} -> ${target.nodeId}.${target.field} creates a cycle.`);
+  }
+  targetNode.in[target.field] = signal;
+  return serializeUnitGraphNodeUpdate(content, targetNode);
+}
+
+export function connectUnitNodes(
+  content: string,
+  catalog: AtomCatalog,
+  source: UnitConnectionEndpoint,
+  target: UnitConnectionEndpoint,
+): string {
+  return connectUnitNodesInternal(content, catalog, source, target, false);
+}
+
+export function replaceUnitConnection(
+  content: string,
+  catalog: AtomCatalog,
+  source: UnitConnectionEndpoint,
+  target: UnitConnectionEndpoint,
+): string {
+  return connectUnitNodesInternal(content, catalog, source, target, true);
+}
+
+export function disconnectUnitInput(content: string, target: UnitConnectionEndpoint): string {
+  const draft = parseUnitGraphDraft(content);
+  const node = draft.nodes.find(item => item.id === target.nodeId);
+  if (!node) throw new Error(`Target atom node "${target.nodeId}" was not found.`);
+  if (!(target.field in node.in)) throw new Error(`"${target.nodeId}.${target.field}" is not a bound atom input.`);
+  node.in[target.field] = '';
+  return serializeUnitGraphNodeUpdate(content, node);
+}
+
+export function moveUnitConnection(
+  content: string,
+  catalog: AtomCatalog,
+  from: UnitConnectionEndpoint,
+  to: UnitConnectionEndpoint,
+): string {
+  const draft = parseUnitGraphDraft(content);
+  const oldTarget = draft.nodes.find(node => node.id === from.nodeId);
+  if (!oldTarget) throw new Error(`Target atom node "${from.nodeId}" was not found.`);
+  const signal = oldTarget.in[from.field];
+  if (!signal) throw new Error(`Target input "${from.nodeId}.${from.field}" is not connected.`);
+  const source = draft.nodes.flatMap(node => Object.entries(node.out).map(([field, value]) => ({ nodeId: node.id, field, value })))
+    .find(output => output.value === signal);
+  if (!source) throw new Error(`Connection source for signal "${signal}" was not found.`);
+  const disconnected = disconnectUnitInput(content, from);
+  return connectUnitNodes(disconnected, catalog, source, to);
+}
+
+export function reconnectUnitConnection(
+  content: string,
+  catalog: AtomCatalog,
+  from: UnitConnectionEndpoint,
+  source: UnitConnectionEndpoint,
+  target: UnitConnectionEndpoint,
+): string {
+  return connectUnitNodes(disconnectUnitInput(content, from), catalog, source, target);
 }
 
 function portSignals(value: unknown): string[] {

@@ -12,13 +12,17 @@ import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
 import { buildParamDrafts, buildParamOverrides, countDirtyParams, paramDraftKey } from './lib/projectParams';
 import {
   addAtomNodeToUnit,
+  connectUnitNodes,
   createUnitV2,
+  disconnectUnitInput,
   pasteAtomNodeIntoUnit,
   parseUnitGraphDraft,
   removeAtomNodeFromUnit,
+  reconnectUnitConnection,
   serializeUnitGraphNodeUpdate,
   updateProjectInstanceParam,
   type UnitGraphNode,
+  type UnitConnectionEndpoint,
 } from './lib/unitV2Graph';
 import './App.css';
 
@@ -32,8 +36,19 @@ type CanvasMode = 'project' | 'contract';
 
 const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v1';
 
-function normalizeWorkspacePath(path: string): string {
-  return path.replace(/^\.\.\//, '').replace(/^\.\//, '');
+function resolveWorkspacePath(baseFile: string, reference: string): string {
+  const segments = baseFile.split('/');
+  segments.pop();
+  for (const segment of reference.split('/')) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      if (segments.length === 0) throw new Error(`Workspace reference "${reference}" escapes its root.`);
+      segments.pop();
+    } else {
+      segments.push(segment);
+    }
+  }
+  return segments.join('/');
 }
 
 function loadWorkspaceFiles(): WorkspaceFile[] {
@@ -85,7 +100,7 @@ export default function App() {
   const selectedUnitWorkspaceFile = useMemo(() => {
     if (selectedNode?.kind !== 'unit') return selectedWorkspaceFile;
 
-    const path = normalizeWorkspacePath(selectedNode.unit.file);
+    const path = resolveWorkspacePath(backendSamples.project.file, selectedNode.unit.file);
     return workspaceFiles.find(file => file.path === path) ?? selectedWorkspaceFile;
   }, [selectedNode, selectedWorkspaceFile, workspaceFiles]);
   const selectedUnitGraph = useMemo(() => {
@@ -117,7 +132,7 @@ export default function App() {
     const node = nodes.find(item => item.id === id)?.data;
     if (!node || node.kind !== 'unit') return;
 
-    const path = normalizeWorkspacePath(node.unit.file);
+    const path = resolveWorkspacePath(backendSamples.project.file, node.unit.file);
     setSelectedId(id);
     setSelectedRouteIndex(null);
     setSelectedWorkspacePath(path);
@@ -224,6 +239,23 @@ export default function App() {
     if (!selectedAtom) return;
     updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
   }, [selectedAtom, updateSelectedUnitFile]);
+
+  const connectAtoms = useCallback((source: UnitConnectionEndpoint, target: UnitConnectionEndpoint) => {
+    updateSelectedUnitFile(content => connectUnitNodes(content, backendSamples.atomCatalog, source, target));
+  }, [updateSelectedUnitFile]);
+
+  const reconnectAtoms = useCallback((
+    previousTarget: UnitConnectionEndpoint,
+    source: UnitConnectionEndpoint,
+    target: UnitConnectionEndpoint,
+  ) => {
+    updateSelectedUnitFile(content =>
+      reconnectUnitConnection(content, backendSamples.atomCatalog, previousTarget, source, target));
+  }, [updateSelectedUnitFile]);
+
+  const disconnectAtom = useCallback((target: UnitConnectionEndpoint) => {
+    updateSelectedUnitFile(content => disconnectUnitInput(content, target));
+  }, [updateSelectedUnitFile]);
 
   const copySelectedAtom = useCallback(() => {
     if (selectedAtom) setAtomClipboard(selectedAtom);
@@ -333,7 +365,10 @@ export default function App() {
             selectedUnitLabel={selectedNode.unit.name}
             workspaceFile={selectedUnitWorkspaceFile}
             onBackToProject={() => setCanvasMode('project')}
+            onConnectAtoms={connectAtoms}
+            onDisconnectAtom={disconnectAtom}
             onOpenAtomInspector={openAtomInspector}
+            onReconnectAtoms={reconnectAtoms}
             onSelectAtom={selectAtom}
           />
         ) : (

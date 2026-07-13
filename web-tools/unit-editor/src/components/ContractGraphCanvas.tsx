@@ -1,4 +1,4 @@
-import { memo, useMemo, type CSSProperties } from 'react';
+import { memo, useEffect, useMemo, type CSSProperties } from 'react';
 import {
   Background,
   Controls,
@@ -8,14 +8,17 @@ import {
   ReactFlow,
   ReactFlowProvider,
   type Edge,
+  type Connection,
   type Node,
   type NodeProps,
   type NodeTypes,
+  useEdgesState,
+  useNodesState,
 } from '@xyflow/react';
 import dagre from 'dagre';
 
 import type { AtomCatalog, WorkspaceFile } from '../lib/backendSamples';
-import { parseUnitGraphDraft, type UnitGraphDraft } from '../lib/unitV2Graph';
+import { parseUnitGraphDraft, type UnitConnectionEndpoint, type UnitGraphDraft } from '../lib/unitV2Graph';
 
 type ContractNodeData = {
   id: string;
@@ -35,9 +38,21 @@ type Props = {
   selectedUnitLabel: string;
   selectedAtomId: string | null;
   onBackToProject: () => void;
+  onConnectAtoms: (source: UnitConnectionEndpoint, target: UnitConnectionEndpoint) => void;
+  onDisconnectAtom: (target: UnitConnectionEndpoint) => void;
+  onReconnectAtoms: (
+    previousTarget: UnitConnectionEndpoint,
+    source: UnitConnectionEndpoint,
+    target: UnitConnectionEndpoint,
+  ) => void;
   onSelectAtom: (id: string) => void;
   onOpenAtomInspector: (id: string) => void;
 };
+
+function endpoint(nodeId: string | null, handle: string | null, direction: 'in' | 'out'): UnitConnectionEndpoint | null {
+  if (!nodeId || !handle?.startsWith(`${direction}-`)) return null;
+  return { nodeId: nodeId.replace(/^contract-/, ''), field: handle.slice(direction.length + 1) };
+}
 
 type ParsedContractGraph = {
   unit: UnitGraphDraft | null;
@@ -181,8 +196,11 @@ export function ContractGraphCanvas({
   selectedUnitLabel,
   selectedAtomId,
   onBackToProject,
+  onConnectAtoms,
+  onDisconnectAtom,
   onSelectAtom,
   onOpenAtomInspector,
+  onReconnectAtoms,
 }: Props) {
   const parsed = useMemo<ParsedContractGraph>(() => {
     try {
@@ -196,6 +214,39 @@ export function ContractGraphCanvas({
       };
     }
   }, [catalog, selectedAtomId, workspaceFile.content]);
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<ContractFlowNode>(parsed.flow.nodes);
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(parsed.flow.edges);
+
+  useEffect(() => {
+    setFlowNodes(current => parsed.flow.nodes.map(node => {
+      const positioned = current.find(item => item.id === node.id);
+      return positioned ? { ...node, position: positioned.position } : node;
+    }));
+  }, [parsed.flow.nodes, setFlowNodes]);
+
+  useEffect(() => {
+    setFlowEdges(parsed.flow.edges);
+  }, [parsed.flow.edges, setFlowEdges]);
+
+  const connect = (connection: Connection) => {
+    const source = endpoint(connection.source, connection.sourceHandle, 'out');
+    const target = endpoint(connection.target, connection.targetHandle, 'in');
+    if (source && target) onConnectAtoms(source, target);
+  };
+
+  const reconnect = (edge: Edge, connection: Connection) => {
+    const previousTarget = endpoint(edge.target, edge.targetHandle ?? null, 'in');
+    const source = endpoint(connection.source, connection.sourceHandle, 'out');
+    const target = endpoint(connection.target, connection.targetHandle, 'in');
+    if (previousTarget && source && target) onReconnectAtoms(previousTarget, source, target);
+  };
+
+  const deleteEdges = (edges: Edge[]) => {
+    for (const edge of edges) {
+      const target = endpoint(edge.target, edge.targetHandle ?? null, 'in');
+      if (target) onDisconnectAtom(target);
+    }
+  };
 
   return (
     <main className="canvas canvas--contract">
@@ -219,11 +270,18 @@ export function ContractGraphCanvas({
         <div className="flow-shell flow-shell--contract">
           <ReactFlowProvider>
             <ReactFlow
-              nodes={parsed.flow.nodes}
-              edges={parsed.flow.edges}
+              nodes={flowNodes}
+              edges={flowEdges}
               nodeTypes={nodeTypes}
+              onConnect={connect}
+              onEdgesDelete={deleteEdges}
+              onEdgesChange={onEdgesChange}
               onNodeClick={(_, node) => onSelectAtom((node.data as ContractNodeData).id)}
               onNodeDoubleClick={(_, node) => onOpenAtomInspector((node.data as ContractNodeData).id)}
+              onNodesChange={onNodesChange}
+              onReconnect={reconnect}
+              deleteKeyCode={['Backspace', 'Delete']}
+              edgesReconnectable
               fitView
               fitViewOptions={{ padding: 0.18 }}
               minZoom={0.35}

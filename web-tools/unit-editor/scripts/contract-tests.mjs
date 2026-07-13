@@ -115,7 +115,13 @@ includesContent(app, 'serializeUnitGraphNodeUpdate(content, node, originalId)', 
 includesContent(app, 'onOpenAtomInspector', 'double-click contract nodes should switch to Contract inspector');
 includesContent(contractCanvas, 'onNodeDoubleClick', 'contract node interaction should open atom inspector');
 includesContent(contractCanvas, 'onNodeClick', 'contract node click should select atom');
+includesContent(contractCanvas, 'onConnect={connect}', 'contract handles must create structured YAML connections');
+includesContent(contractCanvas, 'onEdgesDelete={deleteEdges}', 'contract edges must support structural disconnection');
+includesContent(contractCanvas, 'onEdgesChange={onEdgesChange}', 'controlled contract edges must apply delete and reconnect events');
+includesContent(contractCanvas, 'onReconnect={reconnect}', 'contract edges must support structural moves');
+includesContent(contractCanvas, 'onNodesChange={onNodesChange}', 'contract node positions must remain UI-only state');
 includesContent(app, 'setGraphEditError', 'graph edit failures should be surfaced through workspace error feedback');
+includesContent(app, 'resolveWorkspacePath(backendSamples.project.file, node.unit.file)', 'unit references must resolve against the project path');
 includesContent(app, 'createUnitV2({ name })', 'workspace unit creation must use the structured YAML transformer');
 includesContent(projectSidebar, 'onCreateUnit(unitName)', 'workspace sidebar must expose unit creation');
 

@@ -48,6 +48,11 @@ Removal is blocked while another node or a public output port references the ato
 and compiles every unit draft in a snapshot, including units not yet referenced by the entry project, so incomplete
 forms return file-specific diagnostics without replacing the active runtime.
 
+Unit connections use structured output/input endpoints. React Flow connect, reconnect, and edge-delete actions transform
+YAML bindings and pass through the common validation/swap pipeline. The transformer rejects unknown nodes or fields,
+incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates UI-only position state
+and does not change DSP YAML or announce a workspace revision.
+
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.

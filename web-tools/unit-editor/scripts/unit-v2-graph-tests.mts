@@ -5,9 +5,13 @@ import { resolve } from 'node:path';
 import type { AtomCatalog } from '../src/lib/backendSamples.ts';
 import {
   addAtomNodeToUnit,
+  connectUnitNodes,
   createUnitV2,
+  disconnectUnitInput,
+  moveUnitConnection,
   parseUnitGraphDraft,
   removeAtomNodeFromUnit,
+  replaceUnitConnection,
   serializeUnitGraphNodeUpdate,
 } from '../src/lib/unitV2Graph.ts';
 
@@ -56,5 +60,61 @@ assert(!removedAdded.signals.some(signal => signal.startsWith(`${added.id}_`)));
 const overdrive = readFileSync(resolve(repo, 'test/fixtures/units-v2/overdrive.unit.v2.yaml'), 'utf8');
 assert.throws(() => removeAtomNodeFromUnit(overdrive, 'tone_filter'), /apply_level consumes/);
 assert.throws(() => removeAtomNodeFromUnit(overdrive, 'apply_level'), /unit output output references/);
+
+const disconnectedInput = disconnectUnitInput(created, { nodeId: 'apply_gain', field: 'signal_a' });
+assert.equal(parseUnitGraphDraft(disconnectedInput).nodes[1].in.signal_a, '');
+const connectedInput = connectUnitNodes(
+  disconnectedInput,
+  catalog,
+  { nodeId: 'gain_value', field: 'signal' },
+  { nodeId: 'apply_gain', field: 'signal_a' },
+);
+assert.equal(parseUnitGraphDraft(connectedInput).nodes[1].in.signal_a, 'gain_value');
+assert.throws(
+  () => connectUnitNodes(created, catalog, { nodeId: 'gain_value', field: 'signal' }, { nodeId: 'apply_gain', field: 'signal_a' }),
+  /already connected/,
+);
+assert.throws(
+  () => connectUnitNodes(created, catalog, { nodeId: 'missing', field: 'signal' }, { nodeId: 'apply_gain', field: 'signal_a' }),
+  /was not found/,
+);
+
+const firstClip = addAtomNodeToUnit(created, catalog, 'amplitude_clip_hard');
+let routedClips = replaceUnitConnection(
+  firstClip.content,
+  catalog,
+  { nodeId: 'apply_gain', field: 'signal' },
+  { nodeId: firstClip.id, field: 'signal' },
+);
+assert.throws(
+  () => replaceUnitConnection(
+    routedClips,
+    catalog,
+    { nodeId: firstClip.id, field: 'signal' },
+    { nodeId: 'apply_gain', field: 'signal_a' },
+  ),
+  /creates a cycle/,
+);
+const secondClip = addAtomNodeToUnit(routedClips, catalog, 'amplitude_clip_hard');
+routedClips = moveUnitConnection(
+  secondClip.content,
+  catalog,
+  { nodeId: firstClip.id, field: 'signal' },
+  { nodeId: secondClip.id, field: 'signal' },
+);
+const movedGraph = parseUnitGraphDraft(routedClips);
+assert.equal(movedGraph.nodes.find(node => node.id === firstClip.id)?.in.signal, '');
+assert.equal(movedGraph.nodes.find(node => node.id === secondClip.id)?.in.signal, 'output');
+
+const bufferTarget = addAtomNodeToUnit(created, catalog, 'delay_tap_feedback');
+assert.throws(
+  () => connectUnitNodes(
+    bufferTarget.content,
+    catalog,
+    { nodeId: 'gain_value', field: 'signal' },
+    { nodeId: bufferTarget.id, field: 'buffer' },
+  ),
+  /signal output to buffer input/,
+);
 
 console.log('unit v2 graph transformer tests passed');
