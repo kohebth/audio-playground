@@ -263,11 +263,11 @@ export class WasmBackend {
   }
 
   async setBypass(instanceId: string, enabled: boolean): Promise<void> {
-    if (!this.prepared) throw new Error('No prepared runtime');
+    this.bypassShadows.set(instanceId, enabled);
+    if (!this.prepared || !this.node) return;
     const index = this.prepared.bypassInstances.indexOf(instanceId);
     if (index < 0) throw new Error(`Unknown bypass instance: ${instanceId}`);
     await this.processorRequest({ type: 'setBypass', index, enabled });
-    this.bypassShadows.set(instanceId, enabled);
   }
 
   async setMute(enabled: boolean): Promise<void> {

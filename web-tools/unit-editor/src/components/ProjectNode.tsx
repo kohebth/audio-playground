@@ -44,16 +44,16 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           <span className="pedal-type-name">{data.unit.name}</span>
           <div className="project-node__tools">
             <button
-              aria-label={`${bypassed ? 'Disable' : 'Enable'} bypass for ${data.instance.id}`}
+              aria-label={`Turn ${bypassed ? 'on' : 'off'} ${data.instance.id}`}
               aria-pressed={bypassed}
               className={`project-node__bypass bypass-btn ${bypassed ? 'off project-node__bypass--active' : 'on'} nodrag nopan`}
-              disabled={!controller?.running}
+              disabled={!controller}
               onClick={() => void controller?.setBypass(data.instance.id, !bypassed)}
               onPointerDown={event => event.stopPropagation()}
-              title={bypassed ? 'Disable bypass' : 'Enable bypass'}
+              title={bypassed ? 'Turn on' : 'Turn off'}
               type="button"
             >
-              {bypassed ? 'BYP' : 'ON'}
+              {bypassed ? 'OFF' : 'ON'}
             </button>
           </div>
         </div>
