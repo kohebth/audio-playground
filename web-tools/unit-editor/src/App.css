@@ -664,6 +664,7 @@ body {
 }
 
 /* ─── React Flow overrides ───────────────────────────────────────────────── */
+.react-flow__background { display: none !important; }
 .react-flow__controls { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); }
 .react-flow__controls button { background: transparent; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); }
 .react-flow__controls button:last-child { border-bottom: none; }
@@ -3192,7 +3193,7 @@ body {
   width: 8px !important;
   height: 16px !important;
   border: 2px solid var(--node-color) !important;
-  background: var(--node-color) !important;
+  background: transparent !important;
   box-shadow: 0 0 10px color-mix(in srgb, var(--node-color) 30%, transparent) !important;
   opacity: 1 !important;
   top: 50% !important;
