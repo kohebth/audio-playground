@@ -35,7 +35,6 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
 
   const bypassed = controller?.bypassByInstance[data.instance.id] ?? false;
   const compact = data.instance.params.length <= 1;
-  const compatibility = Object.entries(data.unit.compatibility);
 
   return (
     <div className={`project-node node-card ${selected ? 'project-node--selected selected' : ''}`} style={style}>
@@ -44,19 +43,6 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
         <div className="node-pedal-header">
           <span className="pedal-type-name">{data.unit.name}</span>
           <div className="project-node__tools">
-            {compatibility.length > 0 && (
-              <div className="project-node__chips" aria-label={`${data.instance.id} compatibility`}>
-                {compatibility.map(([key, enabled]) => (
-                  <span
-                    key={key}
-                    className={`project-node__chip ${enabled ? 'project-node__chip--ok' : ''}`}
-                    title={`${key}: ${enabled ? 'enabled' : 'disabled'}`}
-                  >
-                    {key}
-                  </span>
-                ))}
-              </div>
-            )}
             <button
               aria-label={`${bypassed ? 'Disable' : 'Enable'} bypass for ${data.instance.id}`}
               aria-pressed={bypassed}

@@ -1445,30 +1445,6 @@ body {
   white-space: nowrap;
 }
 
-.project-node__chips {
-  display: grid;
-  justify-items: end;
-  gap: 3px;
-  max-width: 56px;
-}
-
-.project-node__chip {
-  max-width: 56px;
-  overflow: hidden;
-  padding: 2px 4px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-dim);
-  font-size: 8px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.project-node__chip--ok {
-  border-color: #22c55e;
-  color: #86efac;
-}
-
 .project-node__handle {
   width: 10px !important;
   height: 10px !important;
@@ -3051,31 +3027,6 @@ body {
   align-items: center;
   flex-shrink: 0;
   gap: 4px;
-}
-
-.project-node__chips {
-  display: flex;
-  max-width: 56px;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
-
-.project-node__chip {
-  width: 7px;
-  height: 7px;
-  overflow: hidden;
-  padding: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: 50%;
-  background: var(--bg-surface);
-  color: transparent;
-  font-size: 0;
-}
-
-.project-node__chip--ok {
-  border-color: var(--accent-green);
-  background: var(--accent-green);
 }
 
 .project-node__bypass,
