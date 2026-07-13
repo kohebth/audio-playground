@@ -46,6 +46,9 @@ The processor keeps an active, staged, and retired runtime slot. It only promote
 crossfades that block; retired-slot destruction occurs during a later control-thread staging operation, never in the
 audio callback. A CMake boundary test rejects allocation, slot destruction, formatting, parsing, compilation, image
 hydration, measurement lookup, and string lookup calls from the processor callback and its real-time diagnostic helper.
+The pinned Emscripten Docker build script also executes the generated control/processor modules under Node with supplied
+WASM bytes, covering workspace diagnostics, prepared-image transfer, hydration, commit, processing, controls, meters,
+and corrupt-image rollback before public editor artifacts are replaced.
 
 Bypass and mute use indexed Worklet controls. The facade retains per-instance bypass and project mute shadows, applies
 them to a newly hydrated runtime before commit, and therefore preserves live control state across structural swaps.

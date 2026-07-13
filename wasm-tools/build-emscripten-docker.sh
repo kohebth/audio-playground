@@ -14,6 +14,8 @@ docker run --rm \
         -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
         && cmake --build ${build_dir} --target apg_control apg_processor -j2"
 
+node "${repo_root}/wasm-tools/test/emscripten_runtime_smoke.mjs" "${repo_root}/${build_dir}/wasm-tools" "${repo_root}"
+
 install -d "${repo_root}/web-tools/unit-editor/public/wasm"
 install -m 0644 \
     "${repo_root}/${build_dir}/wasm-tools/apg_control.mjs" \
