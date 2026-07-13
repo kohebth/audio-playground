@@ -288,7 +288,7 @@ export function ContractGraphCanvas({
               maxZoom={1.6}
               nodesDraggable
             >
-              <Background color="#1e293b" gap={24} />
+              <Background color="#1a2744" gap={24} size={1} />
               <Controls />
               <MiniMap nodeColor={node => (node.data as ContractNodeData).color} pannable zoomable style={{ background: '#111827' }} />
             </ReactFlow>

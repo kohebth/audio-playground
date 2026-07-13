@@ -1118,7 +1118,12 @@ body {
 .canvas--contract {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  background: #070d18;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(74, 158, 255, .03) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent, transparent 23px, var(--border-subtle) 23px, var(--border-subtle) 24px),
+    repeating-linear-gradient(90deg, transparent, transparent 23px, var(--border-subtle) 23px, var(--border-subtle) 24px);
+  background-color: var(--bg-base);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
 }
 
 .flow-shell {
@@ -1128,6 +1133,27 @@ body {
 
 .flow-shell--contract {
   min-height: 0;
+}
+
+.canvas--contract .flow-shell--contract {
+  background: transparent;
+}
+
+.canvas--contract .react-flow__controls {
+  bottom: 16px;
+  left: 16px;
+  overflow: hidden;
+  padding: 4px;
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: rgba(12,18,32,.85);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(12px);
+}
+
+.canvas--contract .react-flow__minimap {
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-lg);
 }
 
 .canvas-modebar {
