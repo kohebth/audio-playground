@@ -45,6 +45,14 @@ import {
   type UnitGraphNode,
   type UnitConnectionEndpoint,
 } from './lib/unitV2Graph';
+import {
+  createWorkspacePayload,
+  hydrateWorkspaceFiles,
+  parseWorkspacePayload,
+  validateWorkspacePayload,
+  WORKSPACE_FORMAT_VERSION,
+  WORKSPACE_SCHEMA,
+} from './lib/workspacePersistence';
 import './App.css';
 
 function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): ProjectNodeData | null {
@@ -55,7 +63,8 @@ function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): Projec
 type InspectorView = 'project' | 'atom' | 'contract';
 type CanvasMode = 'project' | 'contract';
 
-const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v1';
+const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v2';
+const LEGACY_WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v1';
 
 function resolveWorkspacePath(baseFile: string, reference: string): string {
   const segments = baseFile.split('/');
@@ -72,46 +81,61 @@ function resolveWorkspacePath(baseFile: string, reference: string): string {
   return segments.join('/');
 }
 
-function loadWorkspaceFiles(): WorkspaceFile[] {
-  if (typeof window === 'undefined') return initialWorkspaceFiles;
-
-  const saved = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
-  if (!saved) return initialWorkspaceFiles;
-
+function loadWorkspaceState(): { entryProject: string; files: WorkspaceFile[] } {
+  const fallback = { entryProject: backendSamples.project.file, files: initialWorkspaceFiles };
+  if (typeof window === 'undefined') return fallback;
   try {
-    const files = JSON.parse(saved) as Array<Pick<WorkspaceFile, 'path' | 'role' | 'content'>>;
-    const restored = initialWorkspaceFiles.map(file => {
-      const draft = files.find(item => item.path === file.path);
-      return draft ? { ...file, content: draft.content } : file;
-    });
-    const known = new Set(initialWorkspaceFiles.map(file => file.path));
-    for (const file of files) {
-      if (!known.has(file.path) && (file.role === 'project' || file.role === 'unit') && typeof file.content === 'string') {
-        restored.push({ ...file, originalContent: '' });
-      }
+    const saved = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    if (saved) {
+      const payload = parseWorkspacePayload(saved);
+      return { entryProject: payload.entryProject, files: hydrateWorkspaceFiles(payload, initialWorkspaceFiles) };
     }
-    return restored;
+    const legacy = window.localStorage.getItem(LEGACY_WORKSPACE_STORAGE_KEY);
+    if (legacy) {
+      const files = JSON.parse(legacy) as Array<Pick<WorkspaceFile, 'path' | 'role' | 'content'>>;
+      const payload = validateWorkspacePayload({
+        schema: WORKSPACE_SCHEMA,
+        version: WORKSPACE_FORMAT_VERSION,
+        entryProject: backendSamples.project.file,
+        files,
+      });
+      window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
+      return { entryProject: payload.entryProject, files: hydrateWorkspaceFiles(payload, initialWorkspaceFiles) };
+    }
+    return fallback;
   } catch {
-    return initialWorkspaceFiles;
+    return fallback;
   }
 }
 
 export default function App() {
-  const initialGraph = useMemo(() => buildProjectGraph(backendSamples.project), []);
+  const [initialWorkspace] = useState(loadWorkspaceState);
+  const initialProjectInspect = useMemo(() => {
+    try {
+      const file = initialWorkspace.files.find(item => item.path === initialWorkspace.entryProject);
+      if (!file) return backendSamples.project;
+      return projectDraftToInspect(parseProjectGraphDraft(file.content), backendSamples.project, file.path);
+    } catch {
+      return backendSamples.project;
+    }
+  }, [initialWorkspace]);
+  const initialGraph = useMemo(() => buildProjectGraph(initialProjectInspect), [initialProjectInspect]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
-  const [selectedId, setSelectedId] = useState<string | null>('unit-drive1');
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
   const [inspectorView, setInspectorView] = useState<InspectorView>('project');
   const [canvasMode, setCanvasMode] = useState<CanvasMode>('project');
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
   const [atomClipboard, setAtomClipboard] = useState<UnitGraphNode | null>(null);
   const [graphEditError, setGraphEditError] = useState<string | null>(null);
-  const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(backendSamples.project));
-  const [paramOriginals, setParamOriginals] = useState(() => buildParamOriginals(backendSamples.project));
-  const [workspaceFiles, setWorkspaceFiles] = useState(loadWorkspaceFiles);
-  const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspaceFiles[0].path);
-  const projectWorkspaceFile = workspaceFiles.find(file => file.path === backendSamples.project.file) ?? workspaceFiles[0];
+  const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(initialProjectInspect));
+  const [paramOriginals, setParamOriginals] = useState(() => buildParamOriginals(initialProjectInspect));
+  const [entryProject, setEntryProject] = useState(initialWorkspace.entryProject);
+  const [workspaceFiles, setWorkspaceFiles] = useState(initialWorkspace.files);
+  const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspace.entryProject);
+  const projectWorkspaceFile = workspaceFiles.find(file => file.path === entryProject) ?? workspaceFiles[0];
   const lastValidProjectDraft = useRef(parseProjectGraphDraft(initialWorkspaceFiles[0].content));
   const parsedProjectDraft = useMemo(() => {
     try {
@@ -175,9 +199,8 @@ export default function App() {
   }, [project, setEdges, setNodes]);
 
   useEffect(() => {
-    const drafts = workspaceFiles.map(({ path, role, content }) => ({ path, role, content }));
-    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(drafts));
-  }, [workspaceFiles]);
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(createWorkspacePayload(entryProject, workspaceFiles)));
+  }, [entryProject, workspaceFiles]);
 
   const selectProjectNode = useCallback((id: string) => {
     setSelectedId(id);
@@ -447,47 +470,45 @@ export default function App() {
 
   const resetWorkspace = useCallback(() => {
     setWorkspaceFiles(initialWorkspaceFiles);
+    setEntryProject(backendSamples.project.file);
     setSelectedWorkspacePath(initialWorkspaceFiles[0].path);
     setParamDrafts(buildParamDrafts(backendSamples.project));
     setParamOriginals(buildParamOriginals(backendSamples.project));
     setSelectedId('unit-drive1');
     setSelectedRouteIndex(null);
     window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
   }, []);
 
   const exportWorkspace = useCallback(() => {
-    const payload = {
-      schema: 'apg.ui.workspace.v1',
-      files: workspaceFiles.map(({ path, role, content }) => ({ path, role, content })),
-    };
+    const payload = createWorkspacePayload(entryProject, workspaceFiles);
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
     link.download = 'audio-playground-workspace.json';
     link.click();
     URL.revokeObjectURL(url);
-  }, [workspaceFiles]);
+  }, [entryProject, workspaceFiles]);
 
   const importWorkspace = useCallback(async (file: File | null) => {
     if (!file) return;
 
     try {
-      const payload = JSON.parse(await file.text()) as { files?: Array<Pick<WorkspaceFile, 'path' | 'role' | 'content'>> };
-      if (!Array.isArray(payload.files)) return;
-
-      const imported = initialWorkspaceFiles.map(workspaceFile => {
-          const draft = payload.files?.find(item => item.path === workspaceFile.path);
-          return draft ? { ...workspaceFile, content: draft.content } : workspaceFile;
-        });
-      const known = new Set(initialWorkspaceFiles.map(file => file.path));
-      for (const file of payload.files) {
-        if (!known.has(file.path) && (file.role === 'project' || file.role === 'unit') && typeof file.content === 'string') {
-          imported.push({ ...file, originalContent: '' });
-        }
-      }
+      const payload = parseWorkspacePayload(await file.text());
+      const imported = hydrateWorkspaceFiles(payload, initialWorkspaceFiles);
+      const importedProject = imported.find(item => item.path === payload.entryProject);
+      if (!importedProject) return;
+      const importedDraft = parseProjectGraphDraft(importedProject.content);
+      const importedInspect = projectDraftToInspect(importedDraft, backendSamples.project, payload.entryProject);
       setWorkspaceFiles(imported);
-    } catch {
-      return;
+      setEntryProject(payload.entryProject);
+      setSelectedWorkspacePath(payload.entryProject);
+      setParamDrafts(buildParamDrafts(importedInspect));
+      setParamOriginals(buildParamOriginals(importedInspect));
+      setSelectedId(null);
+      setSelectedRouteIndex(null);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Workspace import failed.');
     }
   }, []);
 

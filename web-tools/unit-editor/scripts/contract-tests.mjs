@@ -46,6 +46,7 @@ const previewPanel = read('web-tools/unit-editor/src/components/PreviewPanel.tsx
 const wasmFacade = read('wasm-tools/web/facade.ts');
 const processorWorklet = read('wasm-tools/web/processor.worklet.js');
 const compatibility = read('web-tools/unit-editor/src/components/CompatibilityExportPanel.tsx');
+const workspacePersistence = read('web-tools/unit-editor/src/lib/workspacePersistence.ts');
 
 // AC: Contract-accurate web data is sourced from a frozen backend atom catalog fixture.
 assert(atomCatalog.schema === 'apg.atom_catalog.v2', 'atom catalog fixture schema changed');
@@ -90,14 +91,20 @@ assert(
   'pedalboard route graph fixture changed',
 );
 assert((backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length, 'workspace bundle must include all referenced unit files');
-includesContent(app, 'apg.unit-editor.workspace.v1', 'workspace autosave key is missing');
-includesContent(app, "schema: 'apg.ui.workspace.v1'", 'workspace export schema is missing');
-includesContent(app, 'JSON.parse(saved)', 'autosave restores JSON payloads from localStorage');
+includesContent(app, 'apg.unit-editor.workspace.v2', 'versioned workspace autosave key is missing');
+includesContent(app, 'apg.unit-editor.workspace.v1', 'legacy workspace migration key is missing');
+includesContent(workspacePersistence, "WORKSPACE_SCHEMA = 'apg.ui.workspace.v2'", 'workspace export schema is missing');
+includesContent(workspacePersistence, 'WORKSPACE_FORMAT_VERSION = 2', 'workspace format version is missing');
+includesContent(app, 'parseWorkspacePayload(saved)', 'autosave restore must validate versioned workspace payloads');
+includesContent(app, 'hydrateWorkspaceFiles(payload, initialWorkspaceFiles)', 'workspace restore must hydrate persisted files');
 includesContent(
   app,
-  '.map(({ path, role, content }) => ({ path, role, content }))',
-  'workspace export should include every tracked file as path/role/content',
+  'createWorkspacePayload(entryProject, workspaceFiles)',
+  'workspace persistence should include the entry project and every tracked file',
 );
+includesContent(app, 'setEntryProject(payload.entryProject)', 'workspace import must restore the persisted entry project');
+includesContent(workspacePersistence, "candidate.role !== 'project'", 'workspace import must validate file roles');
+includesContent(workspacePersistence, 'normalizedPath', 'workspace import must confine file paths');
 includesContent(projectTopbar, 'Drafts pending', 'dirty workspace state must be visible');
 includesContent(projectTopbar, 'Backend synced', 'clean workspace state must be visible');
 includesContent(projectInspector, 'Out of sync with local edits', 'validation/render should show stale state');

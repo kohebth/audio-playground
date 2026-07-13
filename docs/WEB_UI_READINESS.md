@@ -28,8 +28,7 @@ the active runtime, and routes stable parameter/bypass names plus meter snapshot
 hydration and commit are separate Worklet messages; a newly announced editor revision invalidates stale preparation
 before commit, while failure state retains the affected revision and diagnostic. Uploaded files
 decode through WebAudio and feed the real processor Worklet; microphone capture remains a separate selectable input
-using the same runtime. Browser-managed storage/export and the remaining graph CRUD workflows are separate feature
-slices.
+using the same runtime.
 
 Parameter edits clamp to unit metadata, update the project YAML, use the indexed Worklet control for immediate audible
 feedback, and then flow through the debounced replacement runtime. Resetting an override sends the original value over
@@ -59,6 +58,13 @@ resolved unit port metadata. Rename updates route endpoints, parameter-control i
 Removal cleans dependent routes and scene values. Direction, port, occupied-target, and cycle checks run before snapshot
 synchronization. A broken chain can validate structurally but fails preparation, leaving the previous active revision in
 the Worklet until a complete route is restored.
+
+Browser persistence uses the versioned `apg.ui.workspace.v2` envelope. Autosave, import, and export retain the entry
+project plus every project/unit file as path, role, and YAML content; baseline-only editor fields are not serialized.
+Restore validates the format version, confined relative paths, unique files, roles, and entry project before mounting
+the Worker/AudioWorklet integration. Legacy array-only local storage migrates once to v2. Invalid imports report the
+error without replacing the active workspace, while valid restored drafts proceed through normal WASM validation and
+revision preparation.
 
 ## Ready To Start Web UI When
 
