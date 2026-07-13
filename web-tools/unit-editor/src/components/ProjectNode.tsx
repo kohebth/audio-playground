@@ -1,11 +1,13 @@
 import { memo, type CSSProperties } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import type { ProjectNodeData } from '../lib/projectGraph';
+import { useLiveBypass } from '../lib/liveBypass';
 import { ParamKnob } from './ParamKnob';
 
 type ProjectFlowNode = Node<ProjectNodeData, 'projectNode'>;
 
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
+  const { controller } = useLiveBypass();
   const style = { '--node-color': data.color } as CSSProperties;
 
   if (data.kind === 'system') {
@@ -20,12 +22,26 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
     );
   }
 
+  const bypassed = controller?.bypassByInstance[data.instance.id] ?? false;
+
   return (
     <div className={`project-node ${selected ? 'project-node--selected' : ''}`} style={style}>
       <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />
       <div className="project-node__eyebrow">{data.unit.name}</div>
       <div className="project-node__title">{data.instance.id}</div>
       <div className="project-node__meta">{data.instance.params.length} params</div>
+      <button
+        aria-label={`${bypassed ? 'Disable' : 'Enable'} bypass for ${data.instance.id}`}
+        aria-pressed={bypassed}
+        className={`project-node__bypass nodrag nopan${bypassed ? ' project-node__bypass--active' : ''}`}
+        disabled={!controller?.running}
+        onClick={() => void controller?.setBypass(data.instance.id, !bypassed)}
+        onPointerDown={event => event.stopPropagation()}
+        title={bypassed ? 'Disable bypass' : 'Enable bypass'}
+        type="button"
+      >
+        Bypass
+      </button>
       {data.instance.params.length > 0 && (
         <div className="project-node__knobs" aria-label={`${data.instance.id} controls`}>
           {data.instance.params.map(param => {

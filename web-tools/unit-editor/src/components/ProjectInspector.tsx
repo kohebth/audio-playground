@@ -191,7 +191,6 @@ export function ProjectInspector({
       <PreviewPanel
         entryProject={projectFile}
         paramOverrides={paramOverrides}
-        selectedInstanceId={selectedNode?.kind === 'unit' ? selectedNode.instance.id : null}
         workspaceFiles={workspaceFiles}
       />
       {graphEditError ? (

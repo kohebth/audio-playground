@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { WorkspaceFile } from '../lib/backendSamples';
+import { useLiveBypass } from '../lib/liveBypass';
 import type { ParamOverride } from '../lib/projectParams';
 
 type InputMode = 'file' | 'microphone';
@@ -17,7 +18,6 @@ type Props = {
   entryProject: string;
   workspaceFiles: WorkspaceFile[];
   paramOverrides: ParamOverride[];
-  selectedInstanceId: string | null;
 };
 
 const emptyMeter: MeterSnapshot = {
@@ -42,7 +42,8 @@ function moduleUrl(file: string): string {
   return new URL(`wasm/${file}`, `${window.location.origin}${import.meta.env.BASE_URL}`).href;
 }
 
-export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, selectedInstanceId }: Props) {
+export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: Props) {
+  const { setController } = useLiveBypass();
   const [backend, setBackend] = useState<WasmBackend | null>(null);
   const [phase, setPhase] = useState<BackendPhase>('idle');
   const [diagnostic, setDiagnostic] = useState('WASM backend is initializing.');
@@ -339,17 +340,22 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
     }
   }, [backend, firstOverride, reportError]);
 
-  const toggleBypass = useCallback(async () => {
-    if (!backend || !selectedInstanceId) return;
-    const next = !(bypassByInstance[selectedInstanceId] ?? false);
+  const setInstanceBypass = useCallback(async (instanceId: string, enabled: boolean) => {
+    if (!backend) return;
     try {
-      await backend.setBypass(selectedInstanceId, next);
-      setBypassByInstance(current => ({ ...current, [selectedInstanceId]: next }));
-      setDiagnostic(`${selectedInstanceId} bypass ${next ? 'enabled' : 'disabled'}.`);
+      await backend.setBypass(instanceId, enabled);
+      setBypassByInstance(current => ({ ...current, [instanceId]: enabled }));
+      setDiagnostic(`${instanceId} bypass ${enabled ? 'enabled' : 'disabled'}.`);
     } catch (error) {
       reportError(error, 'control');
     }
-  }, [backend, bypassByInstance, reportError, selectedInstanceId]);
+  }, [backend, reportError]);
+
+  useEffect(() => {
+    setController({ running, bypassByInstance, setBypass: setInstanceBypass });
+  }, [bypassByInstance, running, setController, setInstanceBypass]);
+
+  useEffect(() => () => setController(null), [setController]);
 
   const toggleMute = useCallback(async () => {
     if (!backend) return;
@@ -459,9 +465,6 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       <div className="preview-panel__actions">
         <button className="btn btn--ghost" disabled={!running || !firstOverride} onClick={() => void sendFirstParam()} type="button">
           Send param
-        </button>
-        <button className="btn btn--ghost" disabled={!running || !selectedInstanceId} onClick={() => void toggleBypass()} type="button">
-          {selectedInstanceId && bypassByInstance[selectedInstanceId] ? 'Disable bypass' : 'Enable bypass'}
         </button>
         <button className="btn btn--ghost" disabled={!running} onClick={() => void toggleMute()} type="button">
           {muted ? 'Unmute output' : 'Mute output'}

@@ -9,6 +9,7 @@ import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
 import { backendCommands, backendSamples, initialWorkspaceFiles, sampleSources, type WorkspaceFile } from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData, type ProjectParamControl } from './lib/projectGraph';
+import { LiveBypassContext, type LiveBypassController } from './lib/liveBypass';
 import {
   buildParamDrafts,
   buildParamOriginals,
@@ -122,6 +123,7 @@ export default function App() {
   const initialGraph = useMemo(() => buildProjectGraph(initialProjectInspect), [initialProjectInspect]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
+  const [liveBypassController, setLiveBypassController] = useState<LiveBypassController | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
@@ -578,6 +580,7 @@ export default function App() {
   }, []);
 
   return (
+    <LiveBypassContext.Provider value={{ controller: liveBypassController, setController: setLiveBypassController }}>
     <div className="app app--project">
         <ProjectTopbar
           project={project}
@@ -679,5 +682,6 @@ export default function App() {
         />
       </div>
     </div>
+    </LiveBypassContext.Provider>
   );
 }

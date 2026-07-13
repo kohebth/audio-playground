@@ -1264,6 +1264,36 @@ body {
   font-size: 12px;
 }
 
+.project-node__bypass {
+  display: block;
+  margin: 10px 0 0 auto;
+  min-width: 50px;
+  height: 24px;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  background: #172033;
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.project-node__bypass:hover:not(:disabled) {
+  border-color: #f59e0b;
+  color: #fef3c7;
+}
+
+.project-node__bypass--active {
+  border-color: #f59e0b;
+  background: #78350f;
+  color: #fef3c7;
+}
+
+.project-node__bypass:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .project-node__knobs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));

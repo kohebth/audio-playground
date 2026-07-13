@@ -172,6 +172,8 @@ assert(
 );
 includesContent(previewPanel, 'backend.setBypass', 'live bypass controls must use the WASM backend');
 includesContent(previewPanel, 'bypassByInstance', 'bypass UI state must be tracked per project instance');
+includesContent(projectNode, 'project-node__bypass', 'unit cards must expose a bypass control');
+includesContent(projectNode, 'controller?.setBypass(data.instance.id, !bypassed)', 'unit-card bypass must target the live instance');
 includesContent(previewPanel, '.pollMeters()', 'preview meters must use throttled Worklet polling');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
 includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
