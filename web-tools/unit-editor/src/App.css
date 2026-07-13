@@ -664,7 +664,6 @@ body {
 }
 
 /* ─── React Flow overrides ───────────────────────────────────────────────── */
-.react-flow__background { background: var(--bg-base); }
 .react-flow__controls { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); }
 .react-flow__controls button { background: transparent; color: var(--text-muted); border: none; border-bottom: 1px solid var(--border); }
 .react-flow__controls button:last-child { border-bottom: none; }
@@ -1127,6 +1126,7 @@ body {
 }
 
 .flow-shell {
+  position: relative;
   width: 100%;
   height: 100%;
 }
@@ -1153,13 +1153,13 @@ body {
   background-size: 100% 100%, 24px 24px, 24px 24px;
 }
 
-.canvas--contract .react-flow {
+.canvas-area .react-flow {
   position: relative;
   z-index: 1;
   background: transparent !important;
 }
 
-.canvas--contract .react-flow__pane {
+.canvas-area .react-flow__pane {
   background: transparent !important;
 }
 

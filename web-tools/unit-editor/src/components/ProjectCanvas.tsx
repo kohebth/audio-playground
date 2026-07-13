@@ -1,5 +1,4 @@
 import {
-  Background,
   Controls,
   MiniMap,
   ReactFlow,
@@ -58,6 +57,7 @@ export function ProjectCanvas({
   return (
     <main className="canvas canvas--project canvas-area">
       <div className="flow-shell">
+        <div className="edit-plane-grid" aria-hidden="true" />
         <ReactFlowProvider>
           <ReactFlow
             nodes={nodes}
@@ -76,7 +76,6 @@ export function ProjectCanvas({
             minZoom={0.35}
             maxZoom={1.5}
           >
-            <Background color="#1c2a3f" gap={24} size={1} />
             <Controls />
             <MiniMap
               nodeColor={node => (node.data as ProjectNodeData).color}
