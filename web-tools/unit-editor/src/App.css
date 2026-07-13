@@ -1214,6 +1214,7 @@ body {
 }
 
 .project-node {
+  position: relative;
   width: 210px;
   min-height: 112px;
   padding: 12px;
@@ -1235,6 +1236,7 @@ body {
 }
 
 .project-node__eyebrow {
+  max-width: 108px;
   overflow: hidden;
   color: var(--node-color);
   font-size: 10px;
@@ -1246,6 +1248,7 @@ body {
 
 .project-node__title {
   margin-top: 5px;
+  max-width: 108px;
   overflow: hidden;
   color: var(--text-primary);
   font-size: 18px;
@@ -1256,6 +1259,7 @@ body {
 
 .project-node__meta {
   margin-top: 3px;
+  max-width: 108px;
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -1264,7 +1268,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 18px;
 }
 
 .unit-knob {
@@ -1302,20 +1306,23 @@ body {
 }
 
 .project-node__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 9px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  width: 76px;
 }
 
 .project-node__chip {
-  max-width: 95px;
+  max-width: 76px;
   overflow: hidden;
-  padding: 2px 5px;
+  padding: 2px 4px;
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-dim);
-  font-size: 9px;
+  font-size: 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
