@@ -23,6 +23,7 @@ export type ProjectNodeData =
 export type ProjectParamControl = {
   key: string;
   label: string;
+  type: string;
   min?: string;
   max?: string;
   unit?: string;

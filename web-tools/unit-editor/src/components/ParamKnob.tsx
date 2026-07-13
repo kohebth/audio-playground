@@ -8,8 +8,11 @@ type Props = {
   unit?: string;
   label?: string;
   compact?: boolean;
+  integer?: boolean;
   onChange: (next: string) => void;
 };
+
+const RANGE_FRACTION_PER_DRAG_PIXEL = 0.005;
 
 function numberOrNull(value: string | undefined): number | null {
   if (value === undefined || value.trim() === '') return null;
@@ -33,7 +36,7 @@ function percentForValue(value: string, minValue: string | undefined, maxValue: 
   return clampValue(((current - min) / (max - min)) * 100, 0, 100);
 }
 
-export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = false, onChange }: Props) {
+export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = false, integer = false, onChange }: Props) {
   const [draft, setDraft] = useState(value);
   const minValue = numberOrNull(min);
   const maxValue = numberOrNull(max);
@@ -46,7 +49,6 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
   const dragState = useRef<{
     pointerId: number;
     lastY: number;
-    lastTime: number;
     value: number;
     integer: boolean;
   } | null>(null);
@@ -64,9 +66,8 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
     dragState.current = {
       pointerId: event.pointerId,
       lastY: event.clientY,
-      lastTime: event.timeStamp,
       value: parsed,
-      integer: Number.isInteger(parsed),
+      integer,
     };
   };
 
@@ -74,18 +75,18 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
     const state = dragState.current;
     if (!state) return;
     const dy = state.lastY - event.clientY;
-    const dt = Math.max(12, event.timeStamp - state.lastTime);
-    const speed = Math.abs(dy) / dt;
-    const range = minValue !== null && maxValue !== null ? maxValue - minValue : 1;
-    const base = state.integer ? 0.55 : Math.max(range / 220, 0.001);
+    const range = minValue !== null && maxValue !== null && maxValue > minValue
+      ? maxValue - minValue
+      : Math.max(Math.abs(state.value), 1);
     const next = clampValue(
-      state.integer ? Math.round(state.value + dy * base * (1 + speed * 2)) : state.value + dy * base * (1 + speed * 2),
+      state.integer
+        ? Math.round(state.value + dy * range * RANGE_FRACTION_PER_DRAG_PIXEL)
+        : state.value + dy * range * RANGE_FRACTION_PER_DRAG_PIXEL,
       minValue,
       maxValue,
     );
     const formatted = formatValue(next);
     state.lastY = event.clientY;
-    state.lastTime = event.timeStamp;
     state.value = Number(formatted);
     setDraft(formatted);
     onChange(formatted);

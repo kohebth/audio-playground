@@ -198,6 +198,7 @@ export default function App() {
         return [reference.id, parseUnitGraphDraft(file.content).params.map(param => ({
           key: param.name,
           label: param.ui?.label ?? param.name,
+          type: param.type,
           min: param.min,
           max: param.max,
           unit: param.ui?.unit,

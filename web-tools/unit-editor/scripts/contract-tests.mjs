@@ -158,8 +158,10 @@ includesContent(previewPanel, 'backend.setParam', 'live parameter controls must 
 includesContent(previewPanel, 'previousOverridesRef', 'live parameter synchronization must detect reset values');
 includesContent(previewPanel, 'override.originalValue', 'removed overrides must restore the original runtime value');
 includesContent(paramKnob, 'clampValue(parsed, minValue, maxValue)', 'typed parameter values must clamp to metadata bounds');
+includesContent(paramKnob, 'RANGE_FRACTION_PER_DRAG_PIXEL', 'knob drags must scale by the parameter range');
 includesContent(projectNode, '<ParamKnob', 'unit cards must render their parameter knobs directly');
 includesContent(projectNode, 'data.onParamChange?.', 'unit card knobs must use the shared YAML parameter update path');
+includesContent(projectNode, "integer={control?.type === 'int'}", 'integer knob stepping must use declared parameter metadata');
 includesContent(app, 'graphTopologySignature', 'scalar parameter edits must be separated from graph topology changes');
 includesContent(projectCanvas, 'nodes={nodes}', 'project canvas must preserve node identities during scalar edits');
 assert(!projectCanvas.includes('const displayedNodes'), 'project canvas must not recreate every node to inject callbacks');

@@ -35,6 +35,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
                 key={param.key}
                 ariaLabel={`${data.instance.id} ${param.key}`}
                 compact
+                integer={control?.type === 'int'}
                 label={control?.label ?? param.key}
                 max={control?.max}
                 min={control?.min}
