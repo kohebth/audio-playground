@@ -208,17 +208,77 @@ export default function App() {
     }),
   ), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
 
+  const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
+    const key = paramDraftKey(instanceId, paramKey);
+    setParamDrafts(drafts => (drafts[key] === value ? drafts : { ...drafts, [key]: value }));
+    setWorkspaceFiles(files => {
+      let changed = false;
+      const next = files.map(file => {
+        if (file.role !== 'project') return file;
+        const content = updateProjectInstanceParam(file.content, instanceId, paramKey, value);
+        if (content === file.content) return file;
+        changed = true;
+        return { ...file, content };
+      });
+      return changed ? next : files;
+    });
+  }, []);
+
+  const graphTopologySignature = useMemo(
+    () => JSON.stringify({
+      nodes: project.nodes.map(node => [node.id, node.unit]),
+      routes: project.routes.map(route => [route.from, route.to]),
+    }),
+    [project.nodes, project.routes],
+  );
+  const graphTopologyRef = useRef('');
+
   useEffect(() => {
-    const next = buildProjectGraph(project);
-    setNodes(current => next.nodes.map(node => {
-      const positioned = current.find(item => item.id === node.id);
-      const data = node.data.kind === 'unit'
-        ? { ...node.data, paramControls: projectParamControls[node.data.unit.id] ?? [] }
-        : node.data;
-      return positioned ? { ...node, data, position: positioned.position } : { ...node, data };
-    }));
-    setEdges(next.edges);
-  }, [project, projectParamControls, setEdges, setNodes]);
+    const topologyChanged = graphTopologyRef.current !== graphTopologySignature;
+    graphTopologyRef.current = graphTopologySignature;
+
+    if (topologyChanged) {
+      const next = buildProjectGraph(project);
+      setNodes(current => next.nodes.map(node => {
+        const positioned = current.find(item => item.id === node.id);
+        const data = node.data.kind === 'unit'
+          ? { ...node.data, paramControls: projectParamControls[node.data.unit.id] ?? [], onParamChange: updateParamDraft }
+          : node.data;
+        return positioned ? { ...node, data, position: positioned.position } : { ...node, data };
+      }));
+      setEdges(next.edges);
+      return;
+    }
+
+    const unitsById = new Map(project.units.map(unit => [unit.id, unit]));
+    const instancesById = new Map(project.nodes.map(instance => [instance.id, instance]));
+    setNodes(current => {
+      let changed = false;
+      const next = current.map(node => {
+        if (node.data.kind !== 'unit') return node;
+        const instance = instancesById.get(node.data.instance.id);
+        const unit = instance ? unitsById.get(instance.unit) : null;
+        if (!instance || !unit) return node;
+        const data = {
+          ...node.data,
+          instance,
+          unit,
+          paramControls: projectParamControls[unit.id] ?? [],
+          onParamChange: updateParamDraft,
+        };
+        const previous = JSON.stringify({
+          instance: node.data.instance,
+          unit: node.data.unit,
+          controls: node.data.paramControls,
+        });
+        const candidate = JSON.stringify({ instance, unit, controls: data.paramControls });
+        if (previous === candidate) return node;
+        changed = true;
+        return { ...node, data };
+      });
+      return changed ? next : current;
+    });
+  }, [graphTopologySignature, project, projectParamControls, setEdges, setNodes, updateParamDraft]);
 
   useEffect(() => {
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(createWorkspacePayload(entryProject, workspaceFiles)));
@@ -251,22 +311,6 @@ export default function App() {
     setSelectedId(null);
     setCanvasMode('project');
     setSelectedAtomId(null);
-  }, []);
-
-  const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
-    const key = paramDraftKey(instanceId, paramKey);
-    setParamDrafts(drafts => (drafts[key] === value ? drafts : { ...drafts, [key]: value }));
-    setWorkspaceFiles(files => {
-      let changed = false;
-      const next = files.map(file => {
-        if (file.role !== 'project') return file;
-        const content = updateProjectInstanceParam(file.content, instanceId, paramKey, value);
-        if (content === file.content) return file;
-        changed = true;
-        return { ...file, content };
-      });
-      return changed ? next : files;
-    });
   }, []);
 
   const resetUnitParamDrafts = useCallback((instanceId: string) => {
@@ -588,7 +632,6 @@ export default function App() {
             onSelectNode={selectProjectNode}
             onOpenContractGraph={openContractGraph}
             onSelectRoute={selectRoute}
-            onParamChange={updateParamDraft}
           />
         )}
 

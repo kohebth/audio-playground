@@ -40,6 +40,7 @@ const backendSamples = read('web-tools/unit-editor/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/unit-editor/src/components/ProjectTopbar.tsx');
 const projectSidebar = read('web-tools/unit-editor/src/components/ProjectSidebar.tsx');
 const projectInspector = read('web-tools/unit-editor/src/components/ProjectInspector.tsx');
+const projectCanvas = read('web-tools/unit-editor/src/components/ProjectCanvas.tsx');
 const projectNode = read('web-tools/unit-editor/src/components/ProjectNode.tsx');
 const paramKnob = read('web-tools/unit-editor/src/components/ParamKnob.tsx');
 const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.tsx');
@@ -159,6 +160,9 @@ includesContent(previewPanel, 'override.originalValue', 'removed overrides must 
 includesContent(paramKnob, 'clampValue(parsed, minValue, maxValue)', 'typed parameter values must clamp to metadata bounds');
 includesContent(projectNode, '<ParamKnob', 'unit cards must render their parameter knobs directly');
 includesContent(projectNode, 'data.onParamChange?.', 'unit card knobs must use the shared YAML parameter update path');
+includesContent(app, 'graphTopologySignature', 'scalar parameter edits must be separated from graph topology changes');
+includesContent(projectCanvas, 'nodes={nodes}', 'project canvas must preserve node identities during scalar edits');
+assert(!projectCanvas.includes('const displayedNodes'), 'project canvas must not recreate every node to inject callbacks');
 includesContent(app, 'return changed ? next : files', 'equivalent parameter serialization must not create a new revision');
 assert(
   projectInspector.indexOf('<PreviewPanel') < projectInspector.indexOf('{isProjectView && ('),

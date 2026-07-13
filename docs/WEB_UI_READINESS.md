@@ -42,6 +42,8 @@ the same fast path before the synchronized YAML revision is prepared.
 Project-unit parameters are edited directly on their canvas cards. Each card renders compact knobs from the referenced
 unit's parameter metadata, including label, range, and unit; the inspector retains structural actions and reset only.
 Dragging a card knob uses the same clamped YAML update and live parameter synchronization path as other parameter edits.
+Scalar updates preserve the existing React Flow nodes, edges, and viewport; only topology changes rebuild the Dagre
+layout, preventing control drags from flashing the canvas.
 
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
