@@ -1,6 +1,5 @@
 import {
   WasmBackend,
-  type BackendState,
   type BackendPhase,
   type MeterSnapshot,
   type ValidationResult,
@@ -31,15 +30,6 @@ const emptyMeter: MeterSnapshot = {
   underruns: 0,
 };
 
-const emptyBackendState: BackendState = {
-  phase: 'idle',
-  workspaceRevision: 0,
-  preparedRevision: 0,
-  activeRevision: 0,
-  failedRevision: 0,
-  lastError: null,
-};
-
 function moduleUrl(file: string): string {
   return new URL(`wasm/${file}`, `${window.location.origin}${import.meta.env.BASE_URL}`).href;
 }
@@ -57,6 +47,23 @@ function captureLatencyMs(stream: MediaStream): number | null {
   return Number.isFinite(latency) && latency !== undefined && latency >= 0 ? latency * 1000 : null;
 }
 
+function createDefaultPreviewBuffer(context: AudioContext): AudioBuffer {
+  const sampleRate = context.sampleRate;
+  const durationSeconds = 2.5;
+  const buffer = context.createBuffer(1, Math.floor(sampleRate * durationSeconds), sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i += 1) {
+    const t = i / sampleRate;
+    const envelope = Math.exp(-2.8 * t);
+    const pluck =
+      Math.sin(2 * Math.PI * 110 * t) * 0.5 +
+      Math.sin(2 * Math.PI * 220 * t) * 0.25 +
+      Math.sin(2 * Math.PI * 330 * t) * 0.12;
+    data[i] = pluck * envelope * 0.32;
+  }
+  return buffer;
+}
+
 const lowLatencyMicrophoneConstraints = {
   autoGainControl: false,
   channelCount: 1,
@@ -69,8 +76,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
   const { setController } = useLiveBypass();
   const [backend, setBackend] = useState<WasmBackend | null>(null);
   const [phase, setPhase] = useState<BackendPhase>('idle');
-  const [diagnostic, setDiagnostic] = useState('WASM backend is initializing.');
-  const [backendState, setBackendState] = useState<BackendState>(emptyBackendState);
+  const [diagnostic, setDiagnostic] = useState('Audio engine is initializing.');
   const [backendDiagnostic, setBackendDiagnostic] = useState<WasmDiagnostic | null>(null);
   const [meter, setMeter] = useState<MeterSnapshot>(emptyMeter);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
@@ -98,7 +104,6 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
     const instance = backendRef.current;
     if (!instance) return;
     const next = instance.getState();
-    setBackendState(next);
     if (next.lastError) setBackendDiagnostic(next.lastError);
     else if (clearDiagnostic) setBackendDiagnostic(null);
   }, []);
@@ -123,6 +128,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
   useEffect(() => {
     const context = new AudioContext({ latencyHint: 'interactive' });
     contextRef.current = context;
+    setAudioBuffer(createDefaultPreviewBuffer(context));
+    setAudioFileName('test_tone.wav');
     let disposed = false;
     void WasmBackend.create({
       controlModuleUrl: moduleUrl('apg_control.mjs'),
@@ -138,8 +145,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
         }
         backendRef.current = instance;
         setBackend(instance);
-        setBackendState(instance.getState());
-        setDiagnostic('WASM control backend ready.');
+        setDiagnostic('Audio engine ready.');
         onRuntimeReady?.();
       })
       .catch(error => {
@@ -178,7 +184,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
           return false;
         }
         validRevisionRef.current = revision;
-        setDiagnostic(`Revision ${revision} validated.`);
+        setDiagnostic('Project validated.');
       }
       if (prepare) {
         setPhase('preparing');
@@ -192,7 +198,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
         if (runningRef.current) await backend.commitPrepared(revision);
         if (revision !== revisionRef.current) return false;
         refreshBackendState(true);
-        setDiagnostic(`Revision ${revision} prepared for live audio.`);
+        setDiagnostic('Project prepared for live audio.');
       }
       setPhase(runningRef.current ? 'running' : prepare ? 'ready' : 'idle');
       return true;
@@ -331,8 +337,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
       }
       setDiagnostic(
         inputMode === 'file'
-          ? `Revision ${revisionRef.current} is processing ${audioFileName}.`
-          : `Revision ${revisionRef.current} is processing microphone input.`,
+          ? `Processing ${audioFileName}.`
+          : 'Processing microphone input.',
       );
     } catch (error) {
       await stopPlayback();
@@ -342,7 +348,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
 
   const stop = useCallback(async () => {
     await stopPlayback();
-    setDiagnostic(`Revision ${revisionRef.current} is ready.`);
+    setDiagnostic('Project is ready.');
   }, [stopPlayback]);
 
   const chooseAudioFile = useCallback(async (file: File | undefined) => {
@@ -365,7 +371,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
     if (!backend || !running) return;
     try {
       await backend.reset();
-      setDiagnostic(`Revision ${revisionRef.current} runtime reset.`);
+      setDiagnostic('Runtime reset.');
     } catch (error) {
       reportError(error, 'reset');
     }
@@ -491,20 +497,13 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
       <div className="inspector-block__label">Live Preview</div>
       <div className="preview-panel__state">
         <strong>{phase}</strong>
-        <span>WASM AudioWorklet</span>
+        <span>Live engine</span>
       </div>
       <p className={`diagnostic-empty${phase === 'error' ? ' diagnostic-empty--error' : ''}`}>{diagnostic}</p>
-      <div className="revision-grid" aria-label="WASM revision state">
-        <div><span>Workspace</span><strong>{backendState.workspaceRevision || '-'}</strong></div>
-        <div><span>Prepared</span><strong>{backendState.preparedRevision || '-'}</strong></div>
-        <div><span>Active</span><strong>{backendState.activeRevision || '-'}</strong></div>
-        <div><span>Failed</span><strong>{backendState.failedRevision || '-'}</strong></div>
-      </div>
       {backendDiagnostic && (
         <dl className="wasm-diagnostic" aria-label="WASM diagnostic">
           <div><dt>Code</dt><dd>{backendDiagnostic.code}</dd></div>
           <div><dt>Phase</dt><dd>{backendDiagnostic.phase}</dd></div>
-          <div><dt>Revision</dt><dd>{backendDiagnostic.revision}</dd></div>
           {backendDiagnostic.file && <div><dt>File</dt><dd>{backendDiagnostic.file}</dd></div>}
           {backendDiagnostic.path && <div><dt>Path</dt><dd>{backendDiagnostic.path}</dd></div>}
         </dl>
@@ -578,10 +577,6 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
         <div>
           <span>Frames</span>
           <strong>{meter.frames}</strong>
-        </div>
-        <div>
-          <span>Active</span>
-          <strong>{meter.activeRevision || '-'}</strong>
         </div>
         <div>
           <span>Underruns</span>

@@ -1577,6 +1577,17 @@ body {
   line-height: 1.45;
 }
 
+.developer-diagnostics .inspector-block__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.developer-diagnostics .inspector-block__label i {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
 .validation-line {
   display: flex;
   align-items: center;

@@ -109,11 +109,12 @@ includesContent(
 includesContent(app, 'setEntryProject(payload.entryProject)', 'workspace import must restore the persisted entry project');
 includesContent(workspacePersistence, "candidate.role !== 'project'", 'workspace import must validate file roles');
 includesContent(workspacePersistence, 'normalizedPath', 'workspace import must confine file paths');
-includesContent(projectTopbar, 'Drafts pending', 'dirty workspace state must be visible');
-includesContent(projectTopbar, 'Backend synced', 'clean workspace state must be visible');
-includesContent(projectInspector, 'Out of sync with local edits', 'validation/render should show stale state');
-includesContent(projectInspector, 'Synchronized with local draft state', 'validation/render should show synced state');
-includesContent(projectInspector, 'commandState = hasDirtyParamDrafts ? \'frozen\' : \'current\'', 'backend command path should switch when workspace is dirty');
+includesContent(projectTopbar, 'Unsaved edits', 'dirty workspace state must be visible');
+includesContent(projectTopbar, 'Saved locally', 'clean workspace state must be visible');
+includesContent(projectInspector, 'Unsaved local edits', 'validation/render should show stale state');
+includesContent(projectInspector, 'Up to date', 'validation/render should show synced state');
+includesContent(projectInspector, 'Developer Diagnostics', 'developer diagnostics panel should own raw YAML and command details');
+includesContent(projectInspector, 'commands.validateProject', 'developer diagnostics should expose validation command details');
 assert(unit.graph.nodes.length > 0 && unit.graph.signals.includes('input'), 'unit inspect graph fixture is empty');
 
 // AE: Contract editor applies graph edits against unit drafts and surfaces binding errors.
@@ -194,9 +195,8 @@ includesContent(wasmFacade, 'Prepared revision ${revision} is stale', 'stale pre
 includesContent(wasmFacade, "type: 'stage'", 'runtime hydration must be a separate processor message');
 includesContent(wasmFacade, "type: 'commit'", 'runtime commit must be a separate processor message');
 includesContent(wasmFacade, 'failedRevision: revision', 'runtime failures must identify their workspace revision');
-includesContent(previewPanel, 'backendState.preparedRevision', 'preview must expose the prepared workspace revision');
-includesContent(previewPanel, 'backendState.activeRevision', 'preview must expose the active runtime revision');
-includesContent(previewPanel, 'backendState.failedRevision', 'preview must expose the failed workspace revision');
+includesContent(previewPanel, 'Live engine', 'preview must expose a user-facing live engine label');
+includesContent(previewPanel, 'Project prepared for live audio.', 'preview must report prepared runtime readiness without revision details');
 includesContent(previewPanel, 'backendDiagnostic.code', 'preview must expose structured diagnostic codes');
 includesContent(previewPanel, 'backendDiagnostic.file', 'preview must expose diagnostic file paths');
 includesContent(previewPanel, 'backendDiagnostic.path', 'preview must expose diagnostic schema paths');
@@ -216,13 +216,10 @@ assert(!previewPanel.includes('createDeterministicPreviewAdapter'), 'determinist
 
 // AG: Compatibility and export actionability.
 for (const profile of ['desktop_full', 'wasm_realtime', 'm7_static', 'offline_render']) {
-  assert(compatibility.includes(profile), `compatibility matrix missing ${profile}`);
+assert(compatibility.includes(profile), `compatibility matrix missing ${profile}`);
 }
 assert(compatibility.includes("'yes'") && compatibility.includes("'no'"), 'compatibility matrix must show both supported and unsupported states');
-includesContent(compatibility, 'commands.exportWasm', 'WASM export command is not surfaced');
-includesContent(compatibility, 'commands.exportM7', 'M7 export command is not surfaced');
-includesContent(compatibility, 'commands.benchmarkProject', 'benchmark command is not surfaced');
 assertAtLeast(compatibility, '<strong>blocked</strong>', 2, 'export panel should show multiple blocked targets with reason');
-assert(compatibility.includes('Blocked:'), 'export action panel should expose blocking reason text for unavailable targets');
+assert(compatibility.includes('Not available in this build.'), 'export action panel should expose blocking reason text for unavailable targets');
 
 console.log('web contract tests passed');

@@ -140,8 +140,7 @@ export function ProjectInspector({
   const selectedDirtyCount = selectedNode?.kind === 'unit'
     ? paramOverrides.filter(override => override.instanceId === selectedNode.instance.id).length
     : 0;
-  const readinessMessage = hasDirtyParamDrafts ? 'Out of sync with local edits' : 'Synchronized with local draft state';
-  const commandState = hasDirtyParamDrafts ? 'frozen' : 'current';
+  const readinessMessage = hasDirtyParamDrafts ? 'Unsaved local edits' : 'Up to date';
   const isProjectView = inspectorView === 'project';
   const isAtomView = inspectorView === 'atom';
   const isContractView = inspectorView === 'contract';
@@ -205,7 +204,7 @@ export function ProjectInspector({
               {validation.errors.length} errors / {validation.warnings.length} warnings
             </div>
             {validation.errors.length === 0 && validation.warnings.length === 0 ? (
-              <div className="diagnostic-empty">No diagnostics in the frozen validation sample.</div>
+              <div className="diagnostic-empty">No diagnostics.</div>
             ) : (
               <div className="diagnostic-list">
                 {[...validation.errors, ...validation.warnings].map((diagnostic, index) => (
@@ -217,10 +216,6 @@ export function ProjectInspector({
                 ))}
               </div>
             )}
-            <div className="command-panel">
-              <span>Backend command ({commandState})</span>
-              <code>{commands.validateProject}</code>
-            </div>
                     </details>
 
           <details className="inspector-block" open>
@@ -249,13 +244,9 @@ export function ProjectInspector({
                 />
               ))}
             </div>
-            <div className="command-panel">
-              <span>Backend command ({commandState})</span>
-              <code>{commands.renderProject}</code>
-            </div>
                     </details>
 
-          <CompatibilityExportPanel project={project} commands={commands} />
+          <CompatibilityExportPanel project={project} />
 
           <DraftExportPanel projectFile={projectFile} overrides={paramOverrides} />
         </>
@@ -410,7 +401,7 @@ export function ProjectInspector({
                 ))}
               </div>
             ) : (
-              <div className="diagnostic-empty">Select a valid unit YAML draft to edit atoms.</div>
+              <div className="diagnostic-empty">Select a valid unit YAML file to edit atoms.</div>
             )}
           </details>
 
@@ -483,11 +474,22 @@ export function ProjectInspector({
             </details>
           ) : null}
 
-          <details className="inspector-block" open>
-            <summary className="inspector-block__label">Workspace Draft</summary>
+          <details className="inspector-block developer-diagnostics">
+            <summary className="inspector-block__label">
+              <i className="fa-solid fa-code" aria-hidden="true" />
+              Developer Diagnostics
+            </summary>
             <div className="workspace-editor__meta">
               <strong>{selectedUnitFile.path}</strong>
               <span>{selectedUnitFile.role}</span>
+            </div>
+            <div className="command-panel">
+              <span>Validation Command</span>
+              <code>{commands.validateProject}</code>
+            </div>
+            <div className="command-panel">
+              <span>Render Command</span>
+              <code>{commands.renderProject}</code>
             </div>
             <textarea
               aria-label={`Workspace file ${selectedUnitFile.path}`}
@@ -501,7 +503,7 @@ export function ProjectInspector({
           <AtomCatalogPanel unit={unit} catalog={atomCatalog} manifest={atomCatalogManifest} />
 
           <details className="inspector-block" open>
-            <summary className="inspector-block__label">Backend Contract</summary>
+            <summary className="inspector-block__label">Unit Contract</summary>
             <div className="contract-list">
               <div>
                 <span>Unit sample</span>

@@ -8,7 +8,7 @@ import { ProjectCanvas } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
-import { backendCommands, backendSamples, initialWorkspaceFiles, sampleSources, type WorkspaceFile } from './lib/backendSamples';
+import { backendCommands, backendSamples, initialWorkspaceFiles, type WorkspaceFile } from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData, type ProjectParamControl } from './lib/projectGraph';
 import { LiveBypassContext, type LiveBypassController } from './lib/liveBypass';
 import {
@@ -630,7 +630,6 @@ export default function App() {
       <div className="layout">
         <ProjectSidebar
           project={project}
-          sampleSources={sampleSources}
           workspaceFiles={workspaceFiles}
           selectedWorkspacePath={selectedWorkspacePath}
           selectedNodeId={selectedId}

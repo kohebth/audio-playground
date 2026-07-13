@@ -69,7 +69,7 @@ export function ProjectTopbar({
             {validation.ok ? 'Valid' : 'Invalid'}
           </div>
           <div className={`status-pill ${draftStateClass}`} title={`${workspaceFileCount} workspace files`}>
-            {hasDirtyParamDrafts ? `Drafts pending (${dirtyParamCount})` : 'Backend synced'}
+            {hasDirtyParamDrafts ? `Unsaved edits (${dirtyParamCount})` : 'Saved locally'}
           </div>
         </div>
         <span className="header-divider" />

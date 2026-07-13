@@ -14,7 +14,7 @@ export function DraftExportPanel({ projectFile, overrides }: Props) {
 
   return (
     <details className="inspector-block" open>
-      <summary className="inspector-block__label">Draft Export</summary>
+      <summary className="inspector-block__label">Parameter Edits</summary>
       <div className="draft-export__summary">
         <strong>{overrides.length} parameter overrides</strong>
         <span>{projectFile}</span>

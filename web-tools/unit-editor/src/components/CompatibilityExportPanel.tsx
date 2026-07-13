@@ -1,8 +1,7 @@
-import type { BackendCommands, ProjectInspect } from '../lib/backendSamples';
+import type { ProjectInspect } from '../lib/backendSamples';
 
 type Props = {
   project: ProjectInspect;
-  commands: BackendCommands;
 };
 
 const PROFILES = ['desktop_full', 'wasm_realtime', 'm7_static', 'offline_render'];
@@ -11,8 +10,8 @@ function profileSupported(project: ProjectInspect, profile: string): boolean {
   return project.units.every(unit => unit.compatibility[profile]);
 }
 
-export function CompatibilityExportPanel({ project, commands }: Props) {
-  const blockedReason = 'Blocked: command backend not wired in this web build.';
+export function CompatibilityExportPanel({ project }: Props) {
+  const unavailableReason = 'Not available in this build.';
   return (
     <details className="inspector-block" open>
       <summary className="inspector-block__label">Compatibility</summary>
@@ -37,26 +36,22 @@ export function CompatibilityExportPanel({ project, commands }: Props) {
         <div>
           <span>Desktop</span>
           <strong>{profileSupported(project, 'desktop_full') ? 'ready' : 'blocked'}</strong>
-          <code>{commands.renderProject}</code>
-          {profileSupported(project, 'desktop_full') ? null : <small>{blockedReason}</small>}
+          {profileSupported(project, 'desktop_full') ? null : <small>{unavailableReason}</small>}
         </div>
         <div>
           <span>Web/WASM</span>
           <strong>blocked</strong>
-          <code>{commands.exportWasm}</code>
-          <small>{blockedReason}</small>
+          <small>{unavailableReason}</small>
         </div>
         <div>
           <span>M7 Static</span>
           <strong>blocked</strong>
-          <code>{commands.exportM7}</code>
-          <small>{blockedReason}</small>
+          <small>{unavailableReason}</small>
         </div>
         <div>
           <span>Benchmark</span>
           <strong>blocked</strong>
-          <code>{commands.benchmarkProject}</code>
-          <small>{blockedReason}</small>
+          <small>{unavailableReason}</small>
         </div>
       </div>
     </details>
