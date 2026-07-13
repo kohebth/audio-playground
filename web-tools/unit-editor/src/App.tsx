@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -9,7 +9,28 @@ import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
 import { backendCommands, backendSamples, initialWorkspaceFiles, sampleSources, type WorkspaceFile } from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
-import { buildParamDrafts, buildParamOverrides, countDirtyParams, paramDraftKey } from './lib/projectParams';
+import {
+  buildParamDrafts,
+  buildParamOriginals,
+  buildParamOverridesFromOriginals,
+  paramDraftKey,
+} from './lib/projectParams';
+import {
+  addProjectInstance,
+  addProjectRoute,
+  duplicateProjectInstance,
+  moveProjectInstance,
+  moveProjectRoute,
+  parseProjectGraphDraft,
+  parseUnitPortNames,
+  projectDraftToInspect,
+  removeProjectInstance,
+  removeProjectRoute,
+  renameProjectInstance,
+  replaceProjectRoute,
+  type ProjectPortCatalog,
+  type ProjectRouteDraft,
+} from './lib/projectV2Graph';
 import {
   addAtomNodeToUnit,
   connectUnitNodes,
@@ -77,8 +98,8 @@ function loadWorkspaceFiles(): WorkspaceFile[] {
 
 export default function App() {
   const initialGraph = useMemo(() => buildProjectGraph(backendSamples.project), []);
-  const [nodes, , onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialGraph.edges);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
   const [selectedId, setSelectedId] = useState<string | null>('unit-drive1');
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
   const [inspectorView, setInspectorView] = useState<InspectorView>('project');
@@ -87,22 +108,41 @@ export default function App() {
   const [atomClipboard, setAtomClipboard] = useState<UnitGraphNode | null>(null);
   const [graphEditError, setGraphEditError] = useState<string | null>(null);
   const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(backendSamples.project));
+  const [paramOriginals, setParamOriginals] = useState(() => buildParamOriginals(backendSamples.project));
   const [workspaceFiles, setWorkspaceFiles] = useState(loadWorkspaceFiles);
   const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspaceFiles[0].path);
+  const projectWorkspaceFile = workspaceFiles.find(file => file.path === backendSamples.project.file) ?? workspaceFiles[0];
+  const lastValidProjectDraft = useRef(parseProjectGraphDraft(initialWorkspaceFiles[0].content));
+  const parsedProjectDraft = useMemo(() => {
+    try {
+      return parseProjectGraphDraft(projectWorkspaceFile.content);
+    } catch {
+      return null;
+    }
+  }, [projectWorkspaceFile.content]);
+  if (parsedProjectDraft) lastValidProjectDraft.current = parsedProjectDraft;
+  const projectDraft = parsedProjectDraft ?? lastValidProjectDraft.current;
+  const project = useMemo(
+    () => projectDraftToInspect(projectDraft, backendSamples.project, projectWorkspaceFile.path),
+    [projectDraft, projectWorkspaceFile.path],
+  );
   const selectedNode = findUnitNode(nodes, selectedId);
-  const selectedRoute = selectedRouteIndex === null ? null : backendSamples.project.routes[selectedRouteIndex] ?? null;
-  const dirtyParamCount = useMemo(() => countDirtyParams(backendSamples.project, paramDrafts), [paramDrafts]);
+  const selectedRoute = selectedRouteIndex === null ? null : project.routes[selectedRouteIndex] ?? null;
+  const paramOverrides = useMemo(
+    () => buildParamOverridesFromOriginals(project, paramDrafts, paramOriginals),
+    [paramDrafts, paramOriginals, project],
+  );
+  const dirtyParamCount = paramOverrides.length;
   const workspaceDraftCount = workspaceFiles.filter(file => file.content !== file.originalContent).length;
   const hasWorkspaceDrafts = workspaceDraftCount > 0;
   const hasDirtyDrafts = dirtyParamCount > 0 || workspaceDraftCount > 0;
   const selectedWorkspaceFile = workspaceFiles.find(file => file.path === selectedWorkspacePath) ?? workspaceFiles[0];
-  const paramOverrides = useMemo(() => buildParamOverrides(backendSamples.project, paramDrafts), [paramDrafts]);
   const selectedUnitWorkspaceFile = useMemo(() => {
     if (selectedNode?.kind !== 'unit') return selectedWorkspaceFile;
 
-    const path = resolveWorkspacePath(backendSamples.project.file, selectedNode.unit.file);
+    const path = resolveWorkspacePath(project.file, selectedNode.unit.file);
     return workspaceFiles.find(file => file.path === path) ?? selectedWorkspaceFile;
-  }, [selectedNode, selectedWorkspaceFile, workspaceFiles]);
+  }, [project.file, selectedNode, selectedWorkspaceFile, workspaceFiles]);
   const selectedUnitGraph = useMemo(() => {
     try {
       if (selectedUnitWorkspaceFile.role !== 'unit') return null;
@@ -113,6 +153,26 @@ export default function App() {
   }, [selectedUnitWorkspaceFile]);
   const selectedAtom =
     selectedUnitGraph?.nodes.find(node => node.id === selectedAtomId) ?? selectedUnitGraph?.nodes[0] ?? null;
+
+  const projectPorts = useMemo<ProjectPortCatalog>(() => Object.fromEntries(projectDraft.units.map(reference => {
+    const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
+    const file = workspaceFiles.find(item => item.path === path);
+    if (file?.role !== 'unit') return [reference.id, { inputs: [], outputs: [] }];
+    try {
+      return [reference.id, parseUnitPortNames(file.content)];
+    } catch {
+      return [reference.id, { inputs: [], outputs: [] }];
+    }
+  })), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
+
+  useEffect(() => {
+    const next = buildProjectGraph(project);
+    setNodes(current => next.nodes.map(node => {
+      const positioned = current.find(item => item.id === node.id);
+      return positioned ? { ...node, position: positioned.position } : node;
+    }));
+    setEdges(next.edges);
+  }, [project, setEdges, setNodes]);
 
   useEffect(() => {
     const drafts = workspaceFiles.map(({ path, role, content }) => ({ path, role, content }));
@@ -132,14 +192,14 @@ export default function App() {
     const node = nodes.find(item => item.id === id)?.data;
     if (!node || node.kind !== 'unit') return;
 
-    const path = resolveWorkspacePath(backendSamples.project.file, node.unit.file);
+    const path = resolveWorkspacePath(project.file, node.unit.file);
     setSelectedId(id);
     setSelectedRouteIndex(null);
     setSelectedWorkspacePath(path);
     setCanvasMode('contract');
     setInspectorView('contract');
     setSelectedAtomId(null);
-  }, [nodes]);
+  }, [nodes, project.file]);
 
   const selectRoute = useCallback((index: number) => {
     setSelectedRouteIndex(index);
@@ -167,14 +227,15 @@ export default function App() {
   const resetParamDraft = updateParamDraft;
 
   const resetUnitParamDrafts = useCallback((instanceId: string) => {
-    const instance = backendSamples.project.nodes.find(node => node.id === instanceId);
+    const instance = project.nodes.find(node => node.id === instanceId);
     if (!instance) return;
 
     setParamDrafts(drafts => {
       const next = { ...drafts };
 
       for (const param of instance.params) {
-        next[paramDraftKey(instance.id, param.key)] = param.value;
+        const key = paramDraftKey(instance.id, param.key);
+        next[key] = paramOriginals[key] ?? param.value;
       }
 
       return next;
@@ -183,13 +244,110 @@ export default function App() {
       files.map(file => {
         if (file.role !== 'project') return file;
         const content = instance.params.reduce(
-          (draft, param) => updateProjectInstanceParam(draft, instance.id, param.key, param.value),
+          (draft, param) => {
+            const key = paramDraftKey(instance.id, param.key);
+            return updateProjectInstanceParam(draft, instance.id, param.key, paramOriginals[key] ?? param.value);
+          },
           file.content,
         );
         return { ...file, content };
       }),
     );
-  }, []);
+  }, [paramOriginals, project.nodes]);
+
+  const updateProjectFile = useCallback((update: (content: string) => string) => {
+    setGraphEditError(null);
+    try {
+      const content = update(projectWorkspaceFile.content);
+      setWorkspaceFiles(files => files.map(file =>
+        file.path === projectWorkspaceFile.path ? { ...file, content } : file));
+      return content;
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : String(error));
+      return null;
+    }
+  }, [projectWorkspaceFile.content, projectWorkspaceFile.path]);
+
+  const addProjectNode = useCallback((unitId: string, instanceId: string) => {
+    const reference = projectDraft.units.find(unit => unit.id === unitId);
+    if (!reference) return;
+    const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
+    const unitFile = workspaceFiles.find(file => file.path === unitPath);
+    const defaults = unitFile?.role === 'unit'
+      ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
+      : {};
+    const result = addProjectInstance(projectWorkspaceFile.content, unitId, instanceId, defaults);
+    if (!updateProjectFile(() => result.content)) return;
+    setParamDrafts(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
+    setParamOriginals(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
+    setSelectedId(`unit-${result.id}`);
+  }, [projectDraft.units, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
+
+  const duplicateProjectNode = useCallback((instanceId: string) => {
+    try {
+      const result = duplicateProjectInstance(projectWorkspaceFile.content, instanceId);
+      const source = project.nodes.find(node => node.id === instanceId);
+      if (!source || !updateProjectFile(() => result.content)) return;
+      const values = Object.fromEntries(source.params.map(param => [paramDraftKey(result.id, param.key), param.value]));
+      setParamDrafts(current => ({ ...current, ...values }));
+      setParamOriginals(current => ({ ...current, ...values }));
+      setSelectedId(`unit-${result.id}`);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : String(error));
+    }
+  }, [project.nodes, projectWorkspaceFile.content, updateProjectFile]);
+
+  const renameProjectNode = useCallback((instanceId: string, nextId: string) => {
+    if (!updateProjectFile(content => renameProjectInstance(content, instanceId, nextId))) return;
+    const migrate = (values: Record<string, string>) => Object.fromEntries(Object.entries(values).map(([key, value]) => [
+      key.startsWith(`${instanceId}.`) ? `${nextId}${key.slice(instanceId.length)}` : key,
+      value,
+    ]));
+    setParamDrafts(migrate);
+    setParamOriginals(migrate);
+    setSelectedId(`unit-${nextId}`);
+  }, [updateProjectFile]);
+
+  const removeProjectNode = useCallback((instanceId: string) => {
+    if (!updateProjectFile(content => removeProjectInstance(content, instanceId))) return;
+    const removeValues = (values: Record<string, string>) => Object.fromEntries(
+      Object.entries(values).filter(([key]) => !key.startsWith(`${instanceId}.`)),
+    );
+    setParamDrafts(removeValues);
+    setParamOriginals(removeValues);
+    setSelectedId(null);
+  }, [updateProjectFile]);
+
+  const reorderProjectNode = useCallback((instanceId: string, nextIndex: number) => {
+    updateProjectFile(content => moveProjectInstance(content, instanceId, nextIndex));
+  }, [updateProjectFile]);
+
+  const updateProjectRoute = useCallback((index: number, route: ProjectRouteDraft) => {
+    updateProjectFile(content => replaceProjectRoute(content, projectPorts, index, route));
+  }, [projectPorts, updateProjectFile]);
+
+  const createProjectRoute = useCallback((route: ProjectRouteDraft) => {
+    updateProjectFile(content => addProjectRoute(content, projectPorts, route));
+  }, [projectPorts, updateProjectFile]);
+
+  const deleteProjectRoute = useCallback((index: number) => {
+    if (!updateProjectFile(content => removeProjectRoute(content, index))) return;
+    setSelectedRouteIndex(null);
+  }, [updateProjectFile]);
+
+  const reorderProjectRoute = useCallback((index: number, nextIndex: number) => {
+    if (!updateProjectFile(content => moveProjectRoute(content, index, nextIndex))) return;
+    setSelectedRouteIndex(Math.max(0, Math.min(project.routes.length - 1, nextIndex)));
+  }, [project.routes.length, updateProjectFile]);
+
+  const routeSources = useMemo(() => [
+    'system.input',
+    ...project.nodes.flatMap(node => (projectPorts[node.unit]?.outputs ?? []).map(port => `${node.id}.${port}`)),
+  ], [project.nodes, projectPorts]);
+  const routeTargets = useMemo(() => [
+    ...project.nodes.flatMap(node => (projectPorts[node.unit]?.inputs ?? []).map(port => `${node.id}.${port}`)),
+    'system.output',
+  ], [project.nodes, projectPorts]);
 
   const updateWorkspaceFile = useCallback((path: string, content: string) => {
     setWorkspaceFiles(files => files.map(file => (file.path === path ? { ...file, content } : file)));
@@ -290,6 +448,10 @@ export default function App() {
   const resetWorkspace = useCallback(() => {
     setWorkspaceFiles(initialWorkspaceFiles);
     setSelectedWorkspacePath(initialWorkspaceFiles[0].path);
+    setParamDrafts(buildParamDrafts(backendSamples.project));
+    setParamOriginals(buildParamOriginals(backendSamples.project));
+    setSelectedId('unit-drive1');
+    setSelectedRouteIndex(null);
     window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
   }, []);
 
@@ -332,7 +494,7 @@ export default function App() {
   return (
     <div className="app app--project">
         <ProjectTopbar
-          project={backendSamples.project}
+          project={project}
           validation={backendSamples.validation}
           dirtyParamCount={dirtyParamCount + workspaceDraftCount}
           hasDirtyParamDrafts={hasDirtyDrafts}
@@ -345,7 +507,7 @@ export default function App() {
 
       <div className="layout">
         <ProjectSidebar
-          project={backendSamples.project}
+          project={project}
           sampleSources={sampleSources}
           workspaceFiles={workspaceFiles}
           selectedWorkspacePath={selectedWorkspacePath}
@@ -353,9 +515,13 @@ export default function App() {
           selectedRouteIndex={selectedRouteIndex}
           onSelectWorkspaceFile={setSelectedWorkspacePath}
           onCreateUnit={createUnit}
+          onAddInstance={addProjectNode}
+          onAddRoute={createProjectRoute}
           onSelectNode={selectProjectNode}
           onOpenContractGraph={openContractGraph}
           onSelectRoute={selectRoute}
+          routeSources={routeSources}
+          routeTargets={routeTargets}
         />
 
         {canvasMode === 'contract' && selectedNode?.kind === 'unit' ? (
@@ -388,15 +554,16 @@ export default function App() {
           validation={backendSamples.validation}
           render={backendSamples.render}
           commands={backendCommands}
-          project={backendSamples.project}
+          project={project}
           inspectorView={inspectorView}
           onInspectorViewChange={setInspectorView}
           selectedNode={selectedNode}
           selectedRoute={selectedRoute}
+          selectedRouteIndex={selectedRouteIndex}
           unit={backendSamples.unit}
           atomCatalog={backendSamples.atomCatalog}
           atomCatalogManifest={backendSamples.atomCatalogManifest}
-          projectFile={backendSamples.project.file}
+          projectFile={project.file}
           workspaceFiles={workspaceFiles}
           hasDirtyParamDrafts={hasDirtyDrafts}
           selectedUnitFile={selectedUnitWorkspaceFile}
@@ -407,6 +574,15 @@ export default function App() {
           paramDrafts={paramDrafts}
           paramOverrides={paramOverrides}
           onAddAtom={addAtom}
+          onDuplicateInstance={duplicateProjectNode}
+          onRemoveInstance={removeProjectNode}
+          onRenameInstance={renameProjectNode}
+          onReorderInstance={reorderProjectNode}
+          onUpdateRoute={updateProjectRoute}
+          onRemoveRoute={deleteProjectRoute}
+          onReorderRoute={reorderProjectRoute}
+          routeSources={routeSources}
+          routeTargets={routeTargets}
           onCopyAtom={copySelectedAtom}
           onCutAtom={cutSelectedAtom}
           onPasteAtom={pasteAtom}

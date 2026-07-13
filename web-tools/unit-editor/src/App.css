@@ -820,6 +820,39 @@ body {
   padding: 8px;
 }
 
+.project-instance-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 5px;
+  padding: 0 8px 8px;
+}
+
+.project-instance-create select,
+.project-instance-create input,
+.project-instance-create button {
+  min-width: 0;
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font: 10px var(--font-sans);
+}
+
+.project-instance-create input,
+.project-instance-create select {
+  padding: 0 6px;
+}
+
+.project-instance-create button {
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.project-instance-create__error {
+  padding: 0 8px;
+}
+
 .project-list__item {
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr) 28px;
@@ -906,6 +939,23 @@ body {
   border-radius: 6px;
   background: transparent;
   text-align: left;
+}
+
+.route-create {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.route-create select,
+.route-create button {
+  min-width: 0;
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font: 10px var(--font-mono);
 }
 
 .route-list__item:hover,
@@ -1499,6 +1549,52 @@ body {
   min-width: 0;
   color: var(--text-muted);
   font: 11px var(--font-sans);
+}
+
+.project-edit-field {
+  display: grid;
+  gap: 5px;
+  margin: 9px 0;
+}
+
+.project-edit-field span {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.project-edit-field input,
+.project-edit-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font: 11px var(--font-mono);
+}
+
+.project-edit-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+
+.project-edit-actions button {
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 11px var(--font-sans);
+}
+
+.project-edit-error {
+  margin: 8px 12px;
 }
 
 .compat-matrix {

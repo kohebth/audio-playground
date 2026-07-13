@@ -106,7 +106,7 @@ includesContent(projectInspector, 'commandState = hasDirtyParamDrafts ? \'frozen
 assert(unit.graph.nodes.length > 0 && unit.graph.signals.includes('input'), 'unit inspect graph fixture is empty');
 
 // AE: Contract editor applies graph edits against unit drafts and surfaces binding errors.
-includesContent(projectInspector, 'Graph edit blocked', 'invalid atom binding feedback is missing');
+includesContent(projectInspector, 'Edit blocked', 'invalid graph edit feedback is missing');
 includesContent(projectInspector, 'onAddAtom', 'contract graph view should expose insert/add action');
 includesContent(projectInspector, 'onCopyAtom', 'contract graph view should expose copy action');
 includesContent(projectInspector, 'onCutAtom', 'contract graph view should expose cut action');
@@ -121,7 +121,13 @@ includesContent(contractCanvas, 'onEdgesChange={onEdgesChange}', 'controlled con
 includesContent(contractCanvas, 'onReconnect={reconnect}', 'contract edges must support structural moves');
 includesContent(contractCanvas, 'onNodesChange={onNodesChange}', 'contract node positions must remain UI-only state');
 includesContent(app, 'setGraphEditError', 'graph edit failures should be surfaced through workspace error feedback');
-includesContent(app, 'resolveWorkspacePath(backendSamples.project.file, node.unit.file)', 'unit references must resolve against the project path');
+includesContent(app, 'resolveWorkspacePath(project.file, node.unit.file)', 'unit references must resolve against the project path');
+includesContent(app, 'projectDraftToInspect', 'project UI must derive its model from current YAML');
+includesContent(app, 'lastValidProjectDraft', 'invalid project YAML must retain the last valid canvas model');
+includesContent(projectSidebar, 'onAddInstance(instanceUnit, instanceId)', 'project sidebar must add unit instances structurally');
+includesContent(projectSidebar, 'onAddRoute({ from: routeSource, to: routeTarget })', 'project sidebar must add routes structurally');
+includesContent(projectInspector, 'onRenameInstance', 'project inspector must expose safe instance rename');
+includesContent(projectInspector, 'onRemoveRoute', 'project inspector must expose structural route disconnection');
 includesContent(app, 'createUnitV2({ name })', 'workspace unit creation must use the structured YAML transformer');
 includesContent(projectSidebar, 'onCreateUnit(unitName)', 'workspace sidebar must expose unit creation');
 

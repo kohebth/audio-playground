@@ -53,6 +53,13 @@ YAML bindings and pass through the common validation/swap pipeline. The transfor
 incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates UI-only position state
 and does not change DSP YAML or announce a workspace revision.
 
+Project chain editing is driven from the current project YAML rather than the frozen inspect sample. Users can add,
+duplicate, remove, rename, and reorder instances; add, replace, disconnect, and reorder routes; and select endpoints from
+resolved unit port metadata. Rename updates route endpoints, parameter-control identities, and scene paths atomically.
+Removal cleans dependent routes and scene values. Direction, port, occupied-target, and cycle checks run before snapshot
+synchronization. A broken chain can validate structurally but fails preparation, leaving the previous active revision in
+the Worklet until a complete route is restored.
+
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.

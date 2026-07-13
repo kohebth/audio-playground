@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node scripts/contract-tests.mjs && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/unit-v2-graph-tests.mts",
+    "test": "node scripts/contract-tests.mjs && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/unit-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/project-v2-graph-tests.mts",
     "preview": "vite preview"
   },
   "dependencies": {

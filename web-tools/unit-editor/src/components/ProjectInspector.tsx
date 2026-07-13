@@ -15,7 +15,6 @@ import type {
   WorkspaceFile,
 } from '../lib/backendSamples';
 import {
-  countDirtyParamsForInstance,
   paramDraftKey,
   type ParamOverride,
   type ParamDrafts,
@@ -31,6 +30,7 @@ type Props = {
   onInspectorViewChange: (next: 'project' | 'atom' | 'contract') => void;
   selectedNode: ProjectNodeData | null;
   selectedRoute: ProjectRoute | null;
+  selectedRouteIndex: number | null;
   unit: UnitInspect;
   atomCatalog: AtomCatalog;
   atomCatalogManifest: Record<string, string>;
@@ -45,6 +45,15 @@ type Props = {
   paramDrafts: ParamDrafts;
   paramOverrides: ParamOverride[];
   onAddAtom: (atomName: string) => void;
+  onDuplicateInstance: (instanceId: string) => void;
+  onRemoveInstance: (instanceId: string) => void;
+  onRenameInstance: (instanceId: string, nextId: string) => void;
+  onReorderInstance: (instanceId: string, nextIndex: number) => void;
+  onUpdateRoute: (index: number, route: ProjectRoute) => void;
+  onRemoveRoute: (index: number) => void;
+  onReorderRoute: (index: number, nextIndex: number) => void;
+  routeSources: string[];
+  routeTargets: string[];
   onCopyAtom: () => void;
   onCutAtom: () => void;
   onPasteAtom: () => void;
@@ -248,6 +257,7 @@ export function ProjectInspector({
   onInspectorViewChange,
   selectedNode,
   selectedRoute,
+  selectedRouteIndex,
   unit,
   atomCatalog,
   atomCatalogManifest,
@@ -262,6 +272,15 @@ export function ProjectInspector({
   paramDrafts,
   paramOverrides,
   onAddAtom,
+  onDuplicateInstance,
+  onRemoveInstance,
+  onRenameInstance,
+  onReorderInstance,
+  onUpdateRoute,
+  onRemoveRoute,
+  onReorderRoute,
+  routeSources,
+  routeTargets,
   onCopyAtom,
   onCutAtom,
   onPasteAtom,
@@ -274,8 +293,12 @@ export function ProjectInspector({
   onWorkspaceFileChange,
 }: Props) {
   const [atomToAdd, setAtomToAdd] = useState(atomCatalog.atoms[0]?.name ?? '');
-  const selectedDirtyCount =
-    selectedNode?.kind === 'unit' ? countDirtyParamsForInstance(selectedNode.instance, paramDrafts) : 0;
+  const [renameDraft, setRenameDraft] = useState('');
+  const [routeFrom, setRouteFrom] = useState('');
+  const [routeTo, setRouteTo] = useState('');
+  const selectedDirtyCount = selectedNode?.kind === 'unit'
+    ? paramOverrides.filter(override => override.instanceId === selectedNode.instance.id).length
+    : 0;
   const readinessMessage = hasDirtyParamDrafts ? 'Out of sync with local edits' : 'Synchronized with local draft state';
   const commandState = hasDirtyParamDrafts ? 'frozen' : 'current';
   const isProjectView = inspectorView === 'project';
@@ -286,6 +309,15 @@ export function ProjectInspector({
     selectedNode?.kind === 'unit'
       ? project.routes.filter(route => route.from.startsWith(`${selectedNode.instance.id}.`) || route.to.startsWith(`${selectedNode.instance.id}.`))
       : [];
+
+  useEffect(() => {
+    setRenameDraft(selectedNode?.kind === 'unit' ? selectedNode.instance.id : '');
+  }, [selectedNode]);
+
+  useEffect(() => {
+    setRouteFrom(selectedRoute?.from ?? '');
+    setRouteTo(selectedRoute?.to ?? '');
+  }, [selectedRoute]);
 
   return (
     <aside className="project-inspector">
@@ -318,6 +350,12 @@ export function ProjectInspector({
         selectedInstanceId={selectedNode?.kind === 'unit' ? selectedNode.instance.id : null}
         workspaceFiles={workspaceFiles}
       />
+      {graphEditError ? (
+        <div className="diagnostic-list__item project-edit-error">
+          <strong>Edit blocked</strong>
+          <p>{graphEditError}</p>
+        </div>
+      ) : null}
       {isProjectView && (
         <>
           <section className="inspector-block">
@@ -393,14 +431,70 @@ export function ProjectInspector({
           {selectedRoute ? (
             <>
               <div className="inspector-block__meta">Selected Route</div>
-              <h2>{selectedRoute.from}</h2>
-              <p>{selectedRoute.to}</p>
+              <label className="project-edit-field">
+                <span>From</span>
+                <select aria-label="Route source" onChange={event => setRouteFrom(event.target.value)} value={routeFrom}>
+                  {routeSources.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
+                </select>
+              </label>
+              <label className="project-edit-field">
+                <span>To</span>
+                <select aria-label="Route target" onChange={event => setRouteTo(event.target.value)} value={routeTo}>
+                  {routeTargets.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
+                </select>
+              </label>
+              <div className="project-edit-actions">
+                <button
+                  disabled={selectedRouteIndex === null || !routeFrom || !routeTo}
+                  onClick={() => selectedRouteIndex !== null && onUpdateRoute(selectedRouteIndex, { from: routeFrom, to: routeTo })}
+                  type="button"
+                >Replace</button>
+                <button
+                  disabled={selectedRouteIndex === null || selectedRouteIndex === 0}
+                  onClick={() => selectedRouteIndex !== null && onReorderRoute(selectedRouteIndex, selectedRouteIndex - 1)}
+                  type="button"
+                >Up</button>
+                <button
+                  disabled={selectedRouteIndex === null || selectedRouteIndex >= project.routes.length - 1}
+                  onClick={() => selectedRouteIndex !== null && onReorderRoute(selectedRouteIndex, selectedRouteIndex + 1)}
+                  type="button"
+                >Down</button>
+                <button
+                  disabled={selectedRouteIndex === null}
+                  onClick={() => selectedRouteIndex !== null && onRemoveRoute(selectedRouteIndex)}
+                  type="button"
+                >Disconnect</button>
+              </div>
             </>
           ) : selectedNode?.kind === 'unit' ? (
             <>
               <div className="inspector-block__meta">Selected Unit</div>
               <h2>{selectedNode.instance.id}</h2>
               <p>{selectedNode.unit.name}</p>
+
+              <label className="project-edit-field">
+                <span>Instance id</span>
+                <input aria-label="Instance id" onChange={event => setRenameDraft(event.target.value)} value={renameDraft} />
+              </label>
+              <div className="project-edit-actions">
+                <button
+                  disabled={!renameDraft || renameDraft === selectedNode.instance.id}
+                  onClick={() => onRenameInstance(selectedNode.instance.id, renameDraft)}
+                  type="button"
+                >Rename</button>
+                <button onClick={() => onDuplicateInstance(selectedNode.instance.id)} type="button">Duplicate</button>
+                <button
+                  disabled={selectedNode.index === 0}
+                  onClick={() => onReorderInstance(selectedNode.instance.id, selectedNode.index - 1)}
+                  type="button"
+                >Up</button>
+                <button
+                  disabled={selectedNode.index >= project.nodes.length - 1}
+                  onClick={() => onReorderInstance(selectedNode.instance.id, selectedNode.index + 1)}
+                  type="button"
+                >Down</button>
+                <button onClick={() => onRemoveInstance(selectedNode.instance.id)} type="button">Remove unit</button>
+              </div>
 
               <div className="param-list__toolbar">
                 <span>{selectedDirtyCount} local edits</span>
@@ -417,7 +511,8 @@ export function ProjectInspector({
                 {selectedNode.instance.params.map(param => {
                   const draftKey = paramDraftKey(selectedNode.instance.id, param.key);
                   const value = paramDrafts[draftKey] ?? param.value;
-                  const dirty = value !== param.value;
+                  const override = paramOverrides.find(item => item.path === draftKey);
+                  const dirty = Boolean(override);
                   const meta = paramMeta(selectedUnitGraph?.params, param.key);
 
                   return (
@@ -438,7 +533,7 @@ export function ProjectInspector({
                       </label>
                       <button
                         disabled={!dirty}
-                        onClick={() => onParamReset(selectedNode.instance.id, param.key, param.value)}
+                        onClick={() => onParamReset(selectedNode.instance.id, param.key, override?.originalValue ?? param.value)}
                         type="button"
                       >
                         Reset
@@ -483,7 +578,6 @@ export function ProjectInspector({
         <>
           <section className="inspector-block">
             <div className="inspector-block__label">Atom Focus</div>
-            {graphEditError ? <div className="diagnostic-list__item"><strong>Graph edit blocked</strong><p>{graphEditError}</p></div> : null}
             <div className="atom-actionbar">
               <select
                 aria-label="Atom to add"

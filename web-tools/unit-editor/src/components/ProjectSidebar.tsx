@@ -11,6 +11,10 @@ type Props = {
   selectedRouteIndex: number | null;
   onSelectWorkspaceFile: (path: string) => void;
   onCreateUnit: (name: string) => void;
+  onAddInstance: (unitId: string, instanceId: string) => void;
+  onAddRoute: (route: { from: string; to: string }) => void;
+  routeSources: string[];
+  routeTargets: string[];
   onSelectNode: (id: string) => void;
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
@@ -25,12 +29,22 @@ export function ProjectSidebar({
   selectedRouteIndex,
   onSelectWorkspaceFile,
   onCreateUnit,
+  onAddInstance,
+  onAddRoute,
   onSelectNode,
   onOpenContractGraph,
   onSelectRoute,
+  routeSources,
+  routeTargets,
 }: Props) {
   const [unitName, setUnitName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
+  const [instanceUnit, setInstanceUnit] = useState(project.units[0]?.id ?? '');
+  const [instanceId, setInstanceId] = useState('');
+  const [instanceError, setInstanceError] = useState<string | null>(null);
+  const [routeSource, setRouteSource] = useState('system.input');
+  const [routeTarget, setRouteTarget] = useState('system.output');
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   const submitUnit = (event: FormEvent) => {
     event.preventDefault();
@@ -40,6 +54,27 @@ export function ProjectSidebar({
       setCreateError(null);
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const submitRoute = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      onAddRoute({ from: routeSource, to: routeTarget });
+      setRouteError(null);
+    } catch (error) {
+      setRouteError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const submitInstance = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      onAddInstance(instanceUnit, instanceId);
+      setInstanceId('');
+      setInstanceError(null);
+    } catch (error) {
+      setInstanceError(error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -55,6 +90,21 @@ export function ProjectSidebar({
         <span className="project-sidebar__title">Pedalboard</span>
         <span className="project-sidebar__count">{project.nodes.length} units</span>
       </div>
+
+      <form className="project-instance-create" onSubmit={submitInstance}>
+        <select aria-label="Unit type" onChange={event => setInstanceUnit(event.target.value)} value={instanceUnit}>
+          {project.units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+        </select>
+        <input
+          aria-label="New instance id"
+          onChange={event => setInstanceId(event.target.value)}
+          placeholder="instance_id"
+          spellCheck={false}
+          value={instanceId}
+        />
+        <button disabled={!instanceUnit || !instanceId.trim()} type="submit">Add</button>
+      </form>
+      {instanceError ? <p className="workspace-ledger__error project-instance-create__error">{instanceError}</p> : null}
 
       <div className="project-list">
         {project.nodes.map((instance, index) => {
@@ -85,6 +135,16 @@ export function ProjectSidebar({
           <span>Routes</span>
           <strong>{project.routes.length}</strong>
         </div>
+        <form className="route-create" onSubmit={submitRoute}>
+          <select aria-label="New route source" onChange={event => setRouteSource(event.target.value)} value={routeSource}>
+            {routeSources.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
+          </select>
+          <select aria-label="New route target" onChange={event => setRouteTarget(event.target.value)} value={routeTarget}>
+            {routeTargets.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
+          </select>
+          <button disabled={!routeSource || !routeTarget} type="submit">Connect</button>
+        </form>
+        {routeError ? <p className="workspace-ledger__error">{routeError}</p> : null}
         {project.routes.map((route, index) => (
           <button
             key={`${index}-${route.from}-${route.to}`}
