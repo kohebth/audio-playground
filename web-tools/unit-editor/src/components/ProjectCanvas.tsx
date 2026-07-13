@@ -76,13 +76,13 @@ export function ProjectCanvas({
             minZoom={0.35}
             maxZoom={1.5}
           >
-            <Background color="#1e293b" gap={24} />
+            <Background color="#1c2a3f" gap={24} size={1} />
             <Controls />
             <MiniMap
               nodeColor={node => (node.data as ProjectNodeData).color}
               pannable
               zoomable
-              style={{ background: '#111827' }}
+              style={{ background: '#0c1220' }}
             />
           </ReactFlow>
         </ReactFlowProvider>

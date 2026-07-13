@@ -78,11 +78,13 @@ export function ProjectTopbar({
         </button>
       </div>
 
-      <div className={`status-pill ${validation.ok ? 'status-pill--ok' : 'status-pill--bad'}`}>
-        {validation.ok ? 'Valid' : 'Invalid'}
-      </div>
-      <div className={`status-pill ${draftStateClass}`}>
-        {hasDirtyParamDrafts ? 'Drafts pending' : 'Backend synced'}
+      <div className="topbar__status" aria-label="Project status">
+        <div className={`status-pill ${validation.ok ? 'status-pill--ok' : 'status-pill--bad'}`}>
+          {validation.ok ? 'Valid' : 'Invalid'}
+        </div>
+        <div className={`status-pill ${draftStateClass}`}>
+          {hasDirtyParamDrafts ? 'Drafts pending' : 'Backend synced'}
+        </div>
       </div>
     </header>
   );

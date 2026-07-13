@@ -27,21 +27,34 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   return (
     <div className={`project-node ${selected ? 'project-node--selected' : ''}`} style={style}>
       <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />
-      <div className="project-node__eyebrow">{data.unit.name}</div>
-      <div className="project-node__title">{data.instance.id}</div>
-      <div className="project-node__meta">{data.instance.params.length} params</div>
-      <button
-        aria-label={`${bypassed ? 'Disable' : 'Enable'} bypass for ${data.instance.id}`}
-        aria-pressed={bypassed}
-        className={`project-node__bypass nodrag nopan${bypassed ? ' project-node__bypass--active' : ''}`}
-        disabled={!controller?.running}
-        onClick={() => void controller?.setBypass(data.instance.id, !bypassed)}
-        onPointerDown={event => event.stopPropagation()}
-        title={bypassed ? 'Disable bypass' : 'Enable bypass'}
-        type="button"
-      >
-        Bypass
-      </button>
+      <div className="project-node__header">
+        <div className="project-node__identity">
+          <div className="project-node__eyebrow">{data.unit.name}</div>
+          <div className="project-node__title">{data.instance.id}</div>
+          <div className="project-node__meta">{data.instance.params.length} params</div>
+        </div>
+        <div className="project-node__tools">
+          <div className="project-node__chips">
+            {Object.entries(data.unit.compatibility).map(([key, enabled]) => (
+              <span key={key} className={`project-node__chip ${enabled ? 'project-node__chip--ok' : ''}`}>
+                {key}
+              </span>
+            ))}
+          </div>
+          <button
+            aria-label={`${bypassed ? 'Disable' : 'Enable'} bypass for ${data.instance.id}`}
+            aria-pressed={bypassed}
+            className={`project-node__bypass nodrag nopan${bypassed ? ' project-node__bypass--active' : ''}`}
+            disabled={!controller?.running}
+            onClick={() => void controller?.setBypass(data.instance.id, !bypassed)}
+            onPointerDown={event => event.stopPropagation()}
+            title={bypassed ? 'Disable bypass' : 'Enable bypass'}
+            type="button"
+          >
+            BYP
+          </button>
+        </div>
+      </div>
       {data.instance.params.length > 0 && (
         <div className="project-node__knobs" aria-label={`${data.instance.id} controls`}>
           {data.instance.params.map(param => {
@@ -63,13 +76,6 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           })}
         </div>
       )}
-      <div className="project-node__chips">
-        {Object.entries(data.unit.compatibility).map(([key, enabled]) => (
-          <span key={key} className={`project-node__chip ${enabled ? 'project-node__chip--ok' : ''}`}>
-            {key}
-          </span>
-        ))}
-      </div>
       <Handle type="source" position={Position.Right} id="out" className="project-node__handle" />
     </div>
   );
