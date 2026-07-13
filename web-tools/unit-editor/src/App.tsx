@@ -3,6 +3,7 @@ import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { ContractGraphCanvas } from './components/ContractGraphCanvas';
+import { LiveLatencyBadge } from './components/LiveLatencyBadge';
 import { ProjectCanvas } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
@@ -682,6 +683,7 @@ export default function App() {
         />
       </div>
     </div>
+    <LiveLatencyBadge />
     </LiveBypassContext.Provider>
   );
 }

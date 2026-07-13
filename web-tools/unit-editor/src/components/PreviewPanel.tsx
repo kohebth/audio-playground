@@ -368,8 +368,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
   }, [backend, reportError]);
 
   useEffect(() => {
-    setController({ running, bypassByInstance, setBypass: setInstanceBypass });
-  }, [bypassByInstance, running, setController, setInstanceBypass]);
+    setController({ running, latencyMs, bypassByInstance, setBypass: setInstanceBypass });
+  }, [bypassByInstance, latencyMs, running, setController, setInstanceBypass]);
 
   useEffect(() => () => setController(null), [setController]);
 
@@ -475,10 +475,6 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
         <div>
           <span>Underruns</span>
           <strong>{meter.underruns}</strong>
-        </div>
-        <div title="Browser-estimated render and output latency. Microphone capture latency is not exposed by the browser.">
-          <span>Output est.</span>
-          <strong>{latencyMs === null ? '-' : `${latencyMs.toFixed(1)} ms`}</strong>
         </div>
       </div>
 

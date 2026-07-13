@@ -1555,6 +1555,34 @@ body {
   font-size: 13px;
 }
 
+.live-latency-badge {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 20;
+  display: grid;
+  gap: 2px;
+  min-width: 104px;
+  padding: 8px 10px;
+  border: 1px solid #0f766e;
+  border-radius: 6px;
+  background: #0f172a;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  color: #ccfbf1;
+}
+
+.live-latency-badge span {
+  color: #99f6e4;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.live-latency-badge strong {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
 .wasm-diagnostic {
   display: grid;
   gap: 5px;

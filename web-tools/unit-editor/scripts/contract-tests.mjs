@@ -46,6 +46,7 @@ const paramKnob = read('web-tools/unit-editor/src/components/ParamKnob.tsx');
 const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/unit-editor/src/components/ContractGraphCanvas.tsx');
 const previewPanel = read('web-tools/unit-editor/src/components/PreviewPanel.tsx');
+const liveLatencyBadge = read('web-tools/unit-editor/src/components/LiveLatencyBadge.tsx');
 const wasmFacade = read('wasm-tools/web/facade.ts');
 const processorWorklet = read('wasm-tools/web/processor.worklet.js');
 const compatibility = read('web-tools/unit-editor/src/components/CompatibilityExportPanel.tsx');
@@ -176,7 +177,8 @@ includesContent(projectNode, 'project-node__bypass', 'unit cards must expose a b
 includesContent(projectNode, 'controller?.setBypass(data.instance.id, !bypassed)', 'unit-card bypass must target the live instance');
 includesContent(previewPanel, '.pollMeters()', 'preview meters must use throttled Worklet polling');
 includesContent(previewPanel, 'outputLatencyMs', 'live preview must calculate browser-reported output latency');
-includesContent(previewPanel, 'Output est.', 'live preview must display the output latency estimate');
+includesContent(app, '<LiveLatencyBadge />', 'live output latency must remain visible outside the inspector');
+includesContent(liveLatencyBadge, 'Output est.', 'live output latency badge is missing its label');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
 includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
 includesContent(wasmFacade, 'processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary }', 'WASM bytes must be transferred during Worklet construction');
