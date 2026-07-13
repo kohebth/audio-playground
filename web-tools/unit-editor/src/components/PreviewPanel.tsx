@@ -439,14 +439,34 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
       {compact ? (
         <>
           <div className="transport-group">
-            <button className="transport-btn" disabled={!backend} onClick={() => void (running ? stop() : start())} type="button">
-              {running ? 'Stop' : 'Start'}
+            <button className={`transport-btn ${running ? 'active' : ''}`} disabled={!backend} onClick={() => void (running ? stop() : start())} type="button">
+              <i className={`fa-solid ${running ? 'fa-stop' : 'fa-play'}`} aria-hidden="true" />
             </button>
-            <button className="transport-btn" disabled={!backend} onClick={() => void compile()} type="button">Build</button>
+            <button className="transport-btn" disabled={!backend} onClick={() => void compile()} title="Compile" type="button">
+              <i className="fa-solid fa-hammer" aria-hidden="true" />
+            </button>
           </div>
           <div className="transport-group preview-panel__mode" aria-label="Audio input mode" role="group">
-            <button aria-pressed={inputMode === 'file'} disabled={running} onClick={() => setInputMode('file')} type="button">File</button>
-            <button aria-pressed={inputMode === 'microphone'} disabled={running} onClick={() => setInputMode('microphone')} type="button">Mic</button>
+            <button
+              aria-pressed={inputMode === 'file'}
+              className={`source-toggle ${inputMode === 'file' ? 'active' : ''}`}
+              disabled={running}
+              onClick={() => setInputMode('file')}
+              type="button"
+            >
+              <i className="fa-solid fa-file-audio" aria-hidden="true" />
+              Audio File
+            </button>
+            <button
+              aria-pressed={inputMode === 'microphone'}
+              className={`source-toggle ${inputMode === 'microphone' ? 'active' : ''}`}
+              disabled={running}
+              onClick={() => setInputMode('microphone')}
+              type="button"
+            >
+              <i className="fa-solid fa-microphone" aria-hidden="true" />
+              Mic
+            </button>
             {inputMode === 'file' && (
               <label className="transport-file">
                 <span>{audioFileName}</span>
@@ -455,8 +475,15 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
             )}
           </div>
           <div className="transport-group">
+            <div className="mini-viz" aria-hidden="true">
+              {[0, 1, 2, 3, 4].map(index => (
+                <span key={index} className={`mini-viz-bar ${running ? 'active' : ''}`} />
+              ))}
+            </div>
             <span className={`transport-state transport-state--${phase}`}>{phase}</span>
-            <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} type="button">{muted ? 'On' : 'Mute'}</button>
+            <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} title={muted ? 'Unmute output' : 'Mute output'} type="button">
+              <i className={`fa-solid ${muted ? 'fa-volume-xmark' : 'fa-volume-high'}`} aria-hidden="true" />
+            </button>
           </div>
         </>
       ) : (

@@ -40,7 +40,9 @@ export function ProjectTopbar({
     <header className="topbar topbar--project app-header">
       <div className="header-left">
         <div className="header-brand">
-          <span className="topbar__logo">APG</span>
+          <span className="topbar__logo" aria-hidden="true">
+            <i className="fa-solid fa-wave-square" />
+          </span>
           <span className="header-brand-name">APG</span>
         </div>
         <span className="header-divider" />

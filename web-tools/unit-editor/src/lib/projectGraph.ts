@@ -29,8 +29,10 @@ export type ProjectParamControl = {
   unit?: string;
 };
 
-const NODE_WIDTH = 210;
-const NODE_HEIGHT = 206;
+const NODE_WIDTH = 190;
+const NODE_HEIGHT = 148;
+const SYSTEM_NODE_WIDTH = 100;
+const SYSTEM_NODE_HEIGHT = 118;
 const UNIT_COLORS = ['#3b82f6', '#059669', '#2563eb', '#db2777', '#7c3aed', '#dc2626'];
 
 function endpointNodeId(endpoint: string): string {
@@ -81,7 +83,7 @@ export function buildProjectGraph(project: ProjectInspect): { nodes: Node<Projec
   graph.setDefaultEdgeLabel(() => ({}));
 
   for (const node of nodes) {
-    graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    graph.setNode(node.id, { width: SYSTEM_NODE_WIDTH, height: SYSTEM_NODE_HEIGHT });
   }
 
   project.nodes.forEach((instance, index) => {
@@ -102,7 +104,8 @@ export function buildProjectGraph(project: ProjectInspect): { nodes: Node<Projec
     };
 
     nodes.push(node);
-    graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    const nodeWidth = instance.params.length > 1 ? NODE_WIDTH : 140;
+    graph.setNode(node.id, { width: nodeWidth, height: NODE_HEIGHT });
   });
 
   const edges = project.routes.map(createRouteEdge);
@@ -115,9 +118,11 @@ export function buildProjectGraph(project: ProjectInspect): { nodes: Node<Projec
 
   for (const node of nodes) {
     const position = graph.node(node.id);
+    const width = node.data.kind === 'system' ? SYSTEM_NODE_WIDTH : node.data.instance.params.length > 1 ? NODE_WIDTH : 140;
+    const height = node.data.kind === 'system' ? SYSTEM_NODE_HEIGHT : NODE_HEIGHT;
     node.position = {
-      x: position.x - NODE_WIDTH / 2,
-      y: position.y - NODE_HEIGHT / 2,
+      x: position.x - width / 2,
+      y: position.y - height / 2,
     };
   }
 

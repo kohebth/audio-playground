@@ -11,71 +11,97 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   const style = { '--node-color': data.color } as CSSProperties;
 
   if (data.kind === 'system') {
+    const isInput = data.id === 'system-input';
+
     return (
-      <div className={`project-node project-node--system ${selected ? 'project-node--selected' : ''}`} style={style}>
-        <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />
-        <div className="project-node__eyebrow">System</div>
-        <div className="project-node__title">{data.label}</div>
-        <div className="project-node__meta">{data.detail}</div>
-        <Handle type="source" position={Position.Right} id="out" className="project-node__handle" />
+      <div
+        className={`project-node node-card project-node--system ${selected ? 'project-node--selected selected' : ''}`}
+        style={style}
+      >
+        {!isInput && <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />}
+        <div className="node-system">
+          <span className="node-sys-label">System</span>
+          <span className="node-sys-title">{data.label}</span>
+          <i
+            className={`fa-solid ${isInput ? 'fa-right-to-bracket' : 'fa-right-from-bracket'} node-sys-icon`}
+            aria-hidden="true"
+          />
+          <span className="node-sys-port">{data.detail}</span>
+        </div>
+        {isInput && <Handle type="source" position={Position.Right} id="out" className="project-node__handle" />}
       </div>
     );
   }
 
   const bypassed = controller?.bypassByInstance[data.instance.id] ?? false;
+  const compact = data.instance.params.length <= 1;
+  const compatibility = Object.entries(data.unit.compatibility);
 
   return (
-    <div className={`project-node ${selected ? 'project-node--selected' : ''}`} style={style}>
+    <div className={`project-node node-card ${selected ? 'project-node--selected selected' : ''}`} style={style}>
       <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />
-      <div className="project-node__header">
-        <div className="project-node__identity">
-          <div className="project-node__eyebrow">{data.unit.name}</div>
-          <div className="project-node__title">{data.instance.id}</div>
-          <div className="project-node__meta">{data.instance.params.length} params</div>
-        </div>
-        <div className="project-node__tools">
-          <div className="project-node__chips">
-            {Object.entries(data.unit.compatibility).map(([key, enabled]) => (
-              <span key={key} className={`project-node__chip ${enabled ? 'project-node__chip--ok' : ''}`}>
-                {key}
-              </span>
-            ))}
+      <div className={`node-pedal${compact ? '' : ' wide'}`}>
+        <div className="node-pedal-header">
+          <span className="pedal-type-name">{data.unit.name}</span>
+          <div className="project-node__tools">
+            {compatibility.length > 0 && (
+              <div className="project-node__chips" aria-label={`${data.instance.id} compatibility`}>
+                {compatibility.map(([key, enabled]) => (
+                  <span
+                    key={key}
+                    className={`project-node__chip ${enabled ? 'project-node__chip--ok' : ''}`}
+                    title={`${key}: ${enabled ? 'enabled' : 'disabled'}`}
+                  >
+                    {key}
+                  </span>
+                ))}
+              </div>
+            )}
+            <button
+              aria-label={`${bypassed ? 'Disable' : 'Enable'} bypass for ${data.instance.id}`}
+              aria-pressed={bypassed}
+              className={`project-node__bypass bypass-btn ${bypassed ? 'off project-node__bypass--active' : 'on'} nodrag nopan`}
+              disabled={!controller?.running}
+              onClick={() => void controller?.setBypass(data.instance.id, !bypassed)}
+              onPointerDown={event => event.stopPropagation()}
+              title={bypassed ? 'Disable bypass' : 'Enable bypass'}
+              type="button"
+            >
+              {bypassed ? 'BYP' : 'ON'}
+            </button>
           </div>
-          <button
-            aria-label={`${bypassed ? 'Disable' : 'Enable'} bypass for ${data.instance.id}`}
-            aria-pressed={bypassed}
-            className={`project-node__bypass nodrag nopan${bypassed ? ' project-node__bypass--active' : ''}`}
-            disabled={!controller?.running}
-            onClick={() => void controller?.setBypass(data.instance.id, !bypassed)}
-            onPointerDown={event => event.stopPropagation()}
-            title={bypassed ? 'Disable bypass' : 'Enable bypass'}
-            type="button"
-          >
-            BYP
-          </button>
+        </div>
+        <div className="node-pedal-body">
+          <span className="pedal-instance">{data.instance.id}</span>
+          {data.instance.params.length > 0 ? (
+            <div className="project-node__knobs knobs-row" aria-label={`${data.instance.id} controls`}>
+              {data.instance.params.map(param => {
+                const control = data.paramControls?.find(item => item.key === param.key);
+                return (
+                  <ParamKnob
+                    key={param.key}
+                    ariaLabel={`${data.instance.id} ${param.key}`}
+                    compact
+                    integer={control?.type === 'int'}
+                    label={control?.label ?? param.key}
+                    max={control?.max}
+                    min={control?.min}
+                    onChange={value => data.onParamChange?.(data.instance.id, param.key, value)}
+                    unit={control?.unit}
+                    value={param.value}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <span className="project-node__empty">No exposed controls</span>
+          )}
+        </div>
+        <div className="node-pedal-footer" aria-hidden="true">
+          <span>IN</span>
+          <span>OUT</span>
         </div>
       </div>
-      {data.instance.params.length > 0 && (
-        <div className="project-node__knobs" aria-label={`${data.instance.id} controls`}>
-          {data.instance.params.map(param => {
-            const control = data.paramControls?.find(item => item.key === param.key);
-            return (
-              <ParamKnob
-                key={param.key}
-                ariaLabel={`${data.instance.id} ${param.key}`}
-                compact
-                integer={control?.type === 'int'}
-                label={control?.label ?? param.key}
-                max={control?.max}
-                min={control?.min}
-                onChange={value => data.onParamChange?.(data.instance.id, param.key, value)}
-                unit={control?.unit}
-                value={param.value}
-              />
-            );
-          })}
-        </div>
-      )}
       <Handle type="source" position={Position.Right} id="out" className="project-node__handle" />
     </div>
   );

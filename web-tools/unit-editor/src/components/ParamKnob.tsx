@@ -128,10 +128,10 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
 
   if (compact) {
     return (
-      <label className="unit-knob nodrag nopan" onPointerDown={event => event.stopPropagation()}>
-        <span>{label ?? ariaLabel}</span>
+      <label className="unit-knob knob-wrapper nodrag nopan" onPointerDown={event => event.stopPropagation()}>
         {control}
-        <output>{draft}{unit ? ` ${unit}` : ''}</output>
+        <span className="knob-label">{label ?? ariaLabel}</span>
+        <output className="knob-value">{draft}{unit ? ` ${unit}` : ''}</output>
       </label>
     );
   }

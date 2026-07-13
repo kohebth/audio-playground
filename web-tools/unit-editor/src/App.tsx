@@ -586,14 +586,28 @@ export default function App() {
     <LiveBypassContext.Provider value={{ controller: liveBypassController, setController: setLiveBypassController }}>
     {!workbenchLaunched && (
       <section className="launch-screen" aria-live="polite">
-        <div className="launch-screen__mark">APG</div>
-        <h1>Audio Playground <span>v3.0</span></h1>
-        <p>Interactive real-time DSP visual workbench<br />and audio routing matrix</p>
-        <div className="launch-screen__progress">
-          <div><span>{runtimeReady ? 'System ready' : 'Initializing audio engine...'}</span><span>{runtimeReady ? '100%' : 'Loading'}</span></div>
-          <i><b className={runtimeReady ? 'launch-screen__progress-fill launch-screen__progress-fill--ready' : 'launch-screen__progress-fill'} /></i>
+        <div className="splash-bg-glow glow-1" />
+        <div className="splash-bg-glow glow-2" />
+        <div className="splash-bg-glow glow-3" />
+        <div className="launch-screen__content">
+          <div className="launch-screen__mark splash-logo" aria-hidden="true">
+            <span className="splash-logo-inner">
+              <i className="fa-solid fa-wave-square" />
+            </span>
+          </div>
+          <h1>Audio Playground <span>v3.0</span></h1>
+          <p>Interactive real-time DSP visual workbench<br />and audio routing matrix</p>
+          <div className="launch-screen__progress">
+            <div><span>{runtimeReady ? 'System ready' : 'Initializing audio engine...'}</span><span>{runtimeReady ? '100%' : 'Loading'}</span></div>
+            <i><b className={runtimeReady ? 'launch-screen__progress-fill launch-screen__progress-fill--ready' : 'launch-screen__progress-fill'} /></i>
+          </div>
+          {runtimeReady && (
+            <button className="launch-screen__button" onClick={() => setWorkbenchLaunched(true)} type="button">
+              <i className="fa-solid fa-rocket" aria-hidden="true" />
+              Launch Workspace
+            </button>
+          )}
         </div>
-        {runtimeReady && <button className="launch-screen__button" onClick={() => setWorkbenchLaunched(true)} type="button">Launch Workspace</button>}
       </section>
     )}
     <div className="app app--project">
