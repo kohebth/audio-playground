@@ -39,6 +39,10 @@ Parameter edits clamp to unit metadata, update the project YAML, use the indexed
 feedback, and then flow through the debounced replacement runtime. Resetting an override sends the original value over
 the same fast path before the synchronized YAML revision is prepared.
 
+Project-unit parameters are edited directly on their canvas cards. Each card renders compact knobs from the referenced
+unit's parameter metadata, including label, range, and unit; the inspector retains structural actions and reset only.
+Dragging a card knob uses the same clamped YAML update and live parameter synchronization path as other parameter edits.
+
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
 

@@ -1260,6 +1260,47 @@ body {
   font-size: 12px;
 }
 
+.project-node__knobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.unit-knob {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 3px;
+  color: var(--text-muted);
+}
+
+.unit-knob > span {
+  width: 100%;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.unit-knob .param-list__knob-input {
+  width: 2.35rem;
+  max-width: 2.35rem;
+  font-size: 8px;
+}
+
+.unit-knob output {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-primary);
+  font: 10px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .project-node__chips {
   display: flex;
   flex-wrap: wrap;

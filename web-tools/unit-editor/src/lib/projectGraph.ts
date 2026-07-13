@@ -16,10 +16,20 @@ export type ProjectNodeData =
       unit: ProjectUnit;
       index: number;
       color: string;
+      paramControls?: ProjectParamControl[];
+      onParamChange?: (instanceId: string, paramKey: string, value: string) => void;
     };
 
+export type ProjectParamControl = {
+  key: string;
+  label: string;
+  min?: string;
+  max?: string;
+  unit?: string;
+};
+
 const NODE_WIDTH = 210;
-const NODE_HEIGHT = 112;
+const NODE_HEIGHT = 206;
 const UNIT_COLORS = ['#3b82f6', '#059669', '#2563eb', '#db2777', '#7c3aed', '#dc2626'];
 
 function endpointNodeId(endpoint: string): string {

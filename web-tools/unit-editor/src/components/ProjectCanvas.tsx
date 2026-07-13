@@ -25,6 +25,7 @@ type Props = {
   onSelectNode: (id: string) => void;
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
+  onParamChange: (instanceId: string, paramKey: string, value: string) => void;
 };
 
 function routeIndexFromEdge(edge: Edge): number | null {
@@ -41,7 +42,11 @@ export function ProjectCanvas({
   onSelectNode,
   onOpenContractGraph,
   onSelectRoute,
+  onParamChange,
 }: Props) {
+  const displayedNodes = nodes.map(node => node.data.kind === 'unit'
+    ? { ...node, data: { ...node.data, onParamChange } }
+    : node);
   const displayedEdges = edges.map(edge => {
     const selected = routeIndexFromEdge(edge) === selectedRouteIndex;
     return {
@@ -60,7 +65,7 @@ export function ProjectCanvas({
       <div className="flow-shell">
         <ReactFlowProvider>
           <ReactFlow
-            nodes={nodes}
+            nodes={displayedNodes}
             edges={displayedEdges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}

@@ -8,7 +8,7 @@ import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
 import { backendCommands, backendSamples, initialWorkspaceFiles, sampleSources, type WorkspaceFile } from './lib/backendSamples';
-import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
+import { buildProjectGraph, type ProjectNodeData, type ProjectParamControl } from './lib/projectGraph';
 import {
   buildParamDrafts,
   buildParamOriginals,
@@ -189,14 +189,36 @@ export default function App() {
     }
   })), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
 
+  const projectParamControls = useMemo<Record<string, ProjectParamControl[]>>(() => Object.fromEntries(
+    projectDraft.units.map(reference => {
+      const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
+      const file = workspaceFiles.find(item => item.path === path);
+      if (file?.role !== 'unit') return [reference.id, []];
+      try {
+        return [reference.id, parseUnitGraphDraft(file.content).params.map(param => ({
+          key: param.name,
+          label: param.ui?.label ?? param.name,
+          min: param.min,
+          max: param.max,
+          unit: param.ui?.unit,
+        }))];
+      } catch {
+        return [reference.id, []];
+      }
+    }),
+  ), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
+
   useEffect(() => {
     const next = buildProjectGraph(project);
     setNodes(current => next.nodes.map(node => {
       const positioned = current.find(item => item.id === node.id);
-      return positioned ? { ...node, position: positioned.position } : node;
+      const data = node.data.kind === 'unit'
+        ? { ...node.data, paramControls: projectParamControls[node.data.unit.id] ?? [] }
+        : node.data;
+      return positioned ? { ...node, data, position: positioned.position } : { ...node, data };
     }));
     setEdges(next.edges);
-  }, [project, setEdges, setNodes]);
+  }, [project, projectParamControls, setEdges, setNodes]);
 
   useEffect(() => {
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(createWorkspacePayload(entryProject, workspaceFiles)));
@@ -246,8 +268,6 @@ export default function App() {
       return changed ? next : files;
     });
   }, []);
-
-  const resetParamDraft = updateParamDraft;
 
   const resetUnitParamDrafts = useCallback((instanceId: string) => {
     const instance = project.nodes.find(node => node.id === instanceId);
@@ -568,6 +588,7 @@ export default function App() {
             onSelectNode={selectProjectNode}
             onOpenContractGraph={openContractGraph}
             onSelectRoute={selectRoute}
+            onParamChange={updateParamDraft}
           />
         )}
 
@@ -592,7 +613,6 @@ export default function App() {
           selectedAtom={selectedAtom}
           atomClipboard={atomClipboard}
           graphEditError={graphEditError}
-          paramDrafts={paramDrafts}
           paramOverrides={paramOverrides}
           onAddAtom={addAtom}
           onDuplicateInstance={duplicateProjectNode}
@@ -607,8 +627,6 @@ export default function App() {
           onCopyAtom={copySelectedAtom}
           onCutAtom={cutSelectedAtom}
           onPasteAtom={pasteAtom}
-          onParamChange={updateParamDraft}
-          onParamReset={resetParamDraft}
           onRemoveAtom={removeSelectedAtom}
           onResetUnitParams={resetUnitParamDrafts}
           onSelectAtom={setSelectedAtomId}

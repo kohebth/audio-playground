@@ -40,6 +40,8 @@ const backendSamples = read('web-tools/unit-editor/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/unit-editor/src/components/ProjectTopbar.tsx');
 const projectSidebar = read('web-tools/unit-editor/src/components/ProjectSidebar.tsx');
 const projectInspector = read('web-tools/unit-editor/src/components/ProjectInspector.tsx');
+const projectNode = read('web-tools/unit-editor/src/components/ProjectNode.tsx');
+const paramKnob = read('web-tools/unit-editor/src/components/ParamKnob.tsx');
 const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/unit-editor/src/components/ContractGraphCanvas.tsx');
 const previewPanel = read('web-tools/unit-editor/src/components/PreviewPanel.tsx');
@@ -154,7 +156,9 @@ includesContent(previewPanel, 'backend.reset()', 'live preview reset must use th
 includesContent(previewPanel, 'backend.setParam', 'live parameter controls must use the WASM backend');
 includesContent(previewPanel, 'previousOverridesRef', 'live parameter synchronization must detect reset values');
 includesContent(previewPanel, 'override.originalValue', 'removed overrides must restore the original runtime value');
-includesContent(projectInspector, 'clampValue(parsed, minValue, maxValue)', 'typed parameter values must clamp to metadata bounds');
+includesContent(paramKnob, 'clampValue(parsed, minValue, maxValue)', 'typed parameter values must clamp to metadata bounds');
+includesContent(projectNode, '<ParamKnob', 'unit cards must render their parameter knobs directly');
+includesContent(projectNode, 'data.onParamChange?.', 'unit card knobs must use the shared YAML parameter update path');
 includesContent(app, 'return changed ? next : files', 'equivalent parameter serialization must not create a new revision');
 assert(
   projectInspector.indexOf('<PreviewPanel') < projectInspector.indexOf('{isProjectView && ('),

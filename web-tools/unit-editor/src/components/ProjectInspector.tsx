@@ -3,7 +3,7 @@ import { CompatibilityExportPanel } from './CompatibilityExportPanel';
 import { DraftExportPanel } from './DraftExportPanel';
 import { PreviewPanel } from './PreviewPanel';
 import type { ProjectNodeData } from '../lib/projectGraph';
-import { type CSSProperties, type PointerEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type {
   AtomCatalog,
   BackendCommands,
@@ -14,12 +14,8 @@ import type {
   ValidationResult,
   WorkspaceFile,
 } from '../lib/backendSamples';
-import {
-  paramDraftKey,
-  type ParamOverride,
-  type ParamDrafts,
-} from '../lib/projectParams';
-import { findAtom, type UnitGraphDraft, type UnitGraphNode, type UnitParamDraft } from '../lib/unitV2Graph';
+import { type ParamOverride } from '../lib/projectParams';
+import { findAtom, type UnitGraphDraft, type UnitGraphNode } from '../lib/unitV2Graph';
 
 type Props = {
   validation: ValidationResult;
@@ -42,7 +38,6 @@ type Props = {
   selectedAtom: UnitGraphNode | null;
   atomClipboard: UnitGraphNode | null;
   graphEditError: string | null;
-  paramDrafts: ParamDrafts;
   paramOverrides: ParamOverride[];
   onAddAtom: (atomName: string) => void;
   onDuplicateInstance: (instanceId: string) => void;
@@ -57,8 +52,6 @@ type Props = {
   onCopyAtom: () => void;
   onCutAtom: () => void;
   onPasteAtom: () => void;
-  onParamChange: (instanceId: string, paramKey: string, value: string) => void;
-  onParamReset: (instanceId: string, paramKey: string, value: string) => void;
   onRemoveAtom: () => void;
   onResetUnitParams: (instanceId: string) => void;
   onSelectAtom: (id: string) => void;
@@ -75,152 +68,6 @@ function compatibilityLabel(flags: Record<string, boolean>): string {
 
 function formatNumber(value: number): string {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
-}
-
-function formatDragValue(value: number): string {
-  return Number.isInteger(value) ? `${Math.round(value)}` : `${Number(value.toFixed(6))}`;
-}
-
-type DragParamInputProps = {
-  ariaLabel: string;
-  value: string;
-  min?: string;
-  max?: string;
-  unit?: string;
-  onChange: (next: string) => void;
-};
-
-function numberOrNull(value: string | undefined): number | null {
-  if (value === undefined || value.trim() === '') return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function clampValue(value: number, min: number | null, max: number | null): number {
-  return Math.min(max ?? value, Math.max(min ?? value, value));
-}
-
-function percentForValue(value: string, minValue: string | undefined, maxValue: string | undefined): number {
-  const current = numberOrNull(value) ?? 0;
-  const min = numberOrNull(minValue) ?? 0;
-  const max = numberOrNull(maxValue) ?? 1;
-  if (max <= min) return 0;
-  return clampValue(((current - min) / (max - min)) * 100, 0, 100);
-}
-
-function DragParamInput({ ariaLabel, value, min, max, unit, onChange }: DragParamInputProps) {
-  const [draft, setDraft] = useState(value);
-  const minValue = numberOrNull(min);
-  const maxValue = numberOrNull(max);
-  const percent = percentForValue(value, min, max);
-  const outOfRange = (() => {
-    const parsed = numberOrNull(draft);
-    if (parsed === null) return draft.trim() !== '';
-    return (minValue !== null && parsed < minValue) || (maxValue !== null && parsed > maxValue);
-  })();
-  const dragState = useRef<{
-    pointerId: number;
-    lastY: number;
-    lastTime: number;
-    value: number;
-    integer: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
-
-  const startDrag = (event: PointerEvent<HTMLInputElement>) => {
-    if (event.button !== 0 || event.detail > 1) return;
-
-    const parsed = Number(draft);
-    if (!Number.isFinite(parsed)) return;
-
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-
-    dragState.current = {
-      pointerId: event.pointerId,
-      lastY: event.clientY,
-      lastTime: event.timeStamp,
-      value: parsed,
-      integer: Number.isInteger(parsed),
-    };
-  };
-
-  const updateDrag = (event: PointerEvent<HTMLInputElement>) => {
-    const state = dragState.current;
-    if (!state) return;
-
-    const dy = state.lastY - event.clientY;
-    const dt = Math.max(12, event.timeStamp - state.lastTime);
-    const speed = Math.abs(dy) / dt;
-    const range = minValue !== null && maxValue !== null ? maxValue - minValue : 1;
-    const base = state.integer ? 0.55 : Math.max(range / 220, 0.001);
-    const delta = dy * base * (1 + speed * 2);
-    const unclamped = state.integer ? Math.round(state.value + delta) : state.value + delta;
-    const next = clampValue(unclamped, minValue, maxValue);
-    const nextValue = Number.isInteger(next) ? next : Number(next.toFixed(6));
-
-    state.lastY = event.clientY;
-    state.lastTime = event.timeStamp;
-    state.value = Number(nextValue);
-
-    const formatted = formatDragValue(nextValue);
-    setDraft(formatted);
-    onChange(formatted);
-  };
-
-  const stopDrag = () => {
-    dragState.current = null;
-  };
-
-  const commitValue = (next: string) => {
-    setDraft(next);
-    const parsed = numberOrNull(next);
-    if (parsed === null) return;
-    const bounded = clampValue(parsed, minValue, maxValue);
-    onChange(formatDragValue(bounded));
-  };
-
-  return (
-    <div className="param-list__control">
-      <input
-        aria-label={`${ariaLabel} percent`}
-        className="param-list__knob-input"
-        inputMode="decimal"
-        onPointerCancel={stopDrag}
-        onPointerDown={startDrag}
-        onPointerMove={updateDrag}
-        onPointerUp={stopDrag}
-        readOnly
-        style={{ '--knob-percent': `${percent}%` } as CSSProperties}
-        value={`${Math.round(percent)}%`}
-      />
-      <label className="param-list__value-field">
-        <input
-          aria-label={ariaLabel}
-          className={outOfRange ? 'param-list__value-input param-list__value-input--invalid' : 'param-list__value-input'}
-          inputMode="decimal"
-          onBlur={() => commitValue(draft)}
-          onChange={event => {
-            const next = event.target.value;
-            setDraft(next);
-            const parsed = numberOrNull(next);
-            if (parsed === null) return;
-            if ((minValue !== null && parsed < minValue) || (maxValue !== null && parsed > maxValue)) return;
-            onChange(formatDragValue(parsed));
-          }}
-          value={draft}
-        />
-        {unit ? <span>{unit}</span> : null}
-      </label>
-    </div>
-  );
-}
-
-function paramMeta(params: UnitParamDraft[] | undefined, key: string): UnitParamDraft | undefined {
-  return params?.find(param => param.name === key);
 }
 
 function updateMapValue(
@@ -269,7 +116,6 @@ export function ProjectInspector({
   selectedAtom,
   atomClipboard,
   graphEditError,
-  paramDrafts,
   paramOverrides,
   onAddAtom,
   onDuplicateInstance,
@@ -284,8 +130,6 @@ export function ProjectInspector({
   onCopyAtom,
   onCutAtom,
   onPasteAtom,
-  onParamChange,
-  onParamReset,
   onRemoveAtom,
   onResetUnitParams,
   onSelectAtom,
@@ -503,44 +347,8 @@ export function ProjectInspector({
                   onClick={() => onResetUnitParams(selectedNode.instance.id)}
                   type="button"
                 >
-                  Reset unit
+                  Reset controls
                 </button>
-              </div>
-
-              <div className="param-list">
-                {selectedNode.instance.params.map(param => {
-                  const draftKey = paramDraftKey(selectedNode.instance.id, param.key);
-                  const value = paramDrafts[draftKey] ?? param.value;
-                  const override = paramOverrides.find(item => item.path === draftKey);
-                  const dirty = Boolean(override);
-                  const meta = paramMeta(selectedUnitGraph?.params, param.key);
-
-                  return (
-                    <div key={param.key} className={`param-list__row ${dirty ? 'param-list__row--dirty' : ''}`}>
-                      <label className="param-list__field">
-                        <span>{meta?.ui?.label ?? param.key}</span>
-                        <DragParamInput
-                          ariaLabel={`${selectedNode.instance.id} ${param.key}`}
-                          max={meta?.max}
-                          min={meta?.min}
-                          onChange={next => onParamChange(selectedNode.instance.id, param.key, next)}
-                          unit={meta?.ui?.unit}
-                          value={value}
-                        />
-                        {meta?.min !== undefined && meta.max !== undefined ? (
-                          <small>{meta.min} to {meta.max}</small>
-                        ) : null}
-                      </label>
-                      <button
-                        disabled={!dirty}
-                        onClick={() => onParamReset(selectedNode.instance.id, param.key, override?.originalValue ?? param.value)}
-                        type="button"
-                      >
-                        Reset
-                      </button>
-                    </div>
-                  );
-                })}
               </div>
 
               <div className="unit-route-list">
