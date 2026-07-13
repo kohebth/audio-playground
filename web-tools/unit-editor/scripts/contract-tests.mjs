@@ -38,6 +38,7 @@ const render = json('test/golden/v2-render-project-guitar-pedalboard.json');
 const app = read('web-tools/unit-editor/src/App.tsx');
 const backendSamples = read('web-tools/unit-editor/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/unit-editor/src/components/ProjectTopbar.tsx');
+const projectSidebar = read('web-tools/unit-editor/src/components/ProjectSidebar.tsx');
 const projectInspector = read('web-tools/unit-editor/src/components/ProjectInspector.tsx');
 const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/unit-editor/src/components/ContractGraphCanvas.tsx');
@@ -115,6 +116,8 @@ includesContent(app, 'onOpenAtomInspector', 'double-click contract nodes should 
 includesContent(contractCanvas, 'onNodeDoubleClick', 'contract node interaction should open atom inspector');
 includesContent(contractCanvas, 'onNodeClick', 'contract node click should select atom');
 includesContent(app, 'setGraphEditError', 'graph edit failures should be surfaced through workspace error feedback');
+includesContent(app, 'createUnitV2({ name })', 'workspace unit creation must use the structured YAML transformer');
+includesContent(projectSidebar, 'onCreateUnit(unitName)', 'workspace sidebar must expose unit creation');
 
 // AF: WASM preview facade and panel contract state machine.
 assert(render.ok && render.frames === render.output.samples.length, 'render fixture must include deterministic samples');

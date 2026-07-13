@@ -12,6 +12,7 @@ import { buildProjectGraph, type ProjectNodeData } from './lib/projectGraph';
 import { buildParamDrafts, buildParamOverrides, countDirtyParams, paramDraftKey } from './lib/projectParams';
 import {
   addAtomNodeToUnit,
+  createUnitV2,
   pasteAtomNodeIntoUnit,
   parseUnitGraphDraft,
   removeAtomNodeFromUnit,
@@ -43,10 +44,17 @@ function loadWorkspaceFiles(): WorkspaceFile[] {
 
   try {
     const files = JSON.parse(saved) as Array<Pick<WorkspaceFile, 'path' | 'role' | 'content'>>;
-    return initialWorkspaceFiles.map(file => {
+    const restored = initialWorkspaceFiles.map(file => {
       const draft = files.find(item => item.path === file.path);
       return draft ? { ...file, content: draft.content } : file;
     });
+    const known = new Set(initialWorkspaceFiles.map(file => file.path));
+    for (const file of files) {
+      if (!known.has(file.path) && (file.role === 'project' || file.role === 'unit') && typeof file.content === 'string') {
+        restored.push({ ...file, originalContent: '' });
+      }
+    }
+    return restored;
   } catch {
     return initialWorkspaceFiles;
   }
@@ -172,6 +180,20 @@ export default function App() {
     setWorkspaceFiles(files => files.map(file => (file.path === path ? { ...file, content } : file)));
   }, []);
 
+  const createUnit = useCallback((name: string) => {
+    const content = createUnitV2({ name });
+    const unitName = parseUnitGraphDraft(content).name;
+    const path = `workspace/${unitName}.unit.v2.yaml`;
+    if (workspaceFiles.some(file => file.path === path)) throw new Error(`Workspace file "${path}" already exists.`);
+    setWorkspaceFiles(files => [...files, { path, role: 'unit', content, originalContent: '' }]);
+    setSelectedWorkspacePath(path);
+    setSelectedId(null);
+    setSelectedRouteIndex(null);
+    setSelectedAtomId(null);
+    setInspectorView('contract');
+    setCanvasMode('project');
+  }, [workspaceFiles]);
+
   const updateSelectedUnitFile = useCallback((update: (content: string) => string, nextAtomId?: string | null) => {
     setGraphEditError(null);
     try {
@@ -259,12 +281,17 @@ export default function App() {
       const payload = JSON.parse(await file.text()) as { files?: Array<Pick<WorkspaceFile, 'path' | 'role' | 'content'>> };
       if (!Array.isArray(payload.files)) return;
 
-      setWorkspaceFiles(
-        initialWorkspaceFiles.map(workspaceFile => {
+      const imported = initialWorkspaceFiles.map(workspaceFile => {
           const draft = payload.files?.find(item => item.path === workspaceFile.path);
           return draft ? { ...workspaceFile, content: draft.content } : workspaceFile;
-        }),
-      );
+        });
+      const known = new Set(initialWorkspaceFiles.map(file => file.path));
+      for (const file of payload.files) {
+        if (!known.has(file.path) && (file.role === 'project' || file.role === 'unit') && typeof file.content === 'string') {
+          imported.push({ ...file, originalContent: '' });
+        }
+      }
+      setWorkspaceFiles(imported);
     } catch {
       return;
     }
@@ -293,6 +320,7 @@ export default function App() {
           selectedNodeId={selectedId}
           selectedRouteIndex={selectedRouteIndex}
           onSelectWorkspaceFile={setSelectedWorkspacePath}
+          onCreateUnit={createUnit}
           onSelectNode={selectProjectNode}
           onOpenContractGraph={openContractGraph}
           onSelectRoute={selectRoute}

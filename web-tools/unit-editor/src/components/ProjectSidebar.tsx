@@ -1,3 +1,5 @@
+import { useState, type FormEvent } from 'react';
+
 import type { ProjectInspect, WorkspaceFile } from '../lib/backendSamples';
 
 type Props = {
@@ -8,6 +10,7 @@ type Props = {
   selectedNodeId: string | null;
   selectedRouteIndex: number | null;
   onSelectWorkspaceFile: (path: string) => void;
+  onCreateUnit: (name: string) => void;
   onSelectNode: (id: string) => void;
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
@@ -21,10 +24,25 @@ export function ProjectSidebar({
   selectedNodeId,
   selectedRouteIndex,
   onSelectWorkspaceFile,
+  onCreateUnit,
   onSelectNode,
   onOpenContractGraph,
   onSelectRoute,
 }: Props) {
+  const [unitName, setUnitName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const submitUnit = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      onCreateUnit(unitName);
+      setUnitName('');
+      setCreateError(null);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
   return (
     <aside className="project-sidebar">
       <section className="project-card">
@@ -92,6 +110,17 @@ export function ProjectSidebar({
 
       <div className="workspace-ledger">
         <div className="sample-ledger__title">Workspace Drafts</div>
+        <form className="workspace-ledger__create" onSubmit={submitUnit}>
+          <input
+            aria-label="New unit name"
+            onChange={event => setUnitName(event.target.value)}
+            placeholder="unit_name"
+            spellCheck={false}
+            value={unitName}
+          />
+          <button disabled={unitName.trim() === ''} type="submit">Create</button>
+        </form>
+        {createError ? <p className="workspace-ledger__error">{createError}</p> : null}
         {workspaceFiles.map(file => (
           <button
             key={file.path}

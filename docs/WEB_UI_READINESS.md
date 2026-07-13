@@ -42,6 +42,12 @@ Bypass and mute use indexed Worklet controls. The facade retains per-instance by
 them to a newly hydrated runtime before commit, and therefore preserves live control state across structural swaps.
 The current project schema has no persisted bypass field, so bypass does not invent a non-schema YAML property.
 
+Unit Atom CRUD is backed by structured YAML transforms and executable transformer tests. The editor can create a valid
+unit scaffold, add catalog-derived atoms, rename nodes, edit bindings/configuration, and remove unreferenced atoms.
+Removal is blocked while another node or a public output port references the atom output. The control Worker validates
+and compiles every unit draft in a snapshot, including units not yet referenced by the entry project, so incomplete
+forms return file-specific diagnostics without replacing the active runtime.
+
 ## Ready To Start Web UI When
 
 - [x] Unit metadata can render a parameter panel without frontend hardcoding.

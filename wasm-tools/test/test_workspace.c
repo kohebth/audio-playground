@@ -70,6 +70,12 @@ static int put_fixture(apg_wasm_control_t *control, const fixture_file_t *fixtur
     return status == APG_WASM_STATUS_OK ? 0 : fail(control, "cannot add fixture to workspace");
 }
 
+static int put_text(apg_wasm_control_t *control, apg_wasm_file_role_t role, const char *path, const char *content) {
+    return apg_wasm_control_put_file(control, role, path, strlen(path), content, strlen(content)) == APG_WASM_STATUS_OK
+               ? 0
+               : fail(control, "cannot add text file to workspace");
+}
+
 int main(void) {
     const char         *entry   = fixture_files[0].path;
     apg_wasm_control_t *control = apg_wasm_control_create(0u);
@@ -119,6 +125,106 @@ int main(void) {
             strlen(yaml)
         ) != APG_WASM_STATUS_INVALID_ARGUMENT)
         return fail(control, "escaping workspace file path was accepted");
+
+    if (apg_wasm_control_begin_workspace(control, 4u, entry, strlen(entry)) != APG_WASM_STATUS_OK)
+        return fail(control, "cannot begin invalid-draft workspace");
+    for (size_t i = 0u; i < sizeof(fixture_files) / sizeof(fixture_files[0]); ++i) {
+        if (put_fixture(control, &fixture_files[i]))
+            return 1;
+    }
+    const char *invalid_unit = "kind: apg.unit\n"
+                               "schema: apg.unit.v2\n"
+                               "name: broken_draft\n"
+                               "version: 1.0.0\n"
+                               "params:\n"
+                               "  gain:\n"
+                               "    type: float\n"
+                               "    default: 1\n"
+                               "    min: 0\n"
+                               "    max: 4\n"
+                               "ports:\n"
+                               "  inputs:\n"
+                               "    - name: input\n"
+                               "      type: audio\n"
+                               "      channels: 1\n"
+                               "  outputs:\n"
+                               "    - name: output\n"
+                               "      type: audio\n"
+                               "      channels: 1\n"
+                               "graph:\n"
+                               "  signals:\n"
+                               "    - input\n"
+                               "    - output\n"
+                               "  nodes:\n"
+                               "    - id: broken\n"
+                               "      atom: amplitude_multiply\n"
+                               "      in:\n"
+                               "        signal_a: input\n"
+                               "      out:\n"
+                               "        signal: output\n"
+                               "compatibility:\n"
+                               "  desktop_full: true\n";
+    if (put_text(control, APG_WASM_FILE_UNIT, "workspace/broken.unit.v2.yaml", invalid_unit))
+        return 1;
+    if (apg_wasm_control_validate_workspace(control) != APG_WASM_STATUS_COMPILE_ERROR)
+        return fail(control, "invalid unreferenced unit draft was accepted");
+    diagnostic = apg_wasm_control_last_diagnostic(control);
+    if (!diagnostic || strcmp(diagnostic->file, "workspace/broken.unit.v2.yaml") != 0 ||
+        strcmp(diagnostic->phase, "compile") != 0)
+        return fail(control, "invalid unit draft diagnostic is incomplete");
+
+    if (apg_wasm_control_begin_workspace(control, 5u, entry, strlen(entry)) != APG_WASM_STATUS_OK)
+        return fail(control, "cannot begin valid-draft workspace");
+    for (size_t i = 0u; i < sizeof(fixture_files) / sizeof(fixture_files[0]); ++i) {
+        if (put_fixture(control, &fixture_files[i]))
+            return 1;
+    }
+    const char *valid_unit = "kind: apg.unit\n"
+                             "schema: apg.unit.v2\n"
+                             "name: browser_gain\n"
+                             "version: 1.0.0\n"
+                             "params:\n"
+                             "  gain:\n"
+                             "    type: float\n"
+                             "    default: 1\n"
+                             "    min: 0\n"
+                             "    max: 4\n"
+                             "ports:\n"
+                             "  inputs:\n"
+                             "    - name: input\n"
+                             "      type: audio\n"
+                             "      channels: 1\n"
+                             "  outputs:\n"
+                             "    - name: output\n"
+                             "      type: audio\n"
+                             "      channels: 1\n"
+                             "graph:\n"
+                             "  signals:\n"
+                             "    - input\n"
+                             "    - gain_value\n"
+                             "    - output\n"
+                             "  nodes:\n"
+                             "    - id: gain_value\n"
+                             "      atom: generation_dc\n"
+                             "      out:\n"
+                             "        signal: gain_value\n"
+                             "      config:\n"
+                             "        value: ${params.gain}\n"
+                             "    - id: apply_gain\n"
+                             "      atom: amplitude_multiply\n"
+                             "      in:\n"
+                             "        signal_a: input\n"
+                             "        signal_b: gain_value\n"
+                             "      out:\n"
+                             "        signal: output\n"
+                             "compatibility:\n"
+                             "  desktop_full: true\n"
+                             "  wasm_realtime: true\n";
+    if (put_text(control, APG_WASM_FILE_UNIT, "workspace/browser_gain.unit.v2.yaml", valid_unit))
+        return 1;
+    if (apg_wasm_control_validate_workspace(control) != APG_WASM_STATUS_OK ||
+        apg_wasm_control_compile_workspace(control) != APG_WASM_STATUS_OK)
+        return fail(control, "valid unreferenced unit draft did not validate and compile");
 
     apg_wasm_control_destroy(control);
     return 0;

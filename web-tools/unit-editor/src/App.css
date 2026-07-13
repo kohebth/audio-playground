@@ -972,6 +972,39 @@ body {
   text-align: left;
 }
 
+.workspace-ledger__create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.workspace-ledger__create input,
+.workspace-ledger__create button {
+  min-width: 0;
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font: 11px var(--font-sans);
+}
+
+.workspace-ledger__create input {
+  padding: 0 7px;
+}
+
+.workspace-ledger__create button {
+  padding: 0 9px;
+  cursor: pointer;
+}
+
+.workspace-ledger__error {
+  margin: 0 0 8px;
+  color: var(--danger);
+  font-size: 10px;
+}
+
 .workspace-ledger__row--active {
   color: var(--text-primary);
 }

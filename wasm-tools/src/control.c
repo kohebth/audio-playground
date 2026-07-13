@@ -1,5 +1,6 @@
 #include <apg/wasm/abi.h>
 
+#include <apgcore/compiler/compiler_v2.h>
 #include <apgcore/compiler/project_compiler_v2.h>
 #include <apgcore/registry/registry_builder_v2.h>
 #include <apgcore/validator/project_v2.h>
@@ -238,12 +239,36 @@ report_compile_error(apg_wasm_control_t *control, const char *file, const char *
     );
 }
 
+static apg_wasm_status_t validate_unit_files(apg_wasm_control_t *control) {
+    for (size_t i = 0u; i < control->files_len; ++i) {
+        const apg_wasm_workspace_file_t *file = &control->files[i];
+        if (file->role != APG_WASM_FILE_UNIT)
+            continue;
+        uc_arena_reset(&control->arena);
+        uc_error               error = {0};
+        apg_unit_v2_t          unit  = {0};
+        apg_v2_compiled_unit_t plan  = {0};
+        uc_status status = apg_unit_v2_load_string(file->content, file->content_len, &control->arena, &unit, &error);
+        if (status != UC_OK)
+            return report_uc_error(control, "unit", file->path, "$", &error);
+        status = apg_v2_compile_unit(&unit, &control->arena, &plan, &error);
+        if (status != UC_OK)
+            return report_compile_error(control, file->path, "$.graph", &error);
+    }
+    uc_arena_reset(&control->arena);
+    return APG_WASM_STATUS_OK;
+}
+
 static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
     uc_arena_reset(&control->arena);
     memset(&control->resolved, 0, sizeof(control->resolved));
     memset(&control->compiled, 0, sizeof(control->compiled));
     control->validated   = false;
     control->compiled_ok = false;
+
+    apg_wasm_status_t unit_status = validate_unit_files(control);
+    if (unit_status != APG_WASM_STATUS_OK)
+        return unit_status;
 
     const apg_wasm_workspace_file_t *project_file = find_file(control, control->entry_project);
     if (!project_file || project_file->role != APG_WASM_FILE_PROJECT)

@@ -35,6 +35,16 @@ type UnitDocument = Record<string, unknown> & {
     signals?: unknown[];
     nodes?: unknown[];
   };
+  ports?: {
+    inputs?: unknown[];
+    outputs?: unknown[];
+  };
+};
+
+export type CreateUnitOptions = {
+  name: string;
+  title?: string;
+  category?: string;
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -148,6 +158,58 @@ function atomDefaultValue(type: string): string {
   return type === 'int' || type === 'uint' || type === 'bool' ? '0' : '0.0';
 }
 
+function portSignals(value: unknown): string[] {
+  if (!isObject(value)) return [];
+  if (Array.isArray(value.signals)) return value.signals.filter((signal): signal is string => typeof signal === 'string');
+  const name = scalarString(value.name);
+  return name ? [name] : [];
+}
+
+export function createUnitV2({ name, title, category }: CreateUnitOptions): string {
+  const normalized = name.trim();
+  if (!/^[a-z][a-z0-9_]*$/.test(normalized)) {
+    throw new Error('Unit name must use lowercase snake_case and start with a letter.');
+  }
+  const doc: UnitDocument = {
+    kind: 'apg.unit',
+    schema: 'apg.unit.v2',
+    name: normalized,
+    version: '1.0.0',
+    meta: {
+      title: title?.trim() || normalized.replace(/_/g, ' '),
+      category: category?.trim() || 'custom',
+      description: '',
+    },
+    params: {
+      gain: {
+        type: 'float',
+        default: 1,
+        min: 0,
+        max: 4,
+        ui: { label: 'Gain', control: 'knob', unit: 'x', scale: 'linear', display_precision: 2 },
+      },
+    },
+    ports: {
+      inputs: [{ name: 'input', type: 'audio', channels: 1 }],
+      outputs: [{ name: 'output', type: 'audio', channels: 1 }],
+    },
+    graph: {
+      signals: ['input', 'gain_value', 'output'],
+      nodes: [
+        { id: 'gain_value', atom: 'generation_dc', out: { signal: 'gain_value' }, config: { value: '${params.gain}' } },
+        {
+          id: 'apply_gain',
+          atom: 'amplitude_multiply',
+          in: { signal_a: 'input', signal_b: 'gain_value' },
+          out: { signal: 'output' },
+        },
+      ],
+    },
+    compatibility: { desktop_full: true, wasm_realtime: true, m7_static: true, offline_render: true },
+  };
+  return dumpDocument(doc);
+}
+
 export function parseUnitGraphDraft(content: string): UnitGraphDraft {
   return parseGraphFromDocument(loadDocument(content));
 }
@@ -200,6 +262,7 @@ export function removeAtomNodeFromUnit(content: string, nodeId: string): string 
   if (!node) throw new Error(`Atom node "${nodeId}" was not found.`);
 
   const outputs = new Set(Object.values(node.out).filter(Boolean));
+  const publicOutputs = new Set((doc.ports?.outputs ?? []).flatMap(portSignals));
   const consumers = draft.nodes
     .filter(item => item.id !== nodeId)
     .filter(item => Object.values(item.in).some(signal => outputs.has(signal)))
@@ -207,8 +270,16 @@ export function removeAtomNodeFromUnit(content: string, nodeId: string): string 
   if (consumers.length > 0) {
     throw new Error(`Cannot remove "${nodeId}" while ${consumers.join(', ')} consumes its output.`);
   }
+  const exposed = [...outputs].filter(signal => publicOutputs.has(signal));
+  if (exposed.length > 0) {
+    throw new Error(`Cannot remove "${nodeId}" while unit output ${exposed.join(', ')} references its output.`);
+  }
 
   graph.nodes = (graph.nodes?.filter(isObject) ?? []).filter(item => String(item.id) !== nodeId);
+  const remainingReferences = new Set(
+    parseGraphFromDocument(doc).nodes.flatMap(item => [...Object.values(item.in), ...Object.values(item.out)]).filter(Boolean),
+  );
+  graph.signals = (graph.signals ?? []).filter(signal => typeof signal !== 'string' || !outputs.has(signal) || remainingReferences.has(signal));
   return dumpDocument(doc);
 }
 
