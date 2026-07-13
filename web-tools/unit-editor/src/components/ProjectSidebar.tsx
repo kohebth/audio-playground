@@ -115,7 +115,7 @@ export function ProjectSidebar({
             onClick={() => onSelectWorkspaceFile(file.path)}
             type="button"
           >
-            <span>{file.role === 'project' ? 'P' : 'U'}</span>
+            <i className={`fa-solid ${file.role === 'project' ? 'fa-folder-open' : 'fa-file-code'}`} aria-hidden="true" />
             <code>{file.path}</code>
           </button>
         ))}
