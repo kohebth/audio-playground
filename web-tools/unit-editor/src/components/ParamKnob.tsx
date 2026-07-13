@@ -57,7 +57,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
     setDraft(value);
   }, [value]);
 
-  const startDrag = (event: PointerEvent<HTMLInputElement>) => {
+  const startDrag = (event: PointerEvent<HTMLElement>) => {
     if (event.button !== 0 || event.detail > 1) return;
     const parsed = Number(draft);
     if (!Number.isFinite(parsed)) return;
@@ -71,7 +71,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
     };
   };
 
-  const updateDrag = (event: PointerEvent<HTMLInputElement>) => {
+  const updateDrag = (event: PointerEvent<HTMLElement>) => {
     const state = dragState.current;
     if (!state) return;
     const dy = state.lastY - event.clientY;
@@ -99,30 +99,51 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
     onChange(formatValue(clampValue(parsed, minValue, maxValue)));
   };
 
-  const control = (
+  const pointerEvents = {
+    onPointerCancel: (event: PointerEvent<HTMLElement>) => {
+      event.stopPropagation();
+      dragState.current = null;
+    },
+    onPointerDown: (event: PointerEvent<HTMLElement>) => {
+      event.stopPropagation();
+      startDrag(event);
+    },
+    onPointerMove: (event: PointerEvent<HTMLElement>) => {
+      event.stopPropagation();
+      updateDrag(event);
+    },
+    onPointerUp: (event: PointerEvent<HTMLElement>) => {
+      event.stopPropagation();
+      dragState.current = null;
+    },
+  };
+
+  const control = compact ? (
+    <div
+      aria-label={`${ariaLabel} percent`}
+      aria-valuemax={100}
+      aria-valuemin={0}
+      aria-valuenow={Math.round(percent)}
+      className="knob"
+      role="slider"
+      style={{ '--knob-percent': `${percent}%`, '--knob-angle': `${percent * 2.7 - 135}deg` } as CSSProperties}
+      tabIndex={0}
+      {...pointerEvents}
+    >
+      <div className="knob-ring" />
+      <div className="knob-cap">
+        <div className="knob-pointer" />
+      </div>
+    </div>
+  ) : (
     <input
       aria-label={`${ariaLabel} percent`}
       className="param-list__knob-input"
       inputMode="decimal"
-      onPointerCancel={event => {
-        event.stopPropagation();
-        dragState.current = null;
-      }}
-      onPointerDown={event => {
-        event.stopPropagation();
-        startDrag(event);
-      }}
-      onPointerMove={event => {
-        event.stopPropagation();
-        updateDrag(event);
-      }}
-      onPointerUp={event => {
-        event.stopPropagation();
-        dragState.current = null;
-      }}
       readOnly
       style={{ '--knob-percent': `${percent}%` } as CSSProperties}
       value={`${Math.round(percent)}%`}
+      {...pointerEvents}
     />
   );
 

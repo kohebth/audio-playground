@@ -150,7 +150,7 @@ export function ProjectSidebar({
 
       <section className="route-list accordion">
         <div className="route-list__header">
-          <span>Routes</span>
+          <span><i className="fa-solid fa-circle-nodes" aria-hidden="true" />Connections Matrix</span>
           <strong>{project.routes.length}</strong>
         </div>
         <form className="route-create add-unit-widget" onSubmit={submitRoute}>
@@ -163,14 +163,19 @@ export function ProjectSidebar({
           <button disabled={!routeSource || !routeTarget} type="submit">Connect</button>
         </form>
         {routeError ? <p className="workspace-ledger__error">{routeError}</p> : null}
+        <div className="route-list__columns" aria-hidden="true">
+          <span>Source</span>
+          <span>Destination</span>
+        </div>
         {project.routes.map((route, index) => (
           <button
             key={`${index}-${route.from}-${route.to}`}
-            className={`route-list__item ${selectedRouteIndex === index ? 'route-list__item--active' : ''}`}
+            className={`route-list__item route-item ${selectedRouteIndex === index ? 'route-list__item--active' : ''}`}
             onClick={() => onSelectRoute(index)}
             type="button"
           >
             <span>{route.from}</span>
+            <i className="fa-solid fa-arrow-right route-arrow" aria-hidden="true" />
             <strong>{route.to}</strong>
           </button>
         ))}
