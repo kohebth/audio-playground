@@ -178,8 +178,11 @@ includesContent(projectNode, 'controller?.setBypass(data.instance.id, !bypassed)
 includesContent(previewPanel, '.pollMeters()', 'preview meters must use throttled Worklet polling');
 includesContent(previewPanel, 'outputLatencyMs', 'live preview must calculate browser-reported output latency');
 includesContent(previewPanel, 'captureLatencyMs', 'live preview must read microphone latency when the browser exposes it');
+includesContent(previewPanel, 'measureAcousticLatency', 'live preview must expose an acoustic latency calibration action');
+includesContent(previewPanel, "'Latency chirp'", 'live preview latency calibration button is missing');
 includesContent(app, '<LiveLatencyBadge />', 'live output latency must remain visible outside the inspector');
 includesContent(liveLatencyBadge, "'Mic path est.'", 'live latency badge must distinguish microphone path estimates');
+includesContent(liveLatencyBadge, 'Loopback test', 'live latency badge must show measured loopback results');
 includesContent(previewPanel, "latencyHint: 'interactive'", 'live preview must request interactive browser latency');
 includesContent(previewPanel, 'latency: { ideal: 0 }', 'microphone preview must request the lowest available capture latency');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
@@ -203,6 +206,8 @@ includesContent(previewPanel, "'Mute output'", 'preview mute action is missing')
 includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');
 includesContent(processorWorklet, 'request.type === "commit"', 'Worklet must commit only through an explicit message');
 includesContent(processorWorklet, 'request.type === "pollMeters"', 'meter snapshots must be copied outside process()');
+includesContent(processorWorklet, 'request.type === "startLatencyProbe"', 'AudioWorklet must support acoustic latency probes');
+includesContent(wasmFacade, 'measureLatencyProbe()', 'WASM facade must expose acoustic latency measurement');
 assert(!processorWorklet.slice(processorWorklet.indexOf('process(inputs, outputs)')).includes('this.reply('), 'process() must not allocate and post meter messages');
 assert(!processorWorklet.includes('HEAPF32.subarray'), 'process() must not allocate a typed-array view per block');
 assert(!processorWorklet.includes('import(moduleUrl)'), 'dynamic import must not run in WorkletGlobalScope');

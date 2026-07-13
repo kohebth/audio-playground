@@ -4,6 +4,7 @@ export type LiveBypassController = {
   running: boolean;
   latencyMs: number | null;
   captureLatencyMs: number | null;
+  measuredLatencyMs: number | null;
   bypassByInstance: Record<string, boolean>;
   setBypass: (instanceId: string, enabled: boolean) => Promise<void>;
 };

@@ -20,6 +20,7 @@ export type ProcessorRequest =
   | { id: number; type: 'setBypass'; index: number; enabled: boolean }
   | { id: number; type: 'setMute'; enabled: boolean }
   | { id: number; type: 'reset' }
+  | { id: number; type: 'startLatencyProbe' }
   | { id: number; type: 'pollMeters' }
   | { id: number; type: 'dispose' };
 
@@ -28,6 +29,7 @@ export type ProcessorResponse =
   | { id: number; ok: true; type: 'staged'; revision: number }
   | { id: number; ok: true; type: 'committed'; revision: number }
   | { id: number; ok: true; type: 'command' }
+  | { id: number; ok: true; type: 'latencyProbe'; frames: number; sampleRate: number }
   | { id: number; ok: true; type: 'disposed' }
   | { id: number; ok: true; type: 'meter'; meter: { peak: number; rms: number; frames: number; valid: boolean; activeRevision: number; underruns: number } }
   | { id: number; ok: false; type: 'error'; message: string };

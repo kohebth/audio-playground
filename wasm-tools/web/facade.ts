@@ -279,6 +279,12 @@ export class WasmBackend {
     await this.processorRequest({ type: 'reset' });
   }
 
+  async measureLatencyProbe(): Promise<number> {
+    const response = await this.processorRequest({ type: 'startLatencyProbe' });
+    if (response.type !== 'latencyProbe') throw new Error(`Unexpected processor response: ${response.type}`);
+    return (response.frames / response.sampleRate) * 1000;
+  }
+
   getMeters(): MeterSnapshot {
     return { ...this.meter };
   }

@@ -73,6 +73,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
   const [meter, setMeter] = useState<MeterSnapshot>(emptyMeter);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [captureLatency, setCaptureLatency] = useState<number | null>(null);
+  const [measuredLatencyMs, setMeasuredLatencyMs] = useState<number | null>(null);
+  const [measuringLatency, setMeasuringLatency] = useState(false);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -286,6 +288,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
     setPhase('ready');
     setMeter(emptyMeter);
     setCaptureLatency(null);
+    setMeasuredLatencyMs(null);
   }, [refreshBackendState]);
 
   const start = useCallback(async () => {
@@ -318,6 +321,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
       runningRef.current = true;
       setRunning(true);
       setPhase('running');
+      setMeasuredLatencyMs(null);
       if (fileSourceRef.current) {
         fileSourceRef.current.onended = () => void stopPlayback();
         fileSourceRef.current.start();
@@ -387,9 +391,31 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
     }
   }, [backend, reportError]);
 
+  const measureAcousticLatency = useCallback(async () => {
+    if (!backend || !running || inputMode !== 'microphone') return;
+    setMeasuringLatency(true);
+    setMeasuredLatencyMs(null);
+    try {
+      const measured = await backend.measureLatencyProbe();
+      setMeasuredLatencyMs(measured);
+      setDiagnostic(`Measured acoustic loopback: ${measured.toFixed(1)} ms.`);
+    } catch (error) {
+      reportError(error, 'latency-probe');
+    } finally {
+      setMeasuringLatency(false);
+    }
+  }, [backend, inputMode, reportError, running]);
+
   useEffect(() => {
-    setController({ running, latencyMs, captureLatencyMs: captureLatency, bypassByInstance, setBypass: setInstanceBypass });
-  }, [bypassByInstance, captureLatency, latencyMs, running, setController, setInstanceBypass]);
+    setController({
+      running,
+      latencyMs,
+      captureLatencyMs: captureLatency,
+      measuredLatencyMs,
+      bypassByInstance,
+      setBypass: setInstanceBypass,
+    });
+  }, [bypassByInstance, captureLatency, latencyMs, measuredLatencyMs, running, setController, setInstanceBypass]);
 
   useEffect(() => () => setController(null), [setController]);
 
@@ -472,6 +498,14 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
         </button>
         <button className="btn btn--ghost" disabled={!running} onClick={() => void reset()} type="button">
           Reset
+        </button>
+        <button
+          className="btn btn--ghost"
+          disabled={!running || inputMode !== 'microphone' || measuringLatency}
+          onClick={() => void measureAcousticLatency()}
+          type="button"
+        >
+          {measuringLatency ? 'Listening...' : 'Latency chirp'}
         </button>
       </div>
 

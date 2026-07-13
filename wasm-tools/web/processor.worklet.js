@@ -20,6 +20,7 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     this.processor = 0;
     this.ready = false;
     this.underruns = 0;
+    this.latencyProbe = null;
     this.port.onmessage = (event) => void this.handle(event.data);
     const { moduleUrl, wasmBinary } = options?.processorOptions ?? {};
     if (!moduleUrl || !(wasmBinary instanceof ArrayBuffer)) {
@@ -96,6 +97,23 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
       this.command(request.id, this.module._apg_wasm_processor_reset(this.processor));
       return;
     }
+    if (request.type === "startLatencyProbe") {
+      if (this.latencyProbe) {
+        this.reply({ id: request.id, ok: false, type: "error", message: "A latency probe is already running" });
+        return;
+      }
+      this.latencyProbe = {
+        id: request.id,
+        startFrame: currentFrame + Math.round(sampleRate * 0.08),
+        emittedFrame: -1,
+        deadlineFrame: currentFrame + Math.round(sampleRate * 1.5),
+        toneFrame: 0,
+        correlationSin: 0,
+        correlationCos: 0,
+        correlationFrames: 0,
+      };
+      return;
+    }
     if (request.type === "pollMeters") {
       const meter = this.module._apg_wasm_processor_output_meter(this.processor);
       if (!meter) {
@@ -123,6 +141,44 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     this.ready = false;
     this.reply({ id: request.id, ok: true, type: "disposed" });
   }
+  processLatencyProbe(input, output) {
+    const probe = this.latencyProbe;
+    if (!probe) return;
+    const frequency = 2000;
+    const toneFrames = Math.round(sampleRate * 0.025);
+    const correlationWindow = 64;
+    for (let frame = 0; frame < output.length; frame += 1) {
+      const absoluteFrame = currentFrame + frame;
+      if (absoluteFrame >= probe.startFrame && probe.toneFrame < toneFrames) {
+        if (probe.emittedFrame < 0) probe.emittedFrame = absoluteFrame;
+        output[frame] += 0.2 * Math.sin((2 * Math.PI * frequency * probe.toneFrame) / sampleRate);
+        probe.toneFrame += 1;
+      }
+      if (input && probe.emittedFrame >= 0 && absoluteFrame >= probe.emittedFrame) {
+        const phase = (2 * Math.PI * frequency * absoluteFrame) / sampleRate;
+        probe.correlationSin += input[frame] * Math.sin(phase);
+        probe.correlationCos += input[frame] * Math.cos(phase);
+        probe.correlationFrames += 1;
+        if (probe.correlationFrames === correlationWindow) {
+          const level = (2 * Math.hypot(probe.correlationSin, probe.correlationCos)) / correlationWindow;
+          if (level >= 0.035) {
+            const detectedFrame = absoluteFrame - Math.floor(correlationWindow / 2);
+            this.reply({ id: probe.id, ok: true, type: "latencyProbe", frames: detectedFrame - probe.emittedFrame, sampleRate });
+            this.latencyProbe = null;
+            return;
+          }
+          probe.correlationSin = 0;
+          probe.correlationCos = 0;
+          probe.correlationFrames = 0;
+        }
+      }
+      if (absoluteFrame >= probe.deadlineFrame) {
+        this.reply({ id: probe.id, ok: false, type: "error", message: "Latency chirp was not detected by the microphone" });
+        this.latencyProbe = null;
+        return;
+      }
+    }
+  }
   process(inputs, outputs) {
     const output = outputs[0]?.[0];
     if (!output) return true;
@@ -148,6 +204,7 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     }
     const outputPointer = this.module._apg_wasm_processor_output_buffer(this.processor) >>> 2;
     for (let frame = 0; frame < frames; frame += 1) output[frame] = this.module.HEAPF32[outputPointer + frame];
+    this.processLatencyProbe(input, output);
     for (let channel = 1; channel < (outputs[0]?.length ?? 0); channel += 1) outputs[0]?.[channel]?.set(output);
     return true;
   }
