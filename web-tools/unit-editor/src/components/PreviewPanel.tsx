@@ -42,6 +42,13 @@ function moduleUrl(file: string): string {
   return new URL(`wasm/${file}`, `${window.location.origin}${import.meta.env.BASE_URL}`).href;
 }
 
+function outputLatencyMs(context: AudioContext): number | null {
+  const base = Number.isFinite(context.baseLatency) ? Math.max(context.baseLatency, 0) : 0;
+  const output = (context as AudioContext & { outputLatency?: number }).outputLatency;
+  const device = Number.isFinite(output) ? Math.max(output ?? 0, 0) : 0;
+  return base > 0 || device > 0 ? (base + device) * 1000 : null;
+}
+
 export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: Props) {
   const { setController } = useLiveBypass();
   const [backend, setBackend] = useState<WasmBackend | null>(null);
@@ -50,6 +57,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
   const [backendState, setBackendState] = useState<BackendState>(emptyBackendState);
   const [backendDiagnostic, setBackendDiagnostic] = useState<WasmDiagnostic | null>(null);
   const [meter, setMeter] = useState<MeterSnapshot>(emptyMeter);
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -204,6 +212,14 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
     }, 100);
     return () => window.clearInterval(timer);
   }, [backend, reportError, running]);
+
+  useEffect(() => {
+    if (!running || !contextRef.current) return;
+    const refreshLatency = () => setLatencyMs(outputLatencyMs(contextRef.current!));
+    refreshLatency();
+    const timer = window.setInterval(refreshLatency, 500);
+    return () => window.clearInterval(timer);
+  }, [running]);
 
   useEffect(() => {
     if (!backend || !running) return;
@@ -459,6 +475,10 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
         <div>
           <span>Underruns</span>
           <strong>{meter.underruns}</strong>
+        </div>
+        <div title="Browser-estimated render and output latency. Microphone capture latency is not exposed by the browser.">
+          <span>Output est.</span>
+          <strong>{latencyMs === null ? '-' : `${latencyMs.toFixed(1)} ms`}</strong>
         </div>
       </div>
 

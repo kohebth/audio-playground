@@ -175,6 +175,8 @@ includesContent(previewPanel, 'bypassByInstance', 'bypass UI state must be track
 includesContent(projectNode, 'project-node__bypass', 'unit cards must expose a bypass control');
 includesContent(projectNode, 'controller?.setBypass(data.instance.id, !bypassed)', 'unit-card bypass must target the live instance');
 includesContent(previewPanel, '.pollMeters()', 'preview meters must use throttled Worklet polling');
+includesContent(previewPanel, 'outputLatencyMs', 'live preview must calculate browser-reported output latency');
+includesContent(previewPanel, 'Output est.', 'live preview must display the output latency estimate');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
 includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
 includesContent(wasmFacade, 'processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary }', 'WASM bytes must be transferred during Worklet construction');
