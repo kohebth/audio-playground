@@ -249,7 +249,7 @@ export function ContractGraphCanvas({
   };
 
   return (
-    <main className="canvas canvas--contract">
+    <main className="canvas canvas--contract canvas-area">
       <div className="canvas-modebar">
         <button className="btn btn--ghost" onClick={onBackToProject} type="button">
           Project graph

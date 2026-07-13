@@ -1139,6 +1139,16 @@ body {
   background: transparent;
 }
 
+.canvas--contract .react-flow,
+.canvas--contract .react-flow__pane {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(74, 158, 255, .03) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent, transparent 23px, var(--border-subtle) 23px, var(--border-subtle) 24px),
+    repeating-linear-gradient(90deg, transparent, transparent 23px, var(--border-subtle) 23px, var(--border-subtle) 24px) !important;
+  background-color: var(--bg-base) !important;
+  background-size: 100% 100%, 24px 24px, 24px 24px !important;
+}
+
 .canvas--contract .react-flow__controls {
   bottom: 16px;
   left: 16px;
