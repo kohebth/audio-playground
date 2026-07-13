@@ -1350,6 +1350,12 @@ body {
   font-size: 12px;
 }
 
+.diagnostic-empty--error {
+  border-color: #ef4444;
+  background: #450a0a;
+  color: #fca5a5;
+}
+
 .diagnostic-list {
   display: flex;
   flex-direction: column;
@@ -1430,13 +1436,20 @@ body {
   background: #ef4444;
 }
 
-.meter-grid {
+.meter-grid,
+.revision-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-.meter-grid > div {
+.revision-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 10px 0;
+}
+
+.meter-grid > div,
+.revision-grid > div {
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1444,6 +1457,7 @@ body {
 }
 
 .meter-grid span,
+.revision-grid span,
 .param-list__field span,
 .compatibility span {
   display: block;
@@ -1454,12 +1468,43 @@ body {
 }
 
 .meter-grid strong,
+.revision-grid strong,
 .compatibility strong {
   display: block;
   margin-top: 3px;
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 13px;
+}
+
+.wasm-diagnostic {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0;
+  padding: 8px;
+  border: 1px solid #7f1d1d;
+  border-radius: 6px;
+  background: #1f1012;
+}
+
+.wasm-diagnostic > div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.wasm-diagnostic dt {
+  color: #fca5a5;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.wasm-diagnostic dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font: 11px var(--font-mono);
 }
 
 .waveform {
@@ -2365,6 +2410,10 @@ body {
 
   .meter-grid {
     grid-template-columns: 1fr;
+  }
+
+  .revision-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .canvas--project {

@@ -171,6 +171,12 @@ includesContent(wasmFacade, 'Prepared revision ${revision} is stale', 'stale pre
 includesContent(wasmFacade, "type: 'stage'", 'runtime hydration must be a separate processor message');
 includesContent(wasmFacade, "type: 'commit'", 'runtime commit must be a separate processor message');
 includesContent(wasmFacade, 'failedRevision: revision', 'runtime failures must identify their workspace revision');
+includesContent(previewPanel, 'backendState.preparedRevision', 'preview must expose the prepared workspace revision');
+includesContent(previewPanel, 'backendState.activeRevision', 'preview must expose the active runtime revision');
+includesContent(previewPanel, 'backendState.failedRevision', 'preview must expose the failed workspace revision');
+includesContent(previewPanel, 'backendDiagnostic.code', 'preview must expose structured diagnostic codes');
+includesContent(previewPanel, 'backendDiagnostic.file', 'preview must expose diagnostic file paths');
+includesContent(previewPanel, 'backendDiagnostic.path', 'preview must expose diagnostic schema paths');
 includesContent(wasmFacade, 'bypassShadows', 'bypass controls must survive prepared runtime swaps');
 includesContent(wasmFacade, 'muteShadow', 'mute control must survive prepared runtime swaps');
 includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');

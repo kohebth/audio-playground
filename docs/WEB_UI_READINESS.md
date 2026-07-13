@@ -30,6 +30,11 @@ before commit, while failure state retains the affected revision and diagnostic.
 decode through WebAudio and feed the real processor Worklet; microphone capture remains a separate selectable input
 using the same runtime.
 
+The live preview exposes workspace, prepared, active, and failed revisions independently. Worker and processor failures
+render the structured diagnostic code, phase, revision, file, and schema path instead of collapsing the backend result
+to message text. Beginning a newer revision clears the stale diagnostic display while retaining the failed revision
+counter, and a corrected snapshot proceeds through validation and preparation normally.
+
 Parameter edits clamp to unit metadata, update the project YAML, use the indexed Worklet control for immediate audible
 feedback, and then flow through the debounced replacement runtime. Resetting an override sends the original value over
 the same fast path before the synchronized YAML revision is prepared.

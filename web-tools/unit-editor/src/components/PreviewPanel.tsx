@@ -1,8 +1,10 @@
 import {
   WasmBackend,
+  type BackendState,
   type BackendPhase,
   type MeterSnapshot,
   type ValidationResult,
+  type WasmDiagnostic,
 } from '@audio-playground/wasm-tools';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -27,6 +29,15 @@ const emptyMeter: MeterSnapshot = {
   underruns: 0,
 };
 
+const emptyBackendState: BackendState = {
+  phase: 'idle',
+  workspaceRevision: 0,
+  preparedRevision: 0,
+  activeRevision: 0,
+  failedRevision: 0,
+  lastError: null,
+};
+
 function moduleUrl(file: string): string {
   return new URL(`wasm/${file}`, `${window.location.origin}${import.meta.env.BASE_URL}`).href;
 }
@@ -35,6 +46,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
   const [backend, setBackend] = useState<WasmBackend | null>(null);
   const [phase, setPhase] = useState<BackendPhase>('idle');
   const [diagnostic, setDiagnostic] = useState('WASM backend is initializing.');
+  const [backendState, setBackendState] = useState<BackendState>(emptyBackendState);
+  const [backendDiagnostic, setBackendDiagnostic] = useState<WasmDiagnostic | null>(null);
   const [meter, setMeter] = useState<MeterSnapshot>(emptyMeter);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [running, setRunning] = useState(false);
@@ -51,6 +64,32 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
   const fileSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const previousOverridesRef = useRef<Map<string, ParamOverride>>(new Map());
   const firstOverride = paramOverrides[0];
+
+  const refreshBackendState = useCallback((clearDiagnostic = false) => {
+    const instance = backendRef.current;
+    if (!instance) return;
+    const next = instance.getState();
+    setBackendState(next);
+    if (next.lastError) setBackendDiagnostic(next.lastError);
+    else if (clearDiagnostic) setBackendDiagnostic(null);
+  }, []);
+
+  const reportError = useCallback((error: unknown, errorPhase: string) => {
+    const known = backendRef.current?.getLastError();
+    const detail: WasmDiagnostic = known ?? {
+      revision: revisionRef.current,
+      status: -1,
+      phase: errorPhase,
+      code: 'APG_WEB_RUNTIME_ERROR',
+      file: '',
+      path: '',
+      message: error instanceof Error ? error.message : String(error),
+    };
+    refreshBackendState();
+    setBackendDiagnostic(detail);
+    setPhase('error');
+    setDiagnostic(detail.message || detail.code);
+  }, [refreshBackendState]);
 
   useEffect(() => {
     const context = new AudioContext();
@@ -70,11 +109,11 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
         }
         backendRef.current = instance;
         setBackend(instance);
+        setBackendState(instance.getState());
         setDiagnostic('WASM control backend ready.');
       })
       .catch(error => {
-        setPhase('error');
-        setDiagnostic(error instanceof Error ? error.message : String(error));
+        reportError(error, 'initialize');
       });
     return () => {
       disposed = true;
@@ -85,7 +124,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       if (instance) void instance.destroy().finally(() => context.close());
       else void context.close();
     };
-  }, []);
+  }, [reportError]);
 
   const syncWorkspace = useCallback(
     async (prepare: boolean) => {
@@ -93,14 +132,18 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       const revision = revisionRef.current;
       if (validRevisionRef.current !== revision) {
         setPhase('validating');
-        const validation: ValidationResult = await backend.replaceWorkspace({
+        const validationPromise = backend.replaceWorkspace({
           revision,
           entryProject,
           files: workspaceFiles.map(({ path, role, content }) => ({ path, role, content })),
         });
+        refreshBackendState(true);
+        const validation: ValidationResult = await validationPromise;
         if (revision !== revisionRef.current) return false;
+        refreshBackendState(validation.ok);
         if (!validation.ok) {
           setPhase('error');
+          setBackendDiagnostic(validation.diagnostic);
           setDiagnostic(validation.diagnostic.message || validation.diagnostic.code);
           return false;
         }
@@ -109,34 +152,37 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       }
       if (prepare) {
         setPhase('preparing');
-        await backend.prepare(revision, {
+        const preparePromise = backend.prepare(revision, {
           sampleRate: Math.round(contextRef.current.sampleRate),
           blockFrames: 128,
         });
+        refreshBackendState(true);
+        await preparePromise;
         if (revision !== revisionRef.current) return false;
         if (runningRef.current) await backend.commitPrepared(revision);
         if (revision !== revisionRef.current) return false;
+        refreshBackendState(true);
         setDiagnostic(`Revision ${revision} prepared for live audio.`);
       }
       setPhase(runningRef.current ? 'running' : prepare ? 'ready' : 'idle');
       return true;
     },
-    [backend, entryProject, workspaceFiles],
+    [backend, entryProject, refreshBackendState, workspaceFiles],
   );
 
   useEffect(() => {
     if (!backend) return;
     revisionRef.current += 1;
     backend.setCurrentRevision(revisionRef.current);
+    refreshBackendState(true);
     const timer = window.setTimeout(() => {
       void syncWorkspace(runningRef.current).catch(error => {
         if (revisionRef.current < 1) return;
-        setPhase('error');
-        setDiagnostic(error instanceof Error ? error.message : String(error));
+        reportError(error, 'synchronize');
       });
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [backend, syncWorkspace, workspaceFiles]);
+  }, [backend, refreshBackendState, reportError, syncWorkspace, workspaceFiles]);
 
   useEffect(() => {
     if (!backend || !running) return;
@@ -148,15 +194,14 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
         .pollMeters()
         .then(setMeter)
         .catch(error => {
-          setPhase('error');
-          setDiagnostic(error instanceof Error ? error.message : String(error));
+          reportError(error, 'meter');
         })
         .finally(() => {
           polling = false;
         });
     }, 100);
     return () => window.clearInterval(timer);
-  }, [backend, running]);
+  }, [backend, reportError, running]);
 
   useEffect(() => {
     if (!backend || !running) return;
@@ -171,21 +216,19 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       const value = Number(command.value);
       if (Number.isFinite(value)) {
         void backend.setParam(command.path, value).catch(error => {
-          setPhase('error');
-          setDiagnostic(error instanceof Error ? error.message : String(error));
+          reportError(error, 'control');
         });
       }
     }
-  }, [backend, paramOverrides, running]);
+  }, [backend, paramOverrides, reportError, running]);
 
   const compile = useCallback(async () => {
     try {
       await syncWorkspace(true);
     } catch (error) {
-      setPhase('error');
-      setDiagnostic(error instanceof Error ? error.message : String(error));
+      reportError(error, 'compile');
     }
-  }, [syncWorkspace]);
+  }, [reportError, syncWorkspace]);
 
   const stopPlayback = useCallback(async () => {
     const fileSource = fileSourceRef.current;
@@ -204,11 +247,12 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
     await backendRef.current?.stop();
+    refreshBackendState(true);
     runningRef.current = false;
     setRunning(false);
     setPhase('ready');
     setMeter(emptyMeter);
-  }, []);
+  }, [refreshBackendState]);
 
   const start = useCallback(async () => {
     if (!backend) return;
@@ -232,6 +276,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
         input = source;
       }
       await backend.start({ input });
+      refreshBackendState(true);
       runningRef.current = true;
       setRunning(true);
       setPhase('running');
@@ -246,10 +291,9 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       );
     } catch (error) {
       await stopPlayback();
-      setPhase('error');
-      setDiagnostic(error instanceof Error ? error.message : String(error));
+      reportError(error, 'start');
     }
-  }, [audioBuffer, audioFileName, backend, inputMode, stopPlayback, syncWorkspace]);
+  }, [audioBuffer, audioFileName, backend, inputMode, refreshBackendState, reportError, stopPlayback, syncWorkspace]);
 
   const stop = useCallback(async () => {
     await stopPlayback();
@@ -268,10 +312,9 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
     } catch (error) {
       setAudioBuffer(null);
       setAudioFileName('No audio file selected');
-      setPhase('error');
-      setDiagnostic(error instanceof Error ? error.message : String(error));
+      reportError(error, 'decode');
     }
-  }, [stopPlayback]);
+  }, [reportError, stopPlayback]);
 
   const reset = useCallback(async () => {
     if (!backend || !running) return;
@@ -279,10 +322,9 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       await backend.reset();
       setDiagnostic(`Revision ${revisionRef.current} runtime reset.`);
     } catch (error) {
-      setPhase('error');
-      setDiagnostic(error instanceof Error ? error.message : String(error));
+      reportError(error, 'reset');
     }
-  }, [backend, running]);
+  }, [backend, reportError, running]);
 
   const sendFirstParam = useCallback(async () => {
     if (!backend || !firstOverride) return;
@@ -292,9 +334,9 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       await backend.setParam(firstOverride.path, value);
       setDiagnostic(`Updated ${firstOverride.path}.`);
     } catch (error) {
-      setDiagnostic(error instanceof Error ? error.message : String(error));
+      reportError(error, 'control');
     }
-  }, [backend, firstOverride]);
+  }, [backend, firstOverride, reportError]);
 
   const toggleBypass = useCallback(async () => {
     if (!backend || !selectedInstanceId) return;
@@ -304,9 +346,9 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
       setBypassByInstance(current => ({ ...current, [selectedInstanceId]: next }));
       setDiagnostic(`${selectedInstanceId} bypass ${next ? 'enabled' : 'disabled'}.`);
     } catch (error) {
-      setDiagnostic(error instanceof Error ? error.message : String(error));
+      reportError(error, 'control');
     }
-  }, [backend, bypassByInstance, selectedInstanceId]);
+  }, [backend, bypassByInstance, reportError, selectedInstanceId]);
 
   return (
     <section className="inspector-block">
@@ -315,7 +357,22 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, sel
         <strong>{phase}</strong>
         <span>WASM AudioWorklet</span>
       </div>
-      <p className="diagnostic-empty">{diagnostic}</p>
+      <p className={`diagnostic-empty${phase === 'error' ? ' diagnostic-empty--error' : ''}`}>{diagnostic}</p>
+      <div className="revision-grid" aria-label="WASM revision state">
+        <div><span>Workspace</span><strong>{backendState.workspaceRevision || '-'}</strong></div>
+        <div><span>Prepared</span><strong>{backendState.preparedRevision || '-'}</strong></div>
+        <div><span>Active</span><strong>{backendState.activeRevision || '-'}</strong></div>
+        <div><span>Failed</span><strong>{backendState.failedRevision || '-'}</strong></div>
+      </div>
+      {backendDiagnostic && (
+        <dl className="wasm-diagnostic" aria-label="WASM diagnostic">
+          <div><dt>Code</dt><dd>{backendDiagnostic.code}</dd></div>
+          <div><dt>Phase</dt><dd>{backendDiagnostic.phase}</dd></div>
+          <div><dt>Revision</dt><dd>{backendDiagnostic.revision}</dd></div>
+          {backendDiagnostic.file && <div><dt>File</dt><dd>{backendDiagnostic.file}</dd></div>}
+          {backendDiagnostic.path && <div><dt>Path</dt><dd>{backendDiagnostic.path}</dd></div>}
+        </dl>
+      )}
 
       <div className="preview-panel__mode" aria-label="Audio input mode" role="group">
         <button
