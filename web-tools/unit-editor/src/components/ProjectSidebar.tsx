@@ -20,6 +20,9 @@ type Props = {
   onSelectRoute: (index: number) => void;
 };
 
+const unitDotColors = ['var(--accent-blue)', 'var(--accent-orange)', 'var(--accent-cyan)', 'var(--accent-purple)', 'var(--accent-green)', '#f472b6'];
+type SidebarSection = 'workspace' | 'pedalboard' | 'routes' | 'sources' | 'drafts';
+
 export function ProjectSidebar({
   project,
   sampleSources,
@@ -45,6 +48,17 @@ export function ProjectSidebar({
   const [routeSource, setRouteSource] = useState('system.input');
   const [routeTarget, setRouteTarget] = useState('system.output');
   const [routeError, setRouteError] = useState<string | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<Record<SidebarSection, boolean>>({
+    workspace: false,
+    pedalboard: false,
+    routes: false,
+    sources: false,
+    drafts: false,
+  });
+
+  const toggleSection = (section: SidebarSection) => {
+    setCollapsedSections(current => ({ ...current, [section]: !current[section] }));
+  };
 
   const submitUnit = (event: FormEvent) => {
     event.preventDefault();
@@ -81,11 +95,19 @@ export function ProjectSidebar({
   return (
     <aside className="project-sidebar sidebar-left">
       <div className="sidebar-header">
-        <span className="sidebar-title">Workspace Ledger</span>
+        <button
+          aria-expanded={!collapsedSections.workspace}
+          className={`sidebar-title sidebar-title--button ${collapsedSections.workspace ? 'closed' : 'open'}`}
+          onClick={() => toggleSection('workspace')}
+          type="button"
+        >
+          <span>Workspace Ledger</span>
+          <i className="fa-solid fa-chevron-down chevron" aria-hidden="true" />
+        </button>
         <button className="sidebar-icon-btn" onClick={() => setUnitName('new_unit')} title="Create draft below" type="button">+</button>
       </div>
 
-      <div className="file-list" aria-label="Workspace files">
+      <div className={`file-list ${collapsedSections.workspace ? 'hidden' : ''}`} aria-label="Workspace files">
         {workspaceFiles.map(file => (
           <button
             key={file.path}
@@ -101,29 +123,35 @@ export function ProjectSidebar({
 
       <div className="sidebar-left__scroll">
       <section className="accordion">
-      <div className="accordion-trigger">
-        <span>Pedalboard Units</span>
-        <span>{project.nodes.length}</span>
-      </div>
-      <div className="accordion-body">
+      <button
+        aria-expanded={!collapsedSections.pedalboard}
+        className={`accordion-trigger ${collapsedSections.pedalboard ? 'closed' : 'open'}`}
+        onClick={() => toggleSection('pedalboard')}
+        type="button"
+      >
+        <span><i className="fa-solid fa-guitar" aria-hidden="true" />Pedalboard Units</span>
+        <i className="fa-solid fa-chevron-down chevron" aria-hidden="true" />
+      </button>
+      <div className={`accordion-body ${collapsedSections.pedalboard ? 'hidden' : ''}`}>
       <form className="project-instance-create add-unit-widget" onSubmit={submitInstance}>
         <select aria-label="Unit type" onChange={event => setInstanceUnit(event.target.value)} value={instanceUnit}>
-          {project.units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+          {project.units.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
         </select>
         <input
           aria-label="New instance id"
           onChange={event => setInstanceId(event.target.value)}
-          placeholder="instance_id"
+          placeholder="id"
           spellCheck={false}
           value={instanceId}
         />
-        <button disabled={!instanceUnit || !instanceId.trim()} type="submit">Add</button>
+        <button disabled={!instanceUnit || !instanceId.trim()} title="Add unit" type="submit">
+          <i className="fa-solid fa-plus" aria-hidden="true" />
+        </button>
       </form>
       {instanceError ? <p className="workspace-ledger__error project-instance-create__error">{instanceError}</p> : null}
 
       <div className="project-list">
         {project.nodes.map((instance, index) => {
-          const unit = project.units.find(item => item.id === instance.unit);
           const nodeId = `unit-${instance.id}`;
 
           return (
@@ -134,12 +162,14 @@ export function ProjectSidebar({
               onDoubleClick={() => onOpenContractGraph(nodeId)}
               type="button"
             >
-              <span className="project-list__index unit-dot" style={{ background: unit?.compatibility.wasm_realtime ? '#34d399' : '#4a9eff' }}>{index + 1}</span>
               <span className="project-list__main">
-                <span className="project-list__name">{instance.id}</span>
-                <span className="project-list__unit">{unit?.name ?? instance.unit}</span>
+                <span className="project-list__index unit-dot" style={{ background: unitDotColors[index % unitDotColors.length] }} />
+                <span className="project-list__name unit-name">{instance.id}</span>
+                <span className="project-list__unit unit-type">({instance.unit})</span>
               </span>
-              <span className="project-list__params">{instance.params.length}</span>
+              <span className="project-list__params unit-params">
+                {instance.params.length} {instance.params.length === 1 ? 'param' : 'params'}
+              </span>
             </button>
           );
         })}
@@ -149,10 +179,16 @@ export function ProjectSidebar({
       </section>
 
       <section className="route-list accordion">
-        <div className="route-list__header">
+        <button
+          aria-expanded={!collapsedSections.routes}
+          className={`route-list__header accordion-trigger ${collapsedSections.routes ? 'closed' : 'open'}`}
+          onClick={() => toggleSection('routes')}
+          type="button"
+        >
           <span><i className="fa-solid fa-circle-nodes" aria-hidden="true" />Connections Matrix</span>
-          <strong>{project.routes.length}</strong>
-        </div>
+          <span className="route-list__header-meta"><strong>{project.routes.length}</strong><i className="fa-solid fa-chevron-down chevron" aria-hidden="true" /></span>
+        </button>
+        <div className={`accordion-body route-list__body ${collapsedSections.routes ? 'hidden' : ''}`}>
         <form className="route-create add-unit-widget" onSubmit={submitRoute}>
           <select aria-label="New route source" onChange={event => setRouteSource(event.target.value)} value={routeSource}>
             {routeSources.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
@@ -179,20 +215,40 @@ export function ProjectSidebar({
             <strong>{route.to}</strong>
           </button>
         ))}
+        </div>
       </section>
 
-      <div className="sample-ledger">
-        <div className="sample-ledger__title">Frozen Sources</div>
+      <section className="sample-ledger accordion">
+        <button
+          aria-expanded={!collapsedSections.sources}
+          className={`sample-ledger__title accordion-trigger ${collapsedSections.sources ? 'closed' : 'open'}`}
+          onClick={() => toggleSection('sources')}
+          type="button"
+        >
+          <span>Frozen Sources</span>
+          <i className="fa-solid fa-chevron-down chevron" aria-hidden="true" />
+        </button>
+        <div className={`accordion-body sample-ledger__body ${collapsedSections.sources ? 'hidden' : ''}`}>
         {Object.entries(sampleSources).map(([key, path]) => (
           <div key={key} className="sample-ledger__row">
             <span>{key}</span>
             <code>{path}</code>
           </div>
         ))}
-      </div>
+        </div>
+      </section>
 
-      <div className="workspace-ledger">
-        <div className="sample-ledger__title">Workspace Drafts</div>
+      <section className="workspace-ledger accordion">
+        <button
+          aria-expanded={!collapsedSections.drafts}
+          className={`sample-ledger__title accordion-trigger ${collapsedSections.drafts ? 'closed' : 'open'}`}
+          onClick={() => toggleSection('drafts')}
+          type="button"
+        >
+          <span>Workspace Drafts</span>
+          <i className="fa-solid fa-chevron-down chevron" aria-hidden="true" />
+        </button>
+        <div className={`accordion-body workspace-ledger__body ${collapsedSections.drafts ? 'hidden' : ''}`}>
         <form className="workspace-ledger__create" onSubmit={submitUnit}>
           <input
             aria-label="New unit name"
@@ -216,7 +272,8 @@ export function ProjectSidebar({
             {file.content !== file.originalContent ? <strong>edited</strong> : null}
           </button>
         ))}
-      </div>
+        </div>
+      </section>
       </div>
     </aside>
   );

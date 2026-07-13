@@ -51,8 +51,8 @@ export function AtomCatalogPanel({ unit, catalog, manifest }: Props) {
   );
 
   return (
-    <section className="inspector-block">
-      <div className="inspector-block__label">Atom Palette</div>
+    <details className="inspector-block" open>
+      <summary className="inspector-block__label">Atom Palette</summary>
       <div className="atom-palette__summary">
         <strong>{catalog.atoms.length} backend atoms</strong>
         <span>{manifest.schema} / {manifest.bytes} bytes</span>
@@ -135,6 +135,6 @@ export function AtomCatalogPanel({ unit, catalog, manifest }: Props) {
           ))}
         </div>
       </div>
-    </section>
+    </details>
   );
 }

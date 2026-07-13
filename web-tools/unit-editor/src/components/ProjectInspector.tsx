@@ -194,8 +194,8 @@ export function ProjectInspector({
       ) : null}
       {isProjectView && (
         <>
-          <section className="inspector-block">
-            <div className="inspector-block__label">Validation</div>
+          <details className="inspector-block" open>
+            <summary className="inspector-block__label">Validation</summary>
             <div className="inspector-block__meta">Readiness: {readinessMessage}</div>
             <div className="validation-line">
               <span className={`validation-dot ${validation.ok ? 'validation-dot--ok' : 'validation-dot--bad'}`} />
@@ -221,10 +221,10 @@ export function ProjectInspector({
               <span>Backend command ({commandState})</span>
               <code>{commands.validateProject}</code>
             </div>
-          </section>
+                    </details>
 
-          <section className="inspector-block">
-            <div className="inspector-block__label">Render Preview</div>
+          <details className="inspector-block" open>
+            <summary className="inspector-block__label">Render Preview</summary>
             <div className="inspector-block__meta">Readiness: {readinessMessage}</div>
             <div className="meter-grid">
               <div>
@@ -253,7 +253,7 @@ export function ProjectInspector({
               <span>Backend command ({commandState})</span>
               <code>{commands.renderProject}</code>
             </div>
-          </section>
+                    </details>
 
           <CompatibilityExportPanel project={project} commands={commands} />
 
@@ -262,8 +262,8 @@ export function ProjectInspector({
       )}
 
       {isAtomView && (
-        <section className="inspector-block inspector-block--selected">
-          <div className="inspector-block__label">Atom Inspector</div>
+        <details className="inspector-block inspector-block--selected" open>
+          <summary className="inspector-block__label">Atom Inspector</summary>
           {selectedRoute ? (
             <>
               <div className="inspector-block__meta">Selected Route</div>
@@ -371,13 +371,13 @@ export function ProjectInspector({
               <p>{selectedNode?.detail ?? 'Select a pedalboard unit to inspect its parameters.'}</p>
             </>
           )}
-        </section>
+        </details>
       )}
 
       {isContractView && (
         <>
-          <section className="inspector-block">
-            <div className="inspector-block__label">Atom Focus</div>
+          <details className="inspector-block" open>
+            <summary className="inspector-block__label">Atom Focus</summary>
             <div className="atom-actionbar">
               <select
                 aria-label="Atom to add"
@@ -412,11 +412,11 @@ export function ProjectInspector({
             ) : (
               <div className="diagnostic-empty">Select a valid unit YAML draft to edit atoms.</div>
             )}
-          </section>
+          </details>
 
           {selectedAtom ? (
-            <section className="inspector-block">
-              <div className="inspector-block__label">Selected Atom</div>
+            <details className="inspector-block" open>
+              <summary className="inspector-block__label">Selected Atom</summary>
               <div className="atom-edit-grid">
                 <label>
                   <span>ID</span>
@@ -480,11 +480,11 @@ export function ProjectInspector({
                   )}
                 </div>
               ))}
-            </section>
+            </details>
           ) : null}
 
-          <section className="inspector-block">
-            <div className="inspector-block__label">Workspace Draft</div>
+          <details className="inspector-block" open>
+            <summary className="inspector-block__label">Workspace Draft</summary>
             <div className="workspace-editor__meta">
               <strong>{selectedUnitFile.path}</strong>
               <span>{selectedUnitFile.role}</span>
@@ -496,12 +496,12 @@ export function ProjectInspector({
               spellCheck={false}
               value={selectedUnitFile.content}
             />
-          </section>
+          </details>
 
           <AtomCatalogPanel unit={unit} catalog={atomCatalog} manifest={atomCatalogManifest} />
 
-          <section className="inspector-block">
-            <div className="inspector-block__label">Backend Contract</div>
+          <details className="inspector-block" open>
+            <summary className="inspector-block__label">Backend Contract</summary>
             <div className="contract-list">
               <div>
                 <span>Unit sample</span>
@@ -524,7 +524,7 @@ export function ProjectInspector({
                 <strong>{atomCatalogManifest.fnv1a64}</strong>
               </div>
             </div>
-          </section>
+          </details>
         </>
       )}
       </div>

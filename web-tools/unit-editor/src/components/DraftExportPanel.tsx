@@ -13,8 +13,8 @@ export function DraftExportPanel({ projectFile, overrides }: Props) {
   };
 
   return (
-    <section className="inspector-block">
-      <div className="inspector-block__label">Draft Export</div>
+    <details className="inspector-block" open>
+      <summary className="inspector-block__label">Draft Export</summary>
       <div className="draft-export__summary">
         <strong>{overrides.length} parameter overrides</strong>
         <span>{projectFile}</span>
@@ -38,6 +38,6 @@ export function DraftExportPanel({ projectFile, overrides }: Props) {
       )}
 
       <pre className="draft-export__preview">{JSON.stringify(payload, null, 2)}</pre>
-    </section>
+    </details>
   );
 }
