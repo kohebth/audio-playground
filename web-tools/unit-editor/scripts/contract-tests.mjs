@@ -177,8 +177,9 @@ includesContent(projectNode, 'project-node__bypass', 'unit cards must expose a b
 includesContent(projectNode, 'controller?.setBypass(data.instance.id, !bypassed)', 'unit-card bypass must target the live instance');
 includesContent(previewPanel, '.pollMeters()', 'preview meters must use throttled Worklet polling');
 includesContent(previewPanel, 'outputLatencyMs', 'live preview must calculate browser-reported output latency');
+includesContent(previewPanel, 'captureLatencyMs', 'live preview must read microphone latency when the browser exposes it');
 includesContent(app, '<LiveLatencyBadge />', 'live output latency must remain visible outside the inspector');
-includesContent(liveLatencyBadge, 'Output est.', 'live output latency badge is missing its label');
+includesContent(liveLatencyBadge, "'Mic path est.'", 'live latency badge must distinguish microphone path estimates');
 includesContent(previewPanel, "latencyHint: 'interactive'", 'live preview must request interactive browser latency');
 includesContent(previewPanel, 'latency: { ideal: 0 }', 'microphone preview must request the lowest available capture latency');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');

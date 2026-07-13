@@ -3,6 +3,7 @@ import { createContext, useContext, type Dispatch, type SetStateAction } from 'r
 export type LiveBypassController = {
   running: boolean;
   latencyMs: number | null;
+  captureLatencyMs: number | null;
   bypassByInstance: Record<string, boolean>;
   setBypass: (instanceId: string, enabled: boolean) => Promise<void>;
 };

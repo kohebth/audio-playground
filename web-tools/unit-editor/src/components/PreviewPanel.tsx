@@ -49,6 +49,12 @@ function outputLatencyMs(context: AudioContext): number | null {
   return base > 0 || device > 0 ? (base + device) * 1000 : null;
 }
 
+function captureLatencyMs(stream: MediaStream): number | null {
+  const settings = stream.getAudioTracks()[0]?.getSettings() as MediaTrackSettings & { latency?: number };
+  const latency = settings?.latency;
+  return Number.isFinite(latency) && latency !== undefined && latency >= 0 ? latency * 1000 : null;
+}
+
 const lowLatencyMicrophoneConstraints = {
   autoGainControl: false,
   channelCount: 1,
@@ -66,6 +72,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
   const [backendDiagnostic, setBackendDiagnostic] = useState<WasmDiagnostic | null>(null);
   const [meter, setMeter] = useState<MeterSnapshot>(emptyMeter);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [captureLatency, setCaptureLatency] = useState<number | null>(null);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -278,6 +285,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
     setRunning(false);
     setPhase('ready');
     setMeter(emptyMeter);
+    setCaptureLatency(null);
   }, [refreshBackendState]);
 
   const start = useCallback(async () => {
@@ -289,6 +297,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
       if (!context) return;
       let input: AudioNode;
       if (inputMode === 'file') {
+        setCaptureLatency(null);
         if (!audioBuffer) throw new Error('Select an audio file before starting playback.');
         const source = context.createBufferSource();
         source.buffer = audioBuffer;
@@ -298,6 +307,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: lowLatencyMicrophoneConstraints,
         });
+        setCaptureLatency(captureLatencyMs(stream));
         const source = context.createMediaStreamSource(stream);
         streamRef.current = stream;
         inputRef.current = source;
@@ -378,8 +388,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
   }, [backend, reportError]);
 
   useEffect(() => {
-    setController({ running, latencyMs, bypassByInstance, setBypass: setInstanceBypass });
-  }, [bypassByInstance, latencyMs, running, setController, setInstanceBypass]);
+    setController({ running, latencyMs, captureLatencyMs: captureLatency, bypassByInstance, setBypass: setInstanceBypass });
+  }, [bypassByInstance, captureLatency, latencyMs, running, setController, setInstanceBypass]);
 
   useEffect(() => () => setController(null), [setController]);
 
