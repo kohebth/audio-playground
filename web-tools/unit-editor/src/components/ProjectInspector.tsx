@@ -1,7 +1,6 @@
 import { AtomCatalogPanel } from './AtomCatalogPanel';
 import { CompatibilityExportPanel } from './CompatibilityExportPanel';
 import { DraftExportPanel } from './DraftExportPanel';
-import { PreviewPanel } from './PreviewPanel';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import { useEffect, useState } from 'react';
 import type {
@@ -31,7 +30,6 @@ type Props = {
   atomCatalog: AtomCatalog;
   atomCatalogManifest: Record<string, string>;
   projectFile: string;
-  workspaceFiles: WorkspaceFile[];
   hasDirtyParamDrafts: boolean;
   selectedUnitFile: WorkspaceFile;
   selectedUnitGraph: UnitGraphDraft | null;
@@ -109,7 +107,6 @@ export function ProjectInspector({
   atomCatalog,
   atomCatalogManifest,
   projectFile,
-  workspaceFiles,
   hasDirtyParamDrafts,
   selectedUnitFile,
   selectedUnitGraph,
@@ -164,35 +161,31 @@ export function ProjectInspector({
   }, [selectedRoute]);
 
   return (
-    <aside className="project-inspector">
+    <aside className="project-inspector sidebar-right">
       <div className="inspector-switcher">
         <button
-          className={`btn ${isProjectView ? 'btn--primary' : 'btn--ghost'}`}
+          className={`inspector-tab ${isProjectView ? 'inspector-tab--active' : ''}`}
           onClick={() => onInspectorViewChange('project')}
           type="button"
         >
           Project
         </button>
         <button
-          className={`btn ${isAtomView ? 'btn--primary' : 'btn--ghost'}`}
+          className={`inspector-tab ${isAtomView ? 'inspector-tab--active' : ''}`}
           onClick={() => onInspectorViewChange('atom')}
           type="button"
         >
           Atom
         </button>
         <button
-          className={`btn ${isContractView ? 'btn--primary' : 'btn--ghost'}`}
+          className={`inspector-tab ${isContractView ? 'inspector-tab--active' : ''}`}
           onClick={() => onInspectorViewChange('contract')}
           type="button"
         >
           Contract
         </button>
       </div>
-      <PreviewPanel
-        entryProject={projectFile}
-        paramOverrides={paramOverrides}
-        workspaceFiles={workspaceFiles}
-      />
+      <div className="inspector-content">
       {graphEditError ? (
         <div className="diagnostic-list__item project-edit-error">
           <strong>Edit blocked</strong>
@@ -534,6 +527,7 @@ export function ProjectInspector({
           </section>
         </>
       )}
+      </div>
     </aside>
   );
 }

@@ -56,7 +56,7 @@ export function ProjectCanvas({
   });
 
   return (
-    <main className="canvas canvas--project">
+    <main className="canvas canvas--project canvas-area">
       <div className="flow-shell">
         <ReactFlowProvider>
           <ReactFlow

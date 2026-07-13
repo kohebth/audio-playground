@@ -79,19 +79,34 @@ export function ProjectSidebar({
   };
 
   return (
-    <aside className="project-sidebar">
-      <section className="project-card">
-        <span className="project-card__label">Loaded Project</span>
-        <strong>{project.file}</strong>
-        <span>{project.schema}</span>
-      </section>
-
-      <div className="project-sidebar__header">
-        <span className="project-sidebar__title">Pedalboard</span>
-        <span className="project-sidebar__count">{project.nodes.length} units</span>
+    <aside className="project-sidebar sidebar-left">
+      <div className="sidebar-header">
+        <span className="sidebar-title">Workspace Ledger</span>
+        <button className="sidebar-icon-btn" onClick={() => setUnitName('new_unit')} title="Create draft below" type="button">+</button>
       </div>
 
-      <form className="project-instance-create" onSubmit={submitInstance}>
+      <div className="file-list" aria-label="Workspace files">
+        {workspaceFiles.map(file => (
+          <button
+            key={file.path}
+            className={`file-item ${selectedWorkspacePath === file.path ? 'file-item--active' : ''}`}
+            onClick={() => onSelectWorkspaceFile(file.path)}
+            type="button"
+          >
+            <span>{file.role === 'project' ? 'P' : 'U'}</span>
+            <code>{file.path}</code>
+          </button>
+        ))}
+      </div>
+
+      <div className="sidebar-left__scroll">
+      <section className="accordion">
+      <div className="accordion-trigger">
+        <span>Pedalboard Units</span>
+        <span>{project.nodes.length}</span>
+      </div>
+      <div className="accordion-body">
+      <form className="project-instance-create add-unit-widget" onSubmit={submitInstance}>
         <select aria-label="Unit type" onChange={event => setInstanceUnit(event.target.value)} value={instanceUnit}>
           {project.units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
         </select>
@@ -114,12 +129,12 @@ export function ProjectSidebar({
           return (
             <button
               key={instance.id}
-              className={`project-list__item ${selectedNodeId === nodeId ? 'project-list__item--active' : ''}`}
+              className={`project-list__item unit-item ${selectedNodeId === nodeId ? 'project-list__item--active' : ''}`}
               onClick={() => onSelectNode(nodeId)}
               onDoubleClick={() => onOpenContractGraph(nodeId)}
               type="button"
             >
-              <span className="project-list__index">{index + 1}</span>
+              <span className="project-list__index unit-dot" style={{ background: unit?.compatibility.wasm_realtime ? '#34d399' : '#4a9eff' }}>{index + 1}</span>
               <span className="project-list__main">
                 <span className="project-list__name">{instance.id}</span>
                 <span className="project-list__unit">{unit?.name ?? instance.unit}</span>
@@ -130,12 +145,15 @@ export function ProjectSidebar({
         })}
       </div>
 
-      <div className="route-list">
+      </div>
+      </section>
+
+      <section className="route-list accordion">
         <div className="route-list__header">
           <span>Routes</span>
           <strong>{project.routes.length}</strong>
         </div>
-        <form className="route-create" onSubmit={submitRoute}>
+        <form className="route-create add-unit-widget" onSubmit={submitRoute}>
           <select aria-label="New route source" onChange={event => setRouteSource(event.target.value)} value={routeSource}>
             {routeSources.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
           </select>
@@ -156,7 +174,7 @@ export function ProjectSidebar({
             <strong>{route.to}</strong>
           </button>
         ))}
-      </div>
+      </section>
 
       <div className="sample-ledger">
         <div className="sample-ledger__title">Frozen Sources</div>
@@ -193,6 +211,7 @@ export function ProjectSidebar({
             {file.content !== file.originalContent ? <strong>edited</strong> : null}
           </button>
         ))}
+      </div>
       </div>
     </aside>
   );

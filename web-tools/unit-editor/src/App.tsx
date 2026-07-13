@@ -111,6 +111,8 @@ function loadWorkspaceState(): { entryProject: string; files: WorkspaceFile[] } 
 }
 
 export default function App() {
+  const [runtimeReady, setRuntimeReady] = useState(false);
+  const [workbenchLaunched, setWorkbenchLaunched] = useState(false);
   const [initialWorkspace] = useState(loadWorkspaceState);
   const initialProjectInspect = useMemo(() => {
     try {
@@ -582,6 +584,18 @@ export default function App() {
 
   return (
     <LiveBypassContext.Provider value={{ controller: liveBypassController, setController: setLiveBypassController }}>
+    {!workbenchLaunched && (
+      <section className="launch-screen" aria-live="polite">
+        <div className="launch-screen__mark">APG</div>
+        <h1>Audio Playground <span>v3.0</span></h1>
+        <p>Interactive real-time DSP visual workbench<br />and audio routing matrix</p>
+        <div className="launch-screen__progress">
+          <div><span>{runtimeReady ? 'System ready' : 'Initializing audio engine...'}</span><span>{runtimeReady ? '100%' : 'Loading'}</span></div>
+          <i><b className={runtimeReady ? 'launch-screen__progress-fill launch-screen__progress-fill--ready' : 'launch-screen__progress-fill'} /></i>
+        </div>
+        {runtimeReady && <button className="launch-screen__button" onClick={() => setWorkbenchLaunched(true)} type="button">Launch Workspace</button>}
+      </section>
+    )}
     <div className="app app--project">
         <ProjectTopbar
           project={project}
@@ -593,6 +607,10 @@ export default function App() {
           onExportWorkspace={exportWorkspace}
           onImportWorkspace={importWorkspace}
           onResetWorkspace={resetWorkspace}
+          entryProject={entryProject}
+          workspaceFiles={workspaceFiles}
+          paramOverrides={paramOverrides}
+          onRuntimeReady={() => setRuntimeReady(true)}
         />
 
       <div className="layout">
@@ -654,7 +672,6 @@ export default function App() {
           atomCatalog={backendSamples.atomCatalog}
           atomCatalogManifest={backendSamples.atomCatalogManifest}
           projectFile={project.file}
-          workspaceFiles={workspaceFiles}
           hasDirtyParamDrafts={hasDirtyDrafts}
           selectedUnitFile={selectedUnitWorkspaceFile}
           selectedUnitGraph={selectedUnitGraph}

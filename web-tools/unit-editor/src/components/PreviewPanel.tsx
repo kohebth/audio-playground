@@ -18,6 +18,8 @@ type Props = {
   entryProject: string;
   workspaceFiles: WorkspaceFile[];
   paramOverrides: ParamOverride[];
+  compact?: boolean;
+  onRuntimeReady?: () => void;
 };
 
 const emptyMeter: MeterSnapshot = {
@@ -63,7 +65,7 @@ const lowLatencyMicrophoneConstraints = {
   noiseSuppression: false,
 } as MediaTrackConstraints & { latency: { ideal: number } };
 
-export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: Props) {
+export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, compact = false, onRuntimeReady }: Props) {
   const { setController } = useLiveBypass();
   const [backend, setBackend] = useState<WasmBackend | null>(null);
   const [phase, setPhase] = useState<BackendPhase>('idle');
@@ -138,6 +140,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
         setBackend(instance);
         setBackendState(instance.getState());
         setDiagnostic('WASM control backend ready.');
+        onRuntimeReady?.();
       })
       .catch(error => {
         reportError(error, 'initialize');
@@ -151,7 +154,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
       if (instance) void instance.destroy().finally(() => context.close());
       else void context.close();
     };
-  }, [reportError]);
+  }, [onRuntimeReady, reportError]);
 
   const syncWorkspace = useCallback(
     async (prepare: boolean) => {
@@ -432,7 +435,32 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
   }, [backend, muted, reportError]);
 
   return (
-    <section className="inspector-block">
+    <section className={compact ? 'transport-island preview-panel--compact' : 'inspector-block'}>
+      {compact ? (
+        <>
+          <div className="transport-group">
+            <button className="transport-btn" disabled={!backend} onClick={() => void (running ? stop() : start())} type="button">
+              {running ? 'Stop' : 'Start'}
+            </button>
+            <button className="transport-btn" disabled={!backend} onClick={() => void compile()} type="button">Build</button>
+          </div>
+          <div className="transport-group preview-panel__mode" aria-label="Audio input mode" role="group">
+            <button aria-pressed={inputMode === 'file'} disabled={running} onClick={() => setInputMode('file')} type="button">File</button>
+            <button aria-pressed={inputMode === 'microphone'} disabled={running} onClick={() => setInputMode('microphone')} type="button">Mic</button>
+            {inputMode === 'file' && (
+              <label className="transport-file">
+                <span>{audioFileName}</span>
+                <input accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a,.aac" disabled={running} onChange={event => void chooseAudioFile(event.target.files?.[0])} type="file" />
+              </label>
+            )}
+          </div>
+          <div className="transport-group">
+            <span className={`transport-state transport-state--${phase}`}>{phase}</span>
+            <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} type="button">{muted ? 'On' : 'Mute'}</button>
+          </div>
+        </>
+      ) : (
+        <>
       <div className="inspector-block__label">Live Preview</div>
       <div className="preview-panel__state">
         <strong>{phase}</strong>
@@ -542,6 +570,8 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides }: P
           {muted ? 'Unmute output' : 'Mute output'}
         </button>
       </div>
+        </>
+      )}
     </section>
   );
 }
