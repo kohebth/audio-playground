@@ -1,6 +1,5 @@
 import { memo, useEffect, useMemo, type CSSProperties } from 'react';
 import {
-  Background,
   Controls,
   Handle,
   MiniMap,
@@ -268,6 +267,7 @@ export function ContractGraphCanvas({
         </div>
       ) : (
         <div className="flow-shell flow-shell--contract">
+          <div className="edit-plane-grid" aria-hidden="true" />
           <ReactFlowProvider>
             <ReactFlow
               nodes={flowNodes}
@@ -288,7 +288,6 @@ export function ContractGraphCanvas({
               maxZoom={1.6}
               nodesDraggable
             >
-              <Background color="#1a2744" gap={24} size={1} />
               <Controls />
               <MiniMap nodeColor={node => (node.data as ContractNodeData).color} pannable zoomable style={{ background: '#111827' }} />
             </ReactFlow>

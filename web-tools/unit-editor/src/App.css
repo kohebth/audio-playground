@@ -1132,6 +1132,7 @@ body {
 }
 
 .flow-shell--contract {
+  position: relative;
   min-height: 0;
 }
 
@@ -1139,14 +1140,27 @@ body {
   background: transparent;
 }
 
-.canvas--contract .react-flow,
-.canvas--contract .react-flow__pane {
+.edit-plane-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   background:
     radial-gradient(circle at 50% 50%, rgba(74, 158, 255, .03) 0%, transparent 60%),
     repeating-linear-gradient(0deg, transparent, transparent 23px, var(--border-subtle) 23px, var(--border-subtle) 24px),
-    repeating-linear-gradient(90deg, transparent, transparent 23px, var(--border-subtle) 23px, var(--border-subtle) 24px) !important;
-  background-color: var(--bg-base) !important;
-  background-size: 100% 100%, 24px 24px, 24px 24px !important;
+    repeating-linear-gradient(90deg, transparent, transparent 23px, var(--border-subtle) 23px, var(--border-subtle) 24px);
+  background-color: var(--bg-base);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+}
+
+.canvas--contract .react-flow {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+}
+
+.canvas--contract .react-flow__pane {
+  background: transparent !important;
 }
 
 .canvas--contract .react-flow__controls {
