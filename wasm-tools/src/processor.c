@@ -28,6 +28,7 @@ typedef struct {
 struct apg_wasm_processor {
     apg_wasm_processor_slot_t active;
     apg_wasm_processor_slot_t staged;
+    apg_wasm_processor_slot_t retired;
     bool                      commit_pending;
     float                    *input;
     float                    *output;
@@ -92,13 +93,20 @@ static bool ensure_buffers(apg_wasm_processor_t *processor, uint32_t capacity) {
     return true;
 }
 
-static apg_wasm_status_t runtime_failure(apg_wasm_processor_t *processor, const char *phase, const char *fallback) {
-    const char *message =
-        processor && processor->active.runtime ? apg_v2_measure_last_error(processor->active.runtime) : NULL;
-    return set_diagnostic(
-        processor, APG_WASM_STATUS_RUNTIME_ERROR, phase, "APG_RUNTIME_ERROR",
-        message && message[0] != '\0' ? message : fallback
-    );
+static apg_wasm_status_t
+runtime_failure(apg_wasm_processor_t *processor, uint64_t revision, const char *phase, const char *fallback) {
+    if (!processor)
+        return APG_WASM_STATUS_RUNTIME_ERROR;
+    processor->diagnostic = (apg_wasm_diagnostic_t){
+        .revision = revision,
+        .status   = APG_WASM_STATUS_RUNTIME_ERROR,
+        .phase    = phase,
+        .code     = "APG_RUNTIME_ERROR",
+        .file     = "",
+        .path     = "",
+        .message  = fallback,
+    };
+    return APG_WASM_STATUS_RUNTIME_ERROR;
 }
 
 uint32_t apg_wasm_processor_abi_version(void) { return APG_WASM_ABI_VERSION; }
@@ -119,6 +127,7 @@ void apg_wasm_processor_destroy(apg_wasm_processor_t *processor) {
         return;
     slot_destroy(&processor->active);
     slot_destroy(&processor->staged);
+    slot_destroy(&processor->retired);
     free(processor->input);
     free(processor->output);
     free(processor->crossfade);
@@ -133,6 +142,8 @@ apg_wasm_processor_stage_image(apg_wasm_processor_t *processor, const unsigned c
         return set_diagnostic(
             processor, APG_WASM_STATUS_OUT_OF_MEMORY, "stage", "APG_IMAGE_TOO_LARGE", "prepared image is too large"
         );
+
+    slot_destroy(&processor->retired);
 
     apg_wasm_processor_slot_t staged     = {0};
     const size_t              arena_size = APG_WASM_PROCESSOR_ARENA_MIN + image_size * APG_WASM_PROCESSOR_ARENA_SCALE;
@@ -210,32 +221,38 @@ apg_wasm_status_t apg_wasm_processor_process(apg_wasm_processor_t *processor, ui
     if (processor->commit_pending) {
         if (!processor->active.ready) {
             if (!process_slot(&processor->staged, processor->input, processor->output, frames))
-                return runtime_failure(processor, "process", "staged runtime processing failed");
+                return runtime_failure(
+                    processor, processor->staged.revision, "process", "staged runtime processing failed"
+                );
             processor->active = processor->staged;
             memset(&processor->staged, 0, sizeof(processor->staged));
         } else {
             if (!process_slot(&processor->active, processor->input, processor->crossfade, frames))
-                return runtime_failure(processor, "process", "active runtime processing failed");
+                return runtime_failure(
+                    processor, processor->active.revision, "process", "active runtime processing failed"
+                );
             if (!process_slot(&processor->staged, processor->input, processor->output, frames)) {
+                const uint64_t failed_revision = processor->staged.revision;
                 memcpy(processor->output, processor->crossfade, (size_t)frames * sizeof(*processor->output));
-                slot_destroy(&processor->staged);
+                processor->retired = processor->staged;
+                memset(&processor->staged, 0, sizeof(processor->staged));
                 processor->commit_pending = false;
-                return runtime_failure(processor, "process", "staged runtime processing failed");
+                return runtime_failure(processor, failed_revision, "process", "staged runtime processing failed");
             }
             for (uint32_t i = 0u; i < frames; ++i) {
                 const float mix      = frames == 1u ? 1.0f : (float)i / (float)(frames - 1u);
                 processor->output[i] = processor->crossfade[i] * (1.0f - mix) + processor->output[i] * mix;
             }
-            slot_destroy(&processor->active);
-            processor->active = processor->staged;
+            processor->retired = processor->active;
+            processor->active  = processor->staged;
             memset(&processor->staged, 0, sizeof(processor->staged));
         }
         processor->commit_pending = false;
     } else if (!process_slot(&processor->active, processor->input, processor->output, frames)) {
-        return runtime_failure(processor, "process", "no active runtime is available");
+        return runtime_failure(processor, processor->active.revision, "process", "no active runtime is available");
     }
 
-    return set_diagnostic(processor, APG_WASM_STATUS_OK, "process", "APG_OK", "");
+    return APG_WASM_STATUS_OK;
 }
 
 apg_wasm_status_t apg_wasm_processor_set_param(apg_wasm_processor_t *processor, uint32_t index, float value) {

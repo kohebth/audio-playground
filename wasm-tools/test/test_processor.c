@@ -173,6 +173,15 @@ int main(void) {
         return fail("invalid replacement disturbed active runtime");
     free(corrupt);
 
+    if (prepare_revision(control, 12u))
+        return 1;
+    image = apg_wasm_control_prepared_image(control, &image_size);
+    if (apg_wasm_processor_stage_image(processor, image, image_size) != APG_WASM_STATUS_OK ||
+        apg_wasm_processor_commit_staged(processor, 12u) != APG_WASM_STATUS_OK ||
+        apg_wasm_processor_process(processor, 64u) != APG_WASM_STATUS_OK ||
+        apg_wasm_processor_active_revision(processor) != 12u)
+        return fail("retired runtime cleanup blocked a later swap");
+
     apg_wasm_processor_destroy(processor);
     apg_wasm_control_destroy(control);
     return 0;

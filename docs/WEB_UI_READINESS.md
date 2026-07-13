@@ -42,6 +42,11 @@ the same fast path before the synchronized YAML revision is prepared.
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
 
+The processor keeps an active, staged, and retired runtime slot. It only promotes a staged slot at a block boundary and
+crossfades that block; retired-slot destruction occurs during a later control-thread staging operation, never in the
+audio callback. A CMake boundary test rejects allocation, slot destruction, formatting, parsing, compilation, image
+hydration, measurement lookup, and string lookup calls from the processor callback and its real-time diagnostic helper.
+
 Bypass and mute use indexed Worklet controls. The facade retains per-instance bypass and project mute shadows, applies
 them to a newly hydrated runtime before commit, and therefore preserves live control state across structural swaps.
 The current project schema has no persisted bypass field, so bypass does not invent a non-schema YAML property.

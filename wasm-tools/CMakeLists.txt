@@ -30,6 +30,13 @@ add_test(
 )
 set_tests_properties(test_wasm_tools_core_boundary PROPERTIES LABELS "v2;wasm-tools")
 
+add_test(
+        NAME test_wasm_tools_processor_realtime_boundary
+        COMMAND ${CMAKE_COMMAND} -DPROCESSOR_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/src/processor.c
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/test/check_processor_realtime.cmake
+)
+set_tests_properties(test_wasm_tools_processor_realtime_boundary PROPERTIES LABELS "v2;wasm-tools")
+
 if(EMSCRIPTEN)
     add_executable(apg_control src/control.c src/image.c)
     target_include_directories(apg_control PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
