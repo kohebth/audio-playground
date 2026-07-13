@@ -7,6 +7,7 @@ import projectYaml from '../../../../test/fixtures/projects-v2/guitar-pedalboard
 import projectInspectRaw from '../../../../test/golden/v2-inspect-project-guitar-pedalboard.json?raw';
 import projectRenderRaw from '../../../../test/golden/v2-render-project-guitar-pedalboard.json?raw';
 import projectValidationRaw from '../../../../test/golden/v2-validate-project-guitar-pedalboard.json?raw';
+import schroederReverbUnitYaml from '../../../../test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml?raw';
 import toneStackUnitYaml from '../../../../test/fixtures/units-v2/tone_stack.unit.v2.yaml?raw';
 import tremoloUnitYaml from '../../../../test/fixtures/units-v2/tremolo.unit.v2.yaml?raw';
 import unitInspectRaw from '../../../../test/golden/v2-inspect-unit-simple_gain.json?raw';
@@ -260,5 +261,11 @@ export const initialWorkspaceFiles: WorkspaceFile[] = [
     role: 'unit',
     content: wetDryMixUnitYaml,
     originalContent: wetDryMixUnitYaml,
+  },
+  {
+    path: 'test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml',
+    role: 'unit',
+    content: schroederReverbUnitYaml,
+    originalContent: schroederReverbUnitYaml,
   },
 ];

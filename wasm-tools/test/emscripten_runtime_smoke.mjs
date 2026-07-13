@@ -54,6 +54,7 @@ const files = [
   [2, 'test/fixtures/units-v2/tremolo.unit.v2.yaml'],
   [2, 'test/fixtures/units-v2/delay.unit.v2.yaml'],
   [2, 'test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml'],
+  [2, 'test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml'],
 ];
 
 const controlModule = await loadModule('apg_control');
@@ -108,6 +109,15 @@ for (let frame = 0; frame < 64; frame += 1) processorModule.HEAPF32[input + fram
 assert.equal(processorModule._apg_wasm_processor_process(processor, 64), 0);
 assert.equal(processorModule._apg_wasm_processor_active_revision(processor), 2n);
 assert.notEqual(processorModule._apg_wasm_processor_output_meter(processor), 0, 'Emscripten processor did not expose meters');
+let tailPeak = 0;
+for (let block = 0; block < 32; block += 1) {
+  for (let frame = 0; frame < 64; frame += 1) processorModule.HEAPF32[input + frame] = 0;
+  assert.equal(processorModule._apg_wasm_processor_process(processor, 64), 0);
+  if (block < 23) continue;
+  const output = processorModule._apg_wasm_processor_output_buffer(processor) >>> 2;
+  for (let frame = 0; frame < 64; frame += 1) tailPeak = Math.max(tailPeak, Math.abs(processorModule.HEAPF32[output + frame]));
+}
+assert.ok(tailPeak > 1e-6, 'Emscripten processor did not produce a reverb tail');
 assert.equal(processorModule._apg_wasm_processor_set_param(processor, 0, 0.2), 0);
 assert.equal(processorModule._apg_wasm_processor_set_bypass(processor, 0, 1), 0);
 assert.equal(processorModule._apg_wasm_processor_set_mute(processor, 1), 0);

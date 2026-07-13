@@ -25,11 +25,12 @@ const ports: ProjectPortCatalog = {
   tremolo_unit: { inputs: ['input'], outputs: ['output'] },
   delay_unit: { inputs: ['input'], outputs: ['output'] },
   wet_dry_mix_unit: { inputs: ['dry', 'wet'], outputs: ['output'] },
+  reverb_unit: { inputs: ['input'], outputs: ['output'] },
 };
 
 const draft = parseProjectGraphDraft(project);
-assert.equal(draft.nodes.length, 6);
-assert.equal(draft.routes.length, 8);
+assert.equal(draft.nodes.length, 7);
+assert.equal(draft.routes.length, 9);
 
 const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' });
 assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.id, 'drive2');
@@ -57,9 +58,9 @@ const moved = parseProjectGraphDraft(moveProjectInstance(project, 'drive1', 4));
 assert.equal(moved.nodes[4].id, 'drive1');
 
 const disconnected = removeProjectRoute(project, 2);
-assert.equal(parseProjectGraphDraft(disconnected).routes.length, 7);
+assert.equal(parseProjectGraphDraft(disconnected).routes.length, 8);
 const restored = addProjectRoute(disconnected, ports, { from: 'drive1.output', to: 'tone1.input' });
-assert.equal(parseProjectGraphDraft(restored).routes.length, 8);
+assert.equal(parseProjectGraphDraft(restored).routes.length, 9);
 assert.throws(
   () => addProjectRoute(project, ports, { from: 'gate1.output', to: 'drive1.input' }),
   /already connected/,
@@ -78,7 +79,7 @@ const replaced = parseProjectGraphDraft(replaceProjectRoute(project, ports, 5, {
   to: 'blend1.dry',
 }));
 assert.equal(replaced.routes[5].from, 'drive1.output');
-const reorderedRoutes = parseProjectGraphDraft(moveProjectRoute(project, 7, 0));
+const reorderedRoutes = parseProjectGraphDraft(moveProjectRoute(project, 8, 0));
 assert.equal(reorderedRoutes.routes[0].to, 'system.output');
 
 console.log('project v2 graph transformer tests passed');

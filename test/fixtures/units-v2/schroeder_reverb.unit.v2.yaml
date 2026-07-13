@@ -1,0 +1,166 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: schroeder_reverb
+version: 2.0.0
+
+meta:
+  title: Schroeder Reverb
+  category: reverb
+  description: Builds a mono reverb tail from four feedback combs, two allpass diffusers, and a wet/dry blend.
+
+params:
+  decay:
+    type: float
+    default: 0.72
+    min: 0.1
+    max: 0.95
+    smoothing_ms: 20
+    ui:
+      label: Decay
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
+  mix:
+    type: float
+    default: 0.22
+    min: 0.0
+    max: 1.0
+    smoothing_ms: 20
+    ui:
+      label: Mix
+      control: knob
+      unit: "%"
+      scale: linear
+      display_precision: 2
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - comb_a
+    - comb_b
+    - comb_c
+    - comb_d
+    - comb_ab
+    - comb_cd
+    - comb_mix
+    - diffuse_a
+    - diffuse_b
+    - output
+
+  nodes:
+    - id: comb_a
+      atom: filter_comb_fb
+      in:
+        signal: input
+      out:
+        signal: comb_a
+      config:
+        delay_samples: 1499
+        coefficient: ${params.decay}
+
+    - id: comb_b
+      atom: filter_comb_fb
+      in:
+        signal: input
+      out:
+        signal: comb_b
+      config:
+        delay_samples: 1777
+        coefficient: ${params.decay}
+
+    - id: comb_c
+      atom: filter_comb_fb
+      in:
+        signal: input
+      out:
+        signal: comb_c
+      config:
+        delay_samples: 1999
+        coefficient: ${params.decay}
+
+    - id: comb_d
+      atom: filter_comb_fb
+      in:
+        signal: input
+      out:
+        signal: comb_d
+      config:
+        delay_samples: 2137
+        coefficient: ${params.decay}
+
+    - id: mix_ab
+      atom: mix_wet_dry
+      in:
+        dry: comb_a
+        wet: comb_b
+      out:
+        signal: comb_ab
+      config:
+        mix: 0.5
+
+    - id: mix_cd
+      atom: mix_wet_dry
+      in:
+        dry: comb_c
+        wet: comb_d
+      out:
+        signal: comb_cd
+      config:
+        mix: 0.5
+
+    - id: mix_combs
+      atom: mix_wet_dry
+      in:
+        dry: comb_ab
+        wet: comb_cd
+      out:
+        signal: comb_mix
+      config:
+        mix: 0.5
+
+    - id: diffuse_a
+      atom: filter_allpass
+      in:
+        signal: comb_mix
+      out:
+        signal: diffuse_a
+      config:
+        delay_samples: 225
+        coefficient: 0.7
+
+    - id: diffuse_b
+      atom: filter_allpass
+      in:
+        signal: diffuse_a
+      out:
+        signal: diffuse_b
+      config:
+        delay_samples: 556
+        coefficient: 0.5
+
+    - id: blend
+      atom: mix_wet_dry
+      in:
+        dry: input
+        wet: diffuse_b
+      out:
+        signal: output
+      config:
+        mix: ${params.mix}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: false
+  offline_render: true

@@ -7,7 +7,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, validate/inspect JSON contracts, and runtime product controls for params, bypass, mute, and meters are implemented. Solo remains a host/UI routing concern until a real routing contract exists.
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
 - Reusable test metadata fixtures exist in `test/fixtures/units-v2/`, including representative overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix graphs.
-- Project/session schema, deterministic test metadata fixtures, referenced-unit resolution, mono project compilation, and `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml` exist.
+- Project/session schema, deterministic test metadata fixtures, referenced-unit resolution, mono project compilation, and `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml` exist. The default pedalboard includes a Schroeder reverb that is exercised for tail continuity by native and Emscripten/WASM tests; it supports desktop, WASM real-time, and offline render, but not M7 static export.
 - The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, deterministic project render/benchmark JSON, and export surfaces for `wasm_realtime` and `m7_static`. Validation, unit inspect, project inspect, render, and atom catalog sample contracts are frozen under `test/golden/`.
 
 ## Readiness Declaration

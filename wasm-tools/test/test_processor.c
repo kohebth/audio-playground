@@ -13,6 +13,7 @@ static const char *workspace_paths[] = {
     "test/fixtures/units-v2/tremolo.unit.v2.yaml",
     "test/fixtures/units-v2/delay.unit.v2.yaml",
     "test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml",
+    "test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml",
 };
 
 static int fail(const char *message) {
@@ -102,7 +103,7 @@ int main(void) {
     if (!image || image_size == 0u)
         return fail("prepared image is empty");
     if (apg_wasm_control_param_count(control) == 0u || !apg_wasm_control_param_name(control, 0u) ||
-        apg_wasm_control_bypass_count(control) != 6u || !apg_wasm_control_bypass_name(control, 0u))
+        apg_wasm_control_bypass_count(control) != 7u || !apg_wasm_control_bypass_name(control, 0u))
         return fail("prepared runtime names are incomplete");
     unsigned char *corrupt = malloc(image_size);
     if (!corrupt)

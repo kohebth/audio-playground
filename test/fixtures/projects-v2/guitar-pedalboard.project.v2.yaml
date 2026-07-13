@@ -16,6 +16,8 @@ units:
     file: ../units-v2/delay.unit.v2.yaml
   - id: wet_dry_mix_unit
     file: ../units-v2/wet_dry_mix.unit.v2.yaml
+  - id: reverb_unit
+    file: ../units-v2/schroeder_reverb.unit.v2.yaml
 
 chain:
   nodes:
@@ -49,6 +51,11 @@ chain:
       unit: wet_dry_mix_unit
       params:
         mix: 0.25
+    - id: reverb1
+      unit: reverb_unit
+      params:
+        decay: 0.72
+        mix: 0.22
 
   routes:
     - from: system.input
@@ -66,6 +73,8 @@ chain:
     - from: delay1.output
       to: blend1.wet
     - from: blend1.output
+      to: reverb1.input
+    - from: reverb1.output
       to: system.output
 
 scenes:
@@ -82,10 +91,11 @@ scenes:
       drive1.level: 0.9
       delay1.mix: 0.45
       blend1.mix: 0.35
+      reverb1.decay: 0.82
+      reverb1.mix: 0.28
 
 targets:
   default: desktop_full
   export:
     - wasm_realtime
     - offline_render
-    - m7_static

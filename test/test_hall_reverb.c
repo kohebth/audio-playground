@@ -6,9 +6,11 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
-#define CHUNK  512u
-#define CHUNKS 48u
+#define CHUNK        512u
+#define CHUNKS       96u
+#define INPUT_CHUNKS 8u
 
 static int fail(const char *msg) {
     fprintf(stderr, "FAIL: %s\n", msg);
@@ -40,13 +42,17 @@ static void fill_guitar_like_input(float *input, uint32_t chunk_index) {
     }
 }
 
-static int process_render(apg_v2_runtime_t *runtime, float *peak, double *sum_sq) {
+static int
+process_render(apg_v2_runtime_t *runtime, float *peak, double *sum_sq, float *tail_peak, double *tail_sum_sq) {
     float input[CHUNK];
     float output[CHUNK];
     float previous_last = 0.0f;
 
     for (uint32_t chunk = 0; chunk < CHUNKS; chunk++) {
-        fill_guitar_like_input(input, chunk);
+        if (chunk < INPUT_CHUNKS)
+            fill_guitar_like_input(input, chunk);
+        else
+            memset(input, 0, sizeof(input));
         if (!test_runtime_process_mono_ports(runtime, "input", input, "output", output, CHUNK)) {
             fprintf(stderr, "pedalboard runtime error: %s\n", apg_v2_measure_last_error(runtime));
             return fail("pedalboard offline render failed");
@@ -62,6 +68,11 @@ static int process_render(apg_v2_runtime_t *runtime, float *peak, double *sum_sq
             if (a > *peak)
                 *peak = a;
             *sum_sq += (double)output[i] * (double)output[i];
+            if (chunk >= INPUT_CHUNKS) {
+                if (a > *tail_peak)
+                    *tail_peak = a;
+                *tail_sum_sq += (double)output[i] * (double)output[i];
+            }
         }
     }
     return 0;
@@ -69,7 +80,7 @@ static int process_render(apg_v2_runtime_t *runtime, float *peak, double *sum_sq
 
 int main(void) {
     uc_arena arena;
-    if (uc_arena_init(&arena, 1024u * 1024u) != 0)
+    if (uc_arena_init(&arena, 2u * 1024u * 1024u) != 0)
         return fail("arena init failed");
 
     apg_project_v2_compiled_t compiled;
@@ -88,12 +99,16 @@ int main(void) {
 
     if (!test_runtime_set_param_by_name(&runtime, "drive1.drive", 3.0f) ||
         !test_runtime_set_param_by_name(&runtime, "delay1.mix", 0.45f) ||
-        !test_runtime_set_param_by_name(&runtime, "blend1.mix", 0.35f))
+        !test_runtime_set_param_by_name(&runtime, "blend1.mix", 0.35f) ||
+        !test_runtime_set_param_by_name(&runtime, "reverb1.decay", 0.82f) ||
+        !test_runtime_set_param_by_name(&runtime, "reverb1.mix", 0.28f))
         return fail("failed to set pedalboard render params");
 
-    float  peak   = 0.0f;
-    double sum_sq = 0.0;
-    if (process_render(&runtime, &peak, &sum_sq))
+    float  peak        = 0.0f;
+    float  tail_peak   = 0.0f;
+    double sum_sq      = 0.0;
+    double tail_sum_sq = 0.0;
+    if (process_render(&runtime, &peak, &sum_sq, &tail_peak, &tail_sum_sq))
         return 1;
 
     double rms = sqrt(sum_sq / (double)(CHUNKS * CHUNK));
@@ -101,6 +116,8 @@ int main(void) {
         return fail("pedalboard render peak is out of range");
     if (rms <= 1e-7 || rms > 1.5)
         return fail("pedalboard render RMS is out of range");
+    if (tail_peak <= 1e-4f || tail_sum_sq <= 1e-8)
+        return fail("reverb did not produce a tail after the input stopped");
 
     apg_v2_meter_snapshot_t meter;
     if (!apg_v2_measure_get_output_meter(&runtime, "output", 0u, &meter) || !meter.valid || meter.frames != CHUNK)
