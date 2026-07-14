@@ -16,6 +16,7 @@ import { ProjectNode } from './ProjectNode';
 import { UNIT_DRAG_TYPE } from './ProjectSidebar';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type { GraphPosition } from '../lib/projectV2Graph';
+import { markPerfSpan } from '../lib/perfTelemetry';
 
 const nodeTypes = { projectNode: ProjectNode } satisfies NodeTypes;
 
@@ -57,17 +58,21 @@ function ProjectFlow({
 
   const dragState = (event: DragEvent) => event.dataTransfer.types.includes(UNIT_DRAG_TYPE) ? 'valid' : 'reject';
   const dragOver = (event: DragEvent) => {
-    const state = dragState(event);
-    event.preventDefault();
-    event.dataTransfer.dropEffect = state === 'valid' ? 'copy' : 'none';
-    setDropState(state);
+    markPerfSpan('ui.dragOver.projectNode', () => {
+      const state = dragState(event);
+      event.preventDefault();
+      event.dataTransfer.dropEffect = state === 'valid' ? 'copy' : 'none';
+      setDropState(state);
+    });
   };
   const drop = (event: DragEvent) => {
-    event.preventDefault();
-    const unitId = event.dataTransfer.getData(UNIT_DRAG_TYPE);
-    setDropState('idle');
-    if (!unitId) return;
-    onAddUnitAt(unitId, reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    markPerfSpan('ui.drop.projectNode', () => {
+      event.preventDefault();
+      const unitId = event.dataTransfer.getData(UNIT_DRAG_TYPE);
+      setDropState('idle');
+      if (!unitId) return;
+      onAddUnitAt(unitId, reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    }, { valid: event.dataTransfer.types.includes(UNIT_DRAG_TYPE) });
   };
 
   return (

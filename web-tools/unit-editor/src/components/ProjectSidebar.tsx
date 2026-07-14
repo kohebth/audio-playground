@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 import type { ProjectInspect, WorkspaceFile } from '../lib/backendSamples';
+import { markPerfSpan } from '../lib/perfTelemetry';
 
 type Props = {
   project: ProjectInspect;
@@ -142,8 +143,10 @@ export function ProjectSidebar({
             draggable
             onClick={() => onAddUnitFromLibrary(unit.id)}
             onDragStart={event => {
-              event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id);
-              event.dataTransfer.effectAllowed = 'copy';
+              markPerfSpan('ui.dragStart.projectUnit', () => {
+                event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id);
+                event.dataTransfer.effectAllowed = 'copy';
+              }, { unit: unit.id });
             }}
             type="button"
           >

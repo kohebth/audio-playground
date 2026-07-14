@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "perf:fixtures": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-fixtures.mts",
+    "perf:benchmark": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts",
     "test": "node scripts/contract-tests.mjs && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/unit-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/project-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/workspace-persistence-tests.mts",
     "preview": "vite preview"
   },

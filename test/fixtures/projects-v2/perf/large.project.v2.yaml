@@ -1,0 +1,671 @@
+kind: apg.project
+schema: apg.project.v2
+name: perf-large-chain
+version: 2.0.0
+units:
+  - id: simple_gain_unit
+    file: ../units-v2/simple_gain.unit.v2.yaml
+  - id: noise_gate_unit
+    file: ../units-v2/noise_gate.unit.v2.yaml
+  - id: overdrive_unit
+    file: ../units-v2/overdrive.unit.v2.yaml
+  - id: tone_stack_unit
+    file: ../units-v2/tone_stack.unit.v2.yaml
+  - id: tremolo_unit
+    file: ../units-v2/tremolo.unit.v2.yaml
+  - id: delay_unit
+    file: ../units-v2/delay.unit.v2.yaml
+  - id: simple_clip_unit
+    file: ../units-v2/simple_clip.unit.v2.yaml
+  - id: schroeder_reverb_unit
+    file: ../units-v2/schroeder_reverb.unit.v2.yaml
+chain:
+  nodes:
+    - id: unit_001
+      unit: simple_gain_unit
+    - id: unit_002
+      unit: noise_gate_unit
+    - id: unit_003
+      unit: overdrive_unit
+    - id: unit_004
+      unit: tone_stack_unit
+    - id: unit_005
+      unit: tremolo_unit
+    - id: unit_006
+      unit: delay_unit
+    - id: unit_007
+      unit: simple_clip_unit
+    - id: unit_008
+      unit: schroeder_reverb_unit
+    - id: unit_009
+      unit: simple_gain_unit
+    - id: unit_010
+      unit: noise_gate_unit
+    - id: unit_011
+      unit: overdrive_unit
+    - id: unit_012
+      unit: tone_stack_unit
+    - id: unit_013
+      unit: tremolo_unit
+    - id: unit_014
+      unit: delay_unit
+    - id: unit_015
+      unit: simple_clip_unit
+    - id: unit_016
+      unit: schroeder_reverb_unit
+    - id: unit_017
+      unit: simple_gain_unit
+    - id: unit_018
+      unit: noise_gate_unit
+    - id: unit_019
+      unit: overdrive_unit
+    - id: unit_020
+      unit: tone_stack_unit
+    - id: unit_021
+      unit: tremolo_unit
+    - id: unit_022
+      unit: delay_unit
+    - id: unit_023
+      unit: simple_clip_unit
+    - id: unit_024
+      unit: schroeder_reverb_unit
+    - id: unit_025
+      unit: simple_gain_unit
+    - id: unit_026
+      unit: noise_gate_unit
+    - id: unit_027
+      unit: overdrive_unit
+    - id: unit_028
+      unit: tone_stack_unit
+    - id: unit_029
+      unit: tremolo_unit
+    - id: unit_030
+      unit: delay_unit
+    - id: unit_031
+      unit: simple_clip_unit
+    - id: unit_032
+      unit: schroeder_reverb_unit
+    - id: unit_033
+      unit: simple_gain_unit
+    - id: unit_034
+      unit: noise_gate_unit
+    - id: unit_035
+      unit: overdrive_unit
+    - id: unit_036
+      unit: tone_stack_unit
+    - id: unit_037
+      unit: tremolo_unit
+    - id: unit_038
+      unit: delay_unit
+    - id: unit_039
+      unit: simple_clip_unit
+    - id: unit_040
+      unit: schroeder_reverb_unit
+    - id: unit_041
+      unit: simple_gain_unit
+    - id: unit_042
+      unit: noise_gate_unit
+    - id: unit_043
+      unit: overdrive_unit
+    - id: unit_044
+      unit: tone_stack_unit
+    - id: unit_045
+      unit: tremolo_unit
+    - id: unit_046
+      unit: delay_unit
+    - id: unit_047
+      unit: simple_clip_unit
+    - id: unit_048
+      unit: schroeder_reverb_unit
+    - id: unit_049
+      unit: simple_gain_unit
+    - id: unit_050
+      unit: noise_gate_unit
+    - id: unit_051
+      unit: overdrive_unit
+    - id: unit_052
+      unit: tone_stack_unit
+    - id: unit_053
+      unit: tremolo_unit
+    - id: unit_054
+      unit: delay_unit
+    - id: unit_055
+      unit: simple_clip_unit
+    - id: unit_056
+      unit: schroeder_reverb_unit
+    - id: unit_057
+      unit: simple_gain_unit
+    - id: unit_058
+      unit: noise_gate_unit
+    - id: unit_059
+      unit: overdrive_unit
+    - id: unit_060
+      unit: tone_stack_unit
+    - id: unit_061
+      unit: tremolo_unit
+    - id: unit_062
+      unit: delay_unit
+    - id: unit_063
+      unit: simple_clip_unit
+    - id: unit_064
+      unit: schroeder_reverb_unit
+    - id: unit_065
+      unit: simple_gain_unit
+    - id: unit_066
+      unit: noise_gate_unit
+    - id: unit_067
+      unit: overdrive_unit
+    - id: unit_068
+      unit: tone_stack_unit
+    - id: unit_069
+      unit: tremolo_unit
+    - id: unit_070
+      unit: delay_unit
+    - id: unit_071
+      unit: simple_clip_unit
+    - id: unit_072
+      unit: schroeder_reverb_unit
+    - id: unit_073
+      unit: simple_gain_unit
+    - id: unit_074
+      unit: noise_gate_unit
+    - id: unit_075
+      unit: overdrive_unit
+    - id: unit_076
+      unit: tone_stack_unit
+    - id: unit_077
+      unit: tremolo_unit
+    - id: unit_078
+      unit: delay_unit
+    - id: unit_079
+      unit: simple_clip_unit
+    - id: unit_080
+      unit: schroeder_reverb_unit
+    - id: unit_081
+      unit: simple_gain_unit
+    - id: unit_082
+      unit: noise_gate_unit
+    - id: unit_083
+      unit: overdrive_unit
+    - id: unit_084
+      unit: tone_stack_unit
+    - id: unit_085
+      unit: tremolo_unit
+    - id: unit_086
+      unit: delay_unit
+    - id: unit_087
+      unit: simple_clip_unit
+    - id: unit_088
+      unit: schroeder_reverb_unit
+    - id: unit_089
+      unit: simple_gain_unit
+    - id: unit_090
+      unit: noise_gate_unit
+    - id: unit_091
+      unit: overdrive_unit
+    - id: unit_092
+      unit: tone_stack_unit
+    - id: unit_093
+      unit: tremolo_unit
+    - id: unit_094
+      unit: delay_unit
+    - id: unit_095
+      unit: simple_clip_unit
+    - id: unit_096
+      unit: schroeder_reverb_unit
+    - id: unit_097
+      unit: simple_gain_unit
+    - id: unit_098
+      unit: noise_gate_unit
+    - id: unit_099
+      unit: overdrive_unit
+    - id: unit_100
+      unit: tone_stack_unit
+    - id: unit_101
+      unit: tremolo_unit
+    - id: unit_102
+      unit: delay_unit
+    - id: unit_103
+      unit: simple_clip_unit
+    - id: unit_104
+      unit: schroeder_reverb_unit
+    - id: unit_105
+      unit: simple_gain_unit
+    - id: unit_106
+      unit: noise_gate_unit
+    - id: unit_107
+      unit: overdrive_unit
+    - id: unit_108
+      unit: tone_stack_unit
+    - id: unit_109
+      unit: tremolo_unit
+    - id: unit_110
+      unit: delay_unit
+    - id: unit_111
+      unit: simple_clip_unit
+    - id: unit_112
+      unit: schroeder_reverb_unit
+    - id: unit_113
+      unit: simple_gain_unit
+    - id: unit_114
+      unit: noise_gate_unit
+    - id: unit_115
+      unit: overdrive_unit
+    - id: unit_116
+      unit: tone_stack_unit
+    - id: unit_117
+      unit: tremolo_unit
+    - id: unit_118
+      unit: delay_unit
+    - id: unit_119
+      unit: simple_clip_unit
+    - id: unit_120
+      unit: schroeder_reverb_unit
+    - id: unit_121
+      unit: simple_gain_unit
+    - id: unit_122
+      unit: noise_gate_unit
+    - id: unit_123
+      unit: overdrive_unit
+    - id: unit_124
+      unit: tone_stack_unit
+    - id: unit_125
+      unit: tremolo_unit
+    - id: unit_126
+      unit: delay_unit
+    - id: unit_127
+      unit: simple_clip_unit
+    - id: unit_128
+      unit: schroeder_reverb_unit
+    - id: unit_129
+      unit: simple_gain_unit
+    - id: unit_130
+      unit: noise_gate_unit
+    - id: unit_131
+      unit: overdrive_unit
+    - id: unit_132
+      unit: tone_stack_unit
+    - id: unit_133
+      unit: tremolo_unit
+    - id: unit_134
+      unit: delay_unit
+    - id: unit_135
+      unit: simple_clip_unit
+    - id: unit_136
+      unit: schroeder_reverb_unit
+    - id: unit_137
+      unit: simple_gain_unit
+    - id: unit_138
+      unit: noise_gate_unit
+    - id: unit_139
+      unit: overdrive_unit
+    - id: unit_140
+      unit: tone_stack_unit
+    - id: unit_141
+      unit: tremolo_unit
+    - id: unit_142
+      unit: delay_unit
+    - id: unit_143
+      unit: simple_clip_unit
+    - id: unit_144
+      unit: schroeder_reverb_unit
+    - id: unit_145
+      unit: simple_gain_unit
+    - id: unit_146
+      unit: noise_gate_unit
+    - id: unit_147
+      unit: overdrive_unit
+    - id: unit_148
+      unit: tone_stack_unit
+    - id: unit_149
+      unit: tremolo_unit
+    - id: unit_150
+      unit: delay_unit
+    - id: unit_151
+      unit: simple_clip_unit
+    - id: unit_152
+      unit: schroeder_reverb_unit
+    - id: unit_153
+      unit: simple_gain_unit
+    - id: unit_154
+      unit: noise_gate_unit
+    - id: unit_155
+      unit: overdrive_unit
+    - id: unit_156
+      unit: tone_stack_unit
+    - id: unit_157
+      unit: tremolo_unit
+    - id: unit_158
+      unit: delay_unit
+    - id: unit_159
+      unit: simple_clip_unit
+    - id: unit_160
+      unit: schroeder_reverb_unit
+  routes:
+    - from: system.input
+      to: unit_001.input
+    - from: unit_001.output
+      to: unit_002.input
+    - from: unit_002.output
+      to: unit_003.input
+    - from: unit_003.output
+      to: unit_004.input
+    - from: unit_004.output
+      to: unit_005.input
+    - from: unit_005.output
+      to: unit_006.input
+    - from: unit_006.output
+      to: unit_007.input
+    - from: unit_007.output
+      to: unit_008.input
+    - from: unit_008.output
+      to: unit_009.input
+    - from: unit_009.output
+      to: unit_010.input
+    - from: unit_010.output
+      to: unit_011.input
+    - from: unit_011.output
+      to: unit_012.input
+    - from: unit_012.output
+      to: unit_013.input
+    - from: unit_013.output
+      to: unit_014.input
+    - from: unit_014.output
+      to: unit_015.input
+    - from: unit_015.output
+      to: unit_016.input
+    - from: unit_016.output
+      to: unit_017.input
+    - from: unit_017.output
+      to: unit_018.input
+    - from: unit_018.output
+      to: unit_019.input
+    - from: unit_019.output
+      to: unit_020.input
+    - from: unit_020.output
+      to: unit_021.input
+    - from: unit_021.output
+      to: unit_022.input
+    - from: unit_022.output
+      to: unit_023.input
+    - from: unit_023.output
+      to: unit_024.input
+    - from: unit_024.output
+      to: unit_025.input
+    - from: unit_025.output
+      to: unit_026.input
+    - from: unit_026.output
+      to: unit_027.input
+    - from: unit_027.output
+      to: unit_028.input
+    - from: unit_028.output
+      to: unit_029.input
+    - from: unit_029.output
+      to: unit_030.input
+    - from: unit_030.output
+      to: unit_031.input
+    - from: unit_031.output
+      to: unit_032.input
+    - from: unit_032.output
+      to: unit_033.input
+    - from: unit_033.output
+      to: unit_034.input
+    - from: unit_034.output
+      to: unit_035.input
+    - from: unit_035.output
+      to: unit_036.input
+    - from: unit_036.output
+      to: unit_037.input
+    - from: unit_037.output
+      to: unit_038.input
+    - from: unit_038.output
+      to: unit_039.input
+    - from: unit_039.output
+      to: unit_040.input
+    - from: unit_040.output
+      to: unit_041.input
+    - from: unit_041.output
+      to: unit_042.input
+    - from: unit_042.output
+      to: unit_043.input
+    - from: unit_043.output
+      to: unit_044.input
+    - from: unit_044.output
+      to: unit_045.input
+    - from: unit_045.output
+      to: unit_046.input
+    - from: unit_046.output
+      to: unit_047.input
+    - from: unit_047.output
+      to: unit_048.input
+    - from: unit_048.output
+      to: unit_049.input
+    - from: unit_049.output
+      to: unit_050.input
+    - from: unit_050.output
+      to: unit_051.input
+    - from: unit_051.output
+      to: unit_052.input
+    - from: unit_052.output
+      to: unit_053.input
+    - from: unit_053.output
+      to: unit_054.input
+    - from: unit_054.output
+      to: unit_055.input
+    - from: unit_055.output
+      to: unit_056.input
+    - from: unit_056.output
+      to: unit_057.input
+    - from: unit_057.output
+      to: unit_058.input
+    - from: unit_058.output
+      to: unit_059.input
+    - from: unit_059.output
+      to: unit_060.input
+    - from: unit_060.output
+      to: unit_061.input
+    - from: unit_061.output
+      to: unit_062.input
+    - from: unit_062.output
+      to: unit_063.input
+    - from: unit_063.output
+      to: unit_064.input
+    - from: unit_064.output
+      to: unit_065.input
+    - from: unit_065.output
+      to: unit_066.input
+    - from: unit_066.output
+      to: unit_067.input
+    - from: unit_067.output
+      to: unit_068.input
+    - from: unit_068.output
+      to: unit_069.input
+    - from: unit_069.output
+      to: unit_070.input
+    - from: unit_070.output
+      to: unit_071.input
+    - from: unit_071.output
+      to: unit_072.input
+    - from: unit_072.output
+      to: unit_073.input
+    - from: unit_073.output
+      to: unit_074.input
+    - from: unit_074.output
+      to: unit_075.input
+    - from: unit_075.output
+      to: unit_076.input
+    - from: unit_076.output
+      to: unit_077.input
+    - from: unit_077.output
+      to: unit_078.input
+    - from: unit_078.output
+      to: unit_079.input
+    - from: unit_079.output
+      to: unit_080.input
+    - from: unit_080.output
+      to: unit_081.input
+    - from: unit_081.output
+      to: unit_082.input
+    - from: unit_082.output
+      to: unit_083.input
+    - from: unit_083.output
+      to: unit_084.input
+    - from: unit_084.output
+      to: unit_085.input
+    - from: unit_085.output
+      to: unit_086.input
+    - from: unit_086.output
+      to: unit_087.input
+    - from: unit_087.output
+      to: unit_088.input
+    - from: unit_088.output
+      to: unit_089.input
+    - from: unit_089.output
+      to: unit_090.input
+    - from: unit_090.output
+      to: unit_091.input
+    - from: unit_091.output
+      to: unit_092.input
+    - from: unit_092.output
+      to: unit_093.input
+    - from: unit_093.output
+      to: unit_094.input
+    - from: unit_094.output
+      to: unit_095.input
+    - from: unit_095.output
+      to: unit_096.input
+    - from: unit_096.output
+      to: unit_097.input
+    - from: unit_097.output
+      to: unit_098.input
+    - from: unit_098.output
+      to: unit_099.input
+    - from: unit_099.output
+      to: unit_100.input
+    - from: unit_100.output
+      to: unit_101.input
+    - from: unit_101.output
+      to: unit_102.input
+    - from: unit_102.output
+      to: unit_103.input
+    - from: unit_103.output
+      to: unit_104.input
+    - from: unit_104.output
+      to: unit_105.input
+    - from: unit_105.output
+      to: unit_106.input
+    - from: unit_106.output
+      to: unit_107.input
+    - from: unit_107.output
+      to: unit_108.input
+    - from: unit_108.output
+      to: unit_109.input
+    - from: unit_109.output
+      to: unit_110.input
+    - from: unit_110.output
+      to: unit_111.input
+    - from: unit_111.output
+      to: unit_112.input
+    - from: unit_112.output
+      to: unit_113.input
+    - from: unit_113.output
+      to: unit_114.input
+    - from: unit_114.output
+      to: unit_115.input
+    - from: unit_115.output
+      to: unit_116.input
+    - from: unit_116.output
+      to: unit_117.input
+    - from: unit_117.output
+      to: unit_118.input
+    - from: unit_118.output
+      to: unit_119.input
+    - from: unit_119.output
+      to: unit_120.input
+    - from: unit_120.output
+      to: unit_121.input
+    - from: unit_121.output
+      to: unit_122.input
+    - from: unit_122.output
+      to: unit_123.input
+    - from: unit_123.output
+      to: unit_124.input
+    - from: unit_124.output
+      to: unit_125.input
+    - from: unit_125.output
+      to: unit_126.input
+    - from: unit_126.output
+      to: unit_127.input
+    - from: unit_127.output
+      to: unit_128.input
+    - from: unit_128.output
+      to: unit_129.input
+    - from: unit_129.output
+      to: unit_130.input
+    - from: unit_130.output
+      to: unit_131.input
+    - from: unit_131.output
+      to: unit_132.input
+    - from: unit_132.output
+      to: unit_133.input
+    - from: unit_133.output
+      to: unit_134.input
+    - from: unit_134.output
+      to: unit_135.input
+    - from: unit_135.output
+      to: unit_136.input
+    - from: unit_136.output
+      to: unit_137.input
+    - from: unit_137.output
+      to: unit_138.input
+    - from: unit_138.output
+      to: unit_139.input
+    - from: unit_139.output
+      to: unit_140.input
+    - from: unit_140.output
+      to: unit_141.input
+    - from: unit_141.output
+      to: unit_142.input
+    - from: unit_142.output
+      to: unit_143.input
+    - from: unit_143.output
+      to: unit_144.input
+    - from: unit_144.output
+      to: unit_145.input
+    - from: unit_145.output
+      to: unit_146.input
+    - from: unit_146.output
+      to: unit_147.input
+    - from: unit_147.output
+      to: unit_148.input
+    - from: unit_148.output
+      to: unit_149.input
+    - from: unit_149.output
+      to: unit_150.input
+    - from: unit_150.output
+      to: unit_151.input
+    - from: unit_151.output
+      to: unit_152.input
+    - from: unit_152.output
+      to: unit_153.input
+    - from: unit_153.output
+      to: unit_154.input
+    - from: unit_154.output
+      to: unit_155.input
+    - from: unit_155.output
+      to: unit_156.input
+    - from: unit_156.output
+      to: unit_157.input
+    - from: unit_157.output
+      to: unit_158.input
+    - from: unit_158.output
+      to: unit_159.input
+    - from: unit_159.output
+      to: unit_160.input
+    - from: unit_160.output
+      to: system.output
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render

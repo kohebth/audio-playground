@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 
 import type { AtomCatalog, AtomCatalogAtom, AtomCatalogField, UnitInspect } from '../lib/backendSamples';
+import { markPerfSpan } from '../lib/perfTelemetry';
 
 type Props = {
   unit: UnitInspect;
@@ -81,8 +82,10 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) 
             draggable
             onClick={() => setSelectedAtomName(atom.name)}
             onDragStart={event => {
-              event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.name);
-              event.dataTransfer.effectAllowed = 'copy';
+              markPerfSpan('ui.dragStart.atomPalette', () => {
+                event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.name);
+                event.dataTransfer.effectAllowed = 'copy';
+              }, { atom: atom.name });
             }}
             style={{ '--category-color': categoryColor(atom.category) } as CSSProperties}
             type="button"

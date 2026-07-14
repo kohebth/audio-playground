@@ -1,0 +1,127 @@
+kind: apg.project
+schema: apg.project.v2
+name: perf-small-chain
+version: 2.0.0
+units:
+  - id: simple_gain_unit
+    file: ../units-v2/simple_gain.unit.v2.yaml
+  - id: noise_gate_unit
+    file: ../units-v2/noise_gate.unit.v2.yaml
+  - id: overdrive_unit
+    file: ../units-v2/overdrive.unit.v2.yaml
+  - id: tone_stack_unit
+    file: ../units-v2/tone_stack.unit.v2.yaml
+  - id: tremolo_unit
+    file: ../units-v2/tremolo.unit.v2.yaml
+  - id: delay_unit
+    file: ../units-v2/delay.unit.v2.yaml
+  - id: simple_clip_unit
+    file: ../units-v2/simple_clip.unit.v2.yaml
+  - id: schroeder_reverb_unit
+    file: ../units-v2/schroeder_reverb.unit.v2.yaml
+chain:
+  nodes:
+    - id: unit_001
+      unit: simple_gain_unit
+    - id: unit_002
+      unit: noise_gate_unit
+    - id: unit_003
+      unit: overdrive_unit
+    - id: unit_004
+      unit: tone_stack_unit
+    - id: unit_005
+      unit: tremolo_unit
+    - id: unit_006
+      unit: delay_unit
+    - id: unit_007
+      unit: simple_clip_unit
+    - id: unit_008
+      unit: schroeder_reverb_unit
+    - id: unit_009
+      unit: simple_gain_unit
+    - id: unit_010
+      unit: noise_gate_unit
+    - id: unit_011
+      unit: overdrive_unit
+    - id: unit_012
+      unit: tone_stack_unit
+    - id: unit_013
+      unit: tremolo_unit
+    - id: unit_014
+      unit: delay_unit
+    - id: unit_015
+      unit: simple_clip_unit
+    - id: unit_016
+      unit: schroeder_reverb_unit
+    - id: unit_017
+      unit: simple_gain_unit
+    - id: unit_018
+      unit: noise_gate_unit
+    - id: unit_019
+      unit: overdrive_unit
+    - id: unit_020
+      unit: tone_stack_unit
+    - id: unit_021
+      unit: tremolo_unit
+    - id: unit_022
+      unit: delay_unit
+    - id: unit_023
+      unit: simple_clip_unit
+    - id: unit_024
+      unit: schroeder_reverb_unit
+  routes:
+    - from: system.input
+      to: unit_001.input
+    - from: unit_001.output
+      to: unit_002.input
+    - from: unit_002.output
+      to: unit_003.input
+    - from: unit_003.output
+      to: unit_004.input
+    - from: unit_004.output
+      to: unit_005.input
+    - from: unit_005.output
+      to: unit_006.input
+    - from: unit_006.output
+      to: unit_007.input
+    - from: unit_007.output
+      to: unit_008.input
+    - from: unit_008.output
+      to: unit_009.input
+    - from: unit_009.output
+      to: unit_010.input
+    - from: unit_010.output
+      to: unit_011.input
+    - from: unit_011.output
+      to: unit_012.input
+    - from: unit_012.output
+      to: unit_013.input
+    - from: unit_013.output
+      to: unit_014.input
+    - from: unit_014.output
+      to: unit_015.input
+    - from: unit_015.output
+      to: unit_016.input
+    - from: unit_016.output
+      to: unit_017.input
+    - from: unit_017.output
+      to: unit_018.input
+    - from: unit_018.output
+      to: unit_019.input
+    - from: unit_019.output
+      to: unit_020.input
+    - from: unit_020.output
+      to: unit_021.input
+    - from: unit_021.output
+      to: unit_022.input
+    - from: unit_022.output
+      to: unit_023.input
+    - from: unit_023.output
+      to: unit_024.input
+    - from: unit_024.output
+      to: system.output
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render

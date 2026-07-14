@@ -20,6 +20,7 @@ import dagre from 'dagre';
 import type { AtomCatalog, WorkspaceFile } from '../lib/backendSamples';
 import { ATOM_DRAG_TYPE } from './AtomCatalogPanel';
 import { parseUnitGraphDraft, type GraphPosition, type UnitConnectionEndpoint, type UnitGraphDraft } from '../lib/unitV2Graph';
+import { markPerfSpan } from '../lib/perfTelemetry';
 
 type ContractNodeData = {
   id: string;
@@ -259,17 +260,21 @@ export function ContractGraphCanvas({
 
   const dragState = (event: DragEvent) => event.dataTransfer.types.includes(ATOM_DRAG_TYPE) ? 'valid' : 'reject';
   const dragOver = (event: DragEvent) => {
-    const state = dragState(event);
-    event.preventDefault();
-    event.dataTransfer.dropEffect = state === 'valid' ? 'copy' : 'none';
-    setDropState(state);
+    markPerfSpan('ui.dragOver.contractAtom', () => {
+      const state = dragState(event);
+      event.preventDefault();
+      event.dataTransfer.dropEffect = state === 'valid' ? 'copy' : 'none';
+      setDropState(state);
+    });
   };
   const drop = (event: DragEvent) => {
-    event.preventDefault();
-    const atomName = event.dataTransfer.getData(ATOM_DRAG_TYPE);
-    setDropState('idle');
-    if (!atomName || !reactFlowRef.current) return;
-    onAddAtomAt(atomName, reactFlowRef.current.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    markPerfSpan('ui.drop.contractAtom', () => {
+      event.preventDefault();
+      const atomName = event.dataTransfer.getData(ATOM_DRAG_TYPE);
+      setDropState('idle');
+      if (!atomName || !reactFlowRef.current) return;
+      onAddAtomAt(atomName, reactFlowRef.current.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    }, { atomType: event.dataTransfer.getData(ATOM_DRAG_TYPE) || 'none' });
   };
 
   return (

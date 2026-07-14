@@ -60,6 +60,7 @@ import {
   WORKSPACE_FORMAT_VERSION,
   WORKSPACE_SCHEMA,
 } from './lib/workspacePersistence';
+import { PERFORMANCE_DEBOUNCE_MS, markPerfSpan } from './lib/perfTelemetry';
 import './App.css';
 
 function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): ProjectNodeData | null {
@@ -179,6 +180,8 @@ export default function App() {
   const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspace.entryProject);
   const undoStack = useRef<WorkspaceHistoryEntry[]>([]);
   const redoStack = useRef<WorkspaceHistoryEntry[]>([]);
+  const autosaveTimeout = useRef<number | null>(null);
+  const lastSavedWorkspace = useRef<string>(JSON.stringify(createWorkspacePayload(initialWorkspace.entryProject, initialWorkspace.files)));
   const [historyCounts, setHistoryCounts] = useState({ undo: 0, redo: 0 });
   const currentHistoryEntry = useCallback((): WorkspaceHistoryEntry => ({
     entryProject,
@@ -305,18 +308,20 @@ export default function App() {
   ), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
 
   const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
-    const key = paramDraftKey(instanceId, paramKey);
-    setParamDrafts(drafts => (drafts[key] === value ? drafts : { ...drafts, [key]: value }));
-    setWorkspaceFiles(files => {
-      let changed = false;
-      const next = files.map(file => {
-        if (file.role !== 'project') return file;
-        const content = updateProjectInstanceParam(file.content, instanceId, paramKey, value);
-        if (content === file.content) return file;
-        changed = true;
-        return { ...file, content };
+    markPerfSpan('param.update', () => {
+      const key = paramDraftKey(instanceId, paramKey);
+      setParamDrafts(drafts => (drafts[key] === value ? drafts : { ...drafts, [key]: value }));
+      setWorkspaceFiles(files => {
+        let changed = false;
+        const next = files.map(file => {
+          if (file.role !== 'project') return file;
+          const content = updateProjectInstanceParam(file.content, instanceId, paramKey, value);
+          if (content === file.content) return file;
+          changed = true;
+          return { ...file, content };
+        });
+        return changed ? next : files;
       });
-      return changed ? next : files;
     });
   }, []);
 
@@ -330,67 +335,94 @@ export default function App() {
   const graphTopologyRef = useRef('');
 
   useEffect(() => {
-    const topologyChanged = graphTopologyRef.current !== graphTopologySignature;
-    graphTopologyRef.current = graphTopologySignature;
+    markPerfSpan('graph.sync.project', () => {
+      const topologyChanged = graphTopologyRef.current !== graphTopologySignature;
+      graphTopologyRef.current = graphTopologySignature;
 
-    if (topologyChanged) {
-      const next = buildProjectGraph(project, projectDraft);
-      setNodes(current => next.nodes.map(node => {
-        const positioned = current.find(item => item.id === node.id);
-        let data = node.data;
-        let storedPosition: ProjectGraphPosition | undefined;
-        if (node.data.kind === 'unit') {
-          const unitData = node.data;
-          data = { ...unitData, paramControls: projectParamControls[unitData.unit.id] ?? [], onParamChange: updateParamDraft };
-          storedPosition = projectDraft.nodes.find(item => item.id === unitData.instance.id)?.ui?.position;
-        }
-        return positioned && !storedPosition ? { ...node, data, position: positioned.position } : { ...node, data };
-      }));
-      setEdges(next.edges);
-      return;
-    }
+      if (topologyChanged) {
+        const next = buildProjectGraph(project, projectDraft);
+        setNodes(current => next.nodes.map(node => {
+          const positioned = current.find(item => item.id === node.id);
+          let data = node.data;
+          let storedPosition: ProjectGraphPosition | undefined;
+          if (node.data.kind === 'unit') {
+            const unitData = node.data;
+            data = { ...unitData, paramControls: projectParamControls[unitData.unit.id] ?? [], onParamChange: updateParamDraft };
+            storedPosition = projectDraft.nodes.find(item => item.id === unitData.instance.id)?.ui?.position;
+          }
+          return positioned && !storedPosition ? { ...node, data, position: positioned.position } : { ...node, data };
+        }));
+        setEdges(next.edges);
+        return;
+      }
 
-    const unitsById = new Map(project.units.map(unit => [unit.id, unit]));
-    const instancesById = new Map(project.nodes.map(instance => [instance.id, instance]));
-    setNodes(current => {
-      let changed = false;
-      const next = current.map(node => {
-        if (node.data.kind !== 'unit') return node;
-        const instance = instancesById.get(node.data.instance.id);
-        const unit = instance ? unitsById.get(instance.unit) : null;
-        if (!instance || !unit) return node;
-        const data = {
-          ...node.data,
-          instance,
-          unit,
-          paramControls: projectParamControls[unit.id] ?? [],
-          onParamChange: updateParamDraft,
-        };
-        const previous = JSON.stringify({
-          instance: node.data.instance,
-          unit: node.data.unit,
-          controls: node.data.paramControls,
+      const unitsById = new Map(project.units.map(unit => [unit.id, unit]));
+      const instancesById = new Map(project.nodes.map(instance => [instance.id, instance]));
+      setNodes(current => {
+        let changed = false;
+        const next = current.map(node => {
+          if (node.data.kind !== 'unit') return node;
+          const instance = instancesById.get(node.data.instance.id);
+          const unit = instance ? unitsById.get(instance.unit) : null;
+          if (!instance || !unit) return node;
+          const data = {
+            ...node.data,
+            instance,
+            unit,
+            paramControls: projectParamControls[unit.id] ?? [],
+            onParamChange: updateParamDraft,
+          };
+          const previous = JSON.stringify({
+            instance: node.data.instance,
+            unit: node.data.unit,
+            controls: node.data.paramControls,
+          });
+          const candidate = JSON.stringify({ instance, unit, controls: data.paramControls });
+          if (previous === candidate) return node;
+          changed = true;
+          return { ...node, data };
         });
-        const candidate = JSON.stringify({ instance, unit, controls: data.paramControls });
-        if (previous === candidate) return node;
-        changed = true;
-        return { ...node, data };
+        return changed ? next : current;
       });
-      return changed ? next : current;
     });
   }, [graphTopologySignature, project, projectDraft, projectParamControls, setEdges, setNodes, updateParamDraft]);
 
   useEffect(() => {
-    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(createWorkspacePayload(entryProject, workspaceFiles)));
+    if (typeof window === 'undefined') return;
+
+    if (autosaveTimeout.current) {
+      window.clearTimeout(autosaveTimeout.current);
+    }
+
+    autosaveTimeout.current = window.setTimeout(() => {
+      markPerfSpan('workspace.autosave.persist', () => {
+        const payload = createWorkspacePayload(entryProject, workspaceFiles);
+        const serialized = JSON.stringify(payload);
+        if (serialized !== lastSavedWorkspace.current) {
+          window.localStorage.setItem(WORKSPACE_STORAGE_KEY, serialized);
+          lastSavedWorkspace.current = serialized;
+        }
+      });
+      autosaveTimeout.current = null;
+    }, PERFORMANCE_DEBOUNCE_MS);
+
+    return () => {
+      if (autosaveTimeout.current) {
+        window.clearTimeout(autosaveTimeout.current);
+        autosaveTimeout.current = null;
+      }
+    };
   }, [entryProject, workspaceFiles]);
 
   const selectProjectNode = useCallback((id: string) => {
-    setSelectedId(id);
-    setSelectedRouteIndex(null);
-    setSelectedAtomId(null);
-    if (id.startsWith('unit-')) {
-      setInspectorView('atom');
-    }
+    markPerfSpan('ui.select.projectNode', () => {
+      setSelectedId(id);
+      setSelectedRouteIndex(null);
+      setSelectedAtomId(null);
+      if (id.startsWith('unit-')) {
+        setInspectorView('atom');
+      }
+    });
   }, []);
 
   const openContractGraph = useCallback((id: string) => {
@@ -398,19 +430,23 @@ export default function App() {
     if (!node || node.kind !== 'unit') return;
 
     const path = resolveWorkspacePath(project.file, node.unit.file);
-    setSelectedId(id);
-    setSelectedRouteIndex(null);
-    setSelectedWorkspacePath(path);
-    setCanvasMode('contract');
-    setInspectorView('contract');
-    setSelectedAtomId(null);
+    markPerfSpan('ui.openContractGraph', () => {
+      setSelectedId(id);
+      setSelectedRouteIndex(null);
+      setSelectedWorkspacePath(path);
+      setCanvasMode('contract');
+      setInspectorView('contract');
+      setSelectedAtomId(null);
+    });
   }, [nodes, project.file]);
 
   const selectRoute = useCallback((index: number) => {
-    setSelectedRouteIndex(index);
-    setSelectedId(null);
-    setCanvasMode('project');
-    setSelectedAtomId(null);
+    markPerfSpan('ui.select.route', () => {
+      setSelectedRouteIndex(index);
+      setSelectedId(null);
+      setCanvasMode('project');
+      setSelectedAtomId(null);
+    });
   }, []);
 
   const resetUnitParamDrafts = useCallback((instanceId: string) => {
@@ -443,97 +479,121 @@ export default function App() {
   }, [paramOriginals, project.nodes]);
 
   const updateProjectFile = useCallback((update: (content: string) => string) => {
-    setGraphEditError(null);
-    try {
-      const content = update(projectWorkspaceFile.content);
-      pushHistory();
-      setWorkspaceFiles(files => files.map(file =>
-        file.path === projectWorkspaceFile.path ? { ...file, content } : file));
-      return content;
-    } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : String(error));
-      return null;
-    }
+    return markPerfSpan('graph.update.project', () => {
+      setGraphEditError(null);
+      try {
+        const content = update(projectWorkspaceFile.content);
+        pushHistory();
+        setWorkspaceFiles(files => files.map(file =>
+          file.path === projectWorkspaceFile.path ? { ...file, content } : file));
+        return content;
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : String(error));
+        return null;
+      }
+    });
   }, [projectWorkspaceFile.content, projectWorkspaceFile.path, pushHistory]);
 
   const addProjectNode = useCallback((unitId: string, instanceId: string, position?: ProjectGraphPosition) => {
-    const reference = projectDraft.units.find(unit => unit.id === unitId);
-    if (!reference) return;
-    const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
-    const unitFile = workspaceFiles.find(file => file.path === unitPath);
-    const defaults = unitFile?.role === 'unit'
-      ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
-      : {};
-    const result = addProjectInstance(projectWorkspaceFile.content, unitId, instanceId, defaults, position);
-    if (!updateProjectFile(() => result.content)) return;
-    setParamDrafts(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
-    setParamOriginals(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
-    setSelectedId(`unit-${result.id}`);
+    markPerfSpan('graph.add.projectNode', () => {
+      const reference = projectDraft.units.find(unit => unit.id === unitId);
+      if (!reference) return;
+      const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
+      const unitFile = workspaceFiles.find(file => file.path === unitPath);
+      const defaults = unitFile?.role === 'unit'
+        ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
+        : {};
+      const result = addProjectInstance(projectWorkspaceFile.content, unitId, instanceId, defaults, position);
+      if (!updateProjectFile(() => result.content)) return;
+      setParamDrafts(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
+      setParamOriginals(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
+      setSelectedId(`unit-${result.id}`);
+    });
   }, [projectDraft.units, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
 
   const addProjectNodeFromLibrary = useCallback((unitId: string, position?: ProjectGraphPosition) => {
-    addProjectNode(unitId, uniqueInstanceId(project.nodes.map(node => node.id), unitId), position);
+    markPerfSpan('graph.add.projectNodeFromLibrary', () => {
+      addProjectNode(unitId, uniqueInstanceId(project.nodes.map(node => node.id), unitId), position);
+    });
   }, [addProjectNode, project.nodes]);
 
   const duplicateProjectNode = useCallback((instanceId: string) => {
-    try {
-      const result = duplicateProjectInstance(projectWorkspaceFile.content, instanceId);
-      const source = project.nodes.find(node => node.id === instanceId);
-      if (!source || !updateProjectFile(() => result.content)) return;
-      const values = Object.fromEntries(source.params.map(param => [paramDraftKey(result.id, param.key), param.value]));
-      setParamDrafts(current => ({ ...current, ...values }));
-      setParamOriginals(current => ({ ...current, ...values }));
-      setSelectedId(`unit-${result.id}`);
-    } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : String(error));
-    }
+    markPerfSpan('graph.duplicate.projectNode', () => {
+      try {
+        const result = duplicateProjectInstance(projectWorkspaceFile.content, instanceId);
+        const source = project.nodes.find(node => node.id === instanceId);
+        if (!source || !updateProjectFile(() => result.content)) return;
+        const values = Object.fromEntries(source.params.map(param => [paramDraftKey(result.id, param.key), param.value]));
+        setParamDrafts(current => ({ ...current, ...values }));
+        setParamOriginals(current => ({ ...current, ...values }));
+        setSelectedId(`unit-${result.id}`);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : String(error));
+      }
+    });
   }, [project.nodes, projectWorkspaceFile.content, updateProjectFile]);
 
   const renameProjectNode = useCallback((instanceId: string, nextId: string) => {
-    if (!updateProjectFile(content => renameProjectInstance(content, instanceId, nextId))) return;
-    const migrate = (values: Record<string, string>) => Object.fromEntries(Object.entries(values).map(([key, value]) => [
-      key.startsWith(`${instanceId}.`) ? `${nextId}${key.slice(instanceId.length)}` : key,
-      value,
-    ]));
-    setParamDrafts(migrate);
-    setParamOriginals(migrate);
-    setSelectedId(`unit-${nextId}`);
+    markPerfSpan('graph.rename.projectNode', () => {
+      if (!updateProjectFile(content => renameProjectInstance(content, instanceId, nextId))) return;
+      const migrate = (values: Record<string, string>) => Object.fromEntries(Object.entries(values).map(([key, value]) => [
+        key.startsWith(`${instanceId}.`) ? `${nextId}${key.slice(instanceId.length)}` : key,
+        value,
+      ]));
+      setParamDrafts(migrate);
+      setParamOriginals(migrate);
+      setSelectedId(`unit-${nextId}`);
+    });
   }, [updateProjectFile]);
 
   const removeProjectNode = useCallback((instanceId: string) => {
-    if (!updateProjectFile(content => removeProjectInstance(content, instanceId))) return;
-    const removeValues = (values: Record<string, string>) => Object.fromEntries(
-      Object.entries(values).filter(([key]) => !key.startsWith(`${instanceId}.`)),
-    );
-    setParamDrafts(removeValues);
-    setParamOriginals(removeValues);
-    setSelectedId(null);
+    markPerfSpan('graph.remove.projectNode', () => {
+      if (!updateProjectFile(content => removeProjectInstance(content, instanceId))) return;
+      const removeValues = (values: Record<string, string>) => Object.fromEntries(
+        Object.entries(values).filter(([key]) => !key.startsWith(`${instanceId}.`)),
+      );
+      setParamDrafts(removeValues);
+      setParamOriginals(removeValues);
+      setSelectedId(null);
+    });
   }, [updateProjectFile]);
 
   const reorderProjectNode = useCallback((instanceId: string, nextIndex: number) => {
-    updateProjectFile(content => moveProjectInstance(content, instanceId, nextIndex));
+    markPerfSpan('graph.reorder.projectNode', () => {
+      updateProjectFile(content => moveProjectInstance(content, instanceId, nextIndex));
+    });
   }, [updateProjectFile]);
 
   const moveProjectNode = useCallback((instanceId: string, position: ProjectGraphPosition) => {
-    updateProjectFile(content => setProjectInstancePosition(content, instanceId, position));
+    markPerfSpan('graph.move.projectNode', () => {
+      updateProjectFile(content => setProjectInstancePosition(content, instanceId, position));
+    });
   }, [updateProjectFile]);
 
   const updateProjectRoute = useCallback((index: number, route: ProjectRouteDraft) => {
-    updateProjectFile(content => replaceProjectRoute(content, projectPorts, index, route));
+    markPerfSpan('graph.update.route', () => {
+      updateProjectFile(content => replaceProjectRoute(content, projectPorts, index, route));
+    });
   }, [projectPorts, updateProjectFile]);
 
   const createProjectRoute = useCallback((route: ProjectRouteDraft) => {
-    updateProjectFile(content => addProjectRoute(content, projectPorts, route));
+    markPerfSpan('graph.create.route', () => {
+      updateProjectFile(content => addProjectRoute(content, projectPorts, route));
+    });
   }, [projectPorts, updateProjectFile]);
 
   const deleteProjectRoute = useCallback((index: number) => {
-    if (!updateProjectFile(content => removeProjectRoute(content, index))) return;
-    setSelectedRouteIndex(null);
+    markPerfSpan('graph.delete.route', () => {
+      if (!updateProjectFile(content => removeProjectRoute(content, index))) return;
+      setSelectedRouteIndex(null);
+    });
   }, [updateProjectFile]);
 
   const reorderProjectRoute = useCallback((index: number, nextIndex: number) => {
-    if (!updateProjectFile(content => moveProjectRoute(content, index, nextIndex))) return;
-    setSelectedRouteIndex(Math.max(0, Math.min(project.routes.length - 1, nextIndex)));
+    markPerfSpan('graph.reorder.route', () => {
+      if (!updateProjectFile(content => moveProjectRoute(content, index, nextIndex))) return;
+      setSelectedRouteIndex(Math.max(0, Math.min(project.routes.length - 1, nextIndex)));
+    });
   }, [project.routes.length, updateProjectFile]);
 
   const routeSources = useMemo(() => [
@@ -546,37 +606,43 @@ export default function App() {
   ], [project.nodes, projectPorts]);
 
   const updateWorkspaceFile = useCallback((path: string, content: string) => {
-    pushHistory();
-    setWorkspaceFiles(files => files.map(file => (file.path === path ? { ...file, content } : file)));
+    markPerfSpan('workspace.update.raw', () => {
+      pushHistory();
+      setWorkspaceFiles(files => files.map(file => (file.path === path ? { ...file, content } : file)));
+    });
   }, [pushHistory]);
 
   const createUnit = useCallback((name: string) => {
-    const content = createUnitV2({ name });
-    const unitName = parseUnitGraphDraft(content).name;
-    const path = `workspace/${unitName}.unit.v2.yaml`;
-    if (workspaceFiles.some(file => file.path === path)) throw new Error(`Workspace file "${path}" already exists.`);
-    pushHistory();
-    setWorkspaceFiles(files => [...files, { path, role: 'unit', content, originalContent: '' }]);
-    setSelectedWorkspacePath(path);
-    setSelectedId(null);
-    setSelectedRouteIndex(null);
-    setSelectedAtomId(null);
-    setInspectorView('contract');
-    setCanvasMode('project');
+    markPerfSpan('project.create.unitFile', () => {
+      const content = createUnitV2({ name });
+      const unitName = parseUnitGraphDraft(content).name;
+      const path = `workspace/${unitName}.unit.v2.yaml`;
+      if (workspaceFiles.some(file => file.path === path)) throw new Error(`Workspace file "${path}" already exists.`);
+      pushHistory();
+      setWorkspaceFiles(files => [...files, { path, role: 'unit', content, originalContent: '' }]);
+      setSelectedWorkspacePath(path);
+      setSelectedId(null);
+      setSelectedRouteIndex(null);
+      setSelectedAtomId(null);
+      setInspectorView('contract');
+      setCanvasMode('project');
+    });
   }, [pushHistory, workspaceFiles]);
 
   const updateSelectedUnitFile = useCallback((update: (content: string) => string, nextAtomId?: string | null) => {
-    setGraphEditError(null);
-    try {
-      const content = update(selectedUnitWorkspaceFile.content);
-      pushHistory();
-      setWorkspaceFiles(files =>
-        files.map(file => (file.path === selectedUnitWorkspaceFile.path ? { ...file, content } : file)),
-      );
-      if (nextAtomId !== undefined) setSelectedAtomId(nextAtomId);
-    } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : 'Unable to update unit graph.');
-    }
+    markPerfSpan('graph.update.unitFile', () => {
+      setGraphEditError(null);
+      try {
+        const content = update(selectedUnitWorkspaceFile.content);
+        pushHistory();
+        setWorkspaceFiles(files =>
+          files.map(file => (file.path === selectedUnitWorkspaceFile.path ? { ...file, content } : file)),
+        );
+        if (nextAtomId !== undefined) setSelectedAtomId(nextAtomId);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to update unit graph.');
+      }
+    });
   }, [pushHistory, selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path]);
 
   const updateSelectedAtom = useCallback((node: UnitGraphNode, originalId = node.id) => {
@@ -584,30 +650,38 @@ export default function App() {
   }, [updateSelectedUnitFile]);
 
   const addAtom = useCallback((atomName: string, position?: UnitGraphPosition) => {
-    try {
-      const result = addAtomNodeToUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, atomName, position);
-      updateSelectedUnitFile(() => result.content, result.id);
-    } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : 'Unable to add atom.');
-    }
+    markPerfSpan('contract.add.atom', () => {
+      try {
+        const result = addAtomNodeToUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, atomName, position);
+        updateSelectedUnitFile(() => result.content, result.id);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to add atom.');
+      }
+    });
   }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
 
   const removeSelectedAtom = useCallback(() => {
     if (!selectedAtom) return;
-    updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
+    markPerfSpan('contract.remove.atom', () => {
+      updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
+    });
   }, [selectedAtom, updateSelectedUnitFile]);
 
   const replaceSelectedAtom = useCallback((nodeId: string, nextAtomName: string, preserveId: boolean) => {
-    try {
-      const result = replaceAtomNodeInUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, nodeId, nextAtomName, preserveId);
-      updateSelectedUnitFile(() => result.content, result.id);
-    } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : 'Unable to replace atom.');
-    }
+    markPerfSpan('contract.replace.atom', () => {
+      try {
+        const result = replaceAtomNodeInUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, nodeId, nextAtomName, preserveId);
+        updateSelectedUnitFile(() => result.content, result.id);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to replace atom.');
+      }
+    });
   }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
 
   const connectAtoms = useCallback((source: UnitConnectionEndpoint, target: UnitConnectionEndpoint) => {
-    updateSelectedUnitFile(content => connectUnitNodes(content, backendSamples.atomCatalog, source, target));
+    markPerfSpan('contract.connect.atom', () => {
+      updateSelectedUnitFile(content => connectUnitNodes(content, backendSamples.atomCatalog, source, target));
+    });
   }, [updateSelectedUnitFile]);
 
   const reconnectAtoms = useCallback((
@@ -615,16 +689,22 @@ export default function App() {
     source: UnitConnectionEndpoint,
     target: UnitConnectionEndpoint,
   ) => {
-    updateSelectedUnitFile(content =>
-      reconnectUnitConnection(content, backendSamples.atomCatalog, previousTarget, source, target));
+    markPerfSpan('contract.reconnect.atom', () => {
+      updateSelectedUnitFile(content =>
+        reconnectUnitConnection(content, backendSamples.atomCatalog, previousTarget, source, target));
+    });
   }, [updateSelectedUnitFile]);
 
   const disconnectAtom = useCallback((target: UnitConnectionEndpoint) => {
-    updateSelectedUnitFile(content => disconnectUnitInput(content, target));
+    markPerfSpan('contract.disconnect.atom', () => {
+      updateSelectedUnitFile(content => disconnectUnitInput(content, target));
+    });
   }, [updateSelectedUnitFile]);
 
   const moveAtom = useCallback((nodeId: string, position: UnitGraphPosition) => {
-    updateSelectedUnitFile(content => setAtomNodePosition(content, nodeId, position));
+    markPerfSpan('contract.move.atom', () => {
+      updateSelectedUnitFile(content => setAtomNodePosition(content, nodeId, position));
+    });
   }, [updateSelectedUnitFile]);
 
   const copySelectedAtom = useCallback(() => {
@@ -633,19 +713,23 @@ export default function App() {
 
   const cutSelectedAtom = useCallback(() => {
     if (!selectedAtom) return;
-    setAtomClipboard(selectedAtom);
-    updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
+    markPerfSpan('contract.cut.atom', () => {
+      setAtomClipboard(selectedAtom);
+      updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
+    });
   }, [selectedAtom, updateSelectedUnitFile]);
 
   const pasteAtom = useCallback(() => {
     if (!atomClipboard) return;
 
-    try {
-      const result = pasteAtomNodeIntoUnit(selectedUnitWorkspaceFile.content, atomClipboard);
-      updateSelectedUnitFile(() => result.content, result.id);
-    } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : 'Unable to paste atom.');
-    }
+    markPerfSpan('contract.paste.atom', () => {
+      try {
+        const result = pasteAtomNodeIntoUnit(selectedUnitWorkspaceFile.content, atomClipboard);
+        updateSelectedUnitFile(() => result.content, result.id);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to paste atom.');
+      }
+    });
   }, [atomClipboard, selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
 
   const selectAtom = useCallback((id: string) => {
@@ -653,54 +737,64 @@ export default function App() {
   }, []);
 
   const openAtomInspector = useCallback((id: string) => {
-    setSelectedAtomId(id);
-    setInspectorView('contract');
+    markPerfSpan('ui.openAtomInspector', () => {
+      setSelectedAtomId(id);
+      setInspectorView('contract');
+    });
   }, []);
 
   const resetWorkspace = useCallback(() => {
-    pushHistory();
-    setWorkspaceFiles(initialWorkspaceFiles);
-    setEntryProject(backendSamples.project.file);
-    setSelectedWorkspacePath(initialWorkspaceFiles[0].path);
-    setParamDrafts(buildParamDrafts(backendSamples.project));
-    setParamOriginals(buildParamOriginals(backendSamples.project));
-    setSelectedId('unit-drive1');
-    setSelectedRouteIndex(null);
-    window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
-    window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
+    markPerfSpan('workspace.reset', () => {
+      pushHistory();
+      setWorkspaceFiles(initialWorkspaceFiles);
+      setEntryProject(backendSamples.project.file);
+      setSelectedWorkspacePath(initialWorkspaceFiles[0].path);
+      setParamDrafts(buildParamDrafts(backendSamples.project));
+      setParamOriginals(buildParamOriginals(backendSamples.project));
+      setSelectedId('unit-drive1');
+      setSelectedRouteIndex(null);
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+        window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
+      }
+    });
   }, [pushHistory]);
 
   const exportWorkspace = useCallback(() => {
-    const payload = createWorkspacePayload(entryProject, workspaceFiles);
-    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'audio-playground-workspace.json';
-    link.click();
-    URL.revokeObjectURL(url);
+    markPerfSpan('workspace.export', () => {
+      const payload = createWorkspacePayload(entryProject, workspaceFiles);
+      const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'audio-playground-workspace.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    });
   }, [entryProject, workspaceFiles]);
 
   const importWorkspace = useCallback(async (file: File | null) => {
     if (!file) return;
 
-    try {
-      const payload = parseWorkspacePayload(await file.text());
-      const imported = hydrateWorkspaceFiles(payload, initialWorkspaceFiles);
-      const importedProject = imported.find(item => item.path === payload.entryProject);
-      if (!importedProject) return;
-      const importedDraft = parseProjectGraphDraft(importedProject.content);
-      const importedInspect = projectDraftToInspect(importedDraft, backendSamples.project, payload.entryProject);
-      pushHistory();
-      setWorkspaceFiles(imported);
-      setEntryProject(payload.entryProject);
-      setSelectedWorkspacePath(payload.entryProject);
-      setParamDrafts(buildParamDrafts(importedInspect));
-      setParamOriginals(buildParamOriginals(importedInspect));
-      setSelectedId(null);
-      setSelectedRouteIndex(null);
-    } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : 'Workspace import failed.');
-    }
+    markPerfSpan('workspace.import', async () => {
+      try {
+        const payload = parseWorkspacePayload(await file.text());
+        const imported = hydrateWorkspaceFiles(payload, initialWorkspaceFiles);
+        const importedProject = imported.find(item => item.path === payload.entryProject);
+        if (!importedProject) return;
+        const importedDraft = parseProjectGraphDraft(importedProject.content);
+        const importedInspect = projectDraftToInspect(importedDraft, backendSamples.project, payload.entryProject);
+        pushHistory();
+        setWorkspaceFiles(imported);
+        setEntryProject(payload.entryProject);
+        setSelectedWorkspacePath(payload.entryProject);
+        setParamDrafts(buildParamDrafts(importedInspect));
+        setParamOriginals(buildParamOriginals(importedInspect));
+        setSelectedId(null);
+        setSelectedRouteIndex(null);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Workspace import failed.');
+      }
+    });
   }, [pushHistory]);
 
   return (
@@ -777,7 +871,7 @@ export default function App() {
             selectedAtomId={selectedAtomId}
             selectedUnitLabel={selectedNode.unit.name}
             workspaceFile={selectedUnitWorkspaceFile}
-            onBackToProject={() => setCanvasMode('project')}
+            onBackToProject={() => markPerfSpan('ui.returnToProject', () => setCanvasMode('project'))}
             onAddAtomAt={addAtom}
             onMoveAtom={moveAtom}
             onConnectAtoms={connectAtoms}
@@ -807,7 +901,9 @@ export default function App() {
           commands={backendCommands}
           project={project}
           inspectorView={inspectorView}
-          onInspectorViewChange={setInspectorView}
+          onInspectorViewChange={value => {
+            markPerfSpan('ui.change.inspectorView', () => setInspectorView(value));
+          }}
           selectedNode={selectedNode}
           selectedRoute={selectedRoute}
           selectedRouteIndex={selectedRouteIndex}
