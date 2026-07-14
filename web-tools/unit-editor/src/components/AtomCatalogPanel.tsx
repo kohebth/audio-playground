@@ -6,7 +6,10 @@ type Props = {
   unit: UnitInspect;
   catalog: AtomCatalog;
   manifest: Record<string, string>;
+  onAddAtom?: (atomName: string) => void;
 };
+
+export const ATOM_DRAG_TYPE = 'application/x-apg-atom';
 
 const CATEGORY_COLORS: Record<string, string> = {
   amplitude: '#10b981',
@@ -37,7 +40,7 @@ function profileLabel(atom: AtomCatalogAtom): string {
   return enabled.length > 0 ? enabled.join(', ') : 'none';
 }
 
-export function AtomCatalogPanel({ unit, catalog, manifest }: Props) {
+export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) {
   const unitAtomNames = unit.graph.nodes.map(node => node.atom);
   const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? catalog.atoms[0]?.name ?? '');
   const selectedAtom = catalog.atoms.find(atom => atom.name === selectedAtomName) ?? catalog.atoms[0];
@@ -75,7 +78,12 @@ export function AtomCatalogPanel({ unit, catalog, manifest }: Props) {
           <button
             key={atom.name}
             className={`atom-palette__item ${atom.name === selectedAtomName ? 'atom-palette__item--active' : ''}`}
+            draggable
             onClick={() => setSelectedAtomName(atom.name)}
+            onDragStart={event => {
+              event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.name);
+              event.dataTransfer.effectAllowed = 'copy';
+            }}
             style={{ '--category-color': categoryColor(atom.category) } as CSSProperties}
             type="button"
           >
@@ -109,6 +117,11 @@ export function AtomCatalogPanel({ unit, catalog, manifest }: Props) {
               <strong>{profileLabel(selectedAtom)}</strong>
             </div>
           </div>
+          {onAddAtom ? (
+            <button className="atom-detail__add" onClick={() => onAddAtom(selectedAtom.name)} type="button">
+              Add atom
+            </button>
+          ) : null}
         </div>
       ) : null}
 

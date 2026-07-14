@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, type CSSProperties } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
 import {
   Controls,
   Handle,
@@ -11,13 +11,15 @@ import {
   type Node,
   type NodeProps,
   type NodeTypes,
+  type ReactFlowInstance,
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
 import dagre from 'dagre';
 
 import type { AtomCatalog, WorkspaceFile } from '../lib/backendSamples';
-import { parseUnitGraphDraft, type UnitConnectionEndpoint, type UnitGraphDraft } from '../lib/unitV2Graph';
+import { ATOM_DRAG_TYPE } from './AtomCatalogPanel';
+import { parseUnitGraphDraft, type GraphPosition, type UnitConnectionEndpoint, type UnitGraphDraft } from '../lib/unitV2Graph';
 
 type ContractNodeData = {
   id: string;
@@ -46,6 +48,7 @@ type Props = {
   ) => void;
   onSelectAtom: (id: string) => void;
   onOpenAtomInspector: (id: string) => void;
+  onAddAtomAt: (atomName: string, position: GraphPosition) => void;
 };
 
 function endpoint(nodeId: string | null, handle: string | null, direction: 'in' | 'out'): UnitConnectionEndpoint | null {
@@ -134,7 +137,8 @@ function buildContractFlow(
 
   for (const node of nodes) {
     const position = graph.node(node.id);
-    node.position = { x: position.x - NODE_WIDTH / 2, y: position.y - NODE_HEIGHT / 2 };
+    const storedPosition = unit.nodes.find(item => `contract-${item.id}` === node.id)?.ui?.position;
+    node.position = storedPosition ?? { x: position.x - NODE_WIDTH / 2, y: position.y - NODE_HEIGHT / 2 };
   }
 
   return { nodes, edges };
@@ -200,6 +204,7 @@ export function ContractGraphCanvas({
   onSelectAtom,
   onOpenAtomInspector,
   onReconnectAtoms,
+  onAddAtomAt,
 }: Props) {
   const parsed = useMemo<ParsedContractGraph>(() => {
     try {
@@ -215,6 +220,8 @@ export function ContractGraphCanvas({
   }, [catalog, selectedAtomId, workspaceFile.content]);
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<ContractFlowNode>(parsed.flow.nodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(parsed.flow.edges);
+  const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
+  const reactFlowRef = useRef<ReactFlowInstance<ContractFlowNode, Edge> | null>(null);
 
   useEffect(() => {
     setFlowNodes(current => parsed.flow.nodes.map(node => {
@@ -247,6 +254,21 @@ export function ContractGraphCanvas({
     }
   };
 
+  const dragState = (event: DragEvent) => event.dataTransfer.types.includes(ATOM_DRAG_TYPE) ? 'valid' : 'reject';
+  const dragOver = (event: DragEvent) => {
+    const state = dragState(event);
+    event.preventDefault();
+    event.dataTransfer.dropEffect = state === 'valid' ? 'copy' : 'none';
+    setDropState(state);
+  };
+  const drop = (event: DragEvent) => {
+    event.preventDefault();
+    const atomName = event.dataTransfer.getData(ATOM_DRAG_TYPE);
+    setDropState('idle');
+    if (!atomName || !reactFlowRef.current) return;
+    onAddAtomAt(atomName, reactFlowRef.current.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+  };
+
   return (
     <main className="canvas canvas--contract canvas-area">
       <div className="canvas-modebar">
@@ -266,7 +288,12 @@ export function ContractGraphCanvas({
           <p>{parsed.error}</p>
         </div>
       ) : (
-        <div className="flow-shell flow-shell--contract">
+        <div
+          className={`flow-shell flow-shell--contract flow-shell--drop-${dropState}`}
+          onDragLeave={() => setDropState('idle')}
+          onDragOver={dragOver}
+          onDrop={drop}
+        >
           <div className="edit-plane-grid" aria-hidden="true" />
           <ReactFlowProvider>
             <ReactFlow
@@ -279,6 +306,9 @@ export function ContractGraphCanvas({
               onNodeClick={(_, node) => onSelectAtom((node.data as ContractNodeData).id)}
               onNodeDoubleClick={(_, node) => onOpenAtomInspector((node.data as ContractNodeData).id)}
               onNodesChange={onNodesChange}
+              onInit={instance => {
+                reactFlowRef.current = instance;
+              }}
               onReconnect={reconnect}
               deleteKeyCode={['Backspace', 'Delete']}
               edgesReconnectable

@@ -46,13 +46,14 @@ const removedGraph = parseUnitGraphDraft(removed);
 assert.deepEqual(removedGraph.nodes.map(node => node.id), ['apply_gain']);
 assert(!removedGraph.signals.includes('gain_value'));
 
-const added = addAtomNodeToUnit(created, catalog, 'amplitude_clip_hard');
+const added = addAtomNodeToUnit(created, catalog, 'amplitude_clip_hard', { x: 120, y: 240 });
 const addedGraph = parseUnitGraphDraft(added.content);
 const addedNode = addedGraph.nodes.find(node => node.id === added.id);
 assert(addedNode);
 assert.deepEqual(Object.keys(addedNode.in), ['signal']);
 assert.deepEqual(Object.keys(addedNode.out), ['signal']);
 assert.deepEqual(Object.keys(addedNode.config), ['threshold']);
+assert.deepEqual(addedNode.ui?.position, { x: 120, y: 240 });
 const removedAdded = parseUnitGraphDraft(removeAtomNodeFromUnit(added.content, added.id));
 assert(!removedAdded.nodes.some(node => node.id === added.id));
 assert(!removedAdded.signals.some(signal => signal.startsWith(`${added.id}_`)));

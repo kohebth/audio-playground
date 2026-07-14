@@ -30,6 +30,7 @@ import {
   removeProjectRoute,
   renameProjectInstance,
   replaceProjectRoute,
+  type GraphPosition as ProjectGraphPosition,
   type ProjectPortCatalog,
   type ProjectRouteDraft,
 } from './lib/projectV2Graph';
@@ -44,6 +45,7 @@ import {
   reconnectUnitConnection,
   serializeUnitGraphNodeUpdate,
   updateProjectInstanceParam,
+  type GraphPosition as UnitGraphPosition,
   type UnitGraphNode,
   type UnitConnectionEndpoint,
 } from './lib/unitV2Graph';
@@ -60,6 +62,20 @@ import './App.css';
 function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): ProjectNodeData | null {
   if (!id) return null;
   return nodes.find(node => node.id === id)?.data ?? null;
+}
+
+function uniqueInstanceId(existing: string[], unitId: string): string {
+  const normalized = unitId
+    .replace(/_unit$/, '')
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+/, '')
+    || 'unit';
+  const base = /^[a-z]/.test(normalized) ? normalized : `unit_${normalized}`;
+  let suffix = 1;
+  let candidate = base;
+  const used = new Set(existing);
+  while (used.has(candidate)) candidate = `${base}_${++suffix}`;
+  return candidate;
 }
 
 type InspectorView = 'project' | 'atom' | 'contract';
@@ -123,7 +139,15 @@ export default function App() {
       return backendSamples.project;
     }
   }, [initialWorkspace]);
-  const initialGraph = useMemo(() => buildProjectGraph(initialProjectInspect), [initialProjectInspect]);
+  const initialProjectDraft = useMemo(() => {
+    try {
+      const file = initialWorkspace.files.find(item => item.path === initialWorkspace.entryProject);
+      return file ? parseProjectGraphDraft(file.content) : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [initialWorkspace]);
+  const initialGraph = useMemo(() => buildProjectGraph(initialProjectInspect, initialProjectDraft), [initialProjectDraft, initialProjectInspect]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
   const [liveBypassController, setLiveBypassController] = useState<LiveBypassController | null>(null);
@@ -244,13 +268,17 @@ export default function App() {
     graphTopologyRef.current = graphTopologySignature;
 
     if (topologyChanged) {
-      const next = buildProjectGraph(project);
+      const next = buildProjectGraph(project, projectDraft);
       setNodes(current => next.nodes.map(node => {
         const positioned = current.find(item => item.id === node.id);
-        const data = node.data.kind === 'unit'
-          ? { ...node.data, paramControls: projectParamControls[node.data.unit.id] ?? [], onParamChange: updateParamDraft }
-          : node.data;
-        return positioned ? { ...node, data, position: positioned.position } : { ...node, data };
+        let data = node.data;
+        let storedPosition: ProjectGraphPosition | undefined;
+        if (node.data.kind === 'unit') {
+          const unitData = node.data;
+          data = { ...unitData, paramControls: projectParamControls[unitData.unit.id] ?? [], onParamChange: updateParamDraft };
+          storedPosition = projectDraft.nodes.find(item => item.id === unitData.instance.id)?.ui?.position;
+        }
+        return positioned && !storedPosition ? { ...node, data, position: positioned.position } : { ...node, data };
       }));
       setEdges(next.edges);
       return;
@@ -284,7 +312,7 @@ export default function App() {
       });
       return changed ? next : current;
     });
-  }, [graphTopologySignature, project, projectParamControls, setEdges, setNodes, updateParamDraft]);
+  }, [graphTopologySignature, project, projectDraft, projectParamControls, setEdges, setNodes, updateParamDraft]);
 
   useEffect(() => {
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(createWorkspacePayload(entryProject, workspaceFiles)));
@@ -361,7 +389,7 @@ export default function App() {
     }
   }, [projectWorkspaceFile.content, projectWorkspaceFile.path]);
 
-  const addProjectNode = useCallback((unitId: string, instanceId: string) => {
+  const addProjectNode = useCallback((unitId: string, instanceId: string, position?: ProjectGraphPosition) => {
     const reference = projectDraft.units.find(unit => unit.id === unitId);
     if (!reference) return;
     const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
@@ -369,12 +397,16 @@ export default function App() {
     const defaults = unitFile?.role === 'unit'
       ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
       : {};
-    const result = addProjectInstance(projectWorkspaceFile.content, unitId, instanceId, defaults);
+    const result = addProjectInstance(projectWorkspaceFile.content, unitId, instanceId, defaults, position);
     if (!updateProjectFile(() => result.content)) return;
     setParamDrafts(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
     setParamOriginals(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
     setSelectedId(`unit-${result.id}`);
   }, [projectDraft.units, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
+
+  const addProjectNodeFromLibrary = useCallback((unitId: string, position?: ProjectGraphPosition) => {
+    addProjectNode(unitId, uniqueInstanceId(project.nodes.map(node => node.id), unitId), position);
+  }, [addProjectNode, project.nodes]);
 
   const duplicateProjectNode = useCallback((instanceId: string) => {
     try {
@@ -477,9 +509,9 @@ export default function App() {
     updateSelectedUnitFile(content => serializeUnitGraphNodeUpdate(content, node, originalId), node.id);
   }, [updateSelectedUnitFile]);
 
-  const addAtom = useCallback((atomName: string) => {
+  const addAtom = useCallback((atomName: string, position?: UnitGraphPosition) => {
     try {
-      const result = addAtomNodeToUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, atomName);
+      const result = addAtomNodeToUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, atomName, position);
       updateSelectedUnitFile(() => result.content, result.id);
     } catch (error) {
       setGraphEditError(error instanceof Error ? error.message : 'Unable to add atom.');
@@ -637,6 +669,7 @@ export default function App() {
           onSelectWorkspaceFile={setSelectedWorkspacePath}
           onCreateUnit={createUnit}
           onAddInstance={addProjectNode}
+          onAddUnitFromLibrary={addProjectNodeFromLibrary}
           onAddRoute={createProjectRoute}
           onSelectNode={selectProjectNode}
           onOpenContractGraph={openContractGraph}
@@ -652,6 +685,7 @@ export default function App() {
             selectedUnitLabel={selectedNode.unit.name}
             workspaceFile={selectedUnitWorkspaceFile}
             onBackToProject={() => setCanvasMode('project')}
+            onAddAtomAt={addAtom}
             onConnectAtoms={connectAtoms}
             onDisconnectAtom={disconnectAtom}
             onOpenAtomInspector={openAtomInspector}
@@ -668,6 +702,7 @@ export default function App() {
             onSelectNode={selectProjectNode}
             onOpenContractGraph={openContractGraph}
             onSelectRoute={selectRoute}
+            onAddUnitAt={addProjectNodeFromLibrary}
           />
         )}
 

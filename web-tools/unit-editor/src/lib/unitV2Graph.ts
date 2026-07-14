@@ -20,6 +20,9 @@ export type UnitGraphNode = {
   in: Record<string, string>;
   out: Record<string, string>;
   config: Record<string, string>;
+  ui?: {
+    position?: GraphPosition;
+  };
 };
 
 export type UnitGraphDraft = {
@@ -32,6 +35,11 @@ export type UnitGraphDraft = {
 export type UnitConnectionEndpoint = {
   nodeId: string;
   field: string;
+};
+
+export type GraphPosition = {
+  x: number;
+  y: number;
 };
 
 type UnitDocument = Record<string, unknown> & {
@@ -95,12 +103,17 @@ function parseParam(name: string, value: unknown): UnitParamDraft {
 
 function parseNode(value: unknown, index: number): UnitGraphNode {
   const raw = isObject(value) ? value : {};
+  const ui = isObject(raw.ui) ? raw.ui : {};
+  const position = isObject(ui.position) ? ui.position : {};
+  const x = Number(position.x);
+  const y = Number(position.y);
   return {
     id: String(raw.id ?? `node_${index + 1}`),
     atom: String(raw.atom ?? 'unknown'),
     in: stringMap(raw.in),
     out: stringMap(raw.out),
     config: stringMap(raw.config),
+    ui: Number.isFinite(x) && Number.isFinite(y) ? { position: { x, y } } : undefined,
   };
 }
 
@@ -145,6 +158,7 @@ function nodeToYaml(node: UnitGraphNode): Record<string, unknown> {
   if (inputs) raw.in = inputs;
   if (outputs) raw.out = outputs;
   if (config) raw.config = config;
+  if (node.ui?.position) raw.ui = { position: node.ui.position };
   return raw;
 }
 
@@ -359,7 +373,12 @@ export function serializeUnitGraphNodeUpdate(content: string, node: UnitGraphNod
   return dumpDocument(doc);
 }
 
-export function addAtomNodeToUnit(content: string, catalog: AtomCatalog, atomName: string): { content: string; id: string } {
+export function addAtomNodeToUnit(
+  content: string,
+  catalog: AtomCatalog,
+  atomName: string,
+  position?: GraphPosition,
+): { content: string; id: string } {
   const atom = catalog.atoms.find(item => item.name === atomName);
   if (!atom) throw new Error(`Atom "${atomName}" is not available in the catalog.`);
 
@@ -379,6 +398,7 @@ export function addAtomNodeToUnit(content: string, catalog: AtomCatalog, atomNam
     in: Object.fromEntries(atom.inputs.map(field => [field.name, ''])),
     out: outputs,
     config: Object.fromEntries(atom.config.map(field => [field.name, atomDefaultValue(field.type)])),
+    ui: position ? { position } : undefined,
   };
 
   graph.signals = Array.from(existingSignals);

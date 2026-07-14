@@ -11,6 +11,7 @@ type Props = {
   onSelectWorkspaceFile: (path: string) => void;
   onCreateUnit: (name: string) => void;
   onAddInstance: (unitId: string, instanceId: string) => void;
+  onAddUnitFromLibrary: (unitId: string) => void;
   onAddRoute: (route: { from: string; to: string }) => void;
   routeSources: string[];
   routeTargets: string[];
@@ -18,6 +19,8 @@ type Props = {
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
 };
+
+export const UNIT_DRAG_TYPE = 'application/x-apg-unit';
 
 const unitDotColors = ['var(--accent-blue)', 'var(--accent-orange)', 'var(--accent-cyan)', 'var(--accent-purple)', 'var(--accent-green)', '#f472b6'];
 type SidebarSection = 'workspace' | 'pedalboard' | 'routes' | 'drafts';
@@ -31,6 +34,7 @@ export function ProjectSidebar({
   onSelectWorkspaceFile,
   onCreateUnit,
   onAddInstance,
+  onAddUnitFromLibrary,
   onAddRoute,
   onSelectNode,
   onOpenContractGraph,
@@ -130,6 +134,24 @@ export function ProjectSidebar({
         <i className="fa-solid fa-chevron-down chevron" aria-hidden="true" />
       </button>
       <div className={`accordion-body ${collapsedSections.pedalboard ? 'hidden' : ''}`}>
+      <div className="unit-library" aria-label="Unit library">
+        {project.units.map(unit => (
+          <button
+            key={unit.id}
+            className="unit-library__item"
+            draggable
+            onClick={() => onAddUnitFromLibrary(unit.id)}
+            onDragStart={event => {
+              event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id);
+              event.dataTransfer.effectAllowed = 'copy';
+            }}
+            type="button"
+          >
+            <span>{unit.name}</span>
+            <strong>{unit.id}</strong>
+          </button>
+        ))}
+      </div>
       <form className="project-instance-create add-unit-widget" onSubmit={submitInstance}>
         <select aria-label="Unit type" onChange={event => setInstanceUnit(event.target.value)} value={instanceUnit}>
           {project.units.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}

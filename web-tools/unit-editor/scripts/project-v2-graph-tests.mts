@@ -32,8 +32,9 @@ const draft = parseProjectGraphDraft(project);
 assert.equal(draft.nodes.length, 7);
 assert.equal(draft.routes.length, 9);
 
-const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' });
+const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' }, { x: 320, y: 180 });
 assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.id, 'drive2');
+assert.deepEqual(parseProjectGraphDraft(added.content).nodes.at(-1)?.ui?.position, { x: 320, y: 180 });
 assert.throws(() => addProjectInstance(project, 'missing_unit', 'missing1'), /was not found/);
 assert.throws(() => addProjectInstance(project, 'overdrive_unit', 'drive1'), /already exists/);
 

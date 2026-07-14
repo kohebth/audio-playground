@@ -3,7 +3,8 @@ import yaml from 'js-yaml';
 import type { Compatibility, ProjectInspect, ProjectInstance, ProjectRoute, ProjectUnit } from './backendSamples';
 
 export type ProjectUnitRefDraft = { id: string; file: string };
-export type ProjectInstanceDraft = { id: string; unit: string; params: Record<string, string> };
+export type GraphPosition = { x: number; y: number };
+export type ProjectInstanceDraft = { id: string; unit: string; params: Record<string, string>; ui?: { position?: GraphPosition } };
 export type ProjectRouteDraft = { from: string; to: string };
 export type ProjectSceneDraft = { name: string; params: Record<string, string> };
 
@@ -38,6 +39,13 @@ function dumpDocument(doc: ProjectDocument): string {
 function stringMap(value: unknown): Record<string, string> {
   if (!isObject(value)) return {};
   return Object.fromEntries(Object.entries(value).map(([key, raw]) => [key, String(raw)]));
+}
+
+function parsePosition(value: unknown): GraphPosition | undefined {
+  if (!isObject(value)) return undefined;
+  const x = Number(value.x);
+  const y = Number(value.y);
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
 }
 
 function parseEndpoint(endpoint: string): { instance: string; port: string } {
@@ -81,6 +89,7 @@ export function parseProjectGraphDraft(content: string): ProjectGraphDraft {
       id: String(node.id ?? ''),
       unit: String(node.unit ?? ''),
       params: stringMap(node.params),
+      ui: isObject(node.ui) ? { position: parsePosition(node.ui.position) } : undefined,
     })),
     routes: (Array.isArray(chain.routes) ? chain.routes : []).filter(isObject).map(route => ({
       from: String(route.from ?? ''),
@@ -138,6 +147,7 @@ export function addProjectInstance(
   unit: string,
   requestedId: string,
   params: Record<string, string> = {},
+  position?: GraphPosition,
 ): { content: string; id: string } {
   const doc = loadDocument(content);
   const draft = parseProjectGraphDraft(content);
@@ -145,7 +155,9 @@ export function addProjectInstance(
   if (!/^[a-z][a-z0-9_]*$/.test(requestedId)) throw new Error('Instance id must use lowercase snake_case.');
   if (draft.nodes.some(node => node.id === requestedId)) throw new Error(`Project instance "${requestedId}" already exists.`);
   const chain = ensureChain(doc);
-  (chain.nodes as unknown[]).push({ id: requestedId, unit, params: { ...params } });
+  const node: Record<string, unknown> = { id: requestedId, unit, params: { ...params } };
+  if (position) node.ui = { position };
+  (chain.nodes as unknown[]).push(node);
   return { content: dumpDocument(doc), id: requestedId };
 }
 

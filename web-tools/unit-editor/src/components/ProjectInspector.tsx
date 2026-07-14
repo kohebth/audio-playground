@@ -418,14 +418,10 @@ export function ProjectInspector({
                 </label>
                 <label>
                   <span>Type</span>
-                  <select
-                    value={selectedAtom.atom}
-                    onChange={event => onSelectedAtomChange({ ...selectedAtom, atom: event.target.value })}
-                  >
-                    {atomCatalog.atoms.map(atom => (
-                      <option key={atom.name} value={atom.name}>{atom.name}</option>
-                    ))}
-                  </select>
+                  <strong className="atom-type-lock">
+                    {selectedAtom.atom}
+                    <i className="fa-solid fa-lock" aria-hidden="true" />
+                  </strong>
                 </label>
               </div>
 
@@ -436,6 +432,13 @@ export function ProjectInspector({
                     ? `${selectedAtomContract.inputs.length} inputs / ${selectedAtomContract.outputs.length} outputs / ${selectedAtomContract.config.length} config`
                     : 'Atom metadata unavailable'}
                 </strong>
+              </div>
+
+              <div className="atom-replace-panel">
+                <button disabled title="Replacement preview is not available yet" type="button">
+                  Replace atom...
+                </button>
+                <span>Type changes require a compatibility preview.</span>
               </div>
 
               {(['in', 'out', 'config'] as const).map(section => (
@@ -500,7 +503,7 @@ export function ProjectInspector({
             />
           </details>
 
-          <AtomCatalogPanel unit={unit} catalog={atomCatalog} manifest={atomCatalogManifest} />
+          <AtomCatalogPanel unit={unit} catalog={atomCatalog} manifest={atomCatalogManifest} onAddAtom={onAddAtom} />
 
           <details className="inspector-block" open>
             <summary className="inspector-block__label">Unit Contract</summary>

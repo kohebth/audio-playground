@@ -78,6 +78,18 @@ includes('web-tools/unit-editor/src/components/ProjectInspector.tsx', '<strong>{
 includesContent(atomPalette, 'catalog.atoms.map(', 'atom palette must render from backend atoms');
 includesContent(atomPalette, 'aria-label="Atom palette"', 'atom palette should expose contract-backed rendering');
 includesContent(atomPalette, 'unit.graph.nodes.map', 'unit inspect graph should drive contract view details');
+includesContent(atomPalette, "ATOM_DRAG_TYPE = 'application/x-apg-atom'", 'atom palette must define a drag payload type');
+includesContent(atomPalette, 'event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.name)', 'atom palette items must be draggable');
+includesContent(atomPalette, 'Add atom', 'atom palette must keep a click fallback for creation');
+includesContent(contractCanvas, 'onAddAtomAt(atomName', 'unit graph canvas must create dropped atoms at a pointer position');
+includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
+includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
+includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
+includesContent(projectCanvas, 'onAddUnitAt(unitId', 'project canvas must create dropped units at a pointer position');
+includesContent(projectCanvas, 'flow-shell--drop-${dropState}', 'project canvas must expose valid/reject drop feedback');
+includesContent(projectInspector, 'atom-type-lock', 'selected atom type must render as read-only');
+assert(!projectInspector.includes('onSelectedAtomChange({ ...selectedAtom, atom:'), 'atom inspector must not directly mutate atom type');
+includesContent(projectInspector, 'Replace atom...', 'atom type changes must route through explicit replacement workflow');
 assert(
   /localStorage\.getItem\(WORKSPACE_STORAGE_KEY\)/.test(app),
   'workspace autosave restore must read from localStorage',

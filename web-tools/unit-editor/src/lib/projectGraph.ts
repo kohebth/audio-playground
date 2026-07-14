@@ -1,6 +1,7 @@
 import type { Edge, Node } from '@xyflow/react';
 import dagre from 'dagre';
 import type { ProjectInspect, ProjectInstance, ProjectRoute, ProjectUnit } from './backendSamples';
+import type { ProjectGraphDraft } from './projectV2Graph';
 
 export type ProjectNodeData =
   | {
@@ -71,8 +72,12 @@ function createRouteEdge(route: ProjectRoute, index: number): Edge {
   };
 }
 
-export function buildProjectGraph(project: ProjectInspect): { nodes: Node<ProjectNodeData>[]; edges: Edge[] } {
+export function buildProjectGraph(
+  project: ProjectInspect,
+  draft?: ProjectGraphDraft,
+): { nodes: Node<ProjectNodeData>[]; edges: Edge[] } {
   const unitsById = new Map(project.units.map(unit => [unit.id, unit]));
+  const positionByInstance = new Map((draft?.nodes ?? []).map(node => [node.id, node.ui?.position]));
   const graph = new dagre.graphlib.Graph();
   const nodes: Node<ProjectNodeData>[] = [
     createSystemNode('system-input', 'Input', 'system.input', '#0891b2'),
@@ -93,7 +98,7 @@ export function buildProjectGraph(project: ProjectInspect): { nodes: Node<Projec
     const node: Node<ProjectNodeData> = {
       id: `unit-${instance.id}`,
       type: 'projectNode',
-      position: { x: 0, y: 0 },
+      position: positionByInstance.get(instance.id) ?? { x: 0, y: 0 },
       data: {
         kind: 'unit',
         instance,
@@ -117,6 +122,7 @@ export function buildProjectGraph(project: ProjectInspect): { nodes: Node<Projec
   dagre.layout(graph);
 
   for (const node of nodes) {
+    if (node.data.kind === 'unit' && positionByInstance.get(node.data.instance.id)) continue;
     const position = graph.node(node.id);
     const width = node.data.kind === 'system' ? SYSTEM_NODE_WIDTH : node.data.instance.params.length > 1 ? NODE_WIDTH : 140;
     const height = node.data.kind === 'system' ? SYSTEM_NODE_HEIGHT : NODE_HEIGHT;
