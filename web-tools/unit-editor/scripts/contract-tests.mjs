@@ -82,14 +82,26 @@ includesContent(atomPalette, "ATOM_DRAG_TYPE = 'application/x-apg-atom'", 'atom 
 includesContent(atomPalette, 'event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.name)', 'atom palette items must be draggable');
 includesContent(atomPalette, 'Add atom', 'atom palette must keep a click fallback for creation');
 includesContent(contractCanvas, 'onAddAtomAt(atomName', 'unit graph canvas must create dropped atoms at a pointer position');
+includesContent(contractCanvas, 'onNodeDragStop', 'unit graph canvas must persist atom moves');
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
 includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
 includesContent(projectCanvas, 'onAddUnitAt(unitId', 'project canvas must create dropped units at a pointer position');
+includesContent(projectCanvas, 'onNodeDragStop', 'project canvas must persist unit moves');
 includesContent(projectCanvas, 'flow-shell--drop-${dropState}', 'project canvas must expose valid/reject drop feedback');
 includesContent(projectInspector, 'atom-type-lock', 'selected atom type must render as read-only');
 assert(!projectInspector.includes('onSelectedAtomChange({ ...selectedAtom, atom:'), 'atom inspector must not directly mutate atom type');
 includesContent(projectInspector, 'Replace atom...', 'atom type changes must route through explicit replacement workflow');
+includesContent(projectInspector, 'previewAtomReplacement', 'atom replacement must preview affected compatibility');
+includesContent(projectInspector, 'Confirm replacement', 'atom replacement must require confirmation');
+includesContent(projectInspector, 'Preserve instance ID', 'atom replacement must make ID preservation explicit');
+includesContent(app, 'replaceAtomNodeInUnit', 'atom replacement must apply through a dedicated graph transaction');
+includesContent(app, 'undoStack', 'workspace graph edits must track undo history');
+includesContent(app, 'redoStack', 'workspace graph edits must track redo history');
+includesContent(app, 'setAtomNodePosition', 'atom moves must use a YAML-backed transaction');
+includesContent(app, 'setProjectInstancePosition', 'unit moves must use a YAML-backed transaction');
+includesContent(projectTopbar, 'title="Undo"', 'topbar must expose undo control');
+includesContent(projectTopbar, 'title="Redo"', 'topbar must expose redo control');
 assert(
   /localStorage\.getItem\(WORKSPACE_STORAGE_KEY\)/.test(app),
   'workspace autosave restore must read from localStorage',

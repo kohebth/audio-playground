@@ -49,6 +49,7 @@ type Props = {
   onSelectAtom: (id: string) => void;
   onOpenAtomInspector: (id: string) => void;
   onAddAtomAt: (atomName: string, position: GraphPosition) => void;
+  onMoveAtom: (nodeId: string, position: GraphPosition) => void;
 };
 
 function endpoint(nodeId: string | null, handle: string | null, direction: 'in' | 'out'): UnitConnectionEndpoint | null {
@@ -205,6 +206,7 @@ export function ContractGraphCanvas({
   onOpenAtomInspector,
   onReconnectAtoms,
   onAddAtomAt,
+  onMoveAtom,
 }: Props) {
   const parsed = useMemo<ParsedContractGraph>(() => {
     try {
@@ -226,9 +228,10 @@ export function ContractGraphCanvas({
   useEffect(() => {
     setFlowNodes(current => parsed.flow.nodes.map(node => {
       const positioned = current.find(item => item.id === node.id);
-      return positioned ? { ...node, position: positioned.position } : node;
+      const storedPosition = parsed.unit?.nodes.find(item => `contract-${item.id}` === node.id)?.ui?.position;
+      return positioned && !storedPosition ? { ...node, position: positioned.position } : node;
     }));
-  }, [parsed.flow.nodes, setFlowNodes]);
+  }, [parsed.flow.nodes, parsed.unit?.nodes, setFlowNodes]);
 
   useEffect(() => {
     setFlowEdges(parsed.flow.edges);
@@ -305,6 +308,7 @@ export function ContractGraphCanvas({
               onEdgesChange={onEdgesChange}
               onNodeClick={(_, node) => onSelectAtom((node.data as ContractNodeData).id)}
               onNodeDoubleClick={(_, node) => onOpenAtomInspector((node.data as ContractNodeData).id)}
+              onNodeDragStop={(_, node) => onMoveAtom((node.data as ContractNodeData).id, node.position)}
               onNodesChange={onNodesChange}
               onInit={instance => {
                 reactFlowRef.current = instance;

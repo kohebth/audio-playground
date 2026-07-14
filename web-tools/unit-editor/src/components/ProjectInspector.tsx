@@ -14,7 +14,13 @@ import type {
   WorkspaceFile,
 } from '../lib/backendSamples';
 import { type ParamOverride } from '../lib/projectParams';
-import { findAtom, type UnitGraphDraft, type UnitGraphNode } from '../lib/unitV2Graph';
+import {
+  findAtom,
+  previewAtomReplacement,
+  type AtomReplacementPreview,
+  type UnitGraphDraft,
+  type UnitGraphNode,
+} from '../lib/unitV2Graph';
 
 type Props = {
   validation: ValidationResult;
@@ -51,6 +57,7 @@ type Props = {
   onCutAtom: () => void;
   onPasteAtom: () => void;
   onRemoveAtom: () => void;
+  onReplaceAtom: (nodeId: string, nextAtomName: string, preserveId: boolean) => void;
   onResetUnitParams: (instanceId: string) => void;
   onSelectAtom: (id: string) => void;
   onSelectedAtomChange: (node: UnitGraphNode, originalId?: string) => void;
@@ -128,12 +135,16 @@ export function ProjectInspector({
   onCutAtom,
   onPasteAtom,
   onRemoveAtom,
+  onReplaceAtom,
   onResetUnitParams,
   onSelectAtom,
   onSelectedAtomChange,
   onWorkspaceFileChange,
 }: Props) {
   const [atomToAdd, setAtomToAdd] = useState(atomCatalog.atoms[0]?.name ?? '');
+  const [replacementAtom, setReplacementAtom] = useState(atomCatalog.atoms[0]?.name ?? '');
+  const [preserveReplacementId, setPreserveReplacementId] = useState(false);
+  const [replaceOpen, setReplaceOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState('');
   const [routeFrom, setRouteFrom] = useState('');
   const [routeTo, setRouteTo] = useState('');
@@ -158,6 +169,23 @@ export function ProjectInspector({
     setRouteFrom(selectedRoute?.from ?? '');
     setRouteTo(selectedRoute?.to ?? '');
   }, [selectedRoute]);
+
+  useEffect(() => {
+    if (!selectedAtom) return;
+    const candidate = atomCatalog.atoms.find(atom => atom.name !== selectedAtom.atom)?.name ?? selectedAtom.atom;
+    setReplacementAtom(candidate);
+    setPreserveReplacementId(false);
+    setReplaceOpen(false);
+  }, [atomCatalog.atoms, selectedAtom]);
+
+  let replacementPreview: AtomReplacementPreview | null = null;
+  if (selectedUnitFile.role === 'unit' && selectedAtom && replacementAtom && replacementAtom !== selectedAtom.atom) {
+    try {
+      replacementPreview = previewAtomReplacement(selectedUnitFile.content, atomCatalog, selectedAtom.id, replacementAtom);
+    } catch {
+      replacementPreview = null;
+    }
+  }
 
   return (
     <aside className="project-inspector sidebar-right">
@@ -435,11 +463,77 @@ export function ProjectInspector({
               </div>
 
               <div className="atom-replace-panel">
-                <button disabled title="Replacement preview is not available yet" type="button">
+                <button onClick={() => setReplaceOpen(open => !open)} type="button">
                   Replace atom...
                 </button>
                 <span>Type changes require a compatibility preview.</span>
               </div>
+
+              {replaceOpen ? (
+                <div className="atom-replace-preview">
+                  <label>
+                    <span>New Type</span>
+                    <select onChange={event => setReplacementAtom(event.target.value)} value={replacementAtom}>
+                      {atomCatalog.atoms
+                        .filter(atom => atom.name !== selectedAtom.atom)
+                        .map(atom => <option key={atom.name} value={atom.name}>{atom.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="atom-replace-preview__check">
+                    <input
+                      checked={preserveReplacementId}
+                      onChange={event => setPreserveReplacementId(event.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>Preserve instance ID</span>
+                  </label>
+                  {replacementPreview ? (
+                    <div className="atom-replace-preview__grid">
+                      <div>
+                        <span>Preserved</span>
+                        <strong>
+                          {[...replacementPreview.preservedInputs, ...replacementPreview.preservedOutputs, ...replacementPreview.preservedConfig].join(', ') || 'none'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Removed</span>
+                        <strong>
+                          {[
+                            ...replacementPreview.removedInputs.map(item => `in.${item.field}`),
+                            ...replacementPreview.removedOutputs.map(item => `out.${item.field}`),
+                            ...replacementPreview.removedConfig.map(item => `config.${item.field}`),
+                          ].join(', ') || 'none'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Added</span>
+                        <strong>
+                          {[
+                            ...replacementPreview.addedInputs.map(field => `in.${field}`),
+                            ...replacementPreview.addedOutputs.map(field => `out.${field}`),
+                            ...replacementPreview.addedConfig.map(field => `config.${field}`),
+                          ].join(', ') || 'none'}
+                        </strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="diagnostic-empty diagnostic-empty--error">Replacement preview unavailable.</p>
+                  )}
+                  <div className="atom-replace-preview__actions">
+                    <button onClick={() => setReplaceOpen(false)} type="button">Cancel</button>
+                    <button
+                      disabled={!replacementPreview}
+                      onClick={() => {
+                        onReplaceAtom(selectedAtom.id, replacementAtom, preserveReplacementId);
+                        setReplaceOpen(false);
+                      }}
+                      type="button"
+                    >
+                      Confirm replacement
+                    </button>
+                  </div>
+                </div>
+              ) : null}
 
               {(['in', 'out', 'config'] as const).map(section => (
                 <div key={section} className="atom-binding-editor">

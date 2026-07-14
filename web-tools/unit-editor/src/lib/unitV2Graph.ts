@@ -42,6 +42,21 @@ export type GraphPosition = {
   y: number;
 };
 
+export type AtomReplacementPreview = {
+  nodeId: string;
+  fromAtom: string;
+  toAtom: string;
+  preservedInputs: string[];
+  removedInputs: Array<{ field: string; signal: string; reason: string }>;
+  addedInputs: string[];
+  preservedOutputs: string[];
+  removedOutputs: Array<{ field: string; signal: string; reason: string }>;
+  addedOutputs: string[];
+  preservedConfig: string[];
+  removedConfig: Array<{ field: string; value: string; reason: string }>;
+  addedConfig: string[];
+};
+
 type UnitDocument = Record<string, unknown> & {
   params?: Record<string, unknown>;
   graph?: {
@@ -186,6 +201,14 @@ function catalogNode(catalog: AtomCatalog, node: UnitGraphNode): AtomCatalogAtom
 function compatibleFields(source: AtomCatalogAtom['outputs'][number], target: AtomCatalogAtom['inputs'][number]): boolean {
   return source.type === target.type &&
     (source.buffer_samples === undefined || target.buffer_samples === undefined || source.buffer_samples === target.buffer_samples);
+}
+
+function compatibleSameDirectionFields(
+  previous: AtomCatalogAtom['inputs'][number] | AtomCatalogAtom['outputs'][number] | AtomCatalogAtom['config'][number],
+  next: AtomCatalogAtom['inputs'][number] | AtomCatalogAtom['outputs'][number] | AtomCatalogAtom['config'][number],
+): boolean {
+  return previous.type === next.type &&
+    (previous.buffer_samples === undefined || next.buffer_samples === undefined || previous.buffer_samples === next.buffer_samples);
 }
 
 function wouldCreateCycle(nodes: UnitGraphNode[], sourceId: string, targetId: string, replacedTarget?: UnitConnectionEndpoint): boolean {
@@ -373,6 +396,13 @@ export function serializeUnitGraphNodeUpdate(content: string, node: UnitGraphNod
   return dumpDocument(doc);
 }
 
+export function setAtomNodePosition(content: string, nodeId: string, position: GraphPosition): string {
+  const draft = parseUnitGraphDraft(content);
+  const node = draft.nodes.find(item => item.id === nodeId);
+  if (!node) throw new Error(`Atom node "${nodeId}" was not found.`);
+  return serializeUnitGraphNodeUpdate(content, { ...node, ui: { ...(node.ui ?? {}), position } }, nodeId);
+}
+
 export function addAtomNodeToUnit(
   content: string,
   catalog: AtomCatalog,
@@ -404,6 +434,125 @@ export function addAtomNodeToUnit(
   graph.signals = Array.from(existingSignals);
   graph.nodes = [...(graph.nodes?.filter(isObject) ?? []), nodeToYaml(node)];
   return { content: dumpDocument(doc), id };
+}
+
+export function previewAtomReplacement(
+  content: string,
+  catalog: AtomCatalog,
+  nodeId: string,
+  nextAtomName: string,
+): AtomReplacementPreview {
+  const draft = parseUnitGraphDraft(content);
+  const node = draft.nodes.find(item => item.id === nodeId);
+  if (!node) throw new Error(`Atom node "${nodeId}" was not found.`);
+  const previousAtom = catalogNode(catalog, node);
+  const nextAtom = catalog.atoms.find(item => item.name === nextAtomName);
+  if (!nextAtom) throw new Error(`Atom "${nextAtomName}" is not available in the catalog.`);
+
+  const nextInputs = new Map(nextAtom.inputs.map(field => [field.name, field]));
+  const previousInputs = new Map(previousAtom.inputs.map(field => [field.name, field]));
+  const nextOutputs = new Map(nextAtom.outputs.map(field => [field.name, field]));
+  const previousOutputs = new Map(previousAtom.outputs.map(field => [field.name, field]));
+  const nextConfig = new Map(nextAtom.config.map(field => [field.name, field]));
+  const previousConfig = new Map(previousAtom.config.map(field => [field.name, field]));
+
+  const preview: AtomReplacementPreview = {
+    nodeId,
+    fromAtom: node.atom,
+    toAtom: nextAtomName,
+    preservedInputs: [],
+    removedInputs: [],
+    addedInputs: [],
+    preservedOutputs: [],
+    removedOutputs: [],
+    addedOutputs: [],
+    preservedConfig: [],
+    removedConfig: [],
+    addedConfig: [],
+  };
+
+  for (const [name, signal] of Object.entries(node.in)) {
+    const previous = previousInputs.get(name);
+    const next = nextInputs.get(name);
+    if (previous && next && compatibleSameDirectionFields(previous, next)) preview.preservedInputs.push(name);
+    else preview.removedInputs.push({ field: name, signal, reason: next ? 'type mismatch' : 'missing input' });
+  }
+  for (const field of nextAtom.inputs) if (!(field.name in node.in)) preview.addedInputs.push(field.name);
+
+  for (const [name, signal] of Object.entries(node.out)) {
+    const previous = previousOutputs.get(name);
+    const next = nextOutputs.get(name);
+    if (previous && next && compatibleSameDirectionFields(previous, next)) preview.preservedOutputs.push(name);
+    else preview.removedOutputs.push({ field: name, signal, reason: next ? 'type mismatch' : 'missing output' });
+  }
+  for (const field of nextAtom.outputs) if (!(field.name in node.out)) preview.addedOutputs.push(field.name);
+
+  for (const [name, value] of Object.entries(node.config)) {
+    const previous = previousConfig.get(name);
+    const next = nextConfig.get(name);
+    if (previous && next && compatibleSameDirectionFields(previous, next)) preview.preservedConfig.push(name);
+    else preview.removedConfig.push({ field: name, value, reason: next ? 'type mismatch' : 'missing config' });
+  }
+  for (const field of nextAtom.config) if (!(field.name in node.config)) preview.addedConfig.push(field.name);
+
+  return preview;
+}
+
+export function replaceAtomNodeInUnit(
+  content: string,
+  catalog: AtomCatalog,
+  nodeId: string,
+  nextAtomName: string,
+  preserveId = false,
+): { content: string; id: string; preview: AtomReplacementPreview } {
+  const preview = previewAtomReplacement(content, catalog, nodeId, nextAtomName);
+  const draft = parseUnitGraphDraft(content);
+  const node = draft.nodes.find(item => item.id === nodeId);
+  const nextAtom = catalog.atoms.find(item => item.name === nextAtomName);
+  if (!node || !nextAtom) throw new Error('Atom replacement target is unavailable.');
+
+  const existingNodeIds = new Set(draft.nodes.filter(item => item.id !== nodeId).map(item => item.id));
+  const id = preserveId ? node.id : uniqueName(existingNodeIds, nextAtom.name.replace(/[^a-z0-9_]+/gi, '_').toLowerCase());
+  const existingSignals = new Set(draft.signals);
+  const keptOutputs = new Set(preview.preservedOutputs);
+  const removedOutputSignals = new Set(preview.removedOutputs.map(item => item.signal).filter(Boolean));
+  const replacement: UnitGraphNode = {
+    id,
+    atom: nextAtom.name,
+    in: Object.fromEntries(nextAtom.inputs.map(field => [
+      field.name,
+      preview.preservedInputs.includes(field.name) ? node.in[field.name] ?? '' : '',
+    ])),
+    out: Object.fromEntries(nextAtom.outputs.map(field => [
+      field.name,
+      keptOutputs.has(field.name) ? node.out[field.name] ?? '' : uniqueName(existingSignals, `${id}_${field.name}`),
+    ])),
+    config: Object.fromEntries(nextAtom.config.map(field => [
+      field.name,
+      preview.preservedConfig.includes(field.name) ? node.config[field.name] : atomDefaultValue(field.type),
+    ])),
+    ui: node.ui,
+  };
+
+  let nextContent = serializeUnitGraphNodeUpdate(content, replacement, nodeId);
+  const nextDoc = loadDocument(nextContent);
+  const graph = ensureGraph(nextDoc);
+  const nodes = (graph.nodes ?? []).filter(isObject).map(item => {
+    const raw = { ...item };
+    if (!isObject(raw.in)) return raw;
+    raw.in = Object.fromEntries(Object.entries(raw.in).map(([field, signal]) => [
+      field,
+      typeof signal === 'string' && removedOutputSignals.has(signal) ? '' : signal,
+    ]));
+    return raw;
+  });
+  graph.nodes = nodes;
+  const references = new Set(parseGraphFromDocument(nextDoc).nodes
+    .flatMap(item => [...Object.values(item.in), ...Object.values(item.out)])
+    .filter(Boolean));
+  graph.signals = (graph.signals ?? []).filter(signal => typeof signal !== 'string' || !removedOutputSignals.has(signal) || references.has(signal));
+  nextContent = dumpDocument(nextDoc);
+  return { content: nextContent, id, preview };
 }
 
 export function removeAtomNodeFromUnit(content: string, nodeId: string): string {

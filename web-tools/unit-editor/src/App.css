@@ -2260,6 +2260,90 @@ body {
   line-height: 1.35;
 }
 
+.atom-replace-preview {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 9px;
+  border: 1px solid #1f2d45;
+  border-radius: 6px;
+  background: #0a0e1a;
+}
+
+.atom-replace-preview label {
+  display: grid;
+  gap: 4px;
+}
+
+.atom-replace-preview label > span,
+.atom-replace-preview__grid span {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.atom-replace-preview select {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  background: #111827;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.atom-replace-preview__check {
+  display: flex !important;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.atom-replace-preview__grid {
+  display: grid;
+  gap: 6px;
+}
+
+.atom-replace-preview__grid > div {
+  padding: 7px;
+  border: 1px solid #1f2d45;
+  border-radius: 5px;
+  background: #111827;
+}
+
+.atom-replace-preview__grid strong {
+  display: block;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.atom-replace-preview__actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.atom-replace-preview__actions button {
+  padding: 7px 9px;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  background: #111827;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.atom-replace-preview__actions button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
 .atom-binding-editor__header {
   display: flex;
   align-items: center;
@@ -2912,6 +2996,12 @@ body {
 .mini-viz-bar.active:nth-child(5) { animation-delay: .15s; background: var(--accent-blue); }
 .header-right .status-pill { border-radius: 999px; font-size: 11px; }
 .header-right .btn { min-height: 30px; padding: 5px 9px; border-radius: 6px; font-size: 11px; }
+.topbar__icon-btn {
+  width: 30px;
+  min-width: 30px;
+  justify-content: center;
+  padding: 0 !important;
+}
 
 .sidebar-left { display: flex; width: 264px; flex-direction: column; flex-shrink: 0; background: var(--bg-panel); border-right-color: var(--border-subtle); }
 .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom-color: var(--border-subtle); }

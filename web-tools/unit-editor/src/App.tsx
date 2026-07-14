@@ -30,6 +30,7 @@ import {
   removeProjectRoute,
   renameProjectInstance,
   replaceProjectRoute,
+  setProjectInstancePosition,
   type GraphPosition as ProjectGraphPosition,
   type ProjectPortCatalog,
   type ProjectRouteDraft,
@@ -42,8 +43,10 @@ import {
   pasteAtomNodeIntoUnit,
   parseUnitGraphDraft,
   removeAtomNodeFromUnit,
+  replaceAtomNodeInUnit,
   reconnectUnitConnection,
   serializeUnitGraphNodeUpdate,
+  setAtomNodePosition,
   updateProjectInstanceParam,
   type GraphPosition as UnitGraphPosition,
   type UnitGraphNode,
@@ -80,6 +83,16 @@ function uniqueInstanceId(existing: string[], unitId: string): string {
 
 type InspectorView = 'project' | 'atom' | 'contract';
 type CanvasMode = 'project' | 'contract';
+type WorkspaceHistoryEntry = {
+  entryProject: string;
+  files: WorkspaceFile[];
+  selectedWorkspacePath: string;
+  selectedId: string | null;
+  selectedRouteIndex: number | null;
+  selectedAtomId: string | null;
+  canvasMode: CanvasMode;
+  inspectorView: InspectorView;
+};
 
 const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v2';
 const LEGACY_WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v1';
@@ -164,6 +177,59 @@ export default function App() {
   const [entryProject, setEntryProject] = useState(initialWorkspace.entryProject);
   const [workspaceFiles, setWorkspaceFiles] = useState(initialWorkspace.files);
   const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspace.entryProject);
+  const undoStack = useRef<WorkspaceHistoryEntry[]>([]);
+  const redoStack = useRef<WorkspaceHistoryEntry[]>([]);
+  const [historyCounts, setHistoryCounts] = useState({ undo: 0, redo: 0 });
+  const currentHistoryEntry = useCallback((): WorkspaceHistoryEntry => ({
+    entryProject,
+    files: workspaceFiles,
+    selectedWorkspacePath,
+    selectedId,
+    selectedRouteIndex,
+    selectedAtomId,
+    canvasMode,
+    inspectorView,
+  }), [canvasMode, entryProject, inspectorView, selectedAtomId, selectedId, selectedRouteIndex, selectedWorkspacePath, workspaceFiles]);
+  const restoreHistoryEntry = useCallback((entry: WorkspaceHistoryEntry) => {
+    setEntryProject(entry.entryProject);
+    setWorkspaceFiles(entry.files);
+    setSelectedWorkspacePath(entry.selectedWorkspacePath);
+    setSelectedId(entry.selectedId);
+    setSelectedRouteIndex(entry.selectedRouteIndex);
+    setSelectedAtomId(entry.selectedAtomId);
+    setCanvasMode(entry.canvasMode);
+    setInspectorView(entry.inspectorView);
+    try {
+      const projectFile = entry.files.find(file => file.path === entry.entryProject);
+      const inspect = projectFile
+        ? projectDraftToInspect(parseProjectGraphDraft(projectFile.content), backendSamples.project, entry.entryProject)
+        : backendSamples.project;
+      setParamDrafts(buildParamDrafts(inspect));
+      setParamOriginals(buildParamOriginals(inspect));
+    } catch {
+      setParamDrafts(buildParamDrafts(backendSamples.project));
+      setParamOriginals(buildParamOriginals(backendSamples.project));
+    }
+  }, []);
+  const pushHistory = useCallback(() => {
+    undoStack.current = [...undoStack.current.slice(-49), currentHistoryEntry()];
+    redoStack.current = [];
+    setHistoryCounts({ undo: undoStack.current.length, redo: 0 });
+  }, [currentHistoryEntry]);
+  const undoWorkspace = useCallback(() => {
+    const previous = undoStack.current.pop();
+    if (!previous) return;
+    redoStack.current = [...redoStack.current.slice(-49), currentHistoryEntry()];
+    restoreHistoryEntry(previous);
+    setHistoryCounts({ undo: undoStack.current.length, redo: redoStack.current.length });
+  }, [currentHistoryEntry, restoreHistoryEntry]);
+  const redoWorkspace = useCallback(() => {
+    const next = redoStack.current.pop();
+    if (!next) return;
+    undoStack.current = [...undoStack.current.slice(-49), currentHistoryEntry()];
+    restoreHistoryEntry(next);
+    setHistoryCounts({ undo: undoStack.current.length, redo: redoStack.current.length });
+  }, [currentHistoryEntry, restoreHistoryEntry]);
   const projectWorkspaceFile = workspaceFiles.find(file => file.path === entryProject) ?? workspaceFiles[0];
   const lastValidProjectDraft = useRef(parseProjectGraphDraft(initialWorkspaceFiles[0].content));
   const parsedProjectDraft = useMemo(() => {
@@ -256,10 +322,10 @@ export default function App() {
 
   const graphTopologySignature = useMemo(
     () => JSON.stringify({
-      nodes: project.nodes.map(node => [node.id, node.unit]),
+      nodes: projectDraft.nodes.map(node => [node.id, node.unit, node.ui?.position?.x ?? null, node.ui?.position?.y ?? null]),
       routes: project.routes.map(route => [route.from, route.to]),
     }),
-    [project.nodes, project.routes],
+    [project.routes, projectDraft.nodes],
   );
   const graphTopologyRef = useRef('');
 
@@ -380,6 +446,7 @@ export default function App() {
     setGraphEditError(null);
     try {
       const content = update(projectWorkspaceFile.content);
+      pushHistory();
       setWorkspaceFiles(files => files.map(file =>
         file.path === projectWorkspaceFile.path ? { ...file, content } : file));
       return content;
@@ -387,7 +454,7 @@ export default function App() {
       setGraphEditError(error instanceof Error ? error.message : String(error));
       return null;
     }
-  }, [projectWorkspaceFile.content, projectWorkspaceFile.path]);
+  }, [projectWorkspaceFile.content, projectWorkspaceFile.path, pushHistory]);
 
   const addProjectNode = useCallback((unitId: string, instanceId: string, position?: ProjectGraphPosition) => {
     const reference = projectDraft.units.find(unit => unit.id === unitId);
@@ -447,6 +514,10 @@ export default function App() {
     updateProjectFile(content => moveProjectInstance(content, instanceId, nextIndex));
   }, [updateProjectFile]);
 
+  const moveProjectNode = useCallback((instanceId: string, position: ProjectGraphPosition) => {
+    updateProjectFile(content => setProjectInstancePosition(content, instanceId, position));
+  }, [updateProjectFile]);
+
   const updateProjectRoute = useCallback((index: number, route: ProjectRouteDraft) => {
     updateProjectFile(content => replaceProjectRoute(content, projectPorts, index, route));
   }, [projectPorts, updateProjectFile]);
@@ -475,14 +546,16 @@ export default function App() {
   ], [project.nodes, projectPorts]);
 
   const updateWorkspaceFile = useCallback((path: string, content: string) => {
+    pushHistory();
     setWorkspaceFiles(files => files.map(file => (file.path === path ? { ...file, content } : file)));
-  }, []);
+  }, [pushHistory]);
 
   const createUnit = useCallback((name: string) => {
     const content = createUnitV2({ name });
     const unitName = parseUnitGraphDraft(content).name;
     const path = `workspace/${unitName}.unit.v2.yaml`;
     if (workspaceFiles.some(file => file.path === path)) throw new Error(`Workspace file "${path}" already exists.`);
+    pushHistory();
     setWorkspaceFiles(files => [...files, { path, role: 'unit', content, originalContent: '' }]);
     setSelectedWorkspacePath(path);
     setSelectedId(null);
@@ -490,12 +563,13 @@ export default function App() {
     setSelectedAtomId(null);
     setInspectorView('contract');
     setCanvasMode('project');
-  }, [workspaceFiles]);
+  }, [pushHistory, workspaceFiles]);
 
   const updateSelectedUnitFile = useCallback((update: (content: string) => string, nextAtomId?: string | null) => {
     setGraphEditError(null);
     try {
       const content = update(selectedUnitWorkspaceFile.content);
+      pushHistory();
       setWorkspaceFiles(files =>
         files.map(file => (file.path === selectedUnitWorkspaceFile.path ? { ...file, content } : file)),
       );
@@ -503,7 +577,7 @@ export default function App() {
     } catch (error) {
       setGraphEditError(error instanceof Error ? error.message : 'Unable to update unit graph.');
     }
-  }, [selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path]);
+  }, [pushHistory, selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path]);
 
   const updateSelectedAtom = useCallback((node: UnitGraphNode, originalId = node.id) => {
     updateSelectedUnitFile(content => serializeUnitGraphNodeUpdate(content, node, originalId), node.id);
@@ -523,6 +597,15 @@ export default function App() {
     updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
   }, [selectedAtom, updateSelectedUnitFile]);
 
+  const replaceSelectedAtom = useCallback((nodeId: string, nextAtomName: string, preserveId: boolean) => {
+    try {
+      const result = replaceAtomNodeInUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, nodeId, nextAtomName, preserveId);
+      updateSelectedUnitFile(() => result.content, result.id);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to replace atom.');
+    }
+  }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+
   const connectAtoms = useCallback((source: UnitConnectionEndpoint, target: UnitConnectionEndpoint) => {
     updateSelectedUnitFile(content => connectUnitNodes(content, backendSamples.atomCatalog, source, target));
   }, [updateSelectedUnitFile]);
@@ -538,6 +621,10 @@ export default function App() {
 
   const disconnectAtom = useCallback((target: UnitConnectionEndpoint) => {
     updateSelectedUnitFile(content => disconnectUnitInput(content, target));
+  }, [updateSelectedUnitFile]);
+
+  const moveAtom = useCallback((nodeId: string, position: UnitGraphPosition) => {
+    updateSelectedUnitFile(content => setAtomNodePosition(content, nodeId, position));
   }, [updateSelectedUnitFile]);
 
   const copySelectedAtom = useCallback(() => {
@@ -571,6 +658,7 @@ export default function App() {
   }, []);
 
   const resetWorkspace = useCallback(() => {
+    pushHistory();
     setWorkspaceFiles(initialWorkspaceFiles);
     setEntryProject(backendSamples.project.file);
     setSelectedWorkspacePath(initialWorkspaceFiles[0].path);
@@ -580,7 +668,7 @@ export default function App() {
     setSelectedRouteIndex(null);
     window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
     window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
-  }, []);
+  }, [pushHistory]);
 
   const exportWorkspace = useCallback(() => {
     const payload = createWorkspacePayload(entryProject, workspaceFiles);
@@ -602,6 +690,7 @@ export default function App() {
       if (!importedProject) return;
       const importedDraft = parseProjectGraphDraft(importedProject.content);
       const importedInspect = projectDraftToInspect(importedDraft, backendSamples.project, payload.entryProject);
+      pushHistory();
       setWorkspaceFiles(imported);
       setEntryProject(payload.entryProject);
       setSelectedWorkspacePath(payload.entryProject);
@@ -612,7 +701,7 @@ export default function App() {
     } catch (error) {
       setGraphEditError(error instanceof Error ? error.message : 'Workspace import failed.');
     }
-  }, []);
+  }, [pushHistory]);
 
   return (
     <LiveBypassContext.Provider value={{ controller: liveBypassController, setController: setLiveBypassController }}>
@@ -653,6 +742,10 @@ export default function App() {
           onExportWorkspace={exportWorkspace}
           onImportWorkspace={importWorkspace}
           onResetWorkspace={resetWorkspace}
+          onUndo={undoWorkspace}
+          onRedo={redoWorkspace}
+          canUndo={historyCounts.undo > 0}
+          canRedo={historyCounts.redo > 0}
           entryProject={entryProject}
           workspaceFiles={workspaceFiles}
           paramOverrides={paramOverrides}
@@ -686,6 +779,7 @@ export default function App() {
             workspaceFile={selectedUnitWorkspaceFile}
             onBackToProject={() => setCanvasMode('project')}
             onAddAtomAt={addAtom}
+            onMoveAtom={moveAtom}
             onConnectAtoms={connectAtoms}
             onDisconnectAtom={disconnectAtom}
             onOpenAtomInspector={openAtomInspector}
@@ -703,6 +797,7 @@ export default function App() {
             onOpenContractGraph={openContractGraph}
             onSelectRoute={selectRoute}
             onAddUnitAt={addProjectNodeFromLibrary}
+            onMoveUnit={moveProjectNode}
           />
         )}
 
@@ -741,6 +836,7 @@ export default function App() {
           onCutAtom={cutSelectedAtom}
           onPasteAtom={pasteAtom}
           onRemoveAtom={removeSelectedAtom}
+          onReplaceAtom={replaceSelectedAtom}
           onResetUnitParams={resetUnitParamDrafts}
           onSelectAtom={setSelectedAtomId}
           onSelectedAtomChange={updateSelectedAtom}

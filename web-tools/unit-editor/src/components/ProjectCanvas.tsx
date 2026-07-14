@@ -29,6 +29,7 @@ type Props = {
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
   onAddUnitAt: (unitId: string, position: GraphPosition) => void;
+  onMoveUnit: (instanceId: string, position: GraphPosition) => void;
 };
 
 type ProjectFlowProps = Props & {
@@ -49,6 +50,7 @@ function ProjectFlow({
   onOpenContractGraph,
   onSelectRoute,
   onAddUnitAt,
+  onMoveUnit,
 }: ProjectFlowProps) {
   const reactFlow = useReactFlow();
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
@@ -84,6 +86,10 @@ function ProjectFlow({
         onEdgesChange={onEdgesChange}
         onNodeClick={(_, node) => onSelectNode(node.id)}
         onNodeDoubleClick={(_, node) => onOpenContractGraph(node.id)}
+        onNodeDragStop={(_, node) => {
+          const data = node.data as ProjectNodeData;
+          if (data.kind === 'unit') onMoveUnit(data.instance.id, node.position);
+        }}
         onEdgeClick={(_, edge) => {
           const routeIndex = routeIndexFromEdge(edge);
           if (routeIndex !== null) onSelectRoute(routeIndex);

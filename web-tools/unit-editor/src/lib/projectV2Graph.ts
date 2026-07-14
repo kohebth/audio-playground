@@ -222,6 +222,17 @@ export function moveProjectInstance(content: string, instanceId: string, nextInd
   return dumpDocument(doc);
 }
 
+export function setProjectInstancePosition(content: string, instanceId: string, position: GraphPosition): string {
+  const doc = loadDocument(content);
+  const chain = ensureChain(doc);
+  const nodes = (chain.nodes as unknown[]).filter(isObject);
+  const node = nodes.find(item => String(item.id) === instanceId);
+  if (!node) throw new Error(`Project instance "${instanceId}" was not found.`);
+  node.ui = { ...(isObject(node.ui) ? node.ui : {}), position };
+  chain.nodes = nodes;
+  return dumpDocument(doc);
+}
+
 function validateRoute(
   draft: ProjectGraphDraft,
   ports: ProjectPortCatalog,

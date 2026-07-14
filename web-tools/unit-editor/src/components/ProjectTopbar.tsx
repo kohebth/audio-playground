@@ -13,6 +13,10 @@ type Props = {
   onExportWorkspace: () => void;
   onImportWorkspace: (file: File | null) => void;
   onResetWorkspace: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   entryProject: string;
   workspaceFiles: WorkspaceFile[];
   paramOverrides: ParamOverride[];
@@ -29,6 +33,10 @@ export function ProjectTopbar({
   onExportWorkspace,
   onImportWorkspace,
   onResetWorkspace,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   entryProject,
   workspaceFiles,
   paramOverrides,
@@ -74,6 +82,12 @@ export function ProjectTopbar({
         </div>
         <span className="header-divider" />
         <div className="topbar__workspace-actions">
+        <button className="btn btn--ghost topbar__icon-btn" disabled={!canUndo} onClick={onUndo} title="Undo" type="button">
+          <i className="fa-solid fa-rotate-left" aria-hidden="true" />
+        </button>
+        <button className="btn btn--ghost topbar__icon-btn" disabled={!canRedo} onClick={onRedo} title="Redo" type="button">
+          <i className="fa-solid fa-rotate-right" aria-hidden="true" />
+        </button>
         <label className="btn btn--ghost">
           Import
           <input

@@ -13,6 +13,7 @@ import {
   removeProjectRoute,
   renameProjectInstance,
   replaceProjectRoute,
+  setProjectInstancePosition,
   type ProjectPortCatalog,
 } from '../src/lib/projectV2Graph.ts';
 
@@ -57,6 +58,8 @@ assert(!Object.keys(removed.scenes[1].params).some(path => path.startsWith('dela
 
 const moved = parseProjectGraphDraft(moveProjectInstance(project, 'drive1', 4));
 assert.equal(moved.nodes[4].id, 'drive1');
+const positioned = parseProjectGraphDraft(setProjectInstancePosition(project, 'drive1', { x: 42, y: 84 }));
+assert.deepEqual(positioned.nodes.find(node => node.id === 'drive1')?.ui?.position, { x: 42, y: 84 });
 
 const disconnected = removeProjectRoute(project, 2);
 assert.equal(parseProjectGraphDraft(disconnected).routes.length, 8);

@@ -10,9 +10,12 @@ import {
   disconnectUnitInput,
   moveUnitConnection,
   parseUnitGraphDraft,
+  previewAtomReplacement,
   removeAtomNodeFromUnit,
+  replaceAtomNodeInUnit,
   replaceUnitConnection,
   serializeUnitGraphNodeUpdate,
+  setAtomNodePosition,
 } from '../src/lib/unitV2Graph.ts';
 
 const repo = resolve(import.meta.dirname, '../../..');
@@ -27,6 +30,8 @@ assert.throws(() => createUnitV2({ name: 'Not Valid' }), /lowercase snake_case/)
 const configuredNode = { ...createdGraph.nodes[0], config: { ...createdGraph.nodes[0].config, value: '0.5' } };
 const configured = serializeUnitGraphNodeUpdate(created, configuredNode);
 assert.equal(parseUnitGraphDraft(configured).nodes[0].config.value, '0.5');
+const positionedAtom = parseUnitGraphDraft(setAtomNodePosition(created, 'gain_value', { x: 15, y: 30 })).nodes[0];
+assert.deepEqual(positionedAtom.ui?.position, { x: 15, y: 30 });
 
 const renamedNode = { ...createdGraph.nodes[0], id: 'gain_source' };
 const renamed = serializeUnitGraphNodeUpdate(created, renamedNode, 'gain_value');
@@ -57,6 +62,30 @@ assert.deepEqual(addedNode.ui?.position, { x: 120, y: 240 });
 const removedAdded = parseUnitGraphDraft(removeAtomNodeFromUnit(added.content, added.id));
 assert(!removedAdded.nodes.some(node => node.id === added.id));
 assert(!removedAdded.signals.some(signal => signal.startsWith(`${added.id}_`)));
+
+const replacementPreview = previewAtomReplacement(added.content, catalog, added.id, 'amplitude_clip_soft');
+assert.deepEqual(replacementPreview.preservedInputs, ['signal']);
+assert.deepEqual(replacementPreview.preservedOutputs, ['signal']);
+assert.deepEqual(replacementPreview.preservedConfig, ['threshold']);
+const replacedAtom = replaceAtomNodeInUnit(added.content, catalog, added.id, 'amplitude_clip_soft');
+const replacedGraph = parseUnitGraphDraft(replacedAtom.content);
+const replacementNode = replacedGraph.nodes.find(node => node.id === replacedAtom.id);
+assert(replacementNode);
+assert.notEqual(replacementNode.id, added.id);
+assert.equal(replacementNode.atom, 'amplitude_clip_soft');
+assert.equal(replacementNode.config.threshold, addedNode.config.threshold);
+assert.deepEqual(replacementNode.ui?.position, { x: 120, y: 240 });
+
+const incompatibleReplacement = replaceAtomNodeInUnit(added.content, catalog, added.id, 'generation_dc', true);
+assert.equal(incompatibleReplacement.id, added.id);
+assert(incompatibleReplacement.preview.removedInputs.some(item => item.field === 'signal'));
+assert(incompatibleReplacement.preview.removedConfig.some(item => item.field === 'threshold'));
+const incompatibleNode = parseUnitGraphDraft(incompatibleReplacement.content).nodes.find(node => node.id === added.id);
+assert(incompatibleNode);
+assert.equal(incompatibleNode.atom, 'generation_dc');
+assert.deepEqual(Object.keys(incompatibleNode.in), []);
+assert.deepEqual(Object.keys(incompatibleNode.out), ['signal']);
+assert.deepEqual(Object.keys(incompatibleNode.config), ['value']);
 
 const overdrive = readFileSync(resolve(repo, 'test/fixtures/units-v2/overdrive.unit.v2.yaml'), 'utf8');
 assert.throws(() => removeAtomNodeFromUnit(overdrive, 'tone_filter'), /apply_level consumes/);
