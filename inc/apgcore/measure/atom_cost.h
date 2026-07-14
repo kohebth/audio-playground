@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <apgcore/compiler/compiler_v2.h>
 #include <apgcore/runtime/process.h>
 #include <apgcore/runtime/spectral.h>
 #include <atom_registry.h>
@@ -59,6 +60,16 @@ bool apg_graph_estimate_cost(
     const void *const *configs,
     const apg_spectral_info_t *const *spectral_infos,
     size_t count,
+    const apg_process_info_t *process_info,
+    apg_graph_cost_result_t *out
+);
+
+/*
+ * Estimate a compiled unit in execution-schedule order. Configuration-dependent
+ * atoms use conservative defaults; compiled spectral contexts are honored exactly.
+ */
+bool apg_compiled_unit_estimate_cost(
+    const apg_v2_compiled_unit_t *compiled,
     const apg_process_info_t *process_info,
     apg_graph_cost_result_t *out
 );
