@@ -1,7 +1,9 @@
 #include <apgcore/compiler/compiler_v2.h>
+#include <apgcore/measure/atom_cost.h>
 #include <apgcore/measure/measure_v2.h>
 #include <apgcore/runtime/runtime_v2.h>
 #include <apgcore/validator/unit_v2.h>
+#include <atom/dsp_types.h>
 
 #include "test_runtime_v2_harness.h"
 
@@ -178,10 +180,103 @@ static int test_measure_snapshot_is_non_mutating(void) {
     return 0;
 }
 
+static int estimate_cost(
+    const char *name,
+    const void *config,
+    uint32_t frames,
+    const apg_spectral_info_t *spectral,
+    apg_atom_cost_result_t *out
+) {
+    const atom_registry_entry_t *entry = atom_registry_find(name);
+    if (!entry)
+        return fail("cost model atom is missing from registry");
+    apg_process_info_t info = {.sample_rate = 48000.0f, .frames = frames, .output_frames = frames, .channels = 1u};
+    if (!apg_atom_estimate_cost(entry, config, &info, spectral, out))
+        return fail("atom cost estimate failed");
+    return 0;
+}
+
+static int test_atom_cost_model(void) {
+    atom_registry_init();
+
+    apg_atom_cost_result_t add_64;
+    apg_atom_cost_result_t add_128;
+    if (estimate_cost("amplitude_add", NULL, 64u, NULL, &add_64) ||
+        estimate_cost("amplitude_add", NULL, 128u, NULL, &add_128))
+        return 1;
+    if (add_128.cpu_acu <= add_64.cpu_acu)
+        return fail("cost model is not monotonic by frame count");
+    if (add_128.cost_class != apg_cost_classify(add_128.cpu_acu))
+        return fail("cost class is inconsistent");
+    if (strcmp(apg_cost_class_name(APG_COST_TRIVIAL), "trivial") != 0 ||
+        strcmp(apg_cost_class_name(APG_COST_EXTREME), "extreme") != 0)
+        return fail("cost class names are invalid");
+
+    float kernel[128] = {0};
+    filter_fir_params_t fir_16_params  = {.kernel = kernel, .kernel_size = 16};
+    filter_fir_params_t fir_128_params = {.kernel = kernel, .kernel_size = 128};
+    apg_atom_cost_result_t fir_16;
+    apg_atom_cost_result_t fir_128;
+    if (estimate_cost("filter_fir", &fir_16_params, 128u, NULL, &fir_16) ||
+        estimate_cost("filter_fir", &fir_128_params, 128u, NULL, &fir_128))
+        return 1;
+    if (fir_128.cpu_acu <= fir_16.cpu_acu)
+        return fail("FIR cost does not increase with tap count");
+    if (fir_128.latency_frames != 63u || fir_128.persistent_bytes == 0u)
+        return fail("FIR latency or memory estimate is invalid");
+
+    interpolation_lagrange_params_t lagrange_2_params = {.order = 2};
+    interpolation_lagrange_params_t lagrange_8_params = {.order = 8};
+    apg_atom_cost_result_t lagrange_2;
+    apg_atom_cost_result_t lagrange_8;
+    if (estimate_cost("interpolation_lagrange", &lagrange_2_params, 128u, NULL, &lagrange_2) ||
+        estimate_cost("interpolation_lagrange", &lagrange_8_params, 128u, NULL, &lagrange_8))
+        return 1;
+    if (lagrange_8.cpu_acu <= lagrange_2.cpu_acu)
+        return fail("Lagrange cost does not increase with order");
+
+    apg_spectral_info_t fft_256  = {.fft_size = 256u, .bin_count = 129u, .hop_size = 256u};
+    apg_spectral_info_t fft_2048 = {.fft_size = 2048u, .bin_count = 1025u, .hop_size = 2048u};
+    apg_atom_cost_result_t fft_small;
+    apg_atom_cost_result_t fft_large;
+    if (estimate_cost("freq_fft", NULL, 128u, &fft_256, &fft_small) ||
+        estimate_cost("freq_fft", NULL, 128u, &fft_2048, &fft_large))
+        return 1;
+    if (fft_large.cpu_acu <= fft_small.cpu_acu || fft_large.scratch_bytes <= fft_small.scratch_bytes)
+        return fail("FFT cost does not scale with transform size");
+
+    apg_spectral_info_t overlap = {.fft_size = 1024u, .bin_count = 513u, .hop_size = 256u};
+    apg_atom_cost_result_t overlap_cost;
+    if (estimate_cost("freq_overlap_add", NULL, 128u, &overlap, &overlap_cost))
+        return 1;
+    if (overlap_cost.latency_frames != 768u)
+        return fail("overlap latency estimate is invalid");
+
+    delay_line_params_t delay_params = {.length = 96};
+    const atom_registry_entry_t *entries[] = {
+        atom_registry_find("amplitude_add"),
+        atom_registry_find("filter_fir"),
+        atom_registry_find("delay_line"),
+    };
+    const void *configs[] = {NULL, &fir_16_params, &delay_params};
+    apg_process_info_t info = {.sample_rate = 48000.0f, .frames = 128u, .output_frames = 128u, .channels = 1u};
+    apg_graph_cost_result_t graph;
+    if (!apg_graph_estimate_cost(entries, configs, NULL, 3u, &info, &graph))
+        return fail("graph cost estimate failed");
+    if (graph.atom_count != 3u || graph.cpu_acu <= fir_16.cpu_acu || graph.persistent_bytes == 0u)
+        return fail("graph cost aggregation is invalid");
+    if (graph.latency_frames != fir_16.latency_frames + 96u)
+        return fail("graph conservative latency is invalid");
+
+    return 0;
+}
+
 int main(void) {
     if (test_measure_snapshot_and_meters())
         return 1;
     if (test_measure_last_error())
         return 1;
-    return test_measure_snapshot_is_non_mutating();
+    if (test_measure_snapshot_is_non_mutating())
+        return 1;
+    return test_atom_cost_model();
 }
