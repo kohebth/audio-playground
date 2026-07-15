@@ -67,7 +67,8 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Autosave debounce and synchronous blocking budget.
 - [x] Bounded residual heap growth after repeated add/remove.
 - [x] Pointer-event node drag while 500 atoms are mounted.
-- [ ] Invalid drop, Escape cancel, rapid drop, zoom/pan drop, edge drop, and filtered catalog.
+- [x] Invalid drop, Escape cancel, rapid drop, zoom/pan drop, and filtered catalog.
+- [ ] Edge drop with an explicit split-and-reconnect transaction.
 - [ ] Unit drag/drop with large atom payloads.
 - [x] Explicit medium-graph replacement, replacement undo/redo, and post-replacement config isolation.
 - [x] Malformed import proving legacy `fn` cannot mutate the immutable `atom` type.

@@ -301,6 +301,29 @@ async function getVisibleContractAtom(page: Page): Promise<{ id: string; x: numb
   });
 }
 
+async function dispatchContractDrag(
+  page: Page,
+  type: 'dragover' | 'drop',
+  atomName: string | null,
+): Promise<void> {
+  await page.getByTestId('contract-canvas').evaluate((canvas, payload) => {
+    const dataTransfer = new DataTransfer();
+    if (payload.atomName) {
+      dataTransfer.setData('application/x-apg-atom', payload.atomName);
+    } else {
+      dataTransfer.setData('text/plain', 'unsupported-payload');
+    }
+    const bounds = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new DragEvent(payload.type, {
+      bubbles: true,
+      cancelable: true,
+      clientX: bounds.left + bounds.width * 0.55,
+      clientY: bounds.top + bounds.height * 0.55,
+      dataTransfer,
+    }));
+  }, { atomName, type });
+}
+
 async function launchWorkspace(page: Page) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const launch = page.getByTestId('launch-workspace');
@@ -628,6 +651,54 @@ test.describe('Contract graph atom scalability', () => {
     const renderedNodes = Object.keys(renders);
     testInfo.annotations.push({ type: 'contract-node-renders', description: renderedNodes.join(',') });
     expect(renderedNodes).toEqual([`ContractNode:${visibleAtom!.id}`]);
+  });
+
+  test('contract drop rejects invalid data, cancels cleanly, and survives rapid transformed drops', async ({ page }) => {
+    const fixture = 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+
+    const canvas = page.getByTestId('contract-canvas');
+    await dispatchContractDrag(page, 'dragover', null);
+    await expect(canvas).toHaveClass(/flow-shell--drop-reject/);
+    await dispatchContractDrag(page, 'drop', null);
+    await expect(canvas).toHaveClass(/flow-shell--drop-idle/);
+    await expect(canvas).toHaveAttribute('data-atom-count', String(meta.atoms));
+
+    await dispatchContractDrag(page, 'dragover', 'amplitude_clip_soft');
+    await expect(canvas).toHaveClass(/flow-shell--drop-valid/);
+    await page.keyboard.press('Escape');
+    await expect(canvas).toHaveClass(/flow-shell--drop-idle/);
+    await expect(canvas).toHaveAttribute('data-atom-count', String(meta.atoms));
+
+    const pane = page.locator('.react-flow__pane');
+    const paneBox = await pane.boundingBox();
+    expect(paneBox).not.toBeNull();
+    await page.mouse.move(paneBox!.x + 30, paneBox!.y + 30);
+    await page.mouse.down();
+    await page.mouse.move(paneBox!.x + 110, paneBox!.y + 70, { steps: 5 });
+    await page.mouse.up();
+    await page.locator('.react-flow__controls-zoomin').click();
+
+    for (let index = 1; index <= 3; index += 1) {
+      await clearPerfSpans(page);
+      await dispatchContractDrag(page, 'drop', 'amplitude_clip_soft');
+      await expect(canvas).toHaveAttribute('data-atom-count', String(meta.atoms + index));
+      await runAndAssertBudget(page, 'contract.add.atom', 1);
+    }
+
+    const filter = page.getByTestId('atom-palette-filter');
+    await filter.fill('clip_soft');
+    const filteredAtom = page.getByTestId('atom-palette-item-amplitude_clip_soft');
+    await expect(filteredAtom).toBeVisible();
+    await expect(page.locator('[data-testid^="atom-palette-item-"]')).toHaveCount(1);
+
+    await clearPerfSpans(page);
+    await filteredAtom.dragTo(canvas, { targetPosition: { x: 420, y: 260 } });
+    await expect(canvas).toHaveAttribute('data-atom-count', String(meta.atoms + 4));
+    await runAndAssertBudget(page, 'ui.dragStart.atomPalette', 1, 'ui.dragStart.projectUnit');
+    await runAndAssertBudget(page, 'ui.drop.contractAtom', 1, 'ui.drop.projectNode');
+    await runAndAssertBudget(page, 'contract.add.atom', 1);
   });
 
   test('editing config in a 500-atom graph stays local', async ({ page }, testInfo) => {

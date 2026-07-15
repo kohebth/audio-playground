@@ -44,7 +44,13 @@ function profileLabel(atom: AtomCatalogAtom): string {
 export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) {
   const unitAtomNames = unit.graph.nodes.map(node => node.atom);
   const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? catalog.atoms[0]?.name ?? '');
+  const [filter, setFilter] = useState('');
   const selectedAtom = catalog.atoms.find(atom => atom.name === selectedAtomName) ?? catalog.atoms[0];
+  const filteredAtoms = useMemo(() => {
+    const query = filter.trim().toLowerCase();
+    if (!query) return catalog.atoms;
+    return catalog.atoms.filter(atom => atom.name.toLowerCase().includes(query) || atom.category.toLowerCase().includes(query));
+  }, [catalog.atoms, filter]);
   const categoryCounts = useMemo(
     () =>
       catalog.atoms.reduce<Record<string, number>>((counts, atom) => {
@@ -74,8 +80,18 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) 
         ))}
       </div>
 
+      <input
+        aria-label="Filter atom palette"
+        className="atom-palette__filter"
+        data-testid="atom-palette-filter"
+        onChange={event => setFilter(event.target.value)}
+        placeholder="Filter atoms"
+        type="search"
+        value={filter}
+      />
+
       <div className="atom-palette__list" aria-label="Atom palette">
-        {catalog.atoms.map(atom => (
+        {filteredAtoms.map(atom => (
           <button
             key={atom.name}
             className={`atom-palette__item ${atom.name === selectedAtomName ? 'atom-palette__item--active' : ''}`}
@@ -95,6 +111,7 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) 
             <strong>{atom.stateful ? 'stateful' : atom.category}</strong>
           </button>
         ))}
+        {filteredAtoms.length === 0 ? <span className="atom-palette__empty">No matching atoms</span> : null}
       </div>
 
       {selectedAtom ? (

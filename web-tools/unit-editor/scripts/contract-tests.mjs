@@ -75,7 +75,9 @@ includes(
 );
 assert(!backendSamples.includes('../atoms/atomCatalog'), 'project workbench backend samples must not use the local atom catalog fallback');
 includes('web-tools/unit-editor/src/components/ProjectInspector.tsx', '<strong>{atomCatalog.schema}</strong>', 'contract view must expose atom catalog schema');
-includesContent(atomPalette, 'catalog.atoms.map(', 'atom palette must render from backend atoms');
+includesContent(atomPalette, 'filteredAtoms.map(', 'atom palette must render its filtered backend atoms');
+includesContent(atomPalette, 'atom.name.toLowerCase().includes(query)', 'atom palette filtering must match atom names');
+includesContent(atomPalette, 'atom.category.toLowerCase().includes(query)', 'atom palette filtering must match atom categories');
 includesContent(atomPalette, 'aria-label="Atom palette"', 'atom palette should expose contract-backed rendering');
 includesContent(atomPalette, 'unit.graph.nodes.map', 'unit inspect graph should drive contract view details');
 includesContent(atomPalette, "ATOM_DRAG_TYPE = 'application/x-apg-atom'", 'atom palette must define a drag payload type');

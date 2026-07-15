@@ -259,6 +259,15 @@ export function ContractGraphCanvas({
   const dragStartAtByNode = useRef<Record<string, number>>({});
 
   useEffect(() => {
+    if (dropState === 'idle') return;
+    const cancelDrop = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDropState('idle');
+    };
+    window.addEventListener('keydown', cancelDrop);
+    return () => window.removeEventListener('keydown', cancelDrop);
+  }, [dropState]);
+
+  useEffect(() => {
     setFlowNodes(current => {
       if (current === parsed.flow.nodes) return current;
       const currentById = new Map(current.map(node => [node.id, node]));

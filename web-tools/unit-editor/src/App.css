@@ -2532,6 +2532,24 @@ body {
   font-weight: 700;
 }
 
+.atom-palette__filter {
+  width: 100%;
+  height: 32px;
+  margin-top: 12px;
+  padding: 0 9px;
+  border: 1px solid #1f2d45;
+  border-radius: 6px;
+  outline: none;
+  background: #0a0e1a;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.atom-palette__filter:focus {
+  border-color: var(--accent-blue);
+}
+
 .atom-palette__list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2539,6 +2557,13 @@ body {
   max-height: 252px;
   margin-top: 12px;
   overflow-y: auto;
+}
+
+.atom-palette__empty {
+  padding: 12px 8px;
+  color: var(--text-muted);
+  font: 11px var(--font-mono);
+  text-align: center;
 }
 
 .atom-palette__item,
