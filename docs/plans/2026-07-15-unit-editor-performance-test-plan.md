@@ -33,7 +33,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Target route counts of 30/140/700/1,500 where the topology supports them.
 - [x] Large parameter payload and repeated unit instances.
 - [x] Executable unit fixtures containing 25/100/500/1,000 actual atom nodes.
-- [ ] Contract-canvas fixtures for linear, branched, dense, payload, and invalid atom graphs.
+- [x] Contract-canvas fixtures for linear, branched, dense, payload-heavy, and invalid atom graphs.
 
 ## Implementation Phases
 

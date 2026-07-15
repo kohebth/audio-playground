@@ -632,7 +632,13 @@ export function PreviewPanel({
                 <span key={index} className={`mini-viz-bar ${running ? 'active' : ''}`} />
               ))}
             </div>
-            <span className={`transport-state transport-state--${phase}`}>{phase}</span>
+            <span
+              aria-label={phase === 'error' ? `Audio engine error: ${diagnostic}` : `Audio engine ${phase}`}
+              className={`transport-state transport-state--${phase}`}
+              title={phase === 'error' ? diagnostic : undefined}
+            >
+              {phase}
+            </span>
             <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} title={muted ? 'Unmute output' : 'Mute output'} type="button">
               <i className={`fa-solid ${muted ? 'fa-volume-xmark' : 'fa-volume-high'}`} aria-hidden="true" />
             </button>

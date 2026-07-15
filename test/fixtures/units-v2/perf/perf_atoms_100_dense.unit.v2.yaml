@@ -1,0 +1,1331 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: perf_atoms_100_dense
+version: 2.0.0
+meta:
+  title: Performance 100 atom dense graph
+  description: Deterministic dense contract-canvas performance fixture.
+  category: test
+  perf:
+    profile: medium
+    topology: dense
+    atoms: 100
+params: {}
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+graph:
+  signals:
+    - input
+    - signal_0001
+    - signal_0002
+    - signal_0003
+    - signal_0004
+    - signal_0005
+    - signal_0006
+    - signal_0007
+    - signal_0008
+    - signal_0009
+    - signal_0010
+    - signal_0011
+    - signal_0012
+    - signal_0013
+    - signal_0014
+    - signal_0015
+    - signal_0016
+    - signal_0017
+    - signal_0018
+    - signal_0019
+    - signal_0020
+    - signal_0021
+    - signal_0022
+    - signal_0023
+    - signal_0024
+    - signal_0025
+    - signal_0026
+    - signal_0027
+    - signal_0028
+    - signal_0029
+    - signal_0030
+    - signal_0031
+    - signal_0032
+    - signal_0033
+    - signal_0034
+    - signal_0035
+    - signal_0036
+    - signal_0037
+    - signal_0038
+    - signal_0039
+    - signal_0040
+    - signal_0041
+    - signal_0042
+    - signal_0043
+    - signal_0044
+    - signal_0045
+    - signal_0046
+    - signal_0047
+    - signal_0048
+    - signal_0049
+    - signal_0050
+    - signal_0051
+    - signal_0052
+    - signal_0053
+    - signal_0054
+    - signal_0055
+    - signal_0056
+    - signal_0057
+    - signal_0058
+    - signal_0059
+    - signal_0060
+    - signal_0061
+    - signal_0062
+    - signal_0063
+    - signal_0064
+    - signal_0065
+    - signal_0066
+    - signal_0067
+    - signal_0068
+    - signal_0069
+    - signal_0070
+    - signal_0071
+    - signal_0072
+    - signal_0073
+    - signal_0074
+    - signal_0075
+    - signal_0076
+    - signal_0077
+    - signal_0078
+    - signal_0079
+    - signal_0080
+    - signal_0081
+    - signal_0082
+    - signal_0083
+    - signal_0084
+    - signal_0085
+    - signal_0086
+    - signal_0087
+    - signal_0088
+    - signal_0089
+    - signal_0090
+    - signal_0091
+    - signal_0092
+    - signal_0093
+    - signal_0094
+    - signal_0095
+    - signal_0096
+    - signal_0097
+    - signal_0098
+    - signal_0099
+    - output
+  nodes:
+    - id: atom_0001
+      atom: amplitude_add
+      in:
+        signal_a: input
+        signal_b: input
+      out:
+        signal: signal_0001
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 0
+    - id: atom_0002
+      atom: amplitude_add
+      in:
+        signal_a: signal_0001
+        signal_b: input
+      out:
+        signal: signal_0002
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 0
+    - id: atom_0003
+      atom: amplitude_add
+      in:
+        signal_a: signal_0002
+        signal_b: signal_0001
+      out:
+        signal: signal_0003
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 0
+    - id: atom_0004
+      atom: amplitude_add
+      in:
+        signal_a: signal_0003
+        signal_b: signal_0002
+      out:
+        signal: signal_0004
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 0
+    - id: atom_0005
+      atom: amplitude_add
+      in:
+        signal_a: signal_0004
+        signal_b: signal_0003
+      out:
+        signal: signal_0005
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 0
+    - id: atom_0006
+      atom: amplitude_add
+      in:
+        signal_a: signal_0005
+        signal_b: signal_0004
+      out:
+        signal: signal_0006
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 0
+    - id: atom_0007
+      atom: amplitude_add
+      in:
+        signal_a: signal_0006
+        signal_b: signal_0005
+      out:
+        signal: signal_0007
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 0
+    - id: atom_0008
+      atom: amplitude_add
+      in:
+        signal_a: signal_0007
+        signal_b: signal_0006
+      out:
+        signal: signal_0008
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 0
+    - id: atom_0009
+      atom: amplitude_add
+      in:
+        signal_a: signal_0008
+        signal_b: signal_0007
+      out:
+        signal: signal_0009
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 0
+    - id: atom_0010
+      atom: amplitude_add
+      in:
+        signal_a: signal_0009
+        signal_b: signal_0008
+      out:
+        signal: signal_0010
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 0
+    - id: atom_0011
+      atom: amplitude_add
+      in:
+        signal_a: signal_0010
+        signal_b: signal_0009
+      out:
+        signal: signal_0011
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 180
+    - id: atom_0012
+      atom: amplitude_add
+      in:
+        signal_a: signal_0011
+        signal_b: signal_0010
+      out:
+        signal: signal_0012
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 180
+    - id: atom_0013
+      atom: amplitude_add
+      in:
+        signal_a: signal_0012
+        signal_b: signal_0011
+      out:
+        signal: signal_0013
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 180
+    - id: atom_0014
+      atom: amplitude_add
+      in:
+        signal_a: signal_0013
+        signal_b: signal_0012
+      out:
+        signal: signal_0014
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 180
+    - id: atom_0015
+      atom: amplitude_add
+      in:
+        signal_a: signal_0014
+        signal_b: signal_0013
+      out:
+        signal: signal_0015
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 180
+    - id: atom_0016
+      atom: amplitude_add
+      in:
+        signal_a: signal_0015
+        signal_b: signal_0014
+      out:
+        signal: signal_0016
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 180
+    - id: atom_0017
+      atom: amplitude_add
+      in:
+        signal_a: signal_0016
+        signal_b: signal_0015
+      out:
+        signal: signal_0017
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 180
+    - id: atom_0018
+      atom: amplitude_add
+      in:
+        signal_a: signal_0017
+        signal_b: signal_0016
+      out:
+        signal: signal_0018
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 180
+    - id: atom_0019
+      atom: amplitude_add
+      in:
+        signal_a: signal_0018
+        signal_b: signal_0017
+      out:
+        signal: signal_0019
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 180
+    - id: atom_0020
+      atom: amplitude_add
+      in:
+        signal_a: signal_0019
+        signal_b: signal_0018
+      out:
+        signal: signal_0020
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 180
+    - id: atom_0021
+      atom: amplitude_add
+      in:
+        signal_a: signal_0020
+        signal_b: signal_0019
+      out:
+        signal: signal_0021
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 360
+    - id: atom_0022
+      atom: amplitude_add
+      in:
+        signal_a: signal_0021
+        signal_b: signal_0020
+      out:
+        signal: signal_0022
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 360
+    - id: atom_0023
+      atom: amplitude_add
+      in:
+        signal_a: signal_0022
+        signal_b: signal_0021
+      out:
+        signal: signal_0023
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 360
+    - id: atom_0024
+      atom: amplitude_add
+      in:
+        signal_a: signal_0023
+        signal_b: signal_0022
+      out:
+        signal: signal_0024
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 360
+    - id: atom_0025
+      atom: amplitude_add
+      in:
+        signal_a: signal_0024
+        signal_b: signal_0023
+      out:
+        signal: signal_0025
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 360
+    - id: atom_0026
+      atom: amplitude_add
+      in:
+        signal_a: signal_0025
+        signal_b: signal_0024
+      out:
+        signal: signal_0026
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 360
+    - id: atom_0027
+      atom: amplitude_add
+      in:
+        signal_a: signal_0026
+        signal_b: signal_0025
+      out:
+        signal: signal_0027
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 360
+    - id: atom_0028
+      atom: amplitude_add
+      in:
+        signal_a: signal_0027
+        signal_b: signal_0026
+      out:
+        signal: signal_0028
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 360
+    - id: atom_0029
+      atom: amplitude_add
+      in:
+        signal_a: signal_0028
+        signal_b: signal_0027
+      out:
+        signal: signal_0029
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 360
+    - id: atom_0030
+      atom: amplitude_add
+      in:
+        signal_a: signal_0029
+        signal_b: signal_0028
+      out:
+        signal: signal_0030
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 360
+    - id: atom_0031
+      atom: amplitude_add
+      in:
+        signal_a: signal_0030
+        signal_b: signal_0029
+      out:
+        signal: signal_0031
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 540
+    - id: atom_0032
+      atom: amplitude_add
+      in:
+        signal_a: signal_0031
+        signal_b: signal_0030
+      out:
+        signal: signal_0032
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 540
+    - id: atom_0033
+      atom: amplitude_add
+      in:
+        signal_a: signal_0032
+        signal_b: signal_0031
+      out:
+        signal: signal_0033
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 540
+    - id: atom_0034
+      atom: amplitude_add
+      in:
+        signal_a: signal_0033
+        signal_b: signal_0032
+      out:
+        signal: signal_0034
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 540
+    - id: atom_0035
+      atom: amplitude_add
+      in:
+        signal_a: signal_0034
+        signal_b: signal_0033
+      out:
+        signal: signal_0035
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 540
+    - id: atom_0036
+      atom: amplitude_add
+      in:
+        signal_a: signal_0035
+        signal_b: signal_0034
+      out:
+        signal: signal_0036
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 540
+    - id: atom_0037
+      atom: amplitude_add
+      in:
+        signal_a: signal_0036
+        signal_b: signal_0035
+      out:
+        signal: signal_0037
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 540
+    - id: atom_0038
+      atom: amplitude_add
+      in:
+        signal_a: signal_0037
+        signal_b: signal_0036
+      out:
+        signal: signal_0038
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 540
+    - id: atom_0039
+      atom: amplitude_add
+      in:
+        signal_a: signal_0038
+        signal_b: signal_0037
+      out:
+        signal: signal_0039
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 540
+    - id: atom_0040
+      atom: amplitude_add
+      in:
+        signal_a: signal_0039
+        signal_b: signal_0038
+      out:
+        signal: signal_0040
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 540
+    - id: atom_0041
+      atom: amplitude_add
+      in:
+        signal_a: signal_0040
+        signal_b: signal_0039
+      out:
+        signal: signal_0041
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 720
+    - id: atom_0042
+      atom: amplitude_add
+      in:
+        signal_a: signal_0041
+        signal_b: signal_0040
+      out:
+        signal: signal_0042
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 720
+    - id: atom_0043
+      atom: amplitude_add
+      in:
+        signal_a: signal_0042
+        signal_b: signal_0041
+      out:
+        signal: signal_0043
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 720
+    - id: atom_0044
+      atom: amplitude_add
+      in:
+        signal_a: signal_0043
+        signal_b: signal_0042
+      out:
+        signal: signal_0044
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 720
+    - id: atom_0045
+      atom: amplitude_add
+      in:
+        signal_a: signal_0044
+        signal_b: signal_0043
+      out:
+        signal: signal_0045
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 720
+    - id: atom_0046
+      atom: amplitude_add
+      in:
+        signal_a: signal_0045
+        signal_b: signal_0044
+      out:
+        signal: signal_0046
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 720
+    - id: atom_0047
+      atom: amplitude_add
+      in:
+        signal_a: signal_0046
+        signal_b: signal_0045
+      out:
+        signal: signal_0047
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 720
+    - id: atom_0048
+      atom: amplitude_add
+      in:
+        signal_a: signal_0047
+        signal_b: signal_0046
+      out:
+        signal: signal_0048
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 720
+    - id: atom_0049
+      atom: amplitude_add
+      in:
+        signal_a: signal_0048
+        signal_b: signal_0047
+      out:
+        signal: signal_0049
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 720
+    - id: atom_0050
+      atom: amplitude_add
+      in:
+        signal_a: signal_0049
+        signal_b: signal_0048
+      out:
+        signal: signal_0050
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 720
+    - id: atom_0051
+      atom: amplitude_add
+      in:
+        signal_a: signal_0050
+        signal_b: signal_0049
+      out:
+        signal: signal_0051
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 900
+    - id: atom_0052
+      atom: amplitude_add
+      in:
+        signal_a: signal_0051
+        signal_b: signal_0050
+      out:
+        signal: signal_0052
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 900
+    - id: atom_0053
+      atom: amplitude_add
+      in:
+        signal_a: signal_0052
+        signal_b: signal_0051
+      out:
+        signal: signal_0053
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 900
+    - id: atom_0054
+      atom: amplitude_add
+      in:
+        signal_a: signal_0053
+        signal_b: signal_0052
+      out:
+        signal: signal_0054
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 900
+    - id: atom_0055
+      atom: amplitude_add
+      in:
+        signal_a: signal_0054
+        signal_b: signal_0053
+      out:
+        signal: signal_0055
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 900
+    - id: atom_0056
+      atom: amplitude_add
+      in:
+        signal_a: signal_0055
+        signal_b: signal_0054
+      out:
+        signal: signal_0056
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 900
+    - id: atom_0057
+      atom: amplitude_add
+      in:
+        signal_a: signal_0056
+        signal_b: signal_0055
+      out:
+        signal: signal_0057
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 900
+    - id: atom_0058
+      atom: amplitude_add
+      in:
+        signal_a: signal_0057
+        signal_b: signal_0056
+      out:
+        signal: signal_0058
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 900
+    - id: atom_0059
+      atom: amplitude_add
+      in:
+        signal_a: signal_0058
+        signal_b: signal_0057
+      out:
+        signal: signal_0059
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 900
+    - id: atom_0060
+      atom: amplitude_add
+      in:
+        signal_a: signal_0059
+        signal_b: signal_0058
+      out:
+        signal: signal_0060
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 900
+    - id: atom_0061
+      atom: amplitude_add
+      in:
+        signal_a: signal_0060
+        signal_b: signal_0059
+      out:
+        signal: signal_0061
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 1080
+    - id: atom_0062
+      atom: amplitude_add
+      in:
+        signal_a: signal_0061
+        signal_b: signal_0060
+      out:
+        signal: signal_0062
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 1080
+    - id: atom_0063
+      atom: amplitude_add
+      in:
+        signal_a: signal_0062
+        signal_b: signal_0061
+      out:
+        signal: signal_0063
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 1080
+    - id: atom_0064
+      atom: amplitude_add
+      in:
+        signal_a: signal_0063
+        signal_b: signal_0062
+      out:
+        signal: signal_0064
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 1080
+    - id: atom_0065
+      atom: amplitude_add
+      in:
+        signal_a: signal_0064
+        signal_b: signal_0063
+      out:
+        signal: signal_0065
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 1080
+    - id: atom_0066
+      atom: amplitude_add
+      in:
+        signal_a: signal_0065
+        signal_b: signal_0064
+      out:
+        signal: signal_0066
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 1080
+    - id: atom_0067
+      atom: amplitude_add
+      in:
+        signal_a: signal_0066
+        signal_b: signal_0065
+      out:
+        signal: signal_0067
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 1080
+    - id: atom_0068
+      atom: amplitude_add
+      in:
+        signal_a: signal_0067
+        signal_b: signal_0066
+      out:
+        signal: signal_0068
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 1080
+    - id: atom_0069
+      atom: amplitude_add
+      in:
+        signal_a: signal_0068
+        signal_b: signal_0067
+      out:
+        signal: signal_0069
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 1080
+    - id: atom_0070
+      atom: amplitude_add
+      in:
+        signal_a: signal_0069
+        signal_b: signal_0068
+      out:
+        signal: signal_0070
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 1080
+    - id: atom_0071
+      atom: amplitude_add
+      in:
+        signal_a: signal_0070
+        signal_b: signal_0069
+      out:
+        signal: signal_0071
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 1260
+    - id: atom_0072
+      atom: amplitude_add
+      in:
+        signal_a: signal_0071
+        signal_b: signal_0070
+      out:
+        signal: signal_0072
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 1260
+    - id: atom_0073
+      atom: amplitude_add
+      in:
+        signal_a: signal_0072
+        signal_b: signal_0071
+      out:
+        signal: signal_0073
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 1260
+    - id: atom_0074
+      atom: amplitude_add
+      in:
+        signal_a: signal_0073
+        signal_b: signal_0072
+      out:
+        signal: signal_0074
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 1260
+    - id: atom_0075
+      atom: amplitude_add
+      in:
+        signal_a: signal_0074
+        signal_b: signal_0073
+      out:
+        signal: signal_0075
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 1260
+    - id: atom_0076
+      atom: amplitude_add
+      in:
+        signal_a: signal_0075
+        signal_b: signal_0074
+      out:
+        signal: signal_0076
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 1260
+    - id: atom_0077
+      atom: amplitude_add
+      in:
+        signal_a: signal_0076
+        signal_b: signal_0075
+      out:
+        signal: signal_0077
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 1260
+    - id: atom_0078
+      atom: amplitude_add
+      in:
+        signal_a: signal_0077
+        signal_b: signal_0076
+      out:
+        signal: signal_0078
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 1260
+    - id: atom_0079
+      atom: amplitude_add
+      in:
+        signal_a: signal_0078
+        signal_b: signal_0077
+      out:
+        signal: signal_0079
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 1260
+    - id: atom_0080
+      atom: amplitude_add
+      in:
+        signal_a: signal_0079
+        signal_b: signal_0078
+      out:
+        signal: signal_0080
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 1260
+    - id: atom_0081
+      atom: amplitude_add
+      in:
+        signal_a: signal_0080
+        signal_b: signal_0079
+      out:
+        signal: signal_0081
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 1440
+    - id: atom_0082
+      atom: amplitude_add
+      in:
+        signal_a: signal_0081
+        signal_b: signal_0080
+      out:
+        signal: signal_0082
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 1440
+    - id: atom_0083
+      atom: amplitude_add
+      in:
+        signal_a: signal_0082
+        signal_b: signal_0081
+      out:
+        signal: signal_0083
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 1440
+    - id: atom_0084
+      atom: amplitude_add
+      in:
+        signal_a: signal_0083
+        signal_b: signal_0082
+      out:
+        signal: signal_0084
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 1440
+    - id: atom_0085
+      atom: amplitude_add
+      in:
+        signal_a: signal_0084
+        signal_b: signal_0083
+      out:
+        signal: signal_0085
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 1440
+    - id: atom_0086
+      atom: amplitude_add
+      in:
+        signal_a: signal_0085
+        signal_b: signal_0084
+      out:
+        signal: signal_0086
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 1440
+    - id: atom_0087
+      atom: amplitude_add
+      in:
+        signal_a: signal_0086
+        signal_b: signal_0085
+      out:
+        signal: signal_0087
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 1440
+    - id: atom_0088
+      atom: amplitude_add
+      in:
+        signal_a: signal_0087
+        signal_b: signal_0086
+      out:
+        signal: signal_0088
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 1440
+    - id: atom_0089
+      atom: amplitude_add
+      in:
+        signal_a: signal_0088
+        signal_b: signal_0087
+      out:
+        signal: signal_0089
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 1440
+    - id: atom_0090
+      atom: amplitude_add
+      in:
+        signal_a: signal_0089
+        signal_b: signal_0088
+      out:
+        signal: signal_0090
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 1440
+    - id: atom_0091
+      atom: amplitude_add
+      in:
+        signal_a: signal_0090
+        signal_b: signal_0089
+      out:
+        signal: signal_0091
+      config: {}
+      ui:
+        position:
+          x: 0
+          y: 1620
+    - id: atom_0092
+      atom: amplitude_add
+      in:
+        signal_a: signal_0091
+        signal_b: signal_0090
+      out:
+        signal: signal_0092
+      config: {}
+      ui:
+        position:
+          x: 260
+          y: 1620
+    - id: atom_0093
+      atom: amplitude_add
+      in:
+        signal_a: signal_0092
+        signal_b: signal_0091
+      out:
+        signal: signal_0093
+      config: {}
+      ui:
+        position:
+          x: 520
+          y: 1620
+    - id: atom_0094
+      atom: amplitude_add
+      in:
+        signal_a: signal_0093
+        signal_b: signal_0092
+      out:
+        signal: signal_0094
+      config: {}
+      ui:
+        position:
+          x: 780
+          y: 1620
+    - id: atom_0095
+      atom: amplitude_add
+      in:
+        signal_a: signal_0094
+        signal_b: signal_0093
+      out:
+        signal: signal_0095
+      config: {}
+      ui:
+        position:
+          x: 1040
+          y: 1620
+    - id: atom_0096
+      atom: amplitude_add
+      in:
+        signal_a: signal_0095
+        signal_b: signal_0094
+      out:
+        signal: signal_0096
+      config: {}
+      ui:
+        position:
+          x: 1300
+          y: 1620
+    - id: atom_0097
+      atom: amplitude_add
+      in:
+        signal_a: signal_0096
+        signal_b: signal_0095
+      out:
+        signal: signal_0097
+      config: {}
+      ui:
+        position:
+          x: 1560
+          y: 1620
+    - id: atom_0098
+      atom: amplitude_add
+      in:
+        signal_a: signal_0097
+        signal_b: signal_0096
+      out:
+        signal: signal_0098
+      config: {}
+      ui:
+        position:
+          x: 1820
+          y: 1620
+    - id: atom_0099
+      atom: amplitude_add
+      in:
+        signal_a: signal_0098
+        signal_b: signal_0097
+      out:
+        signal: signal_0099
+      config: {}
+      ui:
+        position:
+          x: 2080
+          y: 1620
+    - id: atom_0100
+      atom: amplitude_add
+      in:
+        signal_a: signal_0099
+        signal_b: signal_0098
+      out:
+        signal: output
+      config: {}
+      ui:
+        position:
+          x: 2340
+          y: 1620
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

@@ -30,6 +30,7 @@ const PROFILES = [
 ] as const;
 
 type Topology = 'linear' | 'branching' | 'highly_connected' | 'reuse' | 'payload' | 'invalid';
+type AtomTopology = 'linear' | 'branching' | 'dense' | 'payload' | 'invalid';
 
 type Profile = (typeof PROFILES)[number];
 
@@ -143,8 +144,9 @@ function createFanoutUnitFile(name: string, paramCount: number, inputCount = PER
   return file;
 }
 
-function createAtomStressUnit(profile: Profile): UnitTemplate {
-  const name = `perf_atoms_${profile.atoms}`;
+function createAtomStressUnit(profile: Profile, topology: AtomTopology = 'linear'): UnitTemplate {
+  const suffix = topology === 'linear' ? '' : `_${topology}`;
+  const name = `perf_atoms_${profile.atoms}${suffix}`;
   const file = `${name}.unit.v2.yaml`;
   const signals = ['input'];
   const columns = Math.ceil(Math.sqrt(profile.atoms));
@@ -152,12 +154,31 @@ function createAtomStressUnit(profile: Profile): UnitTemplate {
     const sequence = String(index + 1).padStart(4, '0');
     const output = index === profile.atoms - 1 ? 'output' : `signal_${sequence}`;
     signals.push(output);
+    const previous = index === 0 ? 'input' : `signal_${String(index).padStart(4, '0')}`;
+    const branchParent = index === 0
+      ? 'input'
+      : `signal_${String(Math.floor((index - 1) / 2) + 1).padStart(4, '0')}`;
+    const secondDenseInput = index < 2 ? 'input' : `signal_${String(index - 1).padStart(4, '0')}`;
+    const atom = topology === 'dense'
+      ? 'amplitude_add'
+      : topology === 'payload'
+        ? 'filter_biquad'
+        : 'amplitude_clip_hard';
+    const input: Record<string, string> = topology === 'dense'
+      ? { signal_a: previous, signal_b: secondDenseInput }
+      : { signal: topology === 'branching' ? branchParent : previous };
+    if (topology === 'invalid' && index === Math.floor(profile.atoms / 2)) input.signal = 'missing_signal';
+    const config = topology === 'payload'
+      ? { cutoff: 200 + (index % 32) * 100, q: 0.707, mode: index % 3, sample_rate: 48000, smoothing_ms: 5 }
+      : topology === 'dense'
+        ? {}
+        : { threshold: 1.0 };
     return {
       id: `atom_${sequence}`,
-      atom: 'amplitude_clip_hard',
-      in: { signal: index === 0 ? 'input' : `signal_${String(index).padStart(4, '0')}` },
+      atom,
+      in: input,
       out: { signal: output },
-      config: { threshold: 1.0 },
+      config,
       ui: {
         position: {
           x: (index % columns) * 260,
@@ -174,10 +195,14 @@ function createAtomStressUnit(profile: Profile): UnitTemplate {
     name,
     version: '2.0.0',
     meta: {
-      title: `Performance ${profile.atoms} atom chain`,
-      description: 'Deterministic contract-canvas performance fixture.',
+      title: topology === 'linear'
+        ? `Performance ${profile.atoms} atom chain`
+        : `Performance ${profile.atoms} atom ${topology} graph`,
+      description: topology === 'linear'
+        ? 'Deterministic contract-canvas performance fixture.'
+        : `Deterministic ${topology} contract-canvas performance fixture.`,
       category: 'test',
-      perf: { profile: profile.name, atoms: profile.atoms },
+      perf: { profile: profile.name, ...(topology === 'linear' ? {} : { topology }), atoms: profile.atoms },
     },
     params: {},
     ports: {
@@ -196,11 +221,11 @@ function createAtomStressUnit(profile: Profile): UnitTemplate {
   return { id: name, file: `../../units-v2/perf/${file}` };
 }
 
-function buildAtomStressProject(profile: Profile, unit: UnitTemplate): ProjectFixture {
+function buildAtomStressProject(profile: Profile, unit: UnitTemplate, topology: AtomTopology = 'linear'): ProjectFixture {
   return {
     kind: 'apg.project',
     schema: 'apg.project.v2',
-    name: `perf-atoms-${profile.name}`,
+    name: topology === 'linear' ? `perf-atoms-${profile.name}` : `perf-atoms-${profile.name}-${topology}`,
     version: '2.0.0',
     units: [{ id: unit.id, file: unit.file }],
     chain: {
@@ -217,7 +242,7 @@ function buildAtomStressProject(profile: Profile, unit: UnitTemplate): ProjectFi
     meta: {
       perf: {
         profile: profile.name,
-        topology: 'linear',
+        topology: topology === 'dense' ? 'highly_connected' : topology,
         target: { units: 1, atoms: profile.atoms, routes: 2 },
       },
     },
@@ -480,6 +505,25 @@ function generate(): void {
       nodes: atomProject.chain.nodes.length,
       routes: atomProject.chain.routes.length,
     });
+
+    const atomVariants: AtomTopology[] = profile.name === 'medium'
+      ? ['branching', 'dense', 'payload']
+      : profile.name === 'small'
+        ? ['invalid']
+        : [];
+    for (const topology of atomVariants) {
+      const variantUnit = createAtomStressUnit(profile, topology);
+      const variantProject = buildAtomStressProject(profile, variantUnit, topology);
+      const variantPath = resolve(fixtureRoot, `${profile.name}-atoms-${topology}.project.v2.yaml`);
+      writeYaml(variantPath, variantProject);
+      outputs.push({
+        profile: `${profile.name}-atoms-${topology}`,
+        topology: topology === 'dense' ? 'highly_connected' : topology,
+        path: variantPath,
+        nodes: variantProject.chain.nodes.length,
+        routes: variantProject.chain.routes.length,
+      });
+    }
 
     for (const topology of topologies) {
       const payload = buildProject(profile, topology, templates);

@@ -890,6 +890,9 @@ test.describe('Contract graph atom scalability', () => {
   const fixtures = [
     { profile: 'small-atoms', bucket: 'small', path: 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml' },
     { profile: 'medium-atoms', bucket: 'medium', path: 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml' },
+    { profile: 'medium-atoms-branching', bucket: 'medium', path: 'test/fixtures/projects-v2/perf/medium-atoms-branching.project.v2.yaml' },
+    { profile: 'medium-atoms-dense', bucket: 'medium', path: 'test/fixtures/projects-v2/perf/medium-atoms-dense.project.v2.yaml' },
+    { profile: 'medium-atoms-payload', bucket: 'medium', path: 'test/fixtures/projects-v2/perf/medium-atoms-payload.project.v2.yaml' },
     { profile: 'large-atoms', bucket: 'large', path: 'test/fixtures/projects-v2/perf/large-atoms.project.v2.yaml' },
   ];
 
@@ -910,6 +913,20 @@ test.describe('Contract graph atom scalability', () => {
       });
     });
   }
+
+  test('invalid atom binding is visible without breaking contract inspection', async ({ page }) => {
+    const fixture = 'test/fixtures/projects-v2/perf/small-atoms-invalid.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+
+    await importPerfWorkspaceFixture(page, fixture, 1);
+    await expect(page.locator('.transport-state')).toHaveText('error', { timeout: 12_000 });
+    await expect(page.locator('.transport-state')).toHaveAttribute('title', /missing_signal/);
+    await openLoadedContract(page, meta.atoms);
+    await expect(page.getByTestId('contract-canvas')).toHaveAttribute('data-atom-count', String(meta.atoms));
+    expect(pageErrors).toEqual([]);
+  });
 
   test('opens the 1,000-atom failure boundary in scheduled runs', async ({ page }, testInfo) => {
     test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The 1,000-atom boundary runs in scheduled performance CI.');

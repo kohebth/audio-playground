@@ -1,0 +1,29 @@
+kind: apg.project
+schema: apg.project.v2
+name: perf-atoms-medium-dense
+version: 2.0.0
+units:
+  - id: perf_atoms_100_dense
+    file: ../../units-v2/perf/perf_atoms_100_dense.unit.v2.yaml
+chain:
+  nodes:
+    - id: atom_stress
+      unit: perf_atoms_100_dense
+  routes:
+    - from: system.input
+      to: atom_stress.input
+    - from: atom_stress.output
+      to: system.output
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render
+meta:
+  perf:
+    profile: medium
+    topology: highly_connected
+    target:
+      units: 1
+      atoms: 100
+      routes: 2
