@@ -92,20 +92,25 @@ export function saveAudioIoPreference(storage: Pick<Storage, 'setItem'>, prefere
 
 export function collectAudioDevices(devices: readonly MediaDeviceInfo[]): AudioDeviceOption[] {
   const counts = { audioinput: 0, audiooutput: 0 };
-  return devices
-    .filter((device): device is MediaDeviceInfo & { kind: 'audioinput' | 'audiooutput' } => (
-      device.kind === 'audioinput' || device.kind === 'audiooutput'
-    ))
-    .map(device => {
-      counts[device.kind] += 1;
-      const fallback = device.kind === 'audioinput' ? 'Audio input' : 'Audio output';
-      return {
-        deviceId: device.deviceId,
-        groupId: device.groupId,
-        kind: device.kind,
-        label: device.label || `${fallback} ${counts[device.kind]}`,
-      };
+  const seen = new Set<string>();
+  return devices.reduce<AudioDeviceOption[]>((options, device) => {
+    if (device.kind !== 'audioinput' && device.kind !== 'audiooutput') return options;
+    const deviceId = device.deviceId || 'default';
+    const key = `${device.kind}:${deviceId}`;
+    if (seen.has(key)) return options;
+    seen.add(key);
+    counts[device.kind] += 1;
+    const fallback = device.kind === 'audioinput' ? 'Audio input' : 'Audio output';
+    options.push({
+      deviceId,
+      groupId: device.groupId,
+      kind: device.kind,
+      label: device.label || (
+        deviceId === 'default' ? `System default ${fallback.toLowerCase()}` : `${fallback} ${counts[device.kind]}`
+      ),
     });
+    return options;
+  }, []);
 }
 
 function fallbackDeviceId(devices: readonly AudioDeviceOption[], kind: AudioDeviceOption['kind']): string {
@@ -143,7 +148,9 @@ export function microphoneConstraints(preference: AudioIoPreference, sampleRate:
   return {
     autoGainControl: false,
     channelCount: { ideal: 1 },
-    deviceId: preference.inputDeviceId === 'default' ? undefined : { exact: preference.inputDeviceId },
+    deviceId: !preference.inputDeviceId || preference.inputDeviceId === 'default'
+      ? undefined
+      : { exact: preference.inputDeviceId },
     echoCancellation: false,
     latency: { ideal: 0 },
     noiseSuppression: false,
@@ -152,7 +159,7 @@ export function microphoneConstraints(preference: AudioIoPreference, sampleRate:
 }
 
 export async function createConfiguredAudioContext(preference: AudioIoPreference): Promise<ConfiguredAudioContext> {
-  const sinkRequested = preference.outputDeviceId !== 'default';
+  const sinkRequested = Boolean(preference.outputDeviceId) && preference.outputDeviceId !== 'default';
   const options = {
     latencyHint: preference.latencyHint,
     ...(sinkRequested ? { sinkId: preference.outputDeviceId } : {}),

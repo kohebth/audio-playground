@@ -26,6 +26,16 @@ assert.equal(devices.length, 4);
 assert.equal(recommendedOutputDeviceId(devices, 'interface-in', 'default'), 'interface-out');
 assert.equal(recommendedOutputDeviceId(devices, 'interface-in', 'manual-output'), 'manual-output');
 
+const anonymousDevices = collectAudioDevices([
+  { deviceId: '', groupId: '', kind: 'audioinput', label: '' },
+  { deviceId: '', groupId: '', kind: 'audioinput', label: '' },
+  { deviceId: '', groupId: '', kind: 'audiooutput', label: '' },
+] as MediaDeviceInfo[]);
+assert.deepEqual(anonymousDevices.map(device => `${device.kind}:${device.deviceId}`), [
+  'audioinput:default',
+  'audiooutput:default',
+]);
+
 assert.deepEqual(resolveAudioIoPreference({
   inputDeviceId: 'missing',
   outputDeviceId: 'missing',
@@ -44,6 +54,11 @@ const constraints = microphoneConstraints({
 assert.deepEqual(constraints.deviceId, { exact: 'interface-in' });
 assert.deepEqual(constraints.sampleRate, { ideal: 48_000 });
 assert.equal(constraints.echoCancellation, false);
+assert.equal(microphoneConstraints({
+  inputDeviceId: '',
+  outputDeviceId: '',
+  latencyHint: 'interactive',
+}, 48_000).deviceId, undefined);
 
 const storageValues = new Map<string, string>();
 const storage = {
