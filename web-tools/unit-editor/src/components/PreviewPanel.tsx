@@ -108,6 +108,7 @@ export function PreviewPanel({
   const fileSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const previousOverridesRef = useRef<Map<string, ParamOverride>>(new Map());
+  const paramControlQueueRef = useRef<Map<string, { draining: boolean; pendingValue: number | null }>>(new Map());
   const firstOverride = paramOverrides[0];
 
   const refreshBackendState = useCallback((clearDiagnostic = false) => {
@@ -269,7 +270,9 @@ export function PreviewPanel({
     if (!backend || !running) return;
     const previous = previousOverridesRef.current;
     const current = new Map(paramOverrides.map(override => [override.path, override]));
-    const commands = paramOverrides.map(override => ({ path: override.path, value: override.value }));
+    const commands = paramOverrides
+      .filter(override => previous.get(override.path)?.value !== override.value)
+      .map(override => ({ path: override.path, value: override.value }));
     for (const [path, override] of previous) {
       if (!current.has(path)) commands.push({ path, value: override.originalValue });
     }
@@ -277,9 +280,32 @@ export function PreviewPanel({
     for (const command of commands) {
       const value = Number(command.value);
       if (Number.isFinite(value)) {
-        void markPerfSpan('runtime.control.param', () => backend.setParam(command.path, value), { path: command.path }).catch(error => {
-          reportError(error, 'control');
-        });
+        let entry = paramControlQueueRef.current.get(command.path);
+        if (!entry) {
+          entry = { draining: false, pendingValue: null };
+          paramControlQueueRef.current.set(command.path, entry);
+        }
+        entry.pendingValue = value;
+        if (entry.draining) continue;
+        entry.draining = true;
+        void (async () => {
+          try {
+            while (runningRef.current && entry.pendingValue !== null) {
+              const nextValue = entry.pendingValue;
+              entry.pendingValue = null;
+              await markPerfSpan(
+                'runtime.control.param',
+                () => backend.setParam(command.path, nextValue),
+                { path: command.path },
+              );
+            }
+          } catch (error) {
+            reportError(error, 'control');
+          } finally {
+            entry.draining = false;
+            if (entry.pendingValue === null) paramControlQueueRef.current.delete(command.path);
+          }
+        })();
       }
     }
   }, [backend, paramOverrides, reportError, running]);
@@ -297,6 +323,7 @@ export function PreviewPanel({
 
   const stopPlayback = useCallback(async () => {
     runningRef.current = false;
+    paramControlQueueRef.current.clear();
     setRunning(false);
     const fileSource = fileSourceRef.current;
     if (fileSource) {

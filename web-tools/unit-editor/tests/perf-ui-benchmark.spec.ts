@@ -10,6 +10,26 @@ type PerfSample = {
   endedAt: number;
 };
 
+type RuntimeSnapshot = {
+  phase: string;
+  activeRevision: number;
+  preparedRevision: number;
+  meter: { frames: number; valid: boolean; underruns: number };
+  resources: {
+    workerActive: boolean;
+    workletActive: boolean;
+    pendingControlRequests: number;
+    pendingProcessorRequests: number;
+    contextState: string;
+    workletStarts: number;
+    workletStops: number;
+    preparedImageBytes: number;
+    streamTracks: number;
+    inputNodeActive: boolean;
+    fileSourceActive: boolean;
+  };
+};
+
 type PerfThresholdMap = {
   maxMs: Record<string, number>;
 };
@@ -17,6 +37,13 @@ type PerfThresholdMap = {
 const thresholds: PerfThresholdMap = JSON.parse(
   readFileSync(path.resolve(process.cwd(), 'scripts', 'perf-ui-thresholds.json'), 'utf8'),
 );
+
+test.use({
+  launchOptions: {
+    args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+  },
+  permissions: ['microphone'],
+});
 
 type PerfFixture = {
   chain?: {
@@ -247,6 +274,13 @@ async function getComponentRenders(page: Page, component: string): Promise<Recor
       Object.entries(trace?.componentRenders ?? {}).filter(([key]) => key.startsWith(`${name}:`)),
     );
   }, component);
+}
+
+async function getRuntimeSnapshot(page: Page): Promise<RuntimeSnapshot | null> {
+  return page.evaluate(() => {
+    const trace = (window as { __apgPerfTrace?: { runtime?: RuntimeSnapshot } }).__apgPerfTrace;
+    return trace?.runtime ?? null;
+  });
 }
 
 async function openContractFixture(page: Page, fixturePath: string, expectedAtoms: number): Promise<number> {
@@ -1185,5 +1219,54 @@ test.describe('Contract graph atom scalability', () => {
     const renderedNodes = Object.keys(renders);
     testInfo.annotations.push({ type: 'project-node-renders', description: renderedNodes.join(',') });
     expect(renderedNodes).toEqual(['ProjectNode:drive1']);
+  });
+});
+
+test.describe('Live WASM runtime performance', () => {
+  test.beforeEach(async ({ page }) => {
+    await launchWorkspace(page);
+  });
+
+  test('rapid parameter controls keep live audio healthy and release input handles on stop', async ({ page }, testInfo) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+    await page.getByTestId('preview-mode-mic').click();
+    await page.getByTestId('preview-start-stop').click();
+    await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+    await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.valid ?? false, { timeout: 10_000 }).toBe(true);
+    await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.frames ?? 0, { timeout: 10_000 }).toBeGreaterThan(0);
+    const baselineUnderruns = (await getRuntimeSnapshot(page))?.meter.underruns ?? 0;
+
+    await page.getByTestId('project-node-drive1').click();
+    await page.getByTestId('inspector-tab-atom').click();
+    const knob = page.getByTestId('param-knob-drive1-drive');
+    const box = await knob.boundingBox();
+    expect(box).not.toBeNull();
+    await clearPerfSpans(page);
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 - 40, { steps: 12 });
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 + 24, { steps: 12 });
+    await page.mouse.up();
+
+    const controlMs = await runAndAssertBudget(page, 'runtime.control.param', 1);
+    const runningSnapshot = await getRuntimeSnapshot(page);
+    expect(runningSnapshot?.meter.underruns).toBe(baselineUnderruns);
+    expect(runningSnapshot?.resources.workletActive).toBe(true);
+    expect(runningSnapshot?.resources.streamTracks).toBe(1);
+
+    await page.getByTestId('preview-start-stop').click();
+    await expect(page.locator('.transport-state')).toHaveText('ready');
+    await expect.poll(async () => (await getRuntimeSnapshot(page))?.resources.workletActive ?? true).toBe(false);
+    const stoppedSnapshot = await getRuntimeSnapshot(page);
+    expect(stoppedSnapshot?.resources.workerActive).toBe(true);
+    expect(stoppedSnapshot?.resources.pendingControlRequests).toBe(0);
+    expect(stoppedSnapshot?.resources.pendingProcessorRequests).toBe(0);
+    expect(stoppedSnapshot?.resources.streamTracks).toBe(0);
+    expect(stoppedSnapshot?.resources.inputNodeActive).toBe(false);
+    expect(stoppedSnapshot?.resources.fileSourceActive).toBe(false);
+    expect(stoppedSnapshot?.resources.workletStarts).toBe(stoppedSnapshot?.resources.workletStops);
+    expect(pageErrors).toEqual([]);
+    testInfo.annotations.push({ type: 'runtime-param-control-ms', description: controlMs.toFixed(2) });
   });
 });

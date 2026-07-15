@@ -31,6 +31,9 @@
     "contract.load.medium": 500,
     "contract.load.large": 2000,
     "contract.load.extreme": 4000,
+    "runtime.control.param": 50,
+    "runtime.prepare.workspace": 500,
+    "runtime.commit.workspace": 100,
     "workspace.autosave.persist": 16
   }
 }

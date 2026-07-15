@@ -19,8 +19,8 @@ memory stability, and live WASM audio. The source requirements are the July 15 p
 | 500-node/atom load | `< 2 s` | 500-atom contract canvas and 50-unit project import |
 | Residual edit memory | `< 10%` | Chromium collected-heap gate after bounded-history warm-up |
 | Interaction frame rate | `>= 50 FPS` | Scheduled 500-atom pointer drag/pan/zoom average-frame gate |
-| Runtime parameter control | `< 50 ms` | UI mutation only; Worklet round-trip not implemented |
-| Audio underruns from UI | `0` | Not implemented |
+| Runtime parameter control | `< 50 ms` | Real Worklet round trip during continuous knob drag |
+| Audio underruns from UI | `0` | Zero increase during rapid live parameter control |
 
 The project import checks measure from browser file import through the expected rendered React Flow node count. Contract
 checks use the median of three opens, including the cold first open, through registering every actual atom and mounting
@@ -86,7 +86,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [ ] Add atom/unit, reconnect, replacement, undo/redo, save, and import while audio runs.
 - [ ] Separate UI commit latency from compile/prepare/commit latency.
 - [ ] Assert zero meter underruns and zero callback deadline misses.
-- [ ] Rapid Worklet parameter-control latency under `50 ms`.
+- [x] Rapid Worklet parameter-control latency under `50 ms`, with per-path diffing and in-flight coalescing.
 - [ ] Start/stop leak checks for AudioContexts, Worklets, Workers, ports, streams, and timers.
 
 ### Phase 5: Regression Gates
