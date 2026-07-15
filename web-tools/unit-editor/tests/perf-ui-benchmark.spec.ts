@@ -46,11 +46,23 @@ const thresholds: PerfThresholdMap = JSON.parse(
   readFileSync(path.resolve(process.cwd(), 'scripts', 'perf-ui-thresholds.json'), 'utf8'),
 );
 
-test.use({
-  launchOptions: {
-    args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
-  },
-  permissions: ['microphone'],
+test.beforeEach(async ({ browserName, page }, testInfo) => {
+  const requestedRate = Number(process.env.APG_CPU_THROTTLE ?? '1');
+  const throttleRate = Number.isFinite(requestedRate) && requestedRate >= 1 ? requestedRate : 1;
+  if (throttleRate > 1) {
+    test.skip(browserName !== 'chromium', 'CPU throttling uses Chromium DevTools Protocol.');
+    const session = await page.context().newCDPSession(page);
+    await session.send('Emulation.setCPUThrottlingRate', { rate: throttleRate });
+    await session.detach();
+  }
+  testInfo.annotations.push({
+    type: 'performance-profile',
+    description: JSON.stringify({
+      browser: browserName,
+      cpuThrottle: throttleRate,
+      profile: process.env.APG_PERF_PROFILE ?? 'local',
+    }),
+  });
 });
 
 type PerfFixture = {
@@ -590,7 +602,7 @@ test.describe('Scalability checkpoints', () => {
   ];
 
   for (const fixture of fixtures) {
-    test(`${fixture.bucket === 'medium' ? '@pr-medium ' : ''}graph load and synchronize ${fixture.profile}`, async ({ page }, testInfo) => {
+    test(`${fixture.bucket === 'medium' ? '@pr-medium @browser-matrix ' : ''}graph load and synchronize ${fixture.profile}`, async ({ page }, testInfo) => {
       const meta = readPerfFixtureMeta(fixture.path);
       await clearPerfSpans(page);
       const loadMs = await importPerfWorkspaceFixture(page, fixture.path, meta.nodes);
@@ -1132,7 +1144,7 @@ test.describe('Contract graph atom scalability', () => {
     testInfo.annotations.push({ type: 'viewport-node-renders', description: String(viewportRenders.length) });
   });
 
-  test('@pr-medium explicit replacement is controlled and undoable in a medium graph', async ({ page }, testInfo) => {
+  test('@pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph', async ({ page }, testInfo) => {
     const fixture = 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml';
     const meta = readPerfFixtureMeta(fixture);
     await openContractFixture(page, fixture, meta.atoms);

@@ -15,6 +15,7 @@
     "perf:benchmark:baseline": "node --expose-gc --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts --out scripts/perf-baseline.json",
     "perf:ui": "playwright test tests/perf-ui-benchmark.spec.ts",
     "perf:ui:pr": "playwright test tests/perf-ui-benchmark.spec.ts --grep @pr-medium --reporter=line --workers=1",
+    "perf:ui:report": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-ui-report.mts",
     "test": "node scripts/contract-tests.mjs && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/unit-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/project-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/workspace-persistence-tests.mts",
     "preview": "vite preview"
   },

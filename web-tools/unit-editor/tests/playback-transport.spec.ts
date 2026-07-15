@@ -1,12 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-test.use({
-  launchOptions: {
-    args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
-  },
-  permissions: ['microphone'],
-});
-
 test('controls file and microphone playback with transport shortcuts', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));

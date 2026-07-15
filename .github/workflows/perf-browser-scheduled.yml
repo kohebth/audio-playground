@@ -1,0 +1,130 @@
+name: Scheduled Browser Performance
+
+on:
+  schedule:
+    - cron: '23 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wasm:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 5.0.1
+          actions-cache-folder: emsdk-cache
+
+      - name: Build and smoke-test WASM middleware
+        run: |
+          emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-wasm --target apg_control apg_processor -j2
+          node wasm-tools/test/emscripten_runtime_smoke.mjs build-wasm/wasm-tools .
+          mkdir -p browser-wasm
+          cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm browser-wasm/
+          cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm browser-wasm/
+          cp wasm-tools/web/processor.worklet.js browser-wasm/processor.worklet.js
+
+      - name: Upload WASM middleware
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-wasm
+          path: browser-wasm
+          retention-days: 14
+
+  browser:
+    needs: wasm
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: chromium-full
+            browser: chromium
+            cpu: 1
+            full: true
+          - profile: chromium-4x
+            browser: chromium
+            cpu: 4
+            full: false
+          - profile: chromium-6x
+            browser: chromium
+            cpu: 6
+            full: false
+          - profile: firefox-medium
+            browser: firefox
+            cpu: 1
+            full: false
+          - profile: webkit-medium
+            browser: webkit
+            cpu: 1
+            full: false
+    env:
+      APG_BROWSER_MATRIX: '1'
+      APG_CPU_THROTTLE: ${{ matrix.cpu }}
+      APG_PERF_BROWSER: ${{ matrix.browser }}
+      APG_PERF_PROFILE: ${{ matrix.profile }}
+      APG_PERF_SCHEDULED: '1'
+      PLAYWRIGHT_JSON_OUTPUT_NAME: perf-results-${{ matrix.profile }}.json
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-tools/unit-editor/package-lock.json
+
+      - name: Download WASM middleware
+        uses: actions/download-artifact@v4
+        with:
+          name: browser-wasm
+          path: web-tools/unit-editor/public/wasm
+
+      - name: Install web editor dependencies
+        working-directory: web-tools/unit-editor
+        run: npm install
+
+      - name: Install browser
+        working-directory: web-tools/unit-editor
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run full scheduled Chromium suite
+        if: matrix.full
+        working-directory: web-tools/unit-editor
+        run: npm run perf:ui -- --project=${{ matrix.browser }} --reporter=line,json --workers=1
+
+      - name: Run throttled or cross-browser medium suite
+        if: matrix.full == false
+        working-directory: web-tools/unit-editor
+        run: npm run perf:ui -- --project=${{ matrix.browser }} --grep @browser-matrix --reporter=line,json --workers=1
+
+      - name: Create trend record
+        if: always()
+        working-directory: web-tools/unit-editor
+        run: npm run perf:ui:report -- --input perf-results-${{ matrix.profile }}.json --output perf-history/${{ matrix.profile }}.json
+
+      - name: Upload browser performance history
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-perf-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            web-tools/unit-editor/perf-results-${{ matrix.profile }}.json
+            web-tools/unit-editor/perf-history/${{ matrix.profile }}.json
+            web-tools/unit-editor/test-results/perf-ui
+          if-no-files-found: warn
+          retention-days: 90
