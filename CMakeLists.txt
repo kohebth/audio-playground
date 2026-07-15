@@ -50,6 +50,13 @@ target_link_libraries(test_runtime apgcore)
 add_executable(apg-v2 tools/apg_v2_cli.c)
 target_link_libraries(apg-v2 apgcore)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(Threads REQUIRED)
+    add_executable(io-test tools/io_test.c)
+    target_link_libraries(io-test PRIVATE m Threads::Threads)
+    add_test(NAME test_io_test_detector COMMAND io-test --self-test)
+endif()
+
 add_subdirectory(wasm-tools)
 
 set(TEST_TARGETS
