@@ -14,7 +14,7 @@ import type {
   WorkspaceFile,
 } from '../lib/backendSamples';
 import { type ParamOverride } from '../lib/projectParams';
-import { AUDIO_TRACE_STAGE_LABELS, exportAudioTraceReport } from '../lib/audioTrace';
+import { AUDIO_TRACE_STAGE_LABELS, exportAudioTraceReport, formatAudioTraceBudget } from '../lib/audioTrace';
 import { formatLatencyHint } from '../lib/audioIo';
 import { useLiveBypass } from '../lib/liveBypass';
 import {
@@ -808,7 +808,7 @@ export function ProjectInspector({
                         <span>{stage.meanMs.toFixed(3)}</span>
                         <span>{stage.p95Ms.toFixed(3)}</span>
                         <span>{stage.maxMs.toFixed(3)}</span>
-                        <span>{stage.deadlineUtilization.toFixed(1)}%</span>
+                        <span>{formatAudioTraceBudget(name as keyof typeof AUDIO_TRACE_STAGE_LABELS, stage.deadlineUtilization)}</span>
                       </div>
                     ))}
                   </div>

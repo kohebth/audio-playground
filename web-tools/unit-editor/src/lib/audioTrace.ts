@@ -12,6 +12,10 @@ export const AUDIO_TRACE_STAGE_LABELS: Record<AudioTraceStageName, string> = {
   callbackTotal: 'Total callback',
 };
 
+export function formatAudioTraceBudget(stage: AudioTraceStageName, utilization: number): string {
+  return stage === 'schedulingJitter' ? 'n/a' : `${utilization.toFixed(1)}%`;
+}
+
 const INTERNAL_STAGES = [
   'inputCopy',
   'wasmProcess',
