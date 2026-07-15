@@ -59,6 +59,18 @@ assert.deepEqual(Object.keys(addedNode.in), ['signal']);
 assert.deepEqual(Object.keys(addedNode.out), ['signal']);
 assert.deepEqual(Object.keys(addedNode.config), ['threshold']);
 assert.deepEqual(addedNode.ui?.position, { x: 120, y: 240 });
+const malformedLegacyFn = added.content.replace(
+  'atom: amplitude_clip_hard',
+  'atom: amplitude_clip_hard\n      fn: amplitude_clip_soft',
+);
+const malformedNode = parseUnitGraphDraft(malformedLegacyFn).nodes.find(node => node.id === added.id);
+assert.equal(malformedNode?.atom, 'amplitude_clip_hard');
+const normalizedMalformed = serializeUnitGraphNodeUpdate(malformedLegacyFn, {
+  ...malformedNode!,
+  config: { ...malformedNode!.config, threshold: '0.7' },
+});
+assert.equal(parseUnitGraphDraft(normalizedMalformed).nodes.find(node => node.id === added.id)?.atom, 'amplitude_clip_hard');
+assert(!normalizedMalformed.includes('fn: amplitude_clip_soft'));
 const removedAdded = parseUnitGraphDraft(removeAtomNodeFromUnit(added.content, added.id));
 assert(!removedAdded.nodes.some(node => node.id === added.id));
 assert(!removedAdded.signals.some(signal => signal.startsWith(`${added.id}_`)));

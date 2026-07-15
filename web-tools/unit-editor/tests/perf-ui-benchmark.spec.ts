@@ -704,6 +704,51 @@ test.describe('Contract graph atom scalability', () => {
     testInfo.annotations.push({ type: 'viewport-node-renders', description: String(viewportRenders.length) });
   });
 
+  test('explicit replacement is controlled and undoable in a medium graph', async ({ page }, testInfo) => {
+    const fixture = 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+
+    const visibleAtom = await getVisibleContractAtom(page);
+    expect(visibleAtom).not.toBeNull();
+    await page.getByTestId(`contract-node-${visibleAtom!.id}`).click();
+    const type = page.getByTestId('contract-atom-type');
+    await expect(type).toHaveText(/amplitude_clip_hard/);
+    await expect(type.locator('input, select')).toHaveCount(0);
+
+    await page.getByTestId('contract-atom-replace-open').click();
+    await page.getByTestId('contract-atom-replace-type').selectOption('amplitude_clip_soft');
+    await page.getByTestId('contract-atom-replace-preserve').check();
+    await clearPerfSpans(page);
+    await page.getByTestId('contract-atom-replace-confirm').click();
+    await waitForSpanCount(page, 'contract.replace.atom', 1);
+    await expect(type).toHaveText(/amplitude_clip_soft/);
+
+    const replaceMs = await runAndAssertBudget(page, 'contract.replace.atom', 1);
+    const replacementRenders = Object.keys(await getComponentRenders(page, 'ContractNode'));
+    expect(replacementRenders).toEqual([`ContractNode:${visibleAtom!.id}`]);
+
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-undo').click();
+    await expect(type).toHaveText(/amplitude_clip_hard/);
+    const undoMs = await runAndAssertBudget(page, 'ui.undo', 1);
+
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-redo').click();
+    await expect(type).toHaveText(/amplitude_clip_soft/);
+    const redoMs = await runAndAssertBudget(page, 'ui.redo', 1);
+
+    const threshold = page.getByLabel(`${visibleAtom!.id} config threshold`);
+    await clearPerfSpans(page);
+    await threshold.fill('0.6');
+    await waitForSpanCount(page, 'contract.edit.atom', 1);
+    const editRenders = Object.keys(await getComponentRenders(page, 'ContractNode'));
+    expect(editRenders).toEqual([`ContractNode:${visibleAtom!.id}`]);
+    testInfo.annotations.push({ type: 'replacement-ms', description: replaceMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'replacement-undo-ms', description: undoMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'replacement-redo-ms', description: redoMs.toFixed(2) });
+  });
+
   test('editing one parameter does not rerender unrelated project nodes', async ({ page }, testInfo) => {
     await page.getByTestId('project-node-drive1').click();
     await page.getByTestId('inspector-tab-atom').click();

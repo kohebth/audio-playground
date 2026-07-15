@@ -17,6 +17,7 @@
     "contract.remove.atom": 200,
     "contract.edit.atom": 300,
     "contract.move.atom": 100,
+    "contract.replace.atom": 300,
     "interaction.frame.average": 20,
     "ui.openContractGraph": 120,
     "graph.load.small": 500,

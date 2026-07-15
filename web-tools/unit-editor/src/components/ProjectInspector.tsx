@@ -2,7 +2,7 @@ import { AtomCatalogPanel } from './AtomCatalogPanel';
 import { CompatibilityExportPanel } from './CompatibilityExportPanel';
 import { DraftExportPanel } from './DraftExportPanel';
 import type { ProjectNodeData } from '../lib/projectGraph';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type {
   AtomCatalog,
   BackendCommands,
@@ -15,7 +15,6 @@ import type {
 } from '../lib/backendSamples';
 import { type ParamOverride } from '../lib/projectParams';
 import {
-  findAtom,
   previewAtomReplacement,
   type AtomReplacementPreview,
   type UnitGraphDraft,
@@ -160,7 +159,8 @@ export function ProjectInspector({
   const isProjectView = inspectorView === 'project';
   const isAtomView = inspectorView === 'atom';
   const isContractView = inspectorView === 'contract';
-  const selectedAtomContract = selectedAtom ? findAtom(atomCatalog, selectedAtom.atom) : null;
+  const atomByName = useMemo(() => new Map(atomCatalog.atoms.map(atom => [atom.name, atom])), [atomCatalog.atoms]);
+  const selectedAtomContract = selectedAtom ? atomByName.get(selectedAtom.atom) ?? null : null;
   const unitRoutes =
     selectedNode?.kind === 'unit'
       ? project.routes.filter(route => route.from.startsWith(`${selectedNode.instance.id}.`) || route.to.startsWith(`${selectedNode.instance.id}.`))
@@ -476,13 +476,14 @@ export function ProjectInspector({
                 <label>
                   <span>ID</span>
                   <input
+                    data-testid="contract-atom-id"
                     value={selectedAtom.id}
                     onChange={event => onSelectedAtomChange({ ...selectedAtom, id: event.target.value }, selectedAtom.id)}
                   />
                 </label>
                 <label>
                   <span>Type</span>
-                  <strong className="atom-type-lock">
+                  <strong className="atom-type-lock" data-testid="contract-atom-type">
                     {selectedAtom.atom}
                     <i className="fa-solid fa-lock" aria-hidden="true" />
                   </strong>
@@ -509,7 +510,11 @@ export function ProjectInspector({
                 <div className="atom-replace-preview">
                   <label>
                     <span>New Type</span>
-                    <select onChange={event => setReplacementAtom(event.target.value)} value={replacementAtom}>
+                    <select
+                      data-testid="contract-atom-replace-type"
+                      onChange={event => setReplacementAtom(event.target.value)}
+                      value={replacementAtom}
+                    >
                       {atomCatalog.atoms
                         .filter(atom => atom.name !== selectedAtom.atom)
                         .map(atom => <option key={atom.name} value={atom.name}>{atom.name}</option>)}
@@ -559,6 +564,7 @@ export function ProjectInspector({
                   <div className="atom-replace-preview__actions">
                     <button onClick={() => setReplaceOpen(false)} type="button">Cancel</button>
                     <button
+                      data-testid="contract-atom-replace-confirm"
                       disabled={!replacementPreview}
                       onClick={() => {
                         onReplaceAtom(selectedAtom.id, replacementAtom, preserveReplacementId);

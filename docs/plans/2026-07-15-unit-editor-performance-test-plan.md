@@ -45,6 +45,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Pure-operation and Chromium collected-heap reporting.
 - [x] Async operations remain open until their promises settle.
 - [x] Per-node render counters and selection/parameter render-scope assertions.
+- [x] Atom metadata lookup is memoized by catalog revision in the inspector.
 - [ ] Per-edge render counters and store notification counters.
 - [x] Scheduled 500-atom frame-interval and long-task collection.
 - [ ] Style, layout, paint, and full browser-trace collection.
@@ -68,8 +69,9 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Pointer-event node drag while 500 atoms are mounted.
 - [ ] Invalid drop, Escape cancel, rapid drop, zoom/pan drop, edge drop, and filtered catalog.
 - [ ] Unit drag/drop with large atom payloads.
-- [ ] Inspector open/close loops, reconnect, rename, explicit replacement, and replacement undo/redo.
-- [ ] Malformed import proving atom `fn` cannot mutate except through explicit replacement.
+- [x] Explicit medium-graph replacement, replacement undo/redo, and post-replacement config isolation.
+- [x] Malformed import proving legacy `fn` cannot mutate the immutable `atom` type.
+- [ ] Inspector open/close loops, reconnect, and rename transactions.
 - [x] Selection and parameter edits do not rerender unrelated project or contract nodes.
 - [ ] Assertions that drag, topology, and YAML edits do not rerender unrelated nodes or the full canvas.
 - [ ] Slow/failing storage and one-hour autosave scenarios.
@@ -103,8 +105,9 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 4. **Removed objects are not retained:** Partially proven. A collected-heap browser gate stays below 10% across a second
    saturated undo-history window; edges, inspectors, navigation, Worklets, and 20x100 atom cycles remain.
 5. **Editing during audio causes no underrun:** Not proven.
-6. **Explicit replacement stays controlled:** Partially proven by pure transformer timing and correctness tests; the
-   medium contract-canvas transaction and rerender impact remain.
+6. **Explicit replacement stays controlled:** Proven. Pure transformer tests cover compatibility planning, the browser
+   gate keeps medium-graph replacement under 300 ms, only the replaced node rerenders, undo/redo restore both types, and
+   subsequent configuration editing remains isolated.
 
 ## Verification Commands
 
