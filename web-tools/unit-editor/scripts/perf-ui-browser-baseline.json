@@ -1,0 +1,277 @@
+{
+  "schema": "apg.unit-editor.browser-baseline.v1",
+  "generatedAt": "2026-07-15T03:48:56.723Z",
+  "maxSamplesPerProfile": 12,
+  "profiles": [
+    {
+      "profile": "chromium-4x",
+      "browser": "chromium",
+      "cpuThrottle": 4,
+      "memoryLimitMb": 0,
+      "samples": [
+        {
+          "generatedAt": "2026-07-15T03:48:52.180Z",
+          "viewport": "1280x720",
+          "runner": {
+            "os": "linux",
+            "arch": "x64",
+            "cpuModel": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+            "cpuCount": 8,
+            "memoryMb": 15739,
+            "nodeVersion": "v22.14.0"
+          },
+          "source": {
+            "commit": "185bf7a02109b42d8323fdb31d96c47a0c07ddac",
+            "ref": "refs/heads/atom/enhance",
+            "runId": "",
+            "runAttempt": ""
+          },
+          "measurements": [
+            {
+              "name": "graph-load-ms",
+              "title": "perf-ui-benchmark.spec.ts > Scalability checkpoints > @pr-medium @browser-matrix graph load and synchronize medium-linear",
+              "valueMs": 176.3
+            },
+            {
+              "name": "replacement-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 16.4
+            },
+            {
+              "name": "replacement-undo-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 0.3
+            },
+            {
+              "name": "replacement-redo-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 0.2
+            }
+          ]
+        }
+      ],
+      "metrics": [
+        {
+          "name": "graph-load-ms",
+          "title": "perf-ui-benchmark.spec.ts > Scalability checkpoints > @pr-medium @browser-matrix graph load and synchronize medium-linear",
+          "valueMs": 176.3,
+          "sampleCount": 1,
+          "medianMs": 176.3,
+          "minMs": 176.3,
+          "maxMs": 176.3,
+          "latestMs": 176.3
+        },
+        {
+          "name": "replacement-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 16.4,
+          "sampleCount": 1,
+          "medianMs": 16.4,
+          "minMs": 16.4,
+          "maxMs": 16.4,
+          "latestMs": 16.4
+        },
+        {
+          "name": "replacement-undo-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 0.3,
+          "sampleCount": 1,
+          "medianMs": 0.3,
+          "minMs": 0.3,
+          "maxMs": 0.3,
+          "latestMs": 0.3
+        },
+        {
+          "name": "replacement-redo-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 0.2,
+          "sampleCount": 1,
+          "medianMs": 0.2,
+          "minMs": 0.2,
+          "maxMs": 0.2,
+          "latestMs": 0.2
+        }
+      ]
+    },
+    {
+      "profile": "chromium-6x",
+      "browser": "chromium",
+      "cpuThrottle": 6,
+      "memoryLimitMb": 0,
+      "samples": [
+        {
+          "generatedAt": "2026-07-15T03:48:52.167Z",
+          "viewport": "1280x720",
+          "runner": {
+            "os": "linux",
+            "arch": "x64",
+            "cpuModel": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+            "cpuCount": 8,
+            "memoryMb": 15739,
+            "nodeVersion": "v22.14.0"
+          },
+          "source": {
+            "commit": "185bf7a02109b42d8323fdb31d96c47a0c07ddac",
+            "ref": "refs/heads/atom/enhance",
+            "runId": "",
+            "runAttempt": ""
+          },
+          "measurements": [
+            {
+              "name": "graph-load-ms",
+              "title": "perf-ui-benchmark.spec.ts > Scalability checkpoints > @pr-medium @browser-matrix graph load and synchronize medium-linear",
+              "valueMs": 328.7
+            },
+            {
+              "name": "replacement-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 33.5
+            },
+            {
+              "name": "replacement-undo-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 0.4
+            },
+            {
+              "name": "replacement-redo-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 0.2
+            }
+          ]
+        }
+      ],
+      "metrics": [
+        {
+          "name": "graph-load-ms",
+          "title": "perf-ui-benchmark.spec.ts > Scalability checkpoints > @pr-medium @browser-matrix graph load and synchronize medium-linear",
+          "valueMs": 328.7,
+          "sampleCount": 1,
+          "medianMs": 328.7,
+          "minMs": 328.7,
+          "maxMs": 328.7,
+          "latestMs": 328.7
+        },
+        {
+          "name": "replacement-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 33.5,
+          "sampleCount": 1,
+          "medianMs": 33.5,
+          "minMs": 33.5,
+          "maxMs": 33.5,
+          "latestMs": 33.5
+        },
+        {
+          "name": "replacement-undo-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 0.4,
+          "sampleCount": 1,
+          "medianMs": 0.4,
+          "minMs": 0.4,
+          "maxMs": 0.4,
+          "latestMs": 0.4
+        },
+        {
+          "name": "replacement-redo-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 0.2,
+          "sampleCount": 1,
+          "medianMs": 0.2,
+          "minMs": 0.2,
+          "maxMs": 0.2,
+          "latestMs": 0.2
+        }
+      ]
+    },
+    {
+      "profile": "chromium-full",
+      "browser": "chromium",
+      "cpuThrottle": 1,
+      "memoryLimitMb": 0,
+      "samples": [
+        {
+          "generatedAt": "2026-07-15T03:48:52.186Z",
+          "viewport": "1280x720",
+          "runner": {
+            "os": "linux",
+            "arch": "x64",
+            "cpuModel": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+            "cpuCount": 8,
+            "memoryMb": 15739,
+            "nodeVersion": "v22.14.0"
+          },
+          "source": {
+            "commit": "185bf7a02109b42d8323fdb31d96c47a0c07ddac",
+            "ref": "refs/heads/atom/enhance",
+            "runId": "",
+            "runAttempt": ""
+          },
+          "measurements": [
+            {
+              "name": "graph-load-ms",
+              "title": "perf-ui-benchmark.spec.ts > Scalability checkpoints > @pr-medium @browser-matrix graph load and synchronize medium-linear",
+              "valueMs": 232.7
+            },
+            {
+              "name": "replacement-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 17.3
+            },
+            {
+              "name": "replacement-undo-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 1.6
+            },
+            {
+              "name": "replacement-redo-ms",
+              "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+              "valueMs": 0.5
+            }
+          ]
+        }
+      ],
+      "metrics": [
+        {
+          "name": "graph-load-ms",
+          "title": "perf-ui-benchmark.spec.ts > Scalability checkpoints > @pr-medium @browser-matrix graph load and synchronize medium-linear",
+          "valueMs": 232.7,
+          "sampleCount": 1,
+          "medianMs": 232.7,
+          "minMs": 232.7,
+          "maxMs": 232.7,
+          "latestMs": 232.7
+        },
+        {
+          "name": "replacement-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 17.3,
+          "sampleCount": 1,
+          "medianMs": 17.3,
+          "minMs": 17.3,
+          "maxMs": 17.3,
+          "latestMs": 17.3
+        },
+        {
+          "name": "replacement-undo-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 1.6,
+          "sampleCount": 1,
+          "medianMs": 1.6,
+          "minMs": 1.6,
+          "maxMs": 1.6,
+          "latestMs": 1.6
+        },
+        {
+          "name": "replacement-redo-ms",
+          "title": "perf-ui-benchmark.spec.ts > Contract graph atom scalability > @pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph",
+          "valueMs": 0.5,
+          "sampleCount": 1,
+          "medianMs": 0.5,
+          "minMs": 0.5,
+          "maxMs": 0.5,
+          "latestMs": 0.5
+        }
+      ]
+    }
+  ]
+}

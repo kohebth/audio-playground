@@ -56,9 +56,14 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 
 - [x] Stored pure-operation baseline for generated fixture families.
 - [x] Small through extreme browser import budget checks.
-- [ ] Persisted browser baseline with machine/profile metadata.
+- [x] Persisted browser baseline with machine/profile metadata.
 - [x] Normalized browser report ranking the three most expensive measured UI interactions per profile.
-- [ ] Typical-laptop 4x CPU baseline and low-end 6x CPU baseline.
+- [x] Typical-laptop 4x CPU baseline and low-end 6x CPU baseline.
+
+The checked-in `scripts/perf-ui-browser-baseline.json` seeds the development, 4x, and 6x profiles with CPU, memory,
+Node, browser, throttle, and viewport metadata. It is informational rather than a pull-request gate. Scheduled CI keeps
+the latest 12 samples per profile in a restored cache, computes rolling medians, and emits a self-contained HTML chart;
+that rolling history is the representative baseline as runner data accumulates.
 
 ### Phase 3: Automated Editing Tests
 
@@ -97,7 +102,8 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Stable Chromium drag/drop, medium-fixture graph-load, and replacement checks on pull requests.
 - [x] Weekly 500/1,000-atom, long-session, continuous-drag, live-audio, Chromium 4x/6x, mobile 6x,
   Chromium 256 MB, Firefox, and WebKit runs.
-- [x] Historical Playwright JSON plus normalized profile/runner/commit trend artifacts with 90-day retention.
+- [x] Historical Playwright JSON, normalized profile/runner/commit records, rolling 12-sample baselines, and HTML trend
+  charts with 90-day artifact retention.
 
 ## Primary Success Criteria Audit
 
@@ -132,6 +138,7 @@ npm run perf:ui -- --reporter=line --workers=1
 APG_BROWSER_MATRIX=1 APG_CPU_THROTTLE=4 npm run perf:ui -- --project=chromium --grep @browser-matrix --workers=1
 APG_BROWSER_MATRIX=1 APG_CPU_THROTTLE=6 npm run perf:ui -- --project=chromium-mobile --grep @browser-matrix --workers=1
 APG_BROWSER_MATRIX=1 APG_MEMORY_LIMIT_MB=256 npm run perf:ui -- --project=chromium --grep @browser-matrix --workers=1
+npm run perf:ui:baseline -- --input <normalized-report.json> --output <baseline.json> --chart <trend.html>
 npm run test
 npm run lint
 npm run build

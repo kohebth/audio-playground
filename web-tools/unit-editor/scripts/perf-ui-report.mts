@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpus, totalmem } from 'node:os';
 import path from 'node:path';
 
 type Annotation = { type?: string; description?: string };
@@ -52,6 +53,18 @@ const measurements = tests.flatMap(test => {
     return Number.isFinite(valueMs) ? [{ name: annotation.type, title, valueMs }] : [];
   });
 }).sort((left, right) => right.valueMs - left.valueMs);
+const performanceProfile = tests.flatMap(test => test.annotations as Annotation[] ?? [])
+  .find(annotation => annotation.type === 'performance-profile')?.description;
+let viewport = 'unknown';
+if (performanceProfile) {
+  try {
+    const metadata = JSON.parse(performanceProfile) as { viewport?: string };
+    viewport = metadata.viewport ?? viewport;
+  } catch {
+    // Preserve reports even if an older test emitted non-JSON profile metadata.
+  }
+}
+const cpuInfo = cpus();
 const trend = {
   schema: 'apg.unit-editor.browser-perf.v1',
   generatedAt: new Date().toISOString(),
@@ -59,9 +72,14 @@ const trend = {
   browser: process.env.APG_PERF_BROWSER ?? 'chromium',
   cpuThrottle: Number(process.env.APG_CPU_THROTTLE ?? '1'),
   memoryLimitMb: Number(process.env.APG_MEMORY_LIMIT_MB ?? '0'),
+  viewport,
   runner: {
     os: process.env.RUNNER_OS ?? process.platform,
     arch: process.env.RUNNER_ARCH ?? process.arch,
+    cpuModel: cpuInfo[0]?.model ?? 'unknown',
+    cpuCount: cpuInfo.length,
+    memoryMb: Math.round(totalmem() / (1024 * 1024)),
+    nodeVersion: process.version,
   },
   source: {
     commit: process.env.GITHUB_SHA ?? '',
