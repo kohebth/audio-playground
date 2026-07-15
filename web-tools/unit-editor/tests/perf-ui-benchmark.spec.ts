@@ -112,12 +112,14 @@ function clearPerfSpans(page: Page) {
         samples?: unknown[];
         renderSamples?: unknown[];
         componentRenders?: Record<string, number>;
+        counters?: Record<string, number>;
       };
     }).__apgPerfTrace;
     if (!trace) return;
     trace.samples = [];
     trace.renderSamples = [];
     trace.componentRenders = {};
+    trace.counters = {};
   });
 }
 
@@ -296,6 +298,13 @@ async function getComponentRenders(page: Page, component: string): Promise<Recor
   }, component);
 }
 
+async function getPerfCounters(page: Page): Promise<Record<string, number>> {
+  return page.evaluate(() => {
+    const trace = (window as { __apgPerfTrace?: { counters?: Record<string, number> } }).__apgPerfTrace;
+    return { ...(trace?.counters ?? {}) };
+  });
+}
+
 async function getRuntimeSnapshot(page: Page): Promise<RuntimeSnapshot | null> {
   return page.evaluate(() => {
     const trace = (window as { __apgPerfTrace?: { runtime?: RuntimeSnapshot } }).__apgPerfTrace;
@@ -471,7 +480,8 @@ test.describe('UI performance checkpoints', () => {
     await launchWorkspace(page);
   });
 
-  test('drag-and-drop add on project graph', async ({ page }) => {
+  test('@pr-medium drag-and-drop add on project graph', async ({ page }) => {
+    await waitForWorkspaceQuiescence(page);
     await clearPerfSpans(page);
 
     const before = await countProjectNodes(page);
@@ -485,6 +495,8 @@ test.describe('UI performance checkpoints', () => {
     await runAndAssertBudget(page, 'ui.dragOver.projectNode');
     await runAndAssertBudget(page, 'ui.drop.projectNode');
     await runAndAssertBudget(page, 'graph.add.projectNode');
+    expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
+    expect(Object.keys(await getComponentRenders(page, 'ProjectNode'))).toEqual(['ProjectNode:overdrive']);
   });
 
   test('inspector switching and parameter edit', async ({ page }) => {
@@ -544,6 +556,8 @@ test.describe('UI performance checkpoints', () => {
     await page.getByTestId('project-route-add').click();
     await expect.poll(() => page.getByTestId(/^route-item-/).count(), { timeout: 5000 }).toBeGreaterThan(beforeCount);
     await runAndAssertBudget(page, 'graph.create.route');
+    expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
+    expect(await getComponentRenders(page, 'ProjectNode')).toEqual({});
 
     await page.getByTestId('inspector-tab-atom').click();
     const latestRoute = page.getByTestId(/^route-item-/).last();
@@ -553,6 +567,8 @@ test.describe('UI performance checkpoints', () => {
     await page.getByTestId('inspector-route-disconnect').click();
     await expect.poll(() => page.getByTestId(/^route-item-/).count(), { timeout: 5000 }).toBe(beforeCount);
     await runAndAssertBudget(page, 'graph.delete.route');
+    expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
+    expect(await getComponentRenders(page, 'ProjectNode')).toEqual({});
   });
 
   test('contract atom mutation latency', async ({ page }) => {
@@ -998,6 +1014,7 @@ test.describe('Contract graph atom scalability', () => {
     await expect(page.getByTestId(`rf__edge-${firstEdgeId}`)).toBeVisible();
     await expect(page.getByTestId(`rf__edge-${secondEdgeId}`)).toBeVisible();
     const insertMs = await runAndAssertBudget(page, 'contract.insert.atom', 1);
+    expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
     const renderedNodes = Object.keys(await getComponentRenders(page, 'ContractNode')).sort();
     expect(renderedNodes).toEqual(['ContractNode:amplitude_clip_soft', 'ContractNode:atom_0002']);
 
@@ -1054,6 +1071,7 @@ test.describe('Contract graph atom scalability', () => {
     await expect(page.getByTestId(`rf__edge-${nextEdgeId}`)).toBeVisible();
     await expect(oldEdge).toHaveCount(0);
     const reconnectMs = await runAndAssertBudget(page, 'contract.reconnect.atom', 1);
+    expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
     const renderedNodes = Object.keys(await getComponentRenders(page, 'ContractNode')).sort();
     const renderedEdges = Object.keys(await getComponentRenders(page, 'ContractEdge'));
     expect(renderedNodes).toEqual([`ContractNode:${addedNodeId}`, 'ContractNode:atom_0003'].sort());
@@ -1233,6 +1251,29 @@ test.describe('Contract graph atom scalability', () => {
     await runAndAssertBudget(page, 'ui.redo', 1);
     testInfo.annotations.push({ type: 'inspector-toggle-average-ms', description: toggleAverageMs.toFixed(3) });
     testInfo.annotations.push({ type: 'atom-rename-ms', description: renameMs.toFixed(2) });
+  });
+
+  test('raw YAML metadata edit does not rerender contract nodes or edges', async ({ page }) => {
+    await page.getByTestId('project-node-drive1').dblclick();
+    await expect(page.getByTestId('contract-canvas')).toBeVisible();
+    const diagnostics = page.locator('details.developer-diagnostics');
+    await diagnostics.locator(':scope > summary').click();
+    const editor = page.getByLabel(/^Workspace file .*overdrive\.unit\.v2\.yaml$/);
+    const original = await editor.inputValue();
+    const updated = original.replace(
+      'description: Boosts mono guitar input, soft clips it, shapes tone, and applies output level.',
+      'description: Boosts mono guitar input, soft clips it, shapes tone, and applies output level efficiently.',
+    );
+    expect(updated).not.toBe(original);
+
+    await clearPerfSpans(page);
+    await editor.fill(updated);
+    await waitForSpanCount(page, 'workspace.update.raw', 1);
+    await page.waitForTimeout(400);
+
+    expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
+    expect(await getComponentRenders(page, 'ContractNode')).toEqual({});
+    expect(await getComponentRenders(page, 'ContractEdge')).toEqual({});
   });
 
   test('editing one parameter does not rerender unrelated project nodes', async ({ page }, testInfo) => {

@@ -47,7 +47,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Per-node render counters and selection/parameter render-scope assertions.
 - [x] Atom metadata lookup is memoized by catalog revision in the inspector.
 - [x] Per-edge render counters.
-- [ ] Store notification counters.
+- [x] Centralized workspace state-dispatch counters; the editor has no external subscription store.
 - [x] Scheduled 500-atom frame-interval and long-task collection.
 - [ ] Style, layout, paint, and full browser-trace collection.
 - [x] Worker validation/prepare, Worklet commit/control/meter round-trip marks, and runtime resource snapshots.
@@ -77,7 +77,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] One hundred inspector open/close cycles and isolated atom-ID rename with undo/redo.
 - [x] Reconnect transaction and render-scope coverage.
 - [x] Selection and parameter edits do not rerender unrelated project or contract nodes.
-- [ ] Assertions that drag, topology, and YAML edits do not rerender unrelated nodes or the full canvas.
+- [x] Assertions that drag, topology, and YAML metadata edits do not rerender unrelated nodes or edges.
 - [x] Slow and failing storage, including last-good-snapshot retention and visible failure state.
 - [x] Scheduled one-hour autosave emulation with exact write count and saturated-history heap gate.
 
@@ -94,7 +94,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 
 - [x] Pull-request pure-operation threshold and baseline regression gate.
 - [x] Fixed threshold plus percentage/absolute baseline regression policy.
-- [x] Stable medium-fixture Chromium graph-load and replacement checks on pull requests.
+- [x] Stable Chromium drag/drop, medium-fixture graph-load, and replacement checks on pull requests.
 - [x] Weekly 500/1,000-atom, long-session, continuous-drag, live-audio, Chromium 4x/6x, Firefox, and WebKit runs.
 - [x] Historical Playwright JSON plus normalized profile/runner/commit trend artifacts with 90-day retention.
 
@@ -103,9 +103,9 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 1. **500-node graph remains usable:** Proven for the required interaction set. The browser registers the real 500-atom
    graph under 2 seconds, virtualizes offscreen nodes, and passes pointer drag, pan, zoom, configuration editing, and
    `>= 50 FPS` average-frame gates.
-2. **Local changes avoid full graph rerender:** Partially proven. Exact node counters show one-node selection and parameter
-   edits stay local, and the 500-atom drag/config gates touch only the affected node; topology, YAML, edge, and
-   store-notification scope remain.
+2. **Local changes avoid full graph rerender:** Proven for the required interaction set. Exact node/edge and centralized
+   state-dispatch counters keep selection, parameter editing, 500-atom drag/config, project drag/drop, route topology,
+   atom insertion/reconnect, and raw YAML metadata edits limited to the affected graph objects.
 3. **Autosave has no visible stall:** Partially proven. Default-workspace rapid edits and an injected 6 ms storage write
    keep synchronous persistence under 16 ms with one debounced write. Storage and serialization failures are isolated,
    retain the last good snapshot, and remain visible without uncaught errors. Large payload, drag, and long-session cases remain.

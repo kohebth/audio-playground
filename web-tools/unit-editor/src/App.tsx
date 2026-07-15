@@ -66,6 +66,7 @@ import {
 } from './lib/workspacePersistence';
 import {
   PERFORMANCE_DEBOUNCE_MS,
+  incrementPerfCounter,
   markPerfSpan,
   markRenderPerfSpan,
   readPerfRenderSpans,
@@ -190,7 +191,11 @@ export default function App() {
   const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(initialProjectInspect));
   const [paramOriginals, setParamOriginals] = useState(() => buildParamOriginals(initialProjectInspect));
   const [entryProject, setEntryProject] = useState(initialWorkspace.entryProject);
-  const [workspaceFiles, setWorkspaceFiles] = useState(initialWorkspace.files);
+  const [workspaceFiles, setWorkspaceFilesState] = useState(initialWorkspace.files);
+  const setWorkspaceFiles = useCallback((update: WorkspaceFile[] | ((files: WorkspaceFile[]) => WorkspaceFile[])) => {
+    incrementPerfCounter('state.workspace.dispatches');
+    setWorkspaceFilesState(update);
+  }, []);
   const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspace.entryProject);
   const undoStack = useRef<WorkspaceHistoryEntry[]>([]);
   const redoStack = useRef<WorkspaceHistoryEntry[]>([]);
@@ -228,7 +233,7 @@ export default function App() {
       setParamDrafts(buildParamDrafts(backendSamples.project));
       setParamOriginals(buildParamOriginals(backendSamples.project));
     }
-  }, []);
+  }, [setWorkspaceFiles]);
   const pushHistory = useCallback(() => {
     undoStack.current = [...undoStack.current.slice(-49), currentHistoryEntry()];
     redoStack.current = [];
@@ -351,7 +356,7 @@ export default function App() {
         return changed ? next : files;
       });
     });
-  }, []);
+  }, [setWorkspaceFiles]);
 
   const graphTopologySignature = useMemo(
     () => JSON.stringify({
@@ -370,7 +375,7 @@ export default function App() {
       if (topologyChanged) {
         const next = buildProjectGraph(project, projectDraft);
         setNodes(current => next.nodes.map(node => {
-          const positioned = current.find(item => item.id === node.id);
+          const existing = current.find(item => item.id === node.id);
           let data = node.data;
           let storedPosition: ProjectGraphPosition | undefined;
           if (node.data.kind === 'unit') {
@@ -378,7 +383,14 @@ export default function App() {
             data = { ...unitData, paramControls: projectParamControls[unitData.unit.id] ?? [], onParamChange: updateParamDraft };
             storedPosition = projectDraft.nodes.find(item => item.id === unitData.instance.id)?.ui?.position;
           }
-          return positioned && !storedPosition ? { ...node, data, position: positioned.position } : { ...node, data };
+          const position = storedPosition ?? existing?.position ?? node.position;
+          if (existing
+            && existing.position.x === position.x
+            && existing.position.y === position.y
+            && JSON.stringify(existing.data) === JSON.stringify(data)) {
+            return existing;
+          }
+          return { ...node, data, position };
         }));
         setEdges(next.edges);
         return;
@@ -509,7 +521,7 @@ export default function App() {
         return { ...file, content };
       }),
     );
-  }, [paramOriginals, project.nodes]);
+  }, [paramOriginals, project.nodes, setWorkspaceFiles]);
 
   const updateProjectFile = useCallback((update: (content: string) => string) => {
     return markPerfSpan('graph.update.project', () => {
@@ -525,7 +537,7 @@ export default function App() {
         return null;
       }
     });
-  }, [projectWorkspaceFile.content, projectWorkspaceFile.path, pushHistory]);
+  }, [projectWorkspaceFile.content, projectWorkspaceFile.path, pushHistory, setWorkspaceFiles]);
 
   const addProjectNode = useCallback((unitId: string, instanceId: string, position?: ProjectGraphPosition) => {
     markPerfSpan('graph.add.projectNode', () => {
@@ -674,7 +686,7 @@ export default function App() {
       pushHistory();
       setWorkspaceFiles(files => files.map(file => (file.path === path ? { ...file, content } : file)));
     });
-  }, [pushHistory]);
+  }, [pushHistory, setWorkspaceFiles]);
 
   const createUnit = useCallback((name: string) => {
     markPerfSpan('project.create.unitFile', () => {
@@ -691,7 +703,7 @@ export default function App() {
       setInspectorView('contract');
       setCanvasMode('project');
     });
-  }, [pushHistory, workspaceFiles]);
+  }, [pushHistory, setWorkspaceFiles, workspaceFiles]);
 
   const updateSelectedUnitFile = useCallback((update: (content: string) => string, nextAtomId?: string | null) => {
     markPerfSpan('graph.update.unitFile', () => {
@@ -707,7 +719,7 @@ export default function App() {
         setGraphEditError(error instanceof Error ? error.message : 'Unable to update unit graph.');
       }
     });
-  }, [pushHistory, selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path]);
+  }, [pushHistory, selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path, setWorkspaceFiles]);
 
   const updateSelectedAtom = useCallback((node: UnitGraphNode, originalId = node.id) => {
     markPerfSpan('contract.edit.atom', () => {
@@ -845,7 +857,7 @@ export default function App() {
         window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
       }
     });
-  }, [pushHistory]);
+  }, [pushHistory, setWorkspaceFiles]);
 
   const saveWorkspace = useCallback(() => {
     try {
@@ -862,7 +874,7 @@ export default function App() {
     } catch (error) {
       setWorkspaceSaveError(error instanceof Error ? error.message : 'Unable to persist the workspace.');
     }
-  }, [entryProject, paramDrafts, workspaceFiles]);
+  }, [entryProject, paramDrafts, setWorkspaceFiles, workspaceFiles]);
 
   const exportWorkspace = useCallback(() => {
     markPerfSpan('workspace.export', () => {
@@ -899,7 +911,7 @@ export default function App() {
         setGraphEditError(error instanceof Error ? error.message : 'Workspace import failed.');
       }
     });
-  }, [pushHistory]);
+  }, [pushHistory, setWorkspaceFiles]);
 
   const handleRenderProfile = useCallback((
     id: string,

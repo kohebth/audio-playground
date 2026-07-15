@@ -59,6 +59,7 @@ type PerfStore = {
   renderSamples: PerfRenderSpan[];
   maxRenderSamples: number;
   componentRenders: Record<string, number>;
+  counters: Record<string, number>;
   runtime?: PerfRuntimeSnapshot;
 };
 
@@ -79,6 +80,7 @@ function getStore(): PerfStore {
       renderSamples: [],
       maxRenderSamples: MAX_RENDER_SAMPLES,
       componentRenders: {},
+      counters: {},
     };
   }
 
@@ -91,6 +93,7 @@ function getStore(): PerfStore {
       renderSamples: [],
       maxRenderSamples: MAX_RENDER_SAMPLES,
       componentRenders: {},
+      counters: {},
     };
     window[TRACE_WINDOW] = store;
   }
@@ -174,6 +177,17 @@ export function markComponentRender(component: string, id: string): void {
   store.componentRenders[key] = (store.componentRenders[key] ?? 0) + 1;
 }
 
+export function incrementPerfCounter(name: string, amount = 1): void {
+  if (!import.meta.env.DEV) return;
+  const store = getStore();
+  store.counters ??= {};
+  store.counters[name] = (store.counters[name] ?? 0) + amount;
+}
+
+export function readPerfCounters(): Record<string, number> {
+  return { ...getStore().counters };
+}
+
 export function recordRuntimeSnapshot(snapshot: PerfRuntimeSnapshot): void {
   if (!import.meta.env.DEV) return;
   getStore().runtime = snapshot;
@@ -186,6 +200,7 @@ export function clearPerfComponentRenders(): void {
 export function clearPerfSpans(): void {
   const store = getStore();
   store.samples = [];
+  store.counters = {};
 }
 
 export const PERFORMANCE_DEBOUNCE_MS = AUTOSAVE_DEBOUNCE_MS;
