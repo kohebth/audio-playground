@@ -1,0 +1,37 @@
+{
+  "buckets": {
+    "small": {
+      "maxTotalMs": 600,
+      "maxParseMs": 120,
+      "maxAddRemoveMs": 500,
+      "maxRouteMutationMs": 500,
+      "maxUnitAddMs": 250,
+      "maxUnitTotalMs": 900
+    },
+    "medium": {
+      "maxTotalMs": 1400,
+      "maxParseMs": 260,
+      "maxAddRemoveMs": 1100,
+      "maxRouteMutationMs": 1000,
+      "maxUnitAddMs": 300,
+      "maxUnitTotalMs": 1100
+    },
+    "large": {
+      "maxTotalMs": 3400,
+      "maxParseMs": 500,
+      "maxAddRemoveMs": 2500,
+      "maxRouteMutationMs": 1900,
+      "maxUnitAddMs": 500,
+      "maxUnitTotalMs": 1300
+    },
+    "extreme": {
+      "maxTotalMs": 9500,
+      "maxParseMs": 800,
+      "maxAddRemoveMs": 5200,
+      "maxRouteMutationMs": 3500,
+      "maxUnitAddMs": 900,
+      "maxUnitTotalMs": 1500
+    }
+  },
+  "maxRegressionPercent": 30
+}
