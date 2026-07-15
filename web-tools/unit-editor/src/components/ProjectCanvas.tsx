@@ -8,9 +8,10 @@ import {
   type OnEdgesChange,
   type OnNodesChange,
   type NodeTypes,
+  useNodesInitialized,
   useReactFlow,
 } from '@xyflow/react';
-import { useRef, useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 
 import { ProjectNode } from './ProjectNode';
 import { UNIT_DRAG_TYPE } from './ProjectSidebar';
@@ -24,6 +25,7 @@ type Props = {
   nodes: Node<ProjectNodeData>[];
   edges: Edge[];
   selectedRouteIndex: number | null;
+  fitViewRevision: number;
   onNodesChange: OnNodesChange<Node<ProjectNodeData>>;
   onEdgesChange: OnEdgesChange;
   onSelectNode: (id: string) => void;
@@ -54,10 +56,18 @@ function ProjectFlow({
   onAddUnitAt,
   onInsertUnitAtRoute,
   onMoveUnit,
+  fitViewRevision,
 }: ProjectFlowProps) {
   const reactFlow = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
   const dragStartAtByNode = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    if (fitViewRevision === 0 || !nodesInitialized) return;
+    const frame = requestAnimationFrame(() => void reactFlow.fitView({ padding: 0.16 }));
+    return () => cancelAnimationFrame(frame);
+  }, [fitViewRevision, nodesInitialized, reactFlow]);
 
   const dragState = (event: DragEvent) => event.dataTransfer.types.includes(UNIT_DRAG_TYPE) ? 'valid' : 'reject';
   const dragOver = (event: DragEvent) => {

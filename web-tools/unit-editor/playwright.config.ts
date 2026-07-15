@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const browserMatrix = process.env.APG_BROWSER_MATRIX === '1';
+const requestedMemoryLimit = Number(process.env.APG_MEMORY_LIMIT_MB ?? '0');
+const memoryLimitMb = Number.isFinite(requestedMemoryLimit) && requestedMemoryLimit > 0 ? requestedMemoryLimit : 0;
+const chromiumArgs = [
+  '--use-fake-device-for-media-stream',
+  '--use-fake-ui-for-media-stream',
+  ...(memoryLimitMb ? [`--js-flags=--max-old-space-size=${memoryLimitMb}`] : []),
+];
 
 const chromium = {
   name: 'chromium',
@@ -8,7 +15,7 @@ const chromium = {
     ...devices['Desktop Chrome'],
     permissions: ['microphone'],
     launchOptions: {
-      args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+      args: chromiumArgs,
     },
   },
 };
@@ -23,6 +30,14 @@ export default defineConfig({
   },
   projects: browserMatrix ? [
     chromium,
+    {
+      name: 'chromium-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        permissions: ['microphone'],
+        launchOptions: { args: chromiumArgs },
+      },
+    },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ] : [chromium],

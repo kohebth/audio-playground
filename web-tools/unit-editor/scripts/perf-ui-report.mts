@@ -58,6 +58,7 @@ const trend = {
   profile: process.env.APG_PERF_PROFILE ?? 'local',
   browser: process.env.APG_PERF_BROWSER ?? 'chromium',
   cpuThrottle: Number(process.env.APG_CPU_THROTTLE ?? '1'),
+  memoryLimitMb: Number(process.env.APG_MEMORY_LIMIT_MB ?? '0'),
   runner: {
     os: process.env.RUNNER_OS ?? process.platform,
     arch: process.env.RUNNER_ARCH ?? process.arch,
@@ -69,6 +70,7 @@ const trend = {
     runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? '',
   },
   summary: report.stats ?? {},
+  measurements,
   rankedMeasurements: measurements.slice(0, 3),
   tests,
 };

@@ -95,7 +95,8 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Pull-request pure-operation threshold and baseline regression gate.
 - [x] Fixed threshold plus percentage/absolute baseline regression policy.
 - [x] Stable Chromium drag/drop, medium-fixture graph-load, and replacement checks on pull requests.
-- [x] Weekly 500/1,000-atom, long-session, continuous-drag, live-audio, Chromium 4x/6x, Firefox, and WebKit runs.
+- [x] Weekly 500/1,000-atom, long-session, continuous-drag, live-audio, Chromium 4x/6x, mobile 6x,
+  Chromium 256 MB, Firefox, and WebKit runs.
 - [x] Historical Playwright JSON plus normalized profile/runner/commit trend artifacts with 90-day retention.
 
 ## Primary Success Criteria Audit
@@ -129,6 +130,8 @@ npm run perf:benchmark:regression
 npm run perf:ui:pr
 npm run perf:ui -- --reporter=line --workers=1
 APG_BROWSER_MATRIX=1 APG_CPU_THROTTLE=4 npm run perf:ui -- --project=chromium --grep @browser-matrix --workers=1
+APG_BROWSER_MATRIX=1 APG_CPU_THROTTLE=6 npm run perf:ui -- --project=chromium-mobile --grep @browser-matrix --workers=1
+APG_BROWSER_MATRIX=1 APG_MEMORY_LIMIT_MB=256 npm run perf:ui -- --project=chromium --grep @browser-matrix --workers=1
 npm run test
 npm run lint
 npm run build

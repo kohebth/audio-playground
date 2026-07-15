@@ -52,28 +52,51 @@ jobs:
         include:
           - profile: chromium-full
             browser: chromium
+            project: chromium
             cpu: 1
+            memory: 0
             full: true
           - profile: chromium-4x
             browser: chromium
+            project: chromium
             cpu: 4
+            memory: 0
             full: false
           - profile: chromium-6x
             browser: chromium
+            project: chromium
             cpu: 6
+            memory: 0
+            full: false
+          - profile: chromium-mobile-6x
+            browser: chromium
+            project: chromium-mobile
+            cpu: 6
+            memory: 0
+            full: false
+          - profile: chromium-memory-256mb
+            browser: chromium
+            project: chromium
+            cpu: 1
+            memory: 256
             full: false
           - profile: firefox-medium
             browser: firefox
+            project: firefox
             cpu: 1
+            memory: 0
             full: false
           - profile: webkit-medium
             browser: webkit
+            project: webkit
             cpu: 1
+            memory: 0
             full: false
     env:
       APG_BROWSER_MATRIX: '1'
       APG_CPU_THROTTLE: ${{ matrix.cpu }}
-      APG_PERF_BROWSER: ${{ matrix.browser }}
+      APG_MEMORY_LIMIT_MB: ${{ matrix.memory }}
+      APG_PERF_BROWSER: ${{ matrix.project }}
       APG_PERF_PROFILE: ${{ matrix.profile }}
       APG_PERF_SCHEDULED: '1'
       PLAYWRIGHT_JSON_OUTPUT_NAME: perf-results-${{ matrix.profile }}.json
@@ -105,12 +128,12 @@ jobs:
       - name: Run full scheduled Chromium suite
         if: matrix.full
         working-directory: web-tools/unit-editor
-        run: npm run perf:ui -- --project=${{ matrix.browser }} --reporter=line,json --workers=1
+        run: npm run perf:ui -- --project=${{ matrix.project }} --reporter=line,json --workers=1
 
       - name: Run throttled or cross-browser medium suite
         if: matrix.full == false
         working-directory: web-tools/unit-editor
-        run: npm run perf:ui -- --project=${{ matrix.browser }} --grep @browser-matrix --reporter=line,json --workers=1
+        run: npm run perf:ui -- --project=${{ matrix.project }} --grep @browser-matrix --reporter=line,json --workers=1
 
       - name: Create trend record
         if: always()

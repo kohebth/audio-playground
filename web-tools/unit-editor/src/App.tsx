@@ -183,6 +183,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
+  const [canvasFitRevision, setCanvasFitRevision] = useState(0);
   const [inspectorView, setInspectorView] = useState<InspectorView>('project');
   const [canvasMode, setCanvasMode] = useState<CanvasMode>('project');
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
@@ -366,13 +367,16 @@ export default function App() {
     [project.routes, projectDraft.nodes],
   );
   const graphTopologyRef = useRef('');
+  const graphLayoutRevisionRef = useRef(0);
 
   useEffect(() => {
     markPerfSpan('graph.sync.project', () => {
       const topologyChanged = graphTopologyRef.current !== graphTopologySignature;
+      const replaceWorkspaceLayout = graphLayoutRevisionRef.current !== canvasFitRevision;
       graphTopologyRef.current = graphTopologySignature;
+      graphLayoutRevisionRef.current = canvasFitRevision;
 
-      if (topologyChanged) {
+      if (topologyChanged || replaceWorkspaceLayout) {
         const next = buildProjectGraph(project, projectDraft);
         setNodes(current => next.nodes.map(node => {
           const existing = current.find(item => item.id === node.id);
@@ -383,7 +387,7 @@ export default function App() {
             data = { ...unitData, paramControls: projectParamControls[unitData.unit.id] ?? [], onParamChange: updateParamDraft };
             storedPosition = projectDraft.nodes.find(item => item.id === unitData.instance.id)?.ui?.position;
           }
-          const position = storedPosition ?? existing?.position ?? node.position;
+          const position = storedPosition ?? (replaceWorkspaceLayout ? undefined : existing?.position) ?? node.position;
           if (existing
             && existing.position.x === position.x
             && existing.position.y === position.y
@@ -425,7 +429,7 @@ export default function App() {
         return changed ? next : current;
       });
     });
-  }, [graphTopologySignature, project, projectDraft, projectParamControls, setEdges, setNodes, updateParamDraft]);
+  }, [canvasFitRevision, graphTopologySignature, project, projectDraft, projectParamControls, setEdges, setNodes, updateParamDraft]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -852,6 +856,7 @@ export default function App() {
       setParamOriginals(buildParamOriginals(backendSamples.project));
       setSelectedId('unit-drive1');
       setSelectedRouteIndex(null);
+      setCanvasFitRevision(revision => revision + 1);
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
         window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
@@ -907,6 +912,7 @@ export default function App() {
         setParamOriginals(buildParamOriginals(importedInspect));
         setSelectedId(null);
         setSelectedRouteIndex(null);
+        setCanvasFitRevision(revision => revision + 1);
       } catch (error) {
         setGraphEditError(error instanceof Error ? error.message : 'Workspace import failed.');
       }
@@ -1032,6 +1038,7 @@ export default function App() {
             <ProjectCanvas
               nodes={nodes}
               edges={edges}
+              fitViewRevision={canvasFitRevision}
               selectedRouteIndex={selectedRouteIndex}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}

@@ -60,7 +60,9 @@ test.beforeEach(async ({ browserName, page }, testInfo) => {
     description: JSON.stringify({
       browser: browserName,
       cpuThrottle: throttleRate,
+      memoryLimitMb: Number(process.env.APG_MEMORY_LIMIT_MB ?? '0'),
       profile: process.env.APG_PERF_PROFILE ?? 'local',
+      viewport: page.viewportSize() ? `${page.viewportSize()!.width}x${page.viewportSize()!.height}` : 'native',
     }),
   });
 });

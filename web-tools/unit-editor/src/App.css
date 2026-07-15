@@ -3790,3 +3790,77 @@ body {
   .transport-file { display: none; }
   .app-header .header-left { flex: 0 1 auto; }
 }
+
+@media (max-width: 920px) {
+  .app--project {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .app-header {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .app-header .header-left,
+  .app-header .header-right {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .transport-island {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    overflow-x: auto;
+  }
+
+  .app--project .layout {
+    min-height: 0;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .canvas-area {
+    order: 1;
+    width: 100%;
+    min-height: 520px;
+    height: min(68vh, 620px);
+    flex: none;
+  }
+
+  .canvas-area .flow-shell {
+    height: 100%;
+  }
+
+  .sidebar-left,
+  .sidebar-right {
+    width: 100%;
+    max-height: none;
+    flex: none;
+    border-right: 0;
+    border-left: 0;
+  }
+
+  .sidebar-left { order: 2; }
+  .sidebar-right { order: 3; }
+}
+
+@media (max-width: 560px) {
+  .app-header .header-left,
+  .app-header .header-right {
+    flex-basis: 100%;
+  }
+
+  .app-header .header-right {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .canvas-area {
+    min-height: 460px;
+    height: 62vh;
+  }
+}
