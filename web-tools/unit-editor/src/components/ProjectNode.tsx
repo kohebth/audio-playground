@@ -15,6 +15,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
 
     return (
       <div
+        data-testid={`project-node-${data.id}`}
         className={`project-node node-card project-node--system ${selected ? 'project-node--selected selected' : ''}`}
         style={style}
       >
@@ -37,7 +38,11 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   const compact = data.instance.params.length <= 1;
 
   return (
-    <div className={`project-node node-card ${selected ? 'project-node--selected selected' : ''}`} style={style}>
+    <div
+      data-testid={`project-node-${data.instance.id}`}
+      className={`project-node node-card ${selected ? 'project-node--selected selected' : ''}`}
+      style={style}
+    >
       <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />
       <div className={`node-pedal${compact ? '' : ' wide'}`}>
         <div className="node-pedal-header">

@@ -156,8 +156,13 @@ export function ProjectSidebar({
           </button>
         ))}
       </div>
-      <form className="project-instance-create add-unit-widget" onSubmit={submitInstance}>
-        <select aria-label="Unit type" onChange={event => setInstanceUnit(event.target.value)} value={instanceUnit}>
+        <form className="project-instance-create add-unit-widget" onSubmit={submitInstance}>
+        <select
+          data-testid="project-instance-unit"
+          aria-label="Unit type"
+          onChange={event => setInstanceUnit(event.target.value)}
+          value={instanceUnit}
+        >
           {project.units.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
         </select>
         <input
@@ -168,7 +173,12 @@ export function ProjectSidebar({
           spellCheck={false}
           value={instanceId}
         />
-        <button data-testid="project-instance-add" disabled={!instanceUnit || !instanceId.trim()} title="Add unit" type="submit">
+        <button
+          data-testid="project-instance-add"
+          disabled={!instanceUnit || !instanceId.trim()}
+          title="Add unit"
+          type="submit"
+        >
           <i className="fa-solid fa-plus" aria-hidden="true" />
         </button>
       </form>
@@ -215,10 +225,20 @@ export function ProjectSidebar({
         </button>
         <div className={`accordion-body route-list__body ${collapsedSections.routes ? 'hidden' : ''}`}>
         <form className="route-create add-unit-widget" onSubmit={submitRoute}>
-          <select aria-label="New route source" onChange={event => setRouteSource(event.target.value)} value={routeSource}>
+          <select
+            aria-label="New route source"
+            data-testid="project-route-source"
+            onChange={event => setRouteSource(event.target.value)}
+            value={routeSource}
+          >
             {routeSources.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
           </select>
-          <select aria-label="New route target" onChange={event => setRouteTarget(event.target.value)} value={routeTarget}>
+          <select
+            aria-label="New route target"
+            data-testid="project-route-target"
+            onChange={event => setRouteTarget(event.target.value)}
+            value={routeTarget}
+          >
             {routeTargets.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
           </select>
           <button data-testid="project-route-add" disabled={!routeSource || !routeTarget} type="submit">Connect</button>

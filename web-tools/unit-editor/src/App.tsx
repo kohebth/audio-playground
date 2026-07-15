@@ -232,6 +232,13 @@ export default function App() {
     restoreHistoryEntry(previous);
     setHistoryCounts({ undo: undoStack.current.length, redo: redoStack.current.length });
   }, [currentHistoryEntry, restoreHistoryEntry]);
+
+  const undoWorkspaceWithPerf = useCallback(() => {
+    markPerfSpan('ui.undo', () => {
+      undoWorkspace();
+    });
+  }, [undoWorkspace]);
+
   const redoWorkspace = useCallback(() => {
     const next = redoStack.current.pop();
     if (!next) return;
@@ -239,6 +246,12 @@ export default function App() {
     restoreHistoryEntry(next);
     setHistoryCounts({ undo: undoStack.current.length, redo: redoStack.current.length });
   }, [currentHistoryEntry, restoreHistoryEntry]);
+
+  const redoWorkspaceWithPerf = useCallback(() => {
+    markPerfSpan('ui.redo', () => {
+      redoWorkspace();
+    });
+  }, [redoWorkspace]);
   const projectWorkspaceFile = workspaceFiles.find(file => file.path === entryProject) ?? workspaceFiles[0];
   const lastValidProjectDraft = useRef(parseProjectGraphDraft(initialWorkspaceFiles[0].content));
   const parsedProjectDraft = useMemo(() => {
@@ -864,8 +877,8 @@ export default function App() {
           onExportWorkspace={exportWorkspace}
           onImportWorkspace={importWorkspace}
           onResetWorkspace={resetWorkspace}
-          onUndo={undoWorkspace}
-          onRedo={redoWorkspace}
+          onUndo={undoWorkspaceWithPerf}
+          onRedo={redoWorkspaceWithPerf}
           canUndo={historyCounts.undo > 0}
           canRedo={historyCounts.redo > 0}
           entryProject={entryProject}

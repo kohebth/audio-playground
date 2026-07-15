@@ -1,0 +1,18 @@
+{
+  "maxMs": {
+    "ui.dragStart.projectUnit": 16,
+    "ui.dragOver.projectNode": 16,
+    "ui.drop.projectNode": 100,
+    "graph.add.projectNode": 100,
+    "ui.select.projectNode": 100,
+    "ui.change.inspectorView": 100,
+    "param.update": 50,
+    "ui.undo": 100,
+    "ui.redo": 100,
+    "graph.create.route": 120,
+    "graph.delete.route": 120,
+    "contract.add.atom": 200,
+    "contract.remove.atom": 200,
+    "ui.openContractGraph": 120
+  }
+}

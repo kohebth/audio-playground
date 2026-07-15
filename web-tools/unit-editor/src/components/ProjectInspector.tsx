@@ -196,6 +196,7 @@ export function ProjectInspector({
     <aside className="project-inspector sidebar-right">
       <div className="inspector-switcher">
         <button
+          data-testid="inspector-tab-project"
           className={`inspector-tab ${isProjectView ? 'inspector-tab--active' : ''}`}
           onClick={() => onInspectorViewChange('project')}
           type="button"
@@ -203,6 +204,7 @@ export function ProjectInspector({
           Project
         </button>
         <button
+          data-testid="inspector-tab-atom"
           className={`inspector-tab ${isAtomView ? 'inspector-tab--active' : ''}`}
           onClick={() => onInspectorViewChange('atom')}
           type="button"
@@ -210,6 +212,7 @@ export function ProjectInspector({
           Atom
         </button>
         <button
+          data-testid="inspector-tab-contract"
           className={`inspector-tab ${isContractView ? 'inspector-tab--active' : ''}`}
           onClick={() => onInspectorViewChange('contract')}
           type="button"
@@ -293,33 +296,47 @@ export function ProjectInspector({
               <div className="inspector-block__meta">Selected Route</div>
               <label className="project-edit-field">
                 <span>From</span>
-                <select aria-label="Route source" onChange={event => setRouteFrom(event.target.value)} value={routeFrom}>
+                <select
+                  aria-label="Route source"
+                  data-testid="project-route-source-select"
+                  onChange={event => setRouteFrom(event.target.value)}
+                  value={routeFrom}
+                >
                   {routeSources.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
                 </select>
               </label>
               <label className="project-edit-field">
                 <span>To</span>
-                <select aria-label="Route target" onChange={event => setRouteTo(event.target.value)} value={routeTo}>
+                <select
+                  aria-label="Route target"
+                  data-testid="project-route-target-select"
+                  onChange={event => setRouteTo(event.target.value)}
+                  value={routeTo}
+                >
                   {routeTargets.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
                 </select>
               </label>
               <div className="project-edit-actions">
                 <button
+                  data-testid="inspector-route-replace"
                   disabled={selectedRouteIndex === null || !routeFrom || !routeTo}
                   onClick={() => selectedRouteIndex !== null && onUpdateRoute(selectedRouteIndex, { from: routeFrom, to: routeTo })}
                   type="button"
                 >Replace</button>
                 <button
+                  data-testid="inspector-route-up"
                   disabled={selectedRouteIndex === null || selectedRouteIndex === 0}
                   onClick={() => selectedRouteIndex !== null && onReorderRoute(selectedRouteIndex, selectedRouteIndex - 1)}
                   type="button"
                 >Up</button>
                 <button
+                  data-testid="inspector-route-down"
                   disabled={selectedRouteIndex === null || selectedRouteIndex >= project.routes.length - 1}
                   onClick={() => selectedRouteIndex !== null && onReorderRoute(selectedRouteIndex, selectedRouteIndex + 1)}
                   type="button"
                 >Down</button>
                 <button
+                  data-testid="inspector-route-disconnect"
                   disabled={selectedRouteIndex === null}
                   onClick={() => selectedRouteIndex !== null && onRemoveRoute(selectedRouteIndex)}
                   type="button"
@@ -338,27 +355,39 @@ export function ProjectInspector({
               </label>
               <div className="project-edit-actions">
                 <button
+                  data-testid="inspector-instance-rename"
                   disabled={!renameDraft || renameDraft === selectedNode.instance.id}
                   onClick={() => onRenameInstance(selectedNode.instance.id, renameDraft)}
                   type="button"
                 >Rename</button>
-                <button onClick={() => onDuplicateInstance(selectedNode.instance.id)} type="button">Duplicate</button>
                 <button
+                  data-testid="inspector-instance-duplicate"
+                  onClick={() => onDuplicateInstance(selectedNode.instance.id)}
+                  type="button"
+                >Duplicate</button>
+                <button
+                  data-testid="inspector-instance-up"
                   disabled={selectedNode.index === 0}
                   onClick={() => onReorderInstance(selectedNode.instance.id, selectedNode.index - 1)}
                   type="button"
                 >Up</button>
                 <button
+                  data-testid="inspector-instance-down"
                   disabled={selectedNode.index >= project.nodes.length - 1}
                   onClick={() => onReorderInstance(selectedNode.instance.id, selectedNode.index + 1)}
                   type="button"
                 >Down</button>
-                <button onClick={() => onRemoveInstance(selectedNode.instance.id)} type="button">Remove unit</button>
+                <button
+                  data-testid="inspector-instance-remove"
+                  onClick={() => onRemoveInstance(selectedNode.instance.id)}
+                  type="button"
+                >Remove unit</button>
               </div>
 
               <div className="param-list__toolbar">
                 <span>{selectedDirtyCount} local edits</span>
                 <button
+                  data-testid="inspector-reset-params"
                   disabled={selectedDirtyCount === 0}
                   onClick={() => onResetUnitParams(selectedNode.instance.id)}
                   type="button"
@@ -404,6 +433,7 @@ export function ProjectInspector({
             <summary className="inspector-block__label">Atom Focus</summary>
             <div className="atom-actionbar">
               <select
+                data-testid="contract-atom-to-add"
                 aria-label="Atom to add"
                 onChange={event => setAtomToAdd(event.target.value)}
                 value={atomToAdd}
@@ -412,11 +442,11 @@ export function ProjectInspector({
                   <option key={atom.name} value={atom.name}>{atom.name}</option>
                 ))}
               </select>
-              <button onClick={() => onAddAtom(atomToAdd)} type="button">Add</button>
-              <button disabled={!selectedAtom} onClick={onCopyAtom} type="button">Copy</button>
-              <button disabled={!selectedAtom} onClick={onCutAtom} type="button">Cut</button>
-              <button disabled={!atomClipboard} onClick={onPasteAtom} type="button">Paste</button>
-              <button disabled={!selectedAtom} onClick={onRemoveAtom} type="button">Remove</button>
+              <button data-testid="contract-atom-add" onClick={() => onAddAtom(atomToAdd)} type="button">Add</button>
+              <button data-testid="contract-atom-copy" disabled={!selectedAtom} onClick={onCopyAtom} type="button">Copy</button>
+              <button data-testid="contract-atom-cut" disabled={!selectedAtom} onClick={onCutAtom} type="button">Cut</button>
+              <button data-testid="contract-atom-paste" disabled={!atomClipboard} onClick={onPasteAtom} type="button">Paste</button>
+              <button data-testid="contract-atom-remove" disabled={!selectedAtom} onClick={onRemoveAtom} type="button">Remove</button>
             </div>
 
             {selectedUnitGraph ? (
@@ -425,6 +455,7 @@ export function ProjectInspector({
                   <button
                     key={node.id}
                     className={selectedAtom?.id === node.id ? 'atom-focus-list__item atom-focus-list__item--active' : 'atom-focus-list__item'}
+                    data-testid={`contract-atom-item-${node.id}`}
                     onClick={() => onSelectAtom(node.id)}
                     type="button"
                   >
@@ -467,8 +498,8 @@ export function ProjectInspector({
                 </strong>
               </div>
 
-              <div className="atom-replace-panel">
-                <button onClick={() => setReplaceOpen(open => !open)} type="button">
+                <div className="atom-replace-panel">
+                <button data-testid="contract-atom-replace-open" onClick={() => setReplaceOpen(open => !open)} type="button">
                   Replace atom...
                 </button>
                 <span>Type changes require a compatibility preview.</span>
@@ -484,12 +515,13 @@ export function ProjectInspector({
                         .map(atom => <option key={atom.name} value={atom.name}>{atom.name}</option>)}
                     </select>
                   </label>
-                  <label className="atom-replace-preview__check">
-                    <input
-                      checked={preserveReplacementId}
-                      onChange={event => setPreserveReplacementId(event.target.checked)}
-                      type="checkbox"
-                    />
+                    <label className="atom-replace-preview__check">
+                      <input
+                        checked={preserveReplacementId}
+                        data-testid="contract-atom-replace-preserve"
+                        onChange={event => setPreserveReplacementId(event.target.checked)}
+                        type="checkbox"
+                      />
                     <span>Preserve instance ID</span>
                   </label>
                   {replacementPreview ? (
