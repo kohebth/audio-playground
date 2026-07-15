@@ -1,0 +1,439 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: perf_fanwide_payload
+version: 2.0.0
+params:
+  p001:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p002:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p003:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p004:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p005:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p006:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p007:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p008:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p009:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p010:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p011:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p012:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p013:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p014:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p015:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p016:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p017:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p018:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p019:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p020:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p021:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p022:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p023:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p024:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p025:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p026:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p027:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p028:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p029:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p030:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p031:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p032:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p033:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p034:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p035:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p036:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p037:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p038:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p039:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p040:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p041:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p042:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p043:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p044:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p045:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p046:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p047:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p048:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p049:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p050:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p051:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p052:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p053:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p054:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p055:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p056:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p057:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p058:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p059:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p060:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p061:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p062:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p063:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+  p064:
+    type: float
+    default: 0.5
+    min: 0
+    max: 1
+ports:
+  inputs:
+    - name: in0
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in1
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in2
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in3
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in4
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in5
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in6
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in7
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in8
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in9
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in10
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in11
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in12
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in13
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in14
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in15
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in16
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in17
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in18
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in19
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in20
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in21
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in22
+      kind: signal
+      type: signal
+      channels: 1
+    - name: in23
+      kind: signal
+      type: signal
+      channels: 1
+  outputs:
+    - name: out
+      kind: signal
+      type: signal
+      channels: 1
+graph:
+  nodes: []
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true
+meta:
+  title: Perf unit perf_fanwide_payload
+  description: Synthetic deterministic fixture unit for performance generation.
+  category: test

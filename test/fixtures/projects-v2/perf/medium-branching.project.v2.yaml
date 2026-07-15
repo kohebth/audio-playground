@@ -1,0 +1,343 @@
+kind: apg.project
+schema: apg.project.v2
+name: perf-branching-medium
+version: 2.0.0
+units:
+  - id: perf_fanwide_24in
+    file: ../units-v2/perf_fanwide_24in.unit.v2.yaml
+chain:
+  nodes:
+    - id: u001
+      unit: perf_fanwide_24in
+    - id: u002
+      unit: perf_fanwide_24in
+    - id: u003
+      unit: perf_fanwide_24in
+    - id: u004
+      unit: perf_fanwide_24in
+    - id: u005
+      unit: perf_fanwide_24in
+    - id: u006
+      unit: perf_fanwide_24in
+    - id: u007
+      unit: perf_fanwide_24in
+    - id: u008
+      unit: perf_fanwide_24in
+    - id: u009
+      unit: perf_fanwide_24in
+    - id: u010
+      unit: perf_fanwide_24in
+    - id: u011
+      unit: perf_fanwide_24in
+    - id: u012
+      unit: perf_fanwide_24in
+    - id: u013
+      unit: perf_fanwide_24in
+    - id: u014
+      unit: perf_fanwide_24in
+    - id: u015
+      unit: perf_fanwide_24in
+    - id: u016
+      unit: perf_fanwide_24in
+    - id: u017
+      unit: perf_fanwide_24in
+    - id: u018
+      unit: perf_fanwide_24in
+    - id: u019
+      unit: perf_fanwide_24in
+    - id: u020
+      unit: perf_fanwide_24in
+  routes:
+    - from: system.input
+      to: u001.in0
+    - from: u001.out
+      to: u002.in0
+    - from: u002.out
+      to: u003.in0
+    - from: u003.out
+      to: u004.in0
+    - from: u004.out
+      to: u005.in0
+    - from: u005.out
+      to: u006.in0
+    - from: u006.out
+      to: u007.in0
+    - from: u007.out
+      to: u008.in0
+    - from: u008.out
+      to: u009.in0
+    - from: u009.out
+      to: u010.in0
+    - from: u010.out
+      to: u011.in0
+    - from: u011.out
+      to: u012.in0
+    - from: u012.out
+      to: u013.in0
+    - from: u013.out
+      to: u014.in0
+    - from: u014.out
+      to: u015.in0
+    - from: u015.out
+      to: u016.in0
+    - from: u016.out
+      to: u017.in0
+    - from: u017.out
+      to: u018.in0
+    - from: u018.out
+      to: u019.in0
+    - from: u019.out
+      to: u020.in0
+    - from: u020.out
+      to: system.output
+    - from: u001.out
+      to: u002.in1
+    - from: u002.out
+      to: u003.in1
+    - from: u003.out
+      to: u004.in1
+    - from: u004.out
+      to: u005.in1
+    - from: u005.out
+      to: u006.in1
+    - from: u006.out
+      to: u007.in1
+    - from: u007.out
+      to: u008.in1
+    - from: u008.out
+      to: u009.in1
+    - from: u009.out
+      to: u010.in1
+    - from: u010.out
+      to: u011.in1
+    - from: u011.out
+      to: u012.in1
+    - from: u012.out
+      to: u013.in1
+    - from: u013.out
+      to: u014.in1
+    - from: u014.out
+      to: u015.in1
+    - from: u015.out
+      to: u016.in1
+    - from: u016.out
+      to: u017.in1
+    - from: u017.out
+      to: u018.in1
+    - from: u018.out
+      to: u019.in1
+    - from: u019.out
+      to: u020.in1
+    - from: u001.out
+      to: u002.in2
+    - from: u002.out
+      to: u003.in2
+    - from: u003.out
+      to: u004.in2
+    - from: u004.out
+      to: u005.in2
+    - from: u005.out
+      to: u006.in2
+    - from: u006.out
+      to: u007.in2
+    - from: u007.out
+      to: u008.in2
+    - from: u008.out
+      to: u009.in2
+    - from: u009.out
+      to: u010.in2
+    - from: u010.out
+      to: u011.in2
+    - from: u011.out
+      to: u012.in2
+    - from: u012.out
+      to: u013.in2
+    - from: u013.out
+      to: u014.in2
+    - from: u014.out
+      to: u015.in2
+    - from: u015.out
+      to: u016.in2
+    - from: u016.out
+      to: u017.in2
+    - from: u017.out
+      to: u018.in2
+    - from: u018.out
+      to: u019.in2
+    - from: u019.out
+      to: u020.in2
+    - from: u001.out
+      to: u002.in3
+    - from: u002.out
+      to: u003.in3
+    - from: u003.out
+      to: u004.in3
+    - from: u004.out
+      to: u005.in3
+    - from: u005.out
+      to: u006.in3
+    - from: u006.out
+      to: u007.in3
+    - from: u007.out
+      to: u008.in3
+    - from: u008.out
+      to: u009.in3
+    - from: u009.out
+      to: u010.in3
+    - from: u010.out
+      to: u011.in3
+    - from: u011.out
+      to: u012.in3
+    - from: u012.out
+      to: u013.in3
+    - from: u013.out
+      to: u014.in3
+    - from: u014.out
+      to: u015.in3
+    - from: u015.out
+      to: u016.in3
+    - from: u016.out
+      to: u017.in3
+    - from: u017.out
+      to: u018.in3
+    - from: u018.out
+      to: u019.in3
+    - from: u019.out
+      to: u020.in3
+    - from: u001.out
+      to: u002.in4
+    - from: u002.out
+      to: u003.in4
+    - from: u003.out
+      to: u004.in4
+    - from: u004.out
+      to: u005.in4
+    - from: u005.out
+      to: u006.in4
+    - from: u006.out
+      to: u007.in4
+    - from: u007.out
+      to: u008.in4
+    - from: u008.out
+      to: u009.in4
+    - from: u009.out
+      to: u010.in4
+    - from: u010.out
+      to: u011.in4
+    - from: u011.out
+      to: u012.in4
+    - from: u012.out
+      to: u013.in4
+    - from: u013.out
+      to: u014.in4
+    - from: u014.out
+      to: u015.in4
+    - from: u015.out
+      to: u016.in4
+    - from: u016.out
+      to: u017.in4
+    - from: u017.out
+      to: u018.in4
+    - from: u018.out
+      to: u019.in4
+    - from: u019.out
+      to: u020.in4
+    - from: u001.out
+      to: u002.in5
+    - from: u002.out
+      to: u003.in5
+    - from: u003.out
+      to: u004.in5
+    - from: u004.out
+      to: u005.in5
+    - from: u005.out
+      to: u006.in5
+    - from: u006.out
+      to: u007.in5
+    - from: u007.out
+      to: u008.in5
+    - from: u008.out
+      to: u009.in5
+    - from: u009.out
+      to: u010.in5
+    - from: u010.out
+      to: u011.in5
+    - from: u011.out
+      to: u012.in5
+    - from: u012.out
+      to: u013.in5
+    - from: u013.out
+      to: u014.in5
+    - from: u014.out
+      to: u015.in5
+    - from: u015.out
+      to: u016.in5
+    - from: u016.out
+      to: u017.in5
+    - from: u017.out
+      to: u018.in5
+    - from: u018.out
+      to: u019.in5
+    - from: u019.out
+      to: u020.in5
+    - from: u001.out
+      to: u002.in6
+    - from: u002.out
+      to: u003.in6
+    - from: u003.out
+      to: u004.in6
+    - from: u004.out
+      to: u005.in6
+    - from: u005.out
+      to: u006.in6
+    - from: u006.out
+      to: u007.in6
+    - from: u007.out
+      to: u008.in6
+    - from: u008.out
+      to: u009.in6
+    - from: u009.out
+      to: u010.in6
+    - from: u010.out
+      to: u011.in6
+    - from: u011.out
+      to: u012.in6
+    - from: u012.out
+      to: u013.in6
+    - from: u013.out
+      to: u014.in6
+    - from: u014.out
+      to: u015.in6
+    - from: u015.out
+      to: u016.in6
+    - from: u016.out
+      to: u017.in6
+    - from: u017.out
+      to: u018.in6
+    - from: u018.out
+      to: u019.in6
+    - from: u019.out
+      to: u020.in6
+    - from: u001.out
+      to: u002.in7
+    - from: u002.out
+      to: u003.in7
+    - from: u003.out
+      to: u004.in7
+    - from: u004.out
+      to: u005.in7
+    - from: u005.out
+      to: u006.in7
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render
+meta:
+  perf:
+    profile: medium
+    topology: branching
+    target:
+      units: 20
+      atoms: 100
+      routes: 140

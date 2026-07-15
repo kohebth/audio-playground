@@ -1,0 +1,93 @@
+kind: apg.project
+schema: apg.project.v2
+name: perf-reuse-small
+version: 2.0.0
+units:
+  - id: perf_fanwide_24in
+    file: ../units-v2/perf_fanwide_24in.unit.v2.yaml
+chain:
+  nodes:
+    - id: u001
+      unit: perf_fanwide_24in
+    - id: u002
+      unit: perf_fanwide_24in
+    - id: u003
+      unit: perf_fanwide_24in
+    - id: u004
+      unit: perf_fanwide_24in
+    - id: u005
+      unit: perf_fanwide_24in
+  routes:
+    - from: system.input
+      to: u001.in0
+    - from: u001.out
+      to: u002.in0
+    - from: u002.out
+      to: u003.in0
+    - from: u003.out
+      to: u004.in0
+    - from: u004.out
+      to: u005.in0
+    - from: u005.out
+      to: system.output
+    - from: u001.out
+      to: u002.in1
+    - from: u001.out
+      to: u003.in1
+    - from: u001.out
+      to: u004.in1
+    - from: u001.out
+      to: u005.in1
+    - from: u001.out
+      to: u002.in2
+    - from: u001.out
+      to: u003.in2
+    - from: u001.out
+      to: u004.in2
+    - from: u001.out
+      to: u005.in2
+    - from: u001.out
+      to: u002.in3
+    - from: u001.out
+      to: u003.in3
+    - from: u001.out
+      to: u004.in3
+    - from: u001.out
+      to: u005.in3
+    - from: u001.out
+      to: u002.in4
+    - from: u001.out
+      to: u003.in4
+    - from: u001.out
+      to: u004.in4
+    - from: u001.out
+      to: u005.in4
+    - from: u001.out
+      to: u002.in5
+    - from: u001.out
+      to: u003.in5
+    - from: u001.out
+      to: u004.in5
+    - from: u001.out
+      to: u005.in5
+    - from: u001.out
+      to: u002.in6
+    - from: u001.out
+      to: u003.in6
+    - from: u001.out
+      to: u004.in6
+    - from: u001.out
+      to: u005.in6
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render
+meta:
+  perf:
+    profile: small
+    topology: reuse
+    target:
+      units: 5
+      atoms: 25
+      routes: 30
