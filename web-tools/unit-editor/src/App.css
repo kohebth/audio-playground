@@ -1617,6 +1617,139 @@ body {
   font-size: 12px;
 }
 
+.audio-io-panel > summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audio-io-panel > summary i {
+  color: var(--accent-cyan);
+  font-size: 11px;
+}
+
+.audio-io-fieldset {
+  display: grid;
+  gap: 9px;
+}
+
+.audio-io-fieldset label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.audio-io-fieldset label > span {
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.audio-io-fieldset select {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font: 11px var(--font-sans);
+  text-overflow: ellipsis;
+}
+
+.audio-io-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.audio-io-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: 600 10px var(--font-sans);
+}
+
+.audio-io-actions .icon-button {
+  width: 30px;
+  padding: 0;
+}
+
+.audio-io-actions button:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.audio-io-actions button:disabled,
+.audio-io-fieldset select:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.audio-io-panel .audio-trace-progress {
+  margin-top: 10px;
+}
+
+.audio-io-runtime {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 10px;
+  background: var(--border-subtle);
+}
+
+.audio-io-runtime > div {
+  min-width: 0;
+  padding: 7px;
+  background: var(--bg-base);
+}
+
+.audio-io-runtime span,
+.audio-io-runtime strong {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.audio-io-runtime span {
+  color: var(--text-dim);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.audio-io-runtime strong {
+  margin-top: 3px;
+  color: var(--text-primary);
+  font: 10px var(--font-mono);
+}
+
+.audio-io-warning,
+.audio-io-result {
+  margin: 9px 0 0 !important;
+  padding: 7px 8px;
+  border-left: 2px solid var(--accent-orange);
+  color: var(--text-secondary) !important;
+  font-size: 10px !important;
+  line-height: 1.45;
+}
+
+.audio-io-result {
+  border-left-color: #22c55e;
+}
+
 .audio-trace-panel {
   margin-top: 10px;
   border: 1px solid var(--border);
@@ -1704,6 +1837,76 @@ body {
 
 .audio-trace-report {
   padding: 10px;
+}
+
+.audio-calibration-report {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  background: #09111d;
+}
+
+.audio-calibration-report__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.audio-calibration-report__header span,
+.audio-calibration-report__header strong {
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.audio-calibration-report__header span {
+  color: var(--text-muted);
+}
+
+.audio-calibration-report__header strong {
+  color: var(--accent-cyan);
+}
+
+.audio-calibration-table {
+  padding: 6px 8px;
+  overflow-x: auto;
+}
+
+.audio-calibration-table__row {
+  display: grid;
+  grid-template-columns: minmax(58px, .8fr) minmax(55px, .8fr) minmax(52px, .7fr) minmax(72px, 1.2fr);
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+  min-height: 28px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.audio-calibration-table__row:last-child {
+  border-bottom: 0;
+}
+
+.audio-calibration-table__row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.audio-calibration-table__row--header {
+  color: var(--text-dim);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.audio-calibration-ok {
+  color: #86efac;
+}
+
+.audio-calibration-bad {
+  color: #fca5a5;
 }
 
 .audio-trace-verdict {
@@ -1875,6 +2078,24 @@ body {
 .live-latency-badge strong {
   font-family: var(--font-mono);
   font-size: 13px;
+}
+
+.live-latency-badge--passing {
+  border-color: #16a34a;
+  color: #dcfce7;
+}
+
+.live-latency-badge--passing span {
+  color: #86efac;
+}
+
+.live-latency-badge--high {
+  border-color: var(--accent-orange);
+  color: #ffedd5;
+}
+
+.live-latency-badge--high span {
+  color: #fdba74;
 }
 
 .wasm-diagnostic {

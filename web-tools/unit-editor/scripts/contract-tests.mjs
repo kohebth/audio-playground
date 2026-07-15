@@ -47,6 +47,7 @@ const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.
 const contractCanvas = read('web-tools/unit-editor/src/components/ContractGraphCanvas.tsx');
 const previewPanel = read('web-tools/unit-editor/src/components/PreviewPanel.tsx');
 const liveLatencyBadge = read('web-tools/unit-editor/src/components/LiveLatencyBadge.tsx');
+const audioIo = read('web-tools/unit-editor/src/lib/audioIo.ts');
 const wasmFacade = read('wasm-tools/web/facade.ts');
 const processorWorklet = read('wasm-tools/web/processor.worklet.js');
 const compatibility = read('web-tools/unit-editor/src/components/CompatibilityExportPanel.tsx');
@@ -178,11 +179,13 @@ includesContent(projectSidebar, 'onCreateUnit(unitName)', 'workspace sidebar mus
 assert(render.ok && render.frames === render.output.samples.length, 'render fixture must include deterministic samples');
 assert(render.output.samples.length > 0, 'render fixture should include sample data');
 includesContent(previewPanel, 'WasmBackend.create', 'preview must initialize the typed WASM facade');
-includesContent(previewPanel, 'backend.replaceWorkspace', 'workspace revisions must be sent to WASM validation');
-includesContent(previewPanel, 'backend.prepare', 'valid revisions must prepare a runtime image');
+includesContent(previewPanel, 'instance.replaceWorkspace', 'workspace revisions must be sent to WASM validation');
+includesContent(previewPanel, 'instance.prepare', 'valid revisions must prepare a runtime image');
 includesContent(previewPanel, 'window.setTimeout', 'workspace synchronization must be debounced');
 includesContent(previewPanel, 'revision !== revisionRef.current', 'stale validation results must be ignored');
 includesContent(previewPanel, 'navigator.mediaDevices.getUserMedia', 'live preview must support microphone input');
+includesContent(previewPanel, 'createConfiguredAudioContext', 'live preview must use device-aware audio contexts');
+includesContent(previewPanel, 'AUDIO_CALIBRATION_HINTS', 'live preview must calibrate browser latency hints');
 includesContent(previewPanel, 'decodeAudioData', 'live preview must decode uploaded audio files');
 includesContent(previewPanel, 'createBufferSource', 'uploaded files must use a WebAudio buffer source');
 includesContent(previewPanel, "type InputMode = 'file' | 'microphone'", 'file and microphone transports must remain separate');
@@ -215,9 +218,9 @@ includesContent(previewPanel, 'measureAcousticLatency', 'live preview must expos
 includesContent(previewPanel, "'Latency chirp'", 'live preview latency calibration button is missing');
 includesContent(app, '<LiveLatencyBadge />', 'live output latency must remain visible outside the inspector');
 includesContent(liveLatencyBadge, "'Mic path est.'", 'live latency badge must distinguish microphone path estimates');
-includesContent(liveLatencyBadge, 'Loopback test', 'live latency badge must show measured loopback results');
-includesContent(previewPanel, "latencyHint: 'interactive'", 'live preview must request interactive browser latency');
-includesContent(previewPanel, 'latency: { ideal: 0 }', 'microphone preview must request the lowest available capture latency');
+includesContent(liveLatencyBadge, 'Loopback ready', 'live latency badge must show measured loopback results');
+includesContent(audioIo, "latencyHint: 'interactive'", 'live preview must request interactive browser latency');
+includesContent(audioIo, 'latency: { ideal: 0 }', 'microphone preview must request the lowest available capture latency');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
 includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
 includesContent(wasmFacade, 'processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary }', 'WASM bytes must be transferred during Worklet construction');
@@ -246,6 +249,9 @@ includesContent(wasmFacade, 'startAudioTrace()', 'WASM facade must expose audio 
 includesContent(wasmFacade, 'pollAudioTrace()', 'WASM facade must expose audio trace polling');
 includesContent(projectInspector, 'data-testid="audio-trace-profile"', 'Developer Diagnostics must expose microphone profiling');
 includesContent(projectInspector, 'exportAudioTraceReport', 'Developer Diagnostics must export audio trace JSON');
+includesContent(projectInspector, 'data-testid="audio-io-panel"', 'right inspector must expose audio I/O controls');
+includesContent(projectInspector, 'data-testid="audio-calibrate"', 'audio I/O controls must expose calibration');
+includesContent(projectInspector, 'data-testid="audio-latency-chirp"', 'audio I/O controls must expose acoustic latency measurement');
 includesContent(processorWorklet, 'request.type === "startLatencyProbe"', 'AudioWorklet must support acoustic latency probes');
 includesContent(wasmFacade, 'measureLatencyProbe()', 'WASM facade must expose acoustic latency measurement');
 assert(!processorWorklet.slice(processorWorklet.indexOf('process(inputs, outputs)')).includes('this.reply('), 'process() must not allocate and post meter messages');

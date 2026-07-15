@@ -3,7 +3,7 @@ import type { AudioTraceReport, AudioTraceSnapshot, AudioTraceStageName } from '
 export type AudioTraceBrowserLatency = AudioTraceReport['browser'];
 
 export const AUDIO_TRACE_STAGE_LABELS: Record<AudioTraceStageName, string> = {
-  schedulingJitter: 'Scheduling jitter',
+  schedulingJitter: 'Callback cadence gap',
   inputCopy: 'Input copy',
   wasmProcess: 'WASM graph',
   outputCopy: 'Output copy',
@@ -32,11 +32,10 @@ export function createAudioTraceReport(
     ));
   const overBudget = trace.callbackDeadlineMissesDelta > 0
     || (trace.deadlineMs > 0 && trace.stages.callbackTotal.maxMs > trace.deadlineMs);
-  const schedulingDelayed = trace.deadlineMs > 0 && trace.stages.schedulingJitter.p95Ms > trace.deadlineMs;
-  const verdict = overBudget ? 'internal-over-budget' : schedulingDelayed ? 'scheduling-delayed' : 'internal-healthy';
+  const verdict = overBudget ? 'internal-over-budget' : 'internal-healthy';
 
   return {
-    schema: 'apg.audio-trace.v1',
+    schema: 'apg.audio-trace.v2',
     capturedAt,
     browser,
     trace,
@@ -44,9 +43,7 @@ export function createAudioTraceReport(
     verdict,
     message: verdict === 'internal-over-budget'
       ? `Internal processing exceeded the ${trace.deadlineMs.toFixed(3)} ms callback deadline.`
-      : verdict === 'scheduling-delayed'
-        ? 'Internal processing remained within its deadline, but callback scheduling jitter exceeded one audio quantum.'
-        : 'Internal processing and callback scheduling remained within budget. Remaining delay is in opaque browser or device buffering.',
+      : 'Callback execution remained within budget. Cadence gaps are diagnostic only; remaining delay is in browser or device buffering.',
   };
 }
 

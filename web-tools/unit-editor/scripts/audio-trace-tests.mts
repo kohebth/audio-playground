@@ -42,10 +42,10 @@ const report = createAudioTraceReport(snapshot, {
   outputLatencyMs: 8,
   acousticLoopbackMs: 22,
 }, '2026-07-16T00:00:00.000Z');
-assert.equal(report.schema, 'apg.audio-trace.v1');
+assert.equal(report.schema, 'apg.audio-trace.v2');
 assert.equal(report.verdict, 'internal-healthy');
 assert.equal(report.slowestInternalStage, 'wasmProcess');
-assert.match(report.message, /opaque browser or device buffering/);
+assert.match(report.message, /Cadence gaps are diagnostic only/);
 assert.equal(JSON.parse(JSON.stringify(report)).trace.sampleCount, 235);
 
 const overBudget = createAudioTraceReport({
@@ -61,8 +61,8 @@ const schedulingDelayed = createAudioTraceReport({
     schedulingJitter: { ...emptyStage(), p95Ms: 4, maxMs: 5 },
   },
 }, report.browser);
-assert.equal(schedulingDelayed.verdict, 'scheduling-delayed');
-assert.match(schedulingDelayed.message, /scheduling jitter/);
+assert.equal(schedulingDelayed.verdict, 'internal-healthy');
+assert.match(schedulingDelayed.message, /Cadence gaps are diagnostic only/);
 
 const source = readFileSync(resolve('../../wasm-tools/web/processor.worklet.js'), 'utf8')
   .replace(/^import createApgProcessorModule[^\n]*\n/, '');

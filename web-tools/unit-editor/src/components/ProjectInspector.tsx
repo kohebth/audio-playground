@@ -15,6 +15,7 @@ import type {
 } from '../lib/backendSamples';
 import { type ParamOverride } from '../lib/projectParams';
 import { AUDIO_TRACE_STAGE_LABELS, exportAudioTraceReport } from '../lib/audioTrace';
+import { formatLatencyHint } from '../lib/audioIo';
 import { useLiveBypass } from '../lib/liveBypass';
 import {
   previewAtomReplacement,
@@ -172,6 +173,10 @@ export function ProjectInspector({
     selectedNode?.kind === 'unit'
       ? project.routes.filter(route => route.from.startsWith(`${selectedNode.instance.id}.`) || route.to.startsWith(`${selectedNode.instance.id}.`))
       : [];
+  const audioInputs = liveAudio?.audioDevices.filter(device => device.kind === 'audioinput') ?? [];
+  const audioOutputs = liveAudio?.audioDevices.filter(device => device.kind === 'audiooutput') ?? [];
+  const audioRuntime = liveAudio?.audioRuntimeSettings ?? null;
+  const calibrationRunning = liveAudio?.audioCalibration.status === 'running';
 
   useEffect(() => {
     setRenameDraft(selectedNode?.kind === 'unit' ? selectedNode.instance.id : '');
@@ -234,6 +239,98 @@ export function ProjectInspector({
           <p>{graphEditError}</p>
         </div>
       ) : null}
+      <details className="inspector-block audio-io-panel" data-testid="audio-io-panel">
+        <summary className="inspector-block__label">
+          <span><i className="fa-solid fa-sliders" aria-hidden="true" />Audio I/O</span>
+        </summary>
+        <div className="audio-io-fieldset">
+          <label>
+            <span>Input</span>
+            <select
+              data-testid="audio-input-device"
+              disabled={!liveAudio || calibrationRunning}
+              onChange={event => void liveAudio?.selectAudioInput(event.target.value)}
+              value={liveAudio?.audioIoPreference.inputDeviceId ?? 'default'}
+            >
+              {audioInputs.length > 0
+                ? audioInputs.map(device => <option key={`input-${device.deviceId}`} value={device.deviceId}>{device.label}</option>)
+                : <option value="default">System default</option>}
+            </select>
+          </label>
+          <label>
+            <span>Output</span>
+            <select
+              data-testid="audio-output-device"
+              disabled={!liveAudio || calibrationRunning}
+              onChange={event => void liveAudio?.selectAudioOutput(event.target.value)}
+              value={liveAudio?.audioIoPreference.outputDeviceId ?? 'default'}
+            >
+              {audioOutputs.length > 0
+                ? audioOutputs.map(device => <option key={`output-${device.deviceId}`} value={device.deviceId}>{device.label}</option>)
+                : <option value="default">System default</option>}
+            </select>
+          </label>
+        </div>
+        <div className="audio-io-actions">
+          <button
+            aria-label="Refresh audio devices"
+            className="icon-button"
+            disabled={!liveAudio || calibrationRunning}
+            onClick={() => void liveAudio?.refreshAudioDevices()}
+            title="Refresh audio devices"
+            type="button"
+          >
+            <i className="fa-solid fa-rotate" aria-hidden="true" />
+          </button>
+          <button
+            data-testid="audio-calibrate"
+            disabled={!liveAudio || liveAudio.inputMode !== 'microphone' || calibrationRunning}
+            onClick={() => void liveAudio?.calibrateAudio()}
+            type="button"
+          >
+            <i className="fa-solid fa-gauge-high" aria-hidden="true" />
+            {calibrationRunning ? 'Calibrating' : 'Calibrate latency'}
+          </button>
+          <button
+            aria-label="Run latency chirp"
+            className="icon-button"
+            data-testid="audio-latency-chirp"
+            disabled={!liveAudio?.running || liveAudio.inputMode !== 'microphone' || liveAudio.measuringLatency || calibrationRunning}
+            onClick={() => void liveAudio?.measureAcousticLatency()}
+            title="Run latency chirp"
+            type="button"
+          >
+            <i className="fa-solid fa-wave-square" aria-hidden="true" />
+          </button>
+        </div>
+        {calibrationRunning ? (
+          <div className="audio-trace-progress" aria-label="Latency calibration progress">
+            <span style={{ width: `${Math.round((liveAudio?.audioCalibration.progress ?? 0) * 100)}%` }} />
+          </div>
+        ) : null}
+        {audioRuntime ? (
+          <div className="audio-io-runtime">
+            <div><span>Context</span><strong>{audioRuntime.contextSampleRate} Hz</strong></div>
+            <div><span>Input</span><strong>{audioRuntime.inputSampleRate === null ? 'Unavailable' : `${audioRuntime.inputSampleRate} Hz`}</strong></div>
+            <div><span>Capture</span><strong>{formatLatency(audioRuntime.captureLatencyMs)}</strong></div>
+            <div><span>Base</span><strong>{formatLatency(audioRuntime.baseLatencyMs)}</strong></div>
+            <div><span>Output</span><strong>{formatLatency(audioRuntime.outputLatencyMs)}</strong></div>
+            <div><span>Hint</span><strong>{formatLatencyHint(liveAudio!.audioIoPreference.latencyHint)}</strong></div>
+          </div>
+        ) : null}
+        {audioRuntime?.sampleRateMismatch ? (
+          <p className="audio-io-warning">Input and output sample rates differ; browser resampling adds work and may add buffering.</p>
+        ) : null}
+        {audioRuntime?.outputRoutingWarning ? (
+          <p className="audio-io-warning">{audioRuntime.outputRoutingWarning}</p>
+        ) : null}
+        {liveAudio?.audioCalibration.status === 'complete' ? (
+          <p className="audio-io-result">Selected {formatLatencyHint(liveAudio.audioCalibration.selectedHint!)}</p>
+        ) : null}
+        {liveAudio?.audioCalibration.status === 'error' ? (
+          <p className="audio-io-warning">{liveAudio.audioCalibration.error}</p>
+        ) : null}
+      </details>
       {isProjectView && (
         <>
           <details className="inspector-block" open>
@@ -723,6 +820,29 @@ export function ProjectInspector({
                 </div>
               ) : null}
             </section>
+            {liveAudio?.audioCalibration.candidates.length ? (
+              <section className="audio-calibration-report" data-testid="audio-calibration-report">
+                <div className="audio-calibration-report__header">
+                  <span>Calibration candidates</span>
+                  <strong>{liveAudio.audioCalibration.status}</strong>
+                </div>
+                <div className="audio-calibration-table" role="table" aria-label="Latency calibration candidates">
+                  <div className="audio-calibration-table__row audio-calibration-table__row--header" role="row">
+                    <span>Hint</span><span>Path</span><span>Max</span><span>Result</span>
+                  </div>
+                  {liveAudio.audioCalibration.candidates.map(candidate => (
+                    <div className="audio-calibration-table__row" key={formatLatencyHint(candidate.requestedHint)} role="row">
+                      <strong>{formatLatencyHint(candidate.requestedHint)}</strong>
+                      <span>{formatLatency(candidate.runtime.estimatedPathLatencyMs)}</span>
+                      <span>{candidate.trace.stages.callbackTotal.maxMs.toFixed(3)} ms</span>
+                      <span className={candidate.stable ? 'audio-calibration-ok' : 'audio-calibration-bad'}>
+                        {candidate.stable ? 'Stable' : candidate.rejectionReason}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
             {perfSpans.length > 0 ? (
               <details className="inspector-block">
                 <summary className="inspector-block__label">Operation Spans ({perfSpans.length})</summary>

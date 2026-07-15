@@ -35,6 +35,12 @@ microphone streams, and suppresses stale meter failures while a Worklet is being
 exercises both transport modes. Workspace shortcuts map `Ctrl/Cmd+S` to local save, `B` to build and save, `M` to mute,
 and `Space` to start or stop playback while leaving text-editing controls unaffected.
 
+The right inspector exposes persisted browser audio input/output selection. AudioContext output routing is
+feature-detected, microphone constraints request the selected device, mono capture, matching sample rate, and disabled
+voice processing, and the UI reports actual capture/context sample rates plus capture/base/output latency. Device
+changes rebuild the browser backend, rehydrate the same workspace revision, and restore running, mute, bypass, and
+parameter-control state; a failed rebuild restores the previous known-good configuration.
+
 The live preview exposes workspace, prepared, active, and failed revisions independently. Worker and processor failures
 render the structured diagnostic code, phase, revision, file, and schema path instead of collapsing the backend result
 to message text. Beginning a newer revision clears the stale diagnostic display while retaining the failed revision
@@ -54,12 +60,16 @@ Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include 
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
 
 Developer Diagnostics includes an opt-in five-second microphone latency profile. The AudioWorklet measures callback
-scheduling jitter and samples input copy, WASM graph execution, output copy, latency-probe work, channel copy, and total
+cadence gaps and samples input copy, WASM graph execution, output copy, latency-probe work, channel copy, and total
 callback time every eighth quantum into fixed-capacity buffers. Polling constructs mean, p95, maximum, deadline
-utilization, underrun, and deadline-miss results outside `process()`. Reports distinguish internal deadline overruns from
-browser scheduling delay and otherwise leave opaque capture/output buffering attributed to the browser or device. The
-UI combines those results with browser latency estimates and an available acoustic-loopback result, and exports the
-versioned `apg.audio-trace.v1` JSON contract. APGCore and embedded runtime boundaries remain unchanged.
+utilization, underrun, and deadline-miss results outside `process()`. Reports classify real-time health from callback
+execution, underruns, and deadline misses; callback cadence gaps remain diagnostic because browser/device render batching
+does not alone prove a missed deadline. The UI combines those results with browser latency estimates and an available
+acoustic-loopback result, and exports the
+versioned `apg.audio-trace.v2` JSON contract. Device-aware calibration measures the current graph for five seconds at
+2.7 ms, 5.3 ms, 10.7 ms, and interactive latency hints, rejects unstable candidates, installs the lowest reported stable
+path, and retains the chirp as the authoritative under-15-ms round-trip check. APGCore and embedded runtime boundaries
+remain unchanged.
 
 The processor keeps an active, staged, and retired runtime slot. It only promotes a staged slot at a block boundary and
 crossfades that block; retired-slot destruction occurs during a later control-thread staging operation, never in the

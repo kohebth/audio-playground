@@ -4,12 +4,13 @@ export function LiveLatencyBadge() {
   const { controller } = useLiveBypass();
   if (!controller?.running || controller.latencyMs === null) return null;
   if (controller.measuredLatencyMs !== null) {
+    const passing = controller.measuredLatencyMs < 15;
     return (
       <output
-        className="live-latency-badge"
+        className={`live-latency-badge live-latency-badge--${passing ? 'passing' : 'high'}`}
         title="Acoustic loopback result from the test chirp. It includes speaker-to-microphone air travel."
       >
-        <span>Loopback test</span>
+        <span>{passing ? 'Loopback ready' : 'Loopback high'}</span>
         <strong>{controller.measuredLatencyMs.toFixed(1)} ms</strong>
       </output>
     );

@@ -12,6 +12,26 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { WorkspaceFile } from '../lib/backendSamples';
 import { useLiveBypass } from '../lib/liveBypass';
 import { createAudioTraceReport } from '../lib/audioTrace';
+import {
+  AUDIO_CALIBRATION_HINTS,
+  EMPTY_AUDIO_CALIBRATION,
+  calibrationCandidate,
+  collectAudioDevices,
+  createConfiguredAudioContext,
+  loadAudioIoPreference,
+  microphoneConstraints,
+  readAudioRuntimeSettings,
+  recommendedOutputDeviceId,
+  resolveAudioIoPreference,
+  saveAudioIoPreference,
+  selectCalibrationCandidate,
+  type AudioCalibrationCandidate,
+  type AudioCalibrationState,
+  type AudioDeviceOption,
+  type AudioIoPreference,
+  type AudioRuntimeSettings,
+  type ConfiguredAudioContext,
+} from '../lib/audioIo';
 import type { ParamOverride } from '../lib/projectParams';
 import { markPerfSpan, recordRuntimeSnapshot } from '../lib/perfTelemetry';
 
@@ -41,21 +61,10 @@ function moduleUrl(file: string): string {
   return new URL(`wasm/${file}`, `${window.location.origin}${import.meta.env.BASE_URL}`).href;
 }
 
-function browserOutputLatency(context: AudioContext) {
-  const base = Number.isFinite(context.baseLatency) && context.baseLatency > 0 ? context.baseLatency * 1000 : null;
-  const output = (context as AudioContext & { outputLatency?: number }).outputLatency;
-  const device = Number.isFinite(output) && (output ?? 0) > 0 ? output! * 1000 : null;
-  return {
-    baseLatencyMs: base,
-    outputLatencyMs: device,
-    totalLatencyMs: base !== null || device !== null ? (base ?? 0) + (device ?? 0) : null,
-  };
-}
-
-function captureLatencyMs(stream: MediaStream): number | null {
-  const settings = stream.getAudioTracks()[0]?.getSettings() as MediaTrackSettings & { latency?: number };
-  const latency = settings?.latency;
-  return Number.isFinite(latency) && latency !== undefined && latency >= 0 ? latency * 1000 : null;
+function outputPathLatency(settings: AudioRuntimeSettings): number | null {
+  return settings.baseLatencyMs !== null || settings.outputLatencyMs !== null
+    ? (settings.baseLatencyMs ?? 0) + (settings.outputLatencyMs ?? 0)
+    : null;
 }
 
 function createDefaultPreviewBuffer(context: AudioContext): AudioBuffer {
@@ -74,14 +83,6 @@ function createDefaultPreviewBuffer(context: AudioContext): AudioBuffer {
   }
   return buffer;
 }
-
-const lowLatencyMicrophoneConstraints = {
-  autoGainControl: false,
-  channelCount: 1,
-  echoCancellation: false,
-  latency: { ideal: 0 },
-  noiseSuppression: false,
-} as MediaTrackConstraints & { latency: { ideal: number } };
 
 export function PreviewPanel({
   entryProject,
@@ -104,6 +105,12 @@ export function PreviewPanel({
   const [audioTraceStatus, setAudioTraceStatus] = useState<AudioTraceStatus>('idle');
   const [audioTraceProgress, setAudioTraceProgress] = useState(0);
   const [audioTraceReport, setAudioTraceReport] = useState<AudioTraceReport | null>(null);
+  const [audioDevices, setAudioDevices] = useState<AudioDeviceOption[]>([]);
+  const [audioIoPreference, setAudioIoPreference] = useState<AudioIoPreference>(() => (
+    loadAudioIoPreference(window.localStorage)
+  ));
+  const [audioRuntimeSettings, setAudioRuntimeSettings] = useState<AudioRuntimeSettings | null>(null);
+  const [audioCalibration, setAudioCalibration] = useState<AudioCalibrationState>(EMPTY_AUDIO_CALIBRATION);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -112,9 +119,16 @@ export function PreviewPanel({
   const [audioFileName, setAudioFileName] = useState('No audio file selected');
   const revisionRef = useRef(0);
   const validRevisionRef = useRef(0);
+  const validatedBackendRevisionsRef = useRef(new WeakMap<WasmBackend, number>());
+  const synchronizedWorkspaceRef = useRef({ entryProject, workspaceFiles });
   const backendRef = useRef<WasmBackend | null>(null);
   const runningRef = useRef(false);
   const contextRef = useRef<AudioContext | null>(null);
+  const outputRoutingRef = useRef<ConfiguredAudioContext['outputRouting']>('default');
+  const outputRoutingWarningRef = useRef<string | null>(null);
+  const audioIoPreferenceRef = useRef(audioIoPreference);
+  const audioCalibrationTokenRef = useRef(0);
+  const audioReconfigureQueueRef = useRef<Promise<void>>(Promise.resolve());
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const fileSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -125,6 +139,9 @@ export function PreviewPanel({
   const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const previousOverridesRef = useRef<Map<string, ParamOverride>>(new Map());
   const paramControlQueueRef = useRef<Map<string, { draining: boolean; pendingValue: number | null }>>(new Map());
+  const bypassByInstanceRef = useRef(bypassByInstance);
+  const mutedRef = useRef(muted);
+  const paramOverridesRef = useRef(paramOverrides);
   const firstOverride = paramOverrides[0];
 
   const refreshBackendState = useCallback((clearDiagnostic = false) => {
@@ -152,27 +169,83 @@ export function PreviewPanel({
     setDiagnostic(detail.message || detail.code);
   }, [refreshBackendState]);
 
+  const createBackendSession = useCallback(async (preference: AudioIoPreference) => {
+    const configured = await createConfiguredAudioContext(preference);
+    try {
+      const instance = await WasmBackend.create({
+        controlModuleUrl: moduleUrl('apg_control.mjs'),
+        processorModuleUrl: moduleUrl('apg_processor.mjs'),
+        processorWasmUrl: moduleUrl('apg_processor.wasm'),
+        processorWorkletUrl: moduleUrl('processor.worklet.js'),
+        audioContext: configured.context,
+      });
+      return { ...configured, backend: instance };
+    } catch (error) {
+      await configured.context.close();
+      throw error;
+    }
+  }, []);
+
+  const refreshRuntimeSettings = useCallback((stream: MediaStream | null = streamRef.current) => {
+    const context = contextRef.current;
+    if (!context) return null;
+    const settings = readAudioRuntimeSettings(
+      context,
+      stream,
+      outputRoutingRef.current,
+      outputRoutingWarningRef.current,
+    );
+    setAudioRuntimeSettings(settings);
+    setLatencyMs(outputPathLatency(settings));
+    setCaptureLatency(settings.captureLatencyMs);
+    return settings;
+  }, []);
+
+  const refreshAudioDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return [];
+    const devices = collectAudioDevices(await navigator.mediaDevices.enumerateDevices());
+    const resolved = resolveAudioIoPreference(audioIoPreferenceRef.current, devices);
+    audioIoPreferenceRef.current = resolved;
+    setAudioIoPreference(resolved);
+    setAudioDevices(devices);
+    saveAudioIoPreference(window.localStorage, resolved);
+    return devices;
+  }, []);
+
   useEffect(() => {
-    const context = new AudioContext({ latencyHint: 'interactive' });
-    contextRef.current = context;
-    setAudioBuffer(createDefaultPreviewBuffer(context));
-    setAudioFileName('test_tone.wav');
+    audioIoPreferenceRef.current = audioIoPreference;
+  }, [audioIoPreference]);
+
+  useEffect(() => {
+    bypassByInstanceRef.current = bypassByInstance;
+  }, [bypassByInstance]);
+
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
+
+  useEffect(() => {
+    paramOverridesRef.current = paramOverrides;
+  }, [paramOverrides]);
+
+  useEffect(() => {
     let disposed = false;
-    void WasmBackend.create({
-      controlModuleUrl: moduleUrl('apg_control.mjs'),
-      processorModuleUrl: moduleUrl('apg_processor.mjs'),
-      processorWasmUrl: moduleUrl('apg_processor.wasm'),
-      processorWorkletUrl: moduleUrl('processor.worklet.js'),
-      audioContext: context,
-    })
-      .then(instance => {
+    void createBackendSession(audioIoPreferenceRef.current)
+      .then(session => {
         if (disposed) {
-          void instance.destroy();
+          void session.backend.destroy().finally(() => session.context.close());
           return;
         }
-        backendRef.current = instance;
-        setBackend(instance);
+        backendRef.current = session.backend;
+        contextRef.current = session.context;
+        outputRoutingRef.current = session.outputRouting;
+        outputRoutingWarningRef.current = session.outputRoutingWarning;
+        setBackend(session.backend);
+        setAudioBuffer(createDefaultPreviewBuffer(session.context));
+        setAudioFileName('test_tone.wav');
+        refreshRuntimeSettings(null);
         setDiagnostic('Audio engine ready.');
+        void refreshAudioDevices();
         onRuntimeReady?.();
       })
       .catch(error => {
@@ -182,72 +255,106 @@ export function PreviewPanel({
       disposed = true;
       runningRef.current = false;
       audioTraceTokenRef.current += 1;
+      audioCalibrationTokenRef.current += 1;
       audioTracePollingActiveRef.current = false;
       streamRef.current?.getTracks().forEach(track => track.stop());
       inputRef.current?.disconnect();
       fileSourceRef.current?.disconnect();
       const instance = backendRef.current;
-      if (instance) void instance.destroy().finally(() => context.close());
-      else void context.close();
+      const context = contextRef.current;
+      backendRef.current = null;
+      contextRef.current = null;
+      if (instance) void instance.destroy().finally(() => context?.close());
+      else void context?.close();
     };
-  }, [onRuntimeReady, reportError]);
+  }, [createBackendSession, onRuntimeReady, refreshAudioDevices, refreshRuntimeSettings, reportError]);
+
+  useEffect(() => {
+    const mediaDevices = navigator.mediaDevices;
+    if (!mediaDevices?.addEventListener) return;
+    const onDeviceChange = () => void refreshAudioDevices();
+    mediaDevices.addEventListener('devicechange', onDeviceChange);
+    return () => mediaDevices.removeEventListener('devicechange', onDeviceChange);
+  }, [refreshAudioDevices]);
+
+  const synchronizeBackend = useCallback(async (
+    instance: WasmBackend,
+    context: AudioContext,
+    prepare: boolean,
+    commit: boolean,
+    announce = true,
+  ) => {
+    const revision = revisionRef.current;
+    instance.setCurrentRevision(revision);
+    if (validatedBackendRevisionsRef.current.get(instance) !== revision) {
+      if (announce) {
+        setPhase('validating');
+      }
+      const validationPromise = markPerfSpan('runtime.validate.workspace', () => instance.replaceWorkspace({
+        revision,
+        entryProject,
+        files: workspaceFiles.map(({ path, role, content }) => ({ path, role, content })),
+      }), { revision });
+      const validation: ValidationResult = await validationPromise;
+      if (revision !== revisionRef.current) return false;
+      if (!validation.ok) {
+        if (announce) {
+          setPhase('error');
+          setBackendDiagnostic(validation.diagnostic);
+          setDiagnostic(validation.diagnostic.message || validation.diagnostic.code);
+        }
+        return false;
+      }
+      validRevisionRef.current = revision;
+      validatedBackendRevisionsRef.current.set(instance, revision);
+      if (announce) setDiagnostic('Project validated.');
+    }
+    if (prepare) {
+      if (announce) setPhase('preparing');
+      const preparePromise = markPerfSpan('runtime.prepare.workspace', () => instance.prepare(revision, {
+        sampleRate: Math.round(context.sampleRate),
+        blockFrames: 128,
+      }), { revision });
+      await preparePromise;
+      if (revision !== revisionRef.current) return false;
+      if (commit) {
+        await markPerfSpan('runtime.commit.workspace', () => instance.commitPrepared(revision), { revision });
+      }
+      if (revision !== revisionRef.current) return false;
+      if (announce) setDiagnostic('Project prepared for live audio.');
+    }
+    if (announce) {
+      const prepared = instance.getState().preparedRevision === revision;
+      setPhase(runningRef.current || commit ? 'running' : prepare || prepared ? 'ready' : 'idle');
+    }
+    return true;
+  }, [entryProject, workspaceFiles]);
 
   const syncWorkspace = useCallback(
     (prepare: boolean) => {
       const synchronize = async () => {
         const context = contextRef.current;
         if (!backend || !context) return false;
-        const revision = revisionRef.current;
-        if (validRevisionRef.current !== revision) {
-          setPhase('validating');
-          const validationPromise = markPerfSpan('runtime.validate.workspace', () => backend.replaceWorkspace({
-            revision,
-            entryProject,
-            files: workspaceFiles.map(({ path, role, content }) => ({ path, role, content })),
-          }), { revision });
-          refreshBackendState(true);
-          const validation: ValidationResult = await validationPromise;
-          if (revision !== revisionRef.current) return false;
-          refreshBackendState(validation.ok);
-          if (!validation.ok) {
-            setPhase('error');
-            setBackendDiagnostic(validation.diagnostic);
-            setDiagnostic(validation.diagnostic.message || validation.diagnostic.code);
-            return false;
-          }
-          validRevisionRef.current = revision;
-          setDiagnostic('Project validated.');
-        }
-        if (prepare) {
-          setPhase('preparing');
-          const preparePromise = markPerfSpan('runtime.prepare.workspace', () => backend.prepare(revision, {
-            sampleRate: Math.round(context.sampleRate),
-            blockFrames: 128,
-          }), { revision });
-          refreshBackendState(true);
-          await preparePromise;
-          if (revision !== revisionRef.current) return false;
-          if (runningRef.current) {
-            await markPerfSpan('runtime.commit.workspace', () => backend.commitPrepared(revision), { revision });
-          }
-          if (revision !== revisionRef.current) return false;
-          refreshBackendState(true);
-          setDiagnostic('Project prepared for live audio.');
-        }
-        setPhase(runningRef.current ? 'running' : prepare ? 'ready' : 'idle');
-        return true;
+        const synchronized = await synchronizeBackend(backend, context, prepare, runningRef.current);
+        refreshBackendState(true);
+        return synchronized;
       };
       const instrumented = () => markPerfSpan('runtime.sync.workspace', synchronize, { revision: revisionRef.current });
       const result = syncQueueRef.current.then(instrumented, instrumented);
       syncQueueRef.current = result.then(() => undefined, () => undefined);
       return result;
     },
-    [backend, entryProject, refreshBackendState, workspaceFiles],
+    [backend, refreshBackendState, synchronizeBackend],
   );
 
   useEffect(() => {
     if (!backend) return;
-    revisionRef.current += 1;
+    const previousWorkspace = synchronizedWorkspaceRef.current;
+    const workspaceChanged = previousWorkspace.entryProject !== entryProject
+      || previousWorkspace.workspaceFiles !== workspaceFiles;
+    if (revisionRef.current === 0) revisionRef.current = 1;
+    else if (workspaceChanged) revisionRef.current += 1;
+    synchronizedWorkspaceRef.current = { entryProject, workspaceFiles };
     backend.setCurrentRevision(revisionRef.current);
     refreshBackendState(true);
     const timer = window.setTimeout(() => {
@@ -257,7 +364,7 @@ export function PreviewPanel({
       });
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [backend, refreshBackendState, reportError, syncWorkspace, workspaceFiles]);
+  }, [backend, entryProject, refreshBackendState, reportError, syncWorkspace, workspaceFiles]);
 
   useEffect(() => {
     if (!backend || !running) return;
@@ -283,7 +390,7 @@ export function PreviewPanel({
 
   useEffect(() => {
     if (!running || !contextRef.current) return;
-    const refreshLatency = () => setLatencyMs(browserOutputLatency(contextRef.current!).totalLatencyMs);
+    const refreshLatency = () => refreshRuntimeSettings();
     refreshLatency();
     latencyTimerActiveRef.current = true;
     const timer = window.setInterval(refreshLatency, 500);
@@ -291,7 +398,7 @@ export function PreviewPanel({
       window.clearInterval(timer);
       latencyTimerActiveRef.current = false;
     };
-  }, [running]);
+  }, [refreshRuntimeSettings, running]);
 
   useEffect(() => {
     if (!backend || !running) return;
@@ -375,9 +482,251 @@ export function PreviewPanel({
     refreshBackendState(true);
     setPhase('ready');
     setMeter(emptyMeter);
-    setCaptureLatency(null);
+    refreshRuntimeSettings(null);
     setMeasuredLatencyMs(null);
-  }, [refreshBackendState]);
+  }, [refreshBackendState, refreshRuntimeSettings]);
+
+  const destroyCurrentSession = useCallback(async () => {
+    const instance = backendRef.current;
+    const context = contextRef.current;
+    backendRef.current = null;
+    contextRef.current = null;
+    setBackend(null);
+    setAudioRuntimeSettings(null);
+    setLatencyMs(null);
+    setCaptureLatency(null);
+    if (instance) await instance.destroy();
+    if (context && context.state !== 'closed') await context.close();
+  }, []);
+
+  const applyRuntimeControls = useCallback(async (instance: WasmBackend, forceMute?: boolean) => {
+    for (const override of paramOverridesRef.current) {
+      const value = Number(override.value);
+      if (Number.isFinite(value)) await instance.setParam(override.path, value);
+    }
+    for (const [instanceId, enabled] of Object.entries(bypassByInstanceRef.current)) {
+      await instance.setBypass(instanceId, enabled);
+    }
+    const nextMute = forceMute ?? mutedRef.current;
+    if (nextMute) await instance.setMute(true);
+    previousOverridesRef.current = new Map(paramOverridesRef.current.map(override => [override.path, override]));
+  }, []);
+
+  const installSession = useCallback((session: Awaited<ReturnType<typeof createBackendSession>>) => {
+    backendRef.current = session.backend;
+    contextRef.current = session.context;
+    outputRoutingRef.current = session.outputRouting;
+    outputRoutingWarningRef.current = session.outputRoutingWarning;
+    setBackend(session.backend);
+  }, []);
+
+  const activateSession = useCallback(async (
+    session: Awaited<ReturnType<typeof createBackendSession>>,
+    shouldRun: boolean,
+    mode: InputMode,
+    preference: AudioIoPreference,
+  ) => {
+    let stream: MediaStream | null = null;
+    let input: AudioNode | null = null;
+    let fileSource: AudioBufferSourceNode | null = null;
+    try {
+      const synchronized = await synchronizeBackend(session.backend, session.context, true, false, false);
+      if (!synchronized) throw new Error('The current workspace could not be prepared for audio.');
+      if (shouldRun) {
+        if (mode === 'microphone') {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: microphoneConstraints(preference, session.context.sampleRate),
+          });
+          input = session.context.createMediaStreamSource(stream);
+        } else {
+          if (!audioBuffer) throw new Error('Select an audio file before starting playback.');
+          fileSource = session.context.createBufferSource();
+          fileSource.buffer = audioBuffer;
+          input = fileSource;
+        }
+        await session.backend.start({ input });
+        await applyRuntimeControls(session.backend);
+      }
+
+      installSession(session);
+      streamRef.current = stream;
+      inputRef.current = mode === 'microphone' ? input as MediaStreamAudioSourceNode | null : null;
+      fileSourceRef.current = fileSource;
+      runningRef.current = shouldRun;
+      setRunning(shouldRun);
+      setPhase(shouldRun ? 'running' : 'ready');
+      const settings = readAudioRuntimeSettings(
+        session.context,
+        stream,
+        session.outputRouting,
+        session.outputRoutingWarning,
+      );
+      setAudioRuntimeSettings(settings);
+      setLatencyMs(outputPathLatency(settings));
+      setCaptureLatency(settings.captureLatencyMs);
+      setMeasuredLatencyMs(null);
+      if (fileSource) {
+        fileSource.onended = () => void stopPlayback();
+        fileSource.start();
+      }
+    } catch (error) {
+      input?.disconnect();
+      fileSource?.disconnect();
+      stream?.getTracks().forEach(track => track.stop());
+      await session.backend.destroy();
+      if (session.context.state !== 'closed') await session.context.close();
+      throw error;
+    }
+  }, [applyRuntimeControls, audioBuffer, installSession, stopPlayback, synchronizeBackend]);
+
+  const reconfigureAudio = useCallback((preference: AudioIoPreference) => {
+    const reconfigure = async () => {
+      const previousPreference = audioIoPreferenceRef.current;
+      const wasRunning = runningRef.current;
+      const mode = inputMode;
+      setPhase('preparing');
+      setDiagnostic('Reconfiguring audio I/O...');
+      try {
+        await stopPlayback();
+        await destroyCurrentSession();
+        const session = await createBackendSession(preference);
+        await activateSession(session, wasRunning, mode, preference);
+        audioIoPreferenceRef.current = preference;
+        setAudioIoPreference(preference);
+        saveAudioIoPreference(window.localStorage, preference);
+        void refreshAudioDevices();
+        setDiagnostic(wasRunning ? 'Audio I/O reconfigured and playback restored.' : 'Audio I/O reconfigured.');
+      } catch (error) {
+        const failedMessage = error instanceof Error ? error.message : String(error);
+        try {
+          await destroyCurrentSession();
+          const restored = await createBackendSession(previousPreference);
+          await activateSession(restored, wasRunning, mode, previousPreference);
+          audioIoPreferenceRef.current = previousPreference;
+          setAudioIoPreference(previousPreference);
+          setDiagnostic(`Audio I/O change failed; previous configuration restored. ${failedMessage}`);
+        } catch (restoreError) {
+          reportError(restoreError, 'audio-io-restore');
+        }
+      }
+    };
+    const result = audioReconfigureQueueRef.current.then(reconfigure, reconfigure);
+    audioReconfigureQueueRef.current = result.then(() => undefined, () => undefined);
+    return result;
+  }, [activateSession, createBackendSession, destroyCurrentSession, inputMode, refreshAudioDevices, reportError, stopPlayback]);
+
+  const selectAudioInput = useCallback(async (deviceId: string) => {
+    const current = audioIoPreferenceRef.current;
+    const preference = {
+      ...current,
+      inputDeviceId: deviceId,
+      outputDeviceId: recommendedOutputDeviceId(audioDevices, deviceId, current.outputDeviceId),
+    };
+    await reconfigureAudio(preference);
+  }, [audioDevices, reconfigureAudio]);
+
+  const selectAudioOutput = useCallback(async (deviceId: string) => {
+    await reconfigureAudio({ ...audioIoPreferenceRef.current, outputDeviceId: deviceId });
+  }, [reconfigureAudio]);
+
+  const runCalibrationCandidate = useCallback(async (
+    preference: AudioIoPreference,
+    token: number,
+  ): Promise<AudioCalibrationCandidate> => {
+    const session = await createBackendSession(preference);
+    let stream: MediaStream | null = null;
+    let input: MediaStreamAudioSourceNode | null = null;
+    try {
+      const synchronized = await synchronizeBackend(session.backend, session.context, true, false, false);
+      if (!synchronized) throw new Error('The workspace could not be prepared for calibration.');
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: microphoneConstraints(preference, session.context.sampleRate),
+      });
+      input = session.context.createMediaStreamSource(stream);
+      await session.backend.start({ input });
+      await applyRuntimeControls(session.backend, true);
+      await new Promise(resolve => window.setTimeout(resolve, 500));
+      if (audioCalibrationTokenRef.current !== token) throw new Error('Calibration cancelled.');
+      await session.backend.startAudioTrace();
+      let trace = await session.backend.pollAudioTrace();
+      while (trace.status !== 'complete') {
+        await new Promise(resolve => window.setTimeout(resolve, 250));
+        if (audioCalibrationTokenRef.current !== token) throw new Error('Calibration cancelled.');
+        trace = await session.backend.pollAudioTrace();
+      }
+      const runtime = readAudioRuntimeSettings(
+        session.context,
+        stream,
+        session.outputRouting,
+        session.outputRoutingWarning,
+      );
+      return calibrationCandidate(preference.latencyHint, runtime, trace);
+    } finally {
+      input?.disconnect();
+      stream?.getTracks().forEach(track => track.stop());
+      await session.backend.destroy();
+      if (session.context.state !== 'closed') await session.context.close();
+    }
+  }, [applyRuntimeControls, createBackendSession, synchronizeBackend]);
+
+  const calibrateAudio = useCallback(async () => {
+    if (inputMode !== 'microphone' || audioCalibration.status === 'running') return;
+    const token = audioCalibrationTokenRef.current + 1;
+    audioCalibrationTokenRef.current = token;
+    const previousPreference = audioIoPreferenceRef.current;
+    const wasRunning = runningRef.current;
+    const candidates: AudioCalibrationCandidate[] = [];
+    setAudioCalibration({ status: 'running', progress: 0, candidates, selectedHint: null, error: null });
+    setDiagnostic('Calibrating audio latency...');
+    try {
+      await stopPlayback();
+      await destroyCurrentSession();
+      for (let index = 0; index < AUDIO_CALIBRATION_HINTS.length; index += 1) {
+        const latencyHint = AUDIO_CALIBRATION_HINTS[index];
+        const candidate = await runCalibrationCandidate({ ...previousPreference, latencyHint }, token);
+        candidates.push(candidate);
+        setAudioCalibration({
+          status: 'running',
+          progress: (index + 1) / AUDIO_CALIBRATION_HINTS.length,
+          candidates: [...candidates],
+          selectedHint: null,
+          error: null,
+        });
+      }
+      const selected = selectCalibrationCandidate(candidates);
+      if (!selected) throw new Error('No latency candidate completed without underruns or deadline misses.');
+      const preference = { ...previousPreference, latencyHint: selected.requestedHint };
+      const session = await createBackendSession(preference);
+      await activateSession(session, wasRunning, 'microphone', preference);
+      audioIoPreferenceRef.current = preference;
+      setAudioIoPreference(preference);
+      saveAudioIoPreference(window.localStorage, preference);
+      setAudioCalibration({
+        status: 'complete',
+        progress: 1,
+        candidates,
+        selectedHint: selected.requestedHint,
+        error: null,
+      });
+      void refreshAudioDevices();
+      setDiagnostic('Latency calibration complete. Run the chirp to verify round-trip latency.');
+    } catch (error) {
+      if (audioCalibrationTokenRef.current !== token) return;
+      const message = error instanceof Error ? error.message : String(error);
+      try {
+        await destroyCurrentSession();
+        const restored = await createBackendSession(previousPreference);
+        await activateSession(restored, wasRunning, 'microphone', previousPreference);
+        audioIoPreferenceRef.current = previousPreference;
+        setAudioIoPreference(previousPreference);
+        setAudioCalibration({ status: 'error', progress: 0, candidates, selectedHint: null, error: message });
+        setDiagnostic(`Calibration failed; previous configuration restored. ${message}`);
+      } catch (restoreError) {
+        setAudioCalibration({ status: 'error', progress: 0, candidates, selectedHint: null, error: message });
+        reportError(restoreError, 'audio-calibration-restore');
+      }
+    }
+  }, [activateSession, audioCalibration.status, createBackendSession, destroyCurrentSession, inputMode, refreshAudioDevices, reportError, runCalibrationCandidate, stopPlayback]);
 
   const start = useCallback(async () => {
     if (!backend) return;
@@ -388,7 +737,7 @@ export function PreviewPanel({
       if (!context) return;
       let input: AudioNode;
       if (inputMode === 'file') {
-        setCaptureLatency(null);
+        refreshRuntimeSettings(null);
         if (!audioBuffer) throw new Error('Select an audio file before starting playback.');
         const source = context.createBufferSource();
         source.buffer = audioBuffer;
@@ -396,13 +745,14 @@ export function PreviewPanel({
         input = source;
       } else {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: lowLatencyMicrophoneConstraints,
+          audio: microphoneConstraints(audioIoPreferenceRef.current, context.sampleRate),
         });
-        setCaptureLatency(captureLatencyMs(stream));
         const source = context.createMediaStreamSource(stream);
         streamRef.current = stream;
         inputRef.current = source;
         input = source;
+        refreshRuntimeSettings(stream);
+        void refreshAudioDevices();
       }
       await markPerfSpan('runtime.start', () => backend.start({ input }));
       refreshBackendState(true);
@@ -423,7 +773,7 @@ export function PreviewPanel({
       await stopPlayback();
       reportError(error, 'start');
     }
-  }, [audioBuffer, audioFileName, backend, inputMode, refreshBackendState, reportError, stopPlayback, syncWorkspace]);
+  }, [audioBuffer, audioFileName, backend, inputMode, refreshAudioDevices, refreshBackendState, refreshRuntimeSettings, reportError, stopPlayback, syncWorkspace]);
 
   const stop = useCallback(async () => {
     await stopPlayback();
@@ -516,12 +866,11 @@ export function PreviewPanel({
         const trace = await backend.pollAudioTrace();
         setAudioTraceProgress(Math.min(1, trace.durationMs > 0 ? trace.elapsedMs / trace.durationMs : 0));
         if (trace.status !== 'complete') continue;
-        const context = contextRef.current;
-        const outputLatency = context ? browserOutputLatency(context) : null;
+        const runtime = refreshRuntimeSettings();
         setAudioTraceReport(createAudioTraceReport(trace, {
-          captureLatencyMs: captureLatency,
-          baseLatencyMs: outputLatency?.baseLatencyMs ?? null,
-          outputLatencyMs: outputLatency?.outputLatencyMs ?? null,
+          captureLatencyMs: runtime?.captureLatencyMs ?? null,
+          baseLatencyMs: runtime?.baseLatencyMs ?? null,
+          outputLatencyMs: runtime?.outputLatencyMs ?? null,
           acousticLoopbackMs: measuredLatencyMs,
         }));
         setAudioTraceProgress(1);
@@ -537,7 +886,7 @@ export function PreviewPanel({
     } finally {
       if (audioTraceTokenRef.current === token) audioTracePollingActiveRef.current = false;
     }
-  }, [backend, captureLatency, inputMode, measuredLatencyMs, reportError, running]);
+  }, [backend, inputMode, measuredLatencyMs, refreshRuntimeSettings, reportError, running]);
 
   useEffect(() => {
     setController({
@@ -545,16 +894,26 @@ export function PreviewPanel({
       latencyMs,
       captureLatencyMs: captureLatency,
       measuredLatencyMs,
+      measuringLatency,
       inputMode,
       audioTraceStatus,
       audioTraceProgress,
       audioTraceReport,
+      audioDevices,
+      audioIoPreference,
+      audioRuntimeSettings,
+      audioCalibration,
       bypassByInstance,
       setBypass: setInstanceBypass,
       profileAudio,
       clearAudioTrace,
+      refreshAudioDevices,
+      selectAudioInput,
+      selectAudioOutput,
+      calibrateAudio,
+      measureAcousticLatency,
     });
-  }, [audioTraceProgress, audioTraceReport, audioTraceStatus, bypassByInstance, captureLatency, clearAudioTrace, inputMode, latencyMs, measuredLatencyMs, profileAudio, running, setController, setInstanceBypass]);
+  }, [audioCalibration, audioDevices, audioIoPreference, audioRuntimeSettings, audioTraceProgress, audioTraceReport, audioTraceStatus, bypassByInstance, calibrateAudio, captureLatency, clearAudioTrace, inputMode, latencyMs, measureAcousticLatency, measuredLatencyMs, measuringLatency, profileAudio, refreshAudioDevices, running, selectAudioInput, selectAudioOutput, setController, setInstanceBypass]);
 
   useEffect(() => () => setController(null), [setController]);
 

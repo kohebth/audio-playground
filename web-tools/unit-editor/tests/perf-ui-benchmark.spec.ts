@@ -1710,7 +1710,7 @@ test.describe('Live WASM runtime performance', () => {
       browser: Record<string, number | null>;
       trace: { status: string; sampleCount: number; stages: Record<string, { p95Ms: number }> };
     };
-    expect(report.schema).toBe('apg.audio-trace.v1');
+    expect(report.schema).toBe('apg.audio-trace.v2');
     expect(report.trace.status).toBe('complete');
     expect(report.trace.sampleCount).toBeGreaterThan(0);
     expect(report.trace.stages.wasmProcess.p95Ms).toBeGreaterThanOrEqual(0);

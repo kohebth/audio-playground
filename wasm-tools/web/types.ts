@@ -85,7 +85,7 @@ export type AudioTraceSnapshot = {
 };
 
 export type AudioTraceReport = {
-  schema: 'apg.audio-trace.v1';
+  schema: 'apg.audio-trace.v2';
   capturedAt: string;
   browser: {
     captureLatencyMs: number | null;
@@ -95,7 +95,7 @@ export type AudioTraceReport = {
   };
   trace: AudioTraceSnapshot;
   slowestInternalStage: Exclude<AudioTraceStageName, 'schedulingJitter' | 'callbackTotal'> | null;
-  verdict: 'internal-over-budget' | 'scheduling-delayed' | 'internal-healthy';
+  verdict: 'internal-over-budget' | 'internal-healthy';
   message: string;
 };
 
