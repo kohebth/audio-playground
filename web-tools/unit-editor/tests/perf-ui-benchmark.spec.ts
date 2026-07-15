@@ -517,7 +517,7 @@ test.describe('UI performance checkpoints', () => {
     await launchWorkspace(page);
   });
 
-  test('@pr-medium drag-and-drop add on project graph', async ({ page }) => {
+  test('@pr-medium drag-and-drop add on project graph', async ({ page }, testInfo) => {
     await waitForWorkspaceQuiescence(page);
     await clearPerfSpans(page);
 
@@ -528,12 +528,16 @@ test.describe('UI performance checkpoints', () => {
 
     await expect.poll(() => countProjectNodes(page), { timeout: 5000 }).toBeGreaterThan(before);
 
-    await runAndAssertBudget(page, 'ui.dragStart.projectUnit');
-    await runAndAssertBudget(page, 'ui.dragOver.projectNode');
-    await runAndAssertBudget(page, 'ui.drop.projectNode');
-    await runAndAssertBudget(page, 'graph.add.projectNode');
+    const dragStartMs = await runAndAssertBudget(page, 'ui.dragStart.projectUnit');
+    const dragOverMs = await runAndAssertBudget(page, 'ui.dragOver.projectNode');
+    const dropMs = await runAndAssertBudget(page, 'ui.drop.projectNode');
+    const addMs = await runAndAssertBudget(page, 'graph.add.projectNode');
     expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
     expect(Object.keys(await getComponentRenders(page, 'ProjectNode'))).toEqual(['ProjectNode:overdrive']);
+    testInfo.annotations.push({ type: 'drag-start-ms', description: dragStartMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'drag-over-ms', description: dragOverMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'drop-commit-ms', description: dropMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'graph-add-ms', description: addMs.toFixed(2) });
   });
 
   test('inspector switching and parameter edit', async ({ page }) => {

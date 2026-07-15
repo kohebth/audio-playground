@@ -57,7 +57,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Stored pure-operation baseline for generated fixture families.
 - [x] Small through extreme browser import budget checks.
 - [ ] Persisted browser baseline with machine/profile metadata.
-- [ ] Ranked report of the three most expensive UI interactions.
+- [x] Normalized browser report ranking the three most expensive measured UI interactions per profile.
 - [ ] Typical-laptop 4x CPU baseline and low-end 6x CPU baseline.
 
 ### Phase 3: Automated Editing Tests

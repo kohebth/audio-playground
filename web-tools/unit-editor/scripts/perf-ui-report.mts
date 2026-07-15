@@ -42,6 +42,16 @@ const input = path.resolve(option('--input'));
 const output = path.resolve(option('--output'));
 const report = JSON.parse(readFileSync(input, 'utf8')) as Report;
 const tests = collect(report.suites ?? []);
+const measurements = tests.flatMap(test => {
+  const title = String(test.title ?? '');
+  return (test.annotations as Annotation[] ?? []).flatMap(annotation => {
+    if (!annotation.type?.endsWith('-ms') || !annotation.description) return [];
+    const labelled = annotation.description.match(/(?:median=|average=|:)(\d+(?:\.\d+)?)/);
+    const direct = annotation.description.match(/^(\d+(?:\.\d+)?)/);
+    const valueMs = Number(labelled?.[1] ?? direct?.[1]);
+    return Number.isFinite(valueMs) ? [{ name: annotation.type, title, valueMs }] : [];
+  });
+}).sort((left, right) => right.valueMs - left.valueMs);
 const trend = {
   schema: 'apg.unit-editor.browser-perf.v1',
   generatedAt: new Date().toISOString(),
@@ -59,6 +69,7 @@ const trend = {
     runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? '',
   },
   summary: report.stats ?? {},
+  rankedMeasurements: measurements.slice(0, 3),
   tests,
 };
 
