@@ -67,6 +67,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Project add/remove, route create/delete, parameter, inspector, undo, and redo checks.
 - [x] Autosave debounce and synchronous blocking budget.
 - [x] Bounded residual heap growth after repeated add/remove.
+- [x] Scheduled 20x100 atom mount/remove retention gate after saturating bounded undo history.
 - [x] Pointer-event node drag while 500 atoms are mounted.
 - [x] Invalid drop, Escape cancel, rapid drop, zoom/pan drop, and filtered catalog.
 - [ ] Edge drop with an explicit split-and-reconnect transaction.
@@ -107,8 +108,9 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 3. **Autosave has no visible stall:** Partially proven. Default-workspace rapid edits and an injected 6 ms storage write
    keep synchronous persistence under 16 ms with one debounced write. Storage and serialization failures are isolated,
    retain the last good snapshot, and remain visible without uncaught errors. Large payload, drag, and long-session cases remain.
-4. **Removed objects are not retained:** Partially proven. A collected-heap browser gate stays below 10% across a second
-   saturated undo-history window; edges, inspectors, navigation, Worklets, and 20x100 atom cycles remain.
+4. **Removed objects are not retained:** Partially proven. Collected-heap browser gates stay below 10% across a second
+   saturated undo-history window and 20 cycles that mount and remove 100 atoms; edges, inspectors, navigation, and
+   runtime handles remain.
 5. **Editing during audio causes no underrun:** Not proven.
 6. **Explicit replacement stays controlled:** Proven. Pure transformer tests cover compatibility planning, the browser
    gate keeps medium-graph replacement under 300 ms, only the replaced node rerenders, undo/redo restore both types, and

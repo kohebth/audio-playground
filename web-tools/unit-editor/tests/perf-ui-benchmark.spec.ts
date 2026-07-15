@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
-import { load as parseYaml } from 'js-yaml';
+import { dump as serializeYaml, load as parseYaml } from 'js-yaml';
 
 type PerfSample = {
   name: string;
@@ -45,6 +45,13 @@ type PerfFixturePayload = {
     role: 'project' | 'unit';
     content: string;
   }[];
+};
+
+type PerfUnitFixture = {
+  graph?: {
+    signals?: string[];
+    nodes?: Array<Record<string, unknown>>;
+  };
 };
 
 function getThreshold(name: string): number | null {
@@ -181,15 +188,45 @@ function buildPerfWorkspacePayload(profilePath: string): string {
   } as PerfFixturePayload);
 }
 
-async function importPerfWorkspaceFixture(page: Page, profilePath: string, expectedNodes: number): Promise<number> {
-  const payload = buildPerfWorkspacePayload(profilePath);
-  const startedAt = await page.evaluate(() => performance.now());
+function buildAtomRetentionPayloads(profilePath: string, addedAtoms: number): { baseline: string; stressed: string } {
+  const payload = JSON.parse(buildPerfWorkspacePayload(profilePath)) as PerfFixturePayload;
+  const baseline = JSON.stringify(payload);
+  const unitFile = payload.files.find(file => file.role === 'unit');
+  if (!unitFile) throw new Error(`Retention fixture "${profilePath}" has no unit file.`);
+  const unit = parseYaml(unitFile.content) as PerfUnitFixture;
+  if (!Array.isArray(unit.graph?.signals) || !Array.isArray(unit.graph.nodes)) {
+    throw new Error(`Retention fixture "${profilePath}" has no mutable graph.`);
+  }
+  for (let index = 0; index < addedAtoms; index += 1) {
+    const suffix = String(index + 1).padStart(3, '0');
+    const signal = `retained_signal_${suffix}`;
+    unit.graph.signals.push(signal);
+    unit.graph.nodes.push({
+      id: `retained_atom_${suffix}`,
+      atom: 'amplitude_clip_hard',
+      in: { signal: '' },
+      out: { signal },
+      config: { threshold: 1 },
+      ui: { position: { x: (index % 10) * 260, y: 1000 + Math.floor(index / 10) * 180 } },
+    });
+  }
+  unitFile.content = serializeYaml(unit, { lineWidth: 120, noRefs: true });
+  return { baseline, stressed: JSON.stringify(payload) };
+}
+
+async function importWorkspacePayload(page: Page, payload: string, expectedNodes: number): Promise<void> {
   await page.getByTestId('topbar-import-input').setInputFiles({
     name: 'perf-workspace.json',
     mimeType: 'application/json',
     buffer: Buffer.from(payload),
   });
   await expect.poll(() => countProjectNodes(page), { timeout: 20_000 }).toBe(expectedNodes);
+}
+
+async function importPerfWorkspaceFixture(page: Page, profilePath: string, expectedNodes: number): Promise<number> {
+  const payload = buildPerfWorkspacePayload(profilePath);
+  const startedAt = await page.evaluate(() => performance.now());
+  await importWorkspacePayload(page, payload, expectedNodes);
   return page.evaluate(start => performance.now() - start, startedAt);
 }
 
@@ -691,6 +728,38 @@ test.describe('Scalability checkpoints', () => {
       description: `${(growth * 100).toFixed(2)}% (${baseHeap} -> ${endHeap})`,
     });
     expect(growth).toBeLessThanOrEqual(0.1);
+  });
+
+  test('removed atoms are not retained across twenty 100-atom cycles', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The 20x100 atom retention gate runs in scheduled performance CI.');
+    test.setTimeout(300_000);
+    const profile = 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml';
+    const payloads = buildAtomRetentionPayloads(profile, 100);
+    const cycle = async () => {
+      await importWorkspacePayload(page, payloads.stressed, 1);
+      await openLoadedContract(page, 125);
+      await importWorkspacePayload(page, payloads.baseline, 1);
+      await openLoadedContract(page, 25);
+    };
+
+    for (let index = 0; index < 25; index += 1) await cycle();
+    await waitForWorkspaceQuiescence(page);
+    await clearPerfSpans(page);
+    const saturatedHeap = await collectHeapBytes(page);
+
+    for (let index = 0; index < 20; index += 1) await cycle();
+    await waitForWorkspaceQuiescence(page);
+    await clearPerfSpans(page);
+    const finalHeap = await collectHeapBytes(page);
+    const growth = (finalHeap - saturatedHeap) / saturatedHeap;
+
+    await expect(page.getByTestId('contract-canvas')).toHaveAttribute('data-atom-count', '25');
+    expect(growth).toBeLessThanOrEqual(0.1);
+    testInfo.annotations.push({ type: 'atom-retention-cycles', description: '20x100' });
+    testInfo.annotations.push({
+      type: 'atom-retention-heap-growth',
+      description: `${(growth * 100).toFixed(2)}% (${saturatedHeap} -> ${finalHeap})`,
+    });
   });
 });
 
