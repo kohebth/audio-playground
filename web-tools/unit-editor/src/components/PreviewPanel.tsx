@@ -106,6 +106,8 @@ export function PreviewPanel({
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const fileSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const meterTimerActiveRef = useRef(false);
+  const latencyTimerActiveRef = useRef(false);
   const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const previousOverridesRef = useRef<Map<string, ParamOverride>>(new Map());
   const paramControlQueueRef = useRef<Map<string, { draining: boolean; pendingValue: number | null }>>(new Map());
@@ -243,6 +245,7 @@ export function PreviewPanel({
   useEffect(() => {
     if (!backend || !running) return;
     let polling = false;
+    meterTimerActiveRef.current = true;
     const timer = window.setInterval(() => {
       if (polling) return;
       polling = true;
@@ -255,15 +258,22 @@ export function PreviewPanel({
           polling = false;
         });
     }, 100);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      meterTimerActiveRef.current = false;
+    };
   }, [backend, reportError, running]);
 
   useEffect(() => {
     if (!running || !contextRef.current) return;
     const refreshLatency = () => setLatencyMs(outputLatencyMs(contextRef.current!));
     refreshLatency();
+    latencyTimerActiveRef.current = true;
     const timer = window.setInterval(refreshLatency, 500);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      latencyTimerActiveRef.current = false;
+    };
   }, [running]);
 
   useEffect(() => {
@@ -490,6 +500,8 @@ export function PreviewPanel({
         streamTracks: streamRef.current?.getTracks().length ?? 0,
         inputNodeActive: inputRef.current !== null,
         fileSourceActive: fileSourceRef.current !== null,
+        meterTimerActive: meterTimerActiveRef.current,
+        latencyTimerActive: latencyTimerActiveRef.current,
       },
       at: Date.now(),
     });

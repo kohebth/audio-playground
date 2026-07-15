@@ -39,6 +39,8 @@ export type PerfRuntimeSnapshot = {
     streamTracks: number;
     inputNodeActive: boolean;
     fileSourceActive: boolean;
+    meterTimerActive: boolean;
+    latencyTimerActive: boolean;
   };
   at: number;
 };

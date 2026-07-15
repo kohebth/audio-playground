@@ -27,6 +27,8 @@ type RuntimeSnapshot = {
     streamTracks: number;
     inputNodeActive: boolean;
     fileSourceActive: boolean;
+    meterTimerActive: boolean;
+    latencyTimerActive: boolean;
   };
 };
 
@@ -1358,5 +1360,55 @@ test.describe('Live WASM runtime performance', () => {
     await page.getByTestId('preview-start-stop').click();
     await expect(page.locator('.transport-state')).toHaveText('ready');
     testInfo.annotations.push({ type: 'live-hot-swaps', description: JSON.stringify(swaps) });
+  });
+
+  test('repeated file and microphone starts release transient audio resources', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'Repeated audio resource checks run in scheduled performance CI.');
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+    const initial = await getRuntimeSnapshot(page);
+    const initialStarts = initial?.resources.workletStarts ?? 0;
+    const initialStops = initial?.resources.workletStops ?? 0;
+    const modes = ['file', 'mic'] as const;
+
+    for (let cycle = 0; cycle < 20; cycle += 1) {
+      const mode = modes[cycle % modes.length];
+      await page.getByTestId(`preview-mode-${mode}`).click();
+      await page.getByTestId('preview-start-stop').click();
+      await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+      await expect.poll(async () => {
+        const snapshot = await getRuntimeSnapshot(page);
+        return Boolean(
+          snapshot?.resources.workletActive
+          && snapshot.resources.meterTimerActive
+          && snapshot.resources.latencyTimerActive,
+        );
+      }).toBe(true);
+
+      await page.getByTestId('preview-start-stop').click();
+      await expect(page.locator('.transport-state')).toHaveText('ready');
+      await expect.poll(async () => {
+        const snapshot = await getRuntimeSnapshot(page);
+        if (!snapshot) return false;
+        const resources = snapshot.resources;
+        return !resources.workletActive
+          && resources.pendingControlRequests === 0
+          && resources.pendingProcessorRequests === 0
+          && resources.streamTracks === 0
+          && !resources.inputNodeActive
+          && !resources.fileSourceActive
+          && !resources.meterTimerActive
+          && !resources.latencyTimerActive
+          && resources.workletStarts === resources.workletStops;
+      }).toBe(true);
+    }
+
+    const final = await getRuntimeSnapshot(page);
+    expect(final?.resources.workerActive).toBe(true);
+    expect(final?.resources.contextState).toBe('running');
+    expect(final?.resources.workletStarts).toBe(initialStarts + 20);
+    expect(final?.resources.workletStops).toBe(initialStops + 20);
+    expect(pageErrors).toEqual([]);
+    testInfo.annotations.push({ type: 'audio-start-stop-cycles', description: '20' });
   });
 });

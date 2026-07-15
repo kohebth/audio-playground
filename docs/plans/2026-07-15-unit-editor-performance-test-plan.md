@@ -87,7 +87,8 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Separate UI mutation latency from worker compile/prepare and Worklet commit latency.
 - [ ] Assert zero meter underruns and zero callback deadline misses.
 - [x] Rapid Worklet parameter-control latency under `50 ms`, with per-path diffing and in-flight coalescing.
-- [ ] Start/stop leak checks for AudioContexts, Worklets, Workers, ports, streams, and timers.
+- [x] Repeated file/microphone start-stop ownership checks for the retained AudioContext/Worker and transient Worklet,
+  request ports, streams, source nodes, and polling timers.
 
 ### Phase 5: Regression Gates
 
@@ -109,8 +110,9 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
    keep synchronous persistence under 16 ms with one debounced write. Storage and serialization failures are isolated,
    retain the last good snapshot, and remain visible without uncaught errors. Large payload, drag, and long-session cases remain.
 4. **Removed objects are not retained:** Partially proven. Collected-heap browser gates stay below 10% across a second
-   saturated undo-history window and 20 cycles that mount and remove 100 atoms; edges, inspectors, navigation, and
-   runtime handles remain.
+   saturated undo-history window and 20 cycles that mount and remove 100 atoms. Twenty alternating file/microphone
+   playback cycles also balance Worklet starts/stops and release request, stream, source-node, and timer resources;
+   edges, inspectors, and navigation remain.
 5. **Editing during audio causes no underrun:** Proven for the scheduled structural workflow. Project-unit and atom
    insertion, atom replacement, reconnect, undo/redo, save, and a 100-atom import each hot-swap while fake microphone
    audio remains running, revisions converge, and the meter underrun count does not increase. Callback deadline timing
