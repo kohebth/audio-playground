@@ -749,6 +749,52 @@ test.describe('Contract graph atom scalability', () => {
     testInfo.annotations.push({ type: 'replacement-redo-ms', description: redoMs.toFixed(2) });
   });
 
+  test('inspector cycling and atom rename stay isolated', async ({ page }, testInfo) => {
+    const fixture = 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+
+    const visibleAtom = await getVisibleContractAtom(page);
+    expect(visibleAtom).not.toBeNull();
+    await page.getByTestId(`contract-node-${visibleAtom!.id}`).click();
+    const panel = page.getByTestId('contract-selected-atom-panel');
+    await expect(panel).toBeVisible();
+
+    await clearPerfSpans(page);
+    const toggleAverageMs = await panel.evaluate((details: HTMLDetailsElement) => {
+      const summary = details.querySelector('summary');
+      if (!summary) throw new Error('Selected atom summary is missing.');
+      const startedAt = performance.now();
+      for (let index = 0; index < 100; index += 1) {
+        summary.click();
+        summary.click();
+      }
+      return (performance.now() - startedAt) / 200;
+    });
+    assertDurationBudget('ui.inspector.toggle', toggleAverageMs);
+    await expect(panel).toHaveJSProperty('open', true);
+    expect(Object.keys(await getComponentRenders(page, 'ContractNode'))).toHaveLength(0);
+
+    const renamedId = 'renamed_atom';
+    await clearPerfSpans(page);
+    await page.getByTestId('contract-atom-id').fill(renamedId);
+    await waitForSpanCount(page, 'contract.edit.atom', 1);
+    await expect(page.getByTestId(`contract-node-${renamedId}`)).toBeVisible();
+    await expect(page.getByTestId(`contract-node-${visibleAtom!.id}`)).toHaveCount(0);
+    const renameMs = await runAndAssertBudget(page, 'contract.edit.atom', 1);
+    expect(Object.keys(await getComponentRenders(page, 'ContractNode'))).toEqual([`ContractNode:${renamedId}`]);
+
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-undo').click();
+    await expect(page.getByTestId(`contract-node-${visibleAtom!.id}`)).toBeVisible();
+    await runAndAssertBudget(page, 'ui.undo', 1);
+    await page.getByTestId('topbar-redo').click();
+    await expect(page.getByTestId(`contract-node-${renamedId}`)).toBeVisible();
+    await runAndAssertBudget(page, 'ui.redo', 1);
+    testInfo.annotations.push({ type: 'inspector-toggle-average-ms', description: toggleAverageMs.toFixed(3) });
+    testInfo.annotations.push({ type: 'atom-rename-ms', description: renameMs.toFixed(2) });
+  });
+
   test('editing one parameter does not rerender unrelated project nodes', async ({ page }, testInfo) => {
     await page.getByTestId('project-node-drive1').click();
     await page.getByTestId('inspector-tab-atom').click();

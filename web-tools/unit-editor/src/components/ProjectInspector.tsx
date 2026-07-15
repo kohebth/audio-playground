@@ -470,7 +470,7 @@ export function ProjectInspector({
           </details>
 
           {selectedAtom ? (
-            <details className="inspector-block" open>
+            <details className="inspector-block" data-testid="contract-selected-atom-panel" open>
               <summary className="inspector-block__label">Selected Atom</summary>
               <div className="atom-edit-grid">
                 <label>

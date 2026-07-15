@@ -71,7 +71,8 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [ ] Unit drag/drop with large atom payloads.
 - [x] Explicit medium-graph replacement, replacement undo/redo, and post-replacement config isolation.
 - [x] Malformed import proving legacy `fn` cannot mutate the immutable `atom` type.
-- [ ] Inspector open/close loops, reconnect, and rename transactions.
+- [x] One hundred inspector open/close cycles and isolated atom-ID rename with undo/redo.
+- [ ] Reconnect transaction and render-scope coverage.
 - [x] Selection and parameter edits do not rerender unrelated project or contract nodes.
 - [ ] Assertions that drag, topology, and YAML edits do not rerender unrelated nodes or the full canvas.
 - [ ] Slow/failing storage and one-hour autosave scenarios.
