@@ -70,7 +70,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Scheduled 20x100 atom mount/remove retention gate after saturating bounded undo history.
 - [x] Pointer-event node drag while 500 atoms are mounted.
 - [x] Invalid drop, Escape cancel, rapid drop, zoom/pan drop, and filtered catalog.
-- [ ] Edge drop with an explicit split-and-reconnect transaction.
+- [x] Edge drop with an explicit split-and-reconnect transaction and single-step undo.
 - [x] Unit drag/drop with a referenced 500-atom payload, without expanding internals on the project canvas.
 - [x] Explicit medium-graph replacement, replacement undo/redo, and post-replacement config isolation.
 - [x] Malformed import proving legacy `fn` cannot mutate the immutable `atom` type.

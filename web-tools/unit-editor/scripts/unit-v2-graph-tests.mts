@@ -8,6 +8,7 @@ import {
   connectUnitNodes,
   createUnitV2,
   disconnectUnitInput,
+  insertAtomNodeOnConnection,
   moveUnitConnection,
   parseUnitGraphDraft,
   previewAtomReplacement,
@@ -144,6 +145,29 @@ assert.throws(
   /creates a cycle/,
 );
 assert.equal(parseUnitGraphDraft(created).nodes.find(node => node.id === 'apply_gain')?.in.signal_a, originalApplyGainInput);
+
+const insertedConnection = insertAtomNodeOnConnection(
+  created,
+  catalog,
+  'amplitude_clip_soft',
+  { nodeId: 'apply_gain', field: 'signal_b' },
+  { x: 80, y: 40 },
+);
+const insertedGraph = parseUnitGraphDraft(insertedConnection.content);
+const insertedNode = insertedGraph.nodes.find(node => node.id === insertedConnection.id);
+assert(insertedNode);
+assert.equal(insertedNode.in.signal, createdGraph.nodes.find(node => node.id === 'apply_gain')?.in.signal_b);
+assert.equal(insertedGraph.nodes.find(node => node.id === 'apply_gain')?.in.signal_b, insertedNode.out.signal);
+assert.deepEqual(insertedNode.ui?.position, { x: 80, y: 40 });
+assert.throws(
+  () => insertAtomNodeOnConnection(
+    created,
+    catalog,
+    'delay_tap_feedback',
+    { nodeId: 'apply_gain', field: 'signal_b' },
+  ),
+  /no compatible input\/output pair/,
+);
 
 const firstClip = addAtomNodeToUnit(created, catalog, 'amplitude_clip_hard');
 let routedClips = replaceUnitConnection(

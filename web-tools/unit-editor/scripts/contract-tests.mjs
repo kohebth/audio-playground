@@ -84,6 +84,7 @@ includesContent(atomPalette, "ATOM_DRAG_TYPE = 'application/x-apg-atom'", 'atom 
 includesContent(atomPalette, 'event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.name)', 'atom palette items must be draggable');
 includesContent(atomPalette, 'Add atom', 'atom palette must keep a click fallback for creation');
 includesContent(contractCanvas, 'onAddAtomAt(atomName', 'unit graph canvas must create dropped atoms at a pointer position');
+includesContent(contractCanvas, 'onInsertAtomAtEdge(atomName', 'edge drops must use the atomic insert transaction');
 includesContent(contractCanvas, 'onNodeDragStop', 'unit graph canvas must persist atom moves');
 includesContent(contractCanvas, "markComponentRender('ContractEdge'", 'unit graph canvas must expose edge render scope');
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');

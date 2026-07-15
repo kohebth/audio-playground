@@ -361,6 +361,21 @@ async function dispatchContractDrag(
   }, { atomName, type });
 }
 
+async function dispatchContractEdgeDrop(page: Page, edgeId: string, atomName: string): Promise<void> {
+  await page.getByTestId(`rf__edge-${edgeId}`).evaluate((edge, atom) => {
+    const dataTransfer = new DataTransfer();
+    dataTransfer.setData('application/x-apg-atom', atom);
+    const bounds = edge.getBoundingClientRect();
+    edge.dispatchEvent(new DragEvent('drop', {
+      bubbles: true,
+      cancelable: true,
+      clientX: bounds.left + bounds.width / 2,
+      clientY: bounds.top + bounds.height / 2,
+      dataTransfer,
+    }));
+  }, atomName);
+}
+
 async function launchWorkspace(page: Page) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const launch = page.getByTestId('launch-workspace');
@@ -894,6 +909,37 @@ test.describe('Contract graph atom scalability', () => {
     await runAndAssertBudget(page, 'ui.dragStart.atomPalette', 1, 'ui.dragStart.projectUnit');
     await runAndAssertBudget(page, 'ui.drop.contractAtom', 1, 'ui.drop.projectNode');
     await runAndAssertBudget(page, 'contract.add.atom', 1);
+  });
+
+  test('dropping an atom on an edge splits the connection in one undoable transaction', async ({ page }, testInfo) => {
+    const fixture = 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+
+    const oldEdgeId = 'contract-edge-contract-atom_0001-contract-atom_0002-signal';
+    const firstEdgeId = 'contract-edge-contract-atom_0001-contract-amplitude_clip_soft-signal';
+    const secondEdgeId = 'contract-edge-contract-amplitude_clip_soft-contract-atom_0002-signal';
+    await expect(page.getByTestId(`rf__edge-${oldEdgeId}`)).toBeVisible();
+    await clearPerfSpans(page);
+    await dispatchContractEdgeDrop(page, oldEdgeId, 'amplitude_clip_soft');
+
+    await expect(page.getByTestId('contract-canvas')).toHaveAttribute('data-atom-count', String(meta.atoms + 1));
+    await expect(page.getByTestId('contract-node-amplitude_clip_soft')).toBeVisible();
+    await expect(page.getByTestId(`rf__edge-${oldEdgeId}`)).toHaveCount(0);
+    await expect(page.getByTestId(`rf__edge-${firstEdgeId}`)).toBeVisible();
+    await expect(page.getByTestId(`rf__edge-${secondEdgeId}`)).toBeVisible();
+    const insertMs = await runAndAssertBudget(page, 'contract.insert.atom', 1);
+    const renderedNodes = Object.keys(await getComponentRenders(page, 'ContractNode')).sort();
+    expect(renderedNodes).toEqual(['ContractNode:amplitude_clip_soft', 'ContractNode:atom_0002']);
+
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-undo').click();
+    await expect(page.getByTestId('contract-canvas')).toHaveAttribute('data-atom-count', String(meta.atoms));
+    await expect(page.getByTestId(`rf__edge-${oldEdgeId}`)).toBeVisible();
+    await expect(page.getByTestId('contract-node-amplitude_clip_soft')).toHaveCount(0);
+    await runAndAssertBudget(page, 'ui.undo', 1);
+    testInfo.annotations.push({ type: 'edge-insert-ms', description: insertMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'edge-insert-node-renders', description: renderedNodes.join(',') });
   });
 
   test('reconnect is atomic, undoable, and only rerenders affected nodes and edge', async ({ page }, testInfo) => {

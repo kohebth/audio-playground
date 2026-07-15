@@ -40,6 +40,7 @@ import {
   connectUnitNodes,
   createUnitV2,
   disconnectUnitInput,
+  insertAtomNodeOnConnection,
   pasteAtomNodeIntoUnit,
   parseUnitGraphDraft,
   removeAtomNodeFromUnit,
@@ -693,6 +694,27 @@ export default function App() {
     });
   }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
 
+  const insertAtomOnConnection = useCallback((
+    atomName: string,
+    target: UnitConnectionEndpoint,
+    position: UnitGraphPosition,
+  ) => {
+    markPerfSpan('contract.insert.atom', () => {
+      try {
+        const result = insertAtomNodeOnConnection(
+          selectedUnitWorkspaceFile.content,
+          backendSamples.atomCatalog,
+          atomName,
+          target,
+          position,
+        );
+        updateSelectedUnitFile(() => result.content, result.id);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to insert atom on connection.');
+      }
+    });
+  }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+
   const removeSelectedAtom = useCallback(() => {
     if (!selectedAtom) return;
     markPerfSpan('contract.remove.atom', () => {
@@ -952,6 +974,7 @@ export default function App() {
               workspaceFile={selectedUnitWorkspaceFile}
               onBackToProject={() => markPerfSpan('ui.returnToProject', () => setCanvasMode('project'))}
               onAddAtomAt={addAtom}
+              onInsertAtomAtEdge={insertAtomOnConnection}
               onMoveAtom={moveAtom}
               onConnectAtoms={connectAtoms}
               onDisconnectAtom={disconnectAtom}

@@ -54,6 +54,7 @@ type Props = {
   onSelectAtom: (id: string) => void;
   onOpenAtomInspector: (id: string) => void;
   onAddAtomAt: (atomName: string, position: GraphPosition) => void;
+  onInsertAtomAtEdge: (atomName: string, target: UnitConnectionEndpoint, position: GraphPosition) => void;
   onMoveAtom: (nodeId: string, position: GraphPosition) => void;
 };
 
@@ -253,6 +254,7 @@ export function ContractGraphCanvas({
   onOpenAtomInspector,
   onReconnectAtoms,
   onAddAtomAt,
+  onInsertAtomAtEdge,
   onMoveAtom,
 }: Props) {
   const parsed = useMemo<ParsedContractGraph>(() => {
@@ -364,7 +366,12 @@ export function ContractGraphCanvas({
       const atomName = event.dataTransfer.getData(ATOM_DRAG_TYPE);
       setDropState('idle');
       if (!atomName || !reactFlowRef.current) return;
-      onAddAtomAt(atomName, reactFlowRef.current.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+      const position = reactFlowRef.current.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const edgeElement = event.target instanceof Element ? event.target.closest<SVGGElement>('.react-flow__edge') : null;
+      const edge = edgeElement ? flowEdges.find(item => item.id === edgeElement.dataset.id) : null;
+      const target = edge ? endpoint(edge.target, edge.targetHandle ?? null, 'in') : null;
+      if (target) onInsertAtomAtEdge(atomName, target, position);
+      else onAddAtomAt(atomName, position);
     }, { atomType: event.dataTransfer.getData(ATOM_DRAG_TYPE) || 'none' });
   };
 

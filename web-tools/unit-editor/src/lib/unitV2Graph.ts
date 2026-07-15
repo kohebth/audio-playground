@@ -327,6 +327,54 @@ export function reconnectUnitConnection(
   return connectUnitNodes(disconnectUnitInput(content, from), catalog, source, target);
 }
 
+export function insertAtomNodeOnConnection(
+  content: string,
+  catalog: AtomCatalog,
+  atomName: string,
+  target: UnitConnectionEndpoint,
+  position?: GraphPosition,
+): { content: string; id: string } {
+  const draft = parseUnitGraphDraft(content);
+  const targetNode = draft.nodes.find(node => node.id === target.nodeId);
+  if (!targetNode) throw new Error(`Target atom node "${target.nodeId}" was not found.`);
+  const signal = targetNode.in[target.field];
+  if (!signal) throw new Error(`Target input "${target.nodeId}.${target.field}" is not connected.`);
+  const source = draft.nodes.flatMap(node => Object.entries(node.out).map(([field, value]) => ({
+    node,
+    endpoint: { nodeId: node.id, field },
+    signal: value,
+  }))).find(output => output.signal === signal);
+  if (!source) throw new Error(`Connection source for signal "${signal}" was not found.`);
+
+  const sourceField = catalogNode(catalog, source.node).outputs.find(field => field.name === source.endpoint.field);
+  const targetField = catalogNode(catalog, targetNode).inputs.find(field => field.name === target.field);
+  const insertedAtom = catalog.atoms.find(atom => atom.name === atomName);
+  if (!sourceField || !targetField || !insertedAtom) throw new Error('Connection metadata is unavailable.');
+  const insertedInput = insertedAtom.inputs.find(field => compatibleFields(sourceField, field));
+  const insertedOutput = insertedAtom.outputs.find(field => compatibleFields(field, targetField));
+  if (!insertedInput || !insertedOutput) {
+    throw new Error(`Atom "${atomName}" has no compatible input/output pair for this connection.`);
+  }
+
+  const added = addAtomNodeToUnit(content, catalog, atomName, position);
+  const connected = connectUnitNodes(
+    added.content,
+    catalog,
+    source.endpoint,
+    { nodeId: added.id, field: insertedInput.name },
+  );
+  return {
+    content: reconnectUnitConnection(
+      connected,
+      catalog,
+      target,
+      { nodeId: added.id, field: insertedOutput.name },
+      target,
+    ),
+    id: added.id,
+  };
+}
+
 function portSignals(value: unknown): string[] {
   if (!isObject(value)) return [];
   if (Array.isArray(value.signals)) return value.signals.filter((signal): signal is string => typeof signal === 'string');

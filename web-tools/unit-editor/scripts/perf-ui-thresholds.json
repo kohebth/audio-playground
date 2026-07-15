@@ -14,6 +14,7 @@
     "graph.create.route": 120,
     "graph.delete.route": 120,
     "contract.add.atom": 200,
+    "contract.insert.atom": 300,
     "contract.remove.atom": 200,
     "contract.edit.atom": 300,
     "contract.move.atom": 100,
