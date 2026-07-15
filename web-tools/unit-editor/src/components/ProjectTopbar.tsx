@@ -9,6 +9,7 @@ type Props = {
   dirtyParamCount: number;
   hasDirtyParamDrafts: boolean;
   hasWorkspaceDrafts: boolean;
+  workspaceSaveError: string | null;
   workspaceFileCount: number;
   onExportWorkspace: () => void;
   onImportWorkspace: (file: File | null) => void;
@@ -30,6 +31,7 @@ export function ProjectTopbar({
   dirtyParamCount,
   hasDirtyParamDrafts,
   hasWorkspaceDrafts,
+  workspaceSaveError,
   workspaceFileCount,
   onExportWorkspace,
   onImportWorkspace,
@@ -44,7 +46,7 @@ export function ProjectTopbar({
   paramOverrides,
   onRuntimeReady,
 }: Props) {
-  const draftStateClass = hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
+  const draftStateClass = workspaceSaveError ? 'status-pill--bad' : hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
 
   return (
     <header className="topbar topbar--project app-header">
@@ -79,8 +81,12 @@ export function ProjectTopbar({
           <div className={`status-pill ${validation.ok ? 'status-pill--ok' : 'status-pill--bad'}`}>
             {validation.ok ? 'Valid' : 'Invalid'}
           </div>
-          <div className={`status-pill ${draftStateClass}`} title={`${workspaceFileCount} workspace files`}>
-            {hasDirtyParamDrafts ? `Unsaved edits (${dirtyParamCount})` : 'Saved locally'}
+          <div
+            className={`status-pill ${draftStateClass}`}
+            data-testid="workspace-save-status"
+            title={workspaceSaveError ?? `${workspaceFileCount} workspace files`}
+          >
+            {workspaceSaveError ? 'Save failed' : hasDirtyParamDrafts ? `Unsaved edits (${dirtyParamCount})` : 'Saved locally'}
           </div>
         </div>
         <span className="header-divider" />

@@ -12,6 +12,12 @@ export type WorkspacePayload = {
   files: PersistedWorkspaceFile[];
 };
 
+export type WorkspaceStorage = {
+  setItem: (key: string, value: string) => void;
+};
+
+export type WorkspaceSerializer = (value: WorkspacePayload) => string;
+
 function normalizedPath(path: string): string | null {
   if (!path || path.startsWith('/') || path.includes('\\') || path.includes(':')) return null;
   const result: string[] = [];
@@ -63,6 +69,25 @@ export function validateWorkspacePayload(value: unknown): WorkspacePayload {
 
 export function parseWorkspacePayload(text: string): WorkspacePayload {
   return validateWorkspacePayload(JSON.parse(text));
+}
+
+export function persistWorkspacePayload(
+  storageKey: string,
+  payload: WorkspacePayload,
+  storage: WorkspaceStorage,
+  serialize: WorkspaceSerializer = JSON.stringify,
+): string {
+  const serialized = serialize(payload);
+  return persistSerializedWorkspace(storageKey, serialized, storage);
+}
+
+export function persistSerializedWorkspace(
+  storageKey: string,
+  serialized: string,
+  storage: WorkspaceStorage,
+): string {
+  storage.setItem(storageKey, serialized);
+  return serialized;
 }
 
 export function hydrateWorkspaceFiles(payload: WorkspacePayload, initialFiles: WorkspaceFile[]): WorkspaceFile[] {

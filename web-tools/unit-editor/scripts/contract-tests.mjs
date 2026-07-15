@@ -103,6 +103,8 @@ includesContent(app, 'undoStack', 'workspace graph edits must track undo history
 includesContent(app, 'redoStack', 'workspace graph edits must track redo history');
 includesContent(app, 'setAtomNodePosition', 'atom moves must use a YAML-backed transaction');
 includesContent(app, 'setProjectInstancePosition', 'unit moves must use a YAML-backed transaction');
+includesContent(app, 'persistWorkspacePayload', 'workspace writes must use the testable persistence boundary');
+includesContent(projectTopbar, 'workspace-save-status', 'workspace persistence failures must be visible');
 includesContent(projectTopbar, 'title="Undo"', 'topbar must expose undo control');
 includesContent(projectTopbar, 'title="Redo"', 'topbar must expose redo control');
 assert(

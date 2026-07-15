@@ -77,7 +77,8 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Reconnect transaction and render-scope coverage.
 - [x] Selection and parameter edits do not rerender unrelated project or contract nodes.
 - [ ] Assertions that drag, topology, and YAML edits do not rerender unrelated nodes or the full canvas.
-- [ ] Slow/failing storage and one-hour autosave scenarios.
+- [x] Slow and failing storage, including last-good-snapshot retention and visible failure state.
+- [ ] One-hour autosave scenario.
 
 ### Phase 4: Live Runtime
 
@@ -103,8 +104,9 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 2. **Local changes avoid full graph rerender:** Partially proven. Exact node counters show one-node selection and parameter
    edits stay local, and the 500-atom drag/config gates touch only the affected node; topology, YAML, edge, and
    store-notification scope remain.
-3. **Autosave has no visible stall:** Partially proven. Default-workspace rapid edits keep synchronous persistence under
-   16 ms; large payload, slow storage, drag, and long-session cases remain.
+3. **Autosave has no visible stall:** Partially proven. Default-workspace rapid edits and an injected 6 ms storage write
+   keep synchronous persistence under 16 ms with one debounced write. Storage and serialization failures are isolated,
+   retain the last good snapshot, and remain visible without uncaught errors. Large payload, drag, and long-session cases remain.
 4. **Removed objects are not retained:** Partially proven. A collected-heap browser gate stays below 10% across a second
    saturated undo-history window; edges, inspectors, navigation, Worklets, and 20x100 atom cycles remain.
 5. **Editing during audio causes no underrun:** Not proven.

@@ -4,6 +4,7 @@ import {
   createWorkspacePayload,
   hydrateWorkspaceFiles,
   parseWorkspacePayload,
+  persistWorkspacePayload,
   validateWorkspacePayload,
 } from '../src/lib/workspacePersistence.ts';
 
@@ -15,6 +16,29 @@ const payload = createWorkspacePayload(initial[0].path, initial);
 assert.equal(payload.version, 2);
 assert.equal(payload.entryProject, initial[0].path);
 assert.equal(parseWorkspacePayload(JSON.stringify(payload)).files.length, 2);
+
+const writes: Array<{ key: string; value: string }> = [];
+const persisted = persistWorkspacePayload('workspace', payload, {
+  setItem: (key, value) => writes.push({ key, value }),
+});
+assert.equal(writes.length, 1);
+assert.equal(writes[0].key, 'workspace');
+assert.equal(writes[0].value, persisted);
+assert.throws(
+  () => persistWorkspacePayload('workspace', payload, { setItem: () => undefined }, () => {
+    throw new Error('serialization failed');
+  }),
+  /serialization failed/,
+);
+assert.equal(writes.length, 1);
+assert.throws(
+  () => persistWorkspacePayload('workspace', payload, {
+    setItem: () => {
+      throw new Error('storage failed');
+    },
+  }),
+  /storage failed/,
+);
 
 const edited = { ...payload, files: [
   { ...payload.files[0], content: 'edited project' },

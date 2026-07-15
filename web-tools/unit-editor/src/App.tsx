@@ -56,6 +56,8 @@ import {
   createWorkspacePayload,
   hydrateWorkspaceFiles,
   parseWorkspacePayload,
+  persistSerializedWorkspace,
+  persistWorkspacePayload,
   validateWorkspacePayload,
   WORKSPACE_FORMAT_VERSION,
   WORKSPACE_SCHEMA,
@@ -192,6 +194,7 @@ export default function App() {
   const redoStack = useRef<WorkspaceHistoryEntry[]>([]);
   const autosaveTimeout = useRef<number | null>(null);
   const lastSavedWorkspace = useRef<string>(JSON.stringify(createWorkspacePayload(initialWorkspace.entryProject, initialWorkspace.files)));
+  const [workspaceSaveError, setWorkspaceSaveError] = useState<string | null>(null);
   const [historyCounts, setHistoryCounts] = useState({ undo: 0, redo: 0 });
   const currentHistoryEntry = useCallback((): WorkspaceHistoryEntry => ({
     entryProject,
@@ -418,15 +421,20 @@ export default function App() {
     }
 
     autosaveTimeout.current = window.setTimeout(() => {
-      markPerfSpan('workspace.autosave.persist', () => {
-        const payload = createWorkspacePayload(entryProject, workspaceFiles);
-        const serialized = JSON.stringify(payload);
-        if (serialized !== lastSavedWorkspace.current) {
-          window.localStorage.setItem(WORKSPACE_STORAGE_KEY, serialized);
-          lastSavedWorkspace.current = serialized;
-        }
-      });
-      autosaveTimeout.current = null;
+      try {
+        markPerfSpan('workspace.autosave.persist', () => {
+          const payload = createWorkspacePayload(entryProject, workspaceFiles);
+          const serialized = JSON.stringify(payload);
+          if (serialized !== lastSavedWorkspace.current) {
+            lastSavedWorkspace.current = persistSerializedWorkspace(WORKSPACE_STORAGE_KEY, serialized, window.localStorage);
+          }
+        });
+        setWorkspaceSaveError(null);
+      } catch (error) {
+        setWorkspaceSaveError(error instanceof Error ? error.message : 'Unable to persist the workspace.');
+      } finally {
+        autosaveTimeout.current = null;
+      }
     }, PERFORMANCE_DEBOUNCE_MS);
 
     return () => {
@@ -786,17 +794,20 @@ export default function App() {
   }, [pushHistory]);
 
   const saveWorkspace = useCallback(() => {
-    markPerfSpan('workspace.save', () => {
-      const payload = createWorkspacePayload(entryProject, workspaceFiles);
-      const serialized = JSON.stringify(payload);
-      if (typeof window === 'undefined') return;
-      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, serialized);
-      lastSavedWorkspace.current = serialized;
-      setParamOriginals(values => ({ ...values, ...paramDrafts }));
-      setWorkspaceFiles(files =>
-        files.map(file => (file.content === file.originalContent ? file : { ...file, originalContent: file.content })),
-      );
-    });
+    try {
+      markPerfSpan('workspace.save', () => {
+        const payload = createWorkspacePayload(entryProject, workspaceFiles);
+        if (typeof window === 'undefined') return;
+        lastSavedWorkspace.current = persistWorkspacePayload(WORKSPACE_STORAGE_KEY, payload, window.localStorage);
+        setParamOriginals(values => ({ ...values, ...paramDrafts }));
+        setWorkspaceFiles(files =>
+          files.map(file => (file.content === file.originalContent ? file : { ...file, originalContent: file.content })),
+        );
+      });
+      setWorkspaceSaveError(null);
+    } catch (error) {
+      setWorkspaceSaveError(error instanceof Error ? error.message : 'Unable to persist the workspace.');
+    }
   }, [entryProject, paramDrafts, workspaceFiles]);
 
   const exportWorkspace = useCallback(() => {
@@ -897,6 +908,7 @@ export default function App() {
           dirtyParamCount={dirtyParamCount + workspaceDraftCount}
           hasDirtyParamDrafts={hasDirtyDrafts}
           hasWorkspaceDrafts={hasWorkspaceDrafts}
+          workspaceSaveError={workspaceSaveError}
           workspaceFileCount={workspaceFiles.length}
           onExportWorkspace={exportWorkspace}
           onImportWorkspace={importWorkspace}

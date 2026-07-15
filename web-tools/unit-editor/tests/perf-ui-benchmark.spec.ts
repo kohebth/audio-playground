@@ -550,6 +550,66 @@ test.describe('Scalability checkpoints', () => {
     testInfo.annotations.push({ type: 'autosave-ms', description: autosaveMs.toFixed(2) });
   });
 
+  test('autosave handles slow and failing storage without losing the last good snapshot', async ({ page }, testInfo) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+    await waitForWorkspaceQuiescence(page);
+    await page.getByTestId('project-node-drive1').click();
+    await page.getByTestId('inspector-tab-atom').click();
+    const knob = page.getByTestId('param-knob-drive1-drive');
+    const box = await knob.boundingBox();
+    expect(box).not.toBeNull();
+
+    await page.evaluate(() => {
+      const original = Storage.prototype.setItem;
+      const host = window as typeof window & { __apgStorageWrites?: number };
+      host.__apgStorageWrites = 0;
+      Storage.prototype.setItem = function setItem(key, value) {
+        if (key === 'apg.unit-editor.workspace.v2') {
+          host.__apgStorageWrites = (host.__apgStorageWrites ?? 0) + 1;
+          const startedAt = performance.now();
+          while (performance.now() - startedAt < 6) {
+            // Intentional synchronous storage latency for the browser budget gate.
+          }
+        }
+        return original.call(this, key, value);
+      };
+    });
+
+    await clearPerfSpans(page);
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 - 12);
+    await page.mouse.up();
+    const slowAutosaveMs = await runAndAssertBudget(page, 'workspace.autosave.persist', 1);
+    expect(await page.evaluate(() => (window as typeof window & { __apgStorageWrites?: number }).__apgStorageWrites)).toBe(1);
+    const lastGoodSnapshot = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
+    expect(lastGoodSnapshot).not.toBeNull();
+
+    await page.evaluate(() => {
+      const previous = Storage.prototype.setItem;
+      Storage.prototype.setItem = function setItem(key, value) {
+        if (key === 'apg.unit-editor.workspace.v2') {
+          throw new DOMException('Injected quota failure', 'QuotaExceededError');
+        }
+        return previous.call(this, key, value);
+      };
+    });
+    await clearPerfSpans(page);
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 + 12);
+    await page.mouse.up();
+
+    await expect(page.getByTestId('workspace-save-status')).toHaveText('Save failed', { timeout: 5000 });
+    await waitForSpanCount(page, 'workspace.autosave.persist', 1);
+    expect(await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'))).toBe(lastGoodSnapshot);
+    await page.keyboard.press('Control+s');
+    await expect(page.getByTestId('workspace-save-status')).toHaveText('Save failed');
+    expect(pageErrors).toEqual([]);
+    testInfo.annotations.push({ type: 'slow-autosave-ms', description: slowAutosaveMs.toFixed(2) });
+  });
+
   test('memory growth stays bounded after repeated add/remove', async ({ page }, testInfo) => {
     const profile = 'test/fixtures/projects-v2/perf/extreme-linear.project.v2.yaml';
     const meta = readPerfFixtureMeta(profile);
