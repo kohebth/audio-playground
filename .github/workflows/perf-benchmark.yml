@@ -1,0 +1,36 @@
+name: Unit Editor Performance Baseline
+
+on:
+  pull_request:
+    paths:
+      - 'web-tools/unit-editor/**'
+      - 'test/fixtures/projects-v2/perf/**'
+      - 'test/fixtures/units-v2/**'
+      - 'test/golden/v2-inspect-atoms.json'
+      - 'test/golden/v2-inspect-atoms.manifest.txt'
+  push:
+    branches:
+      - main
+      - atom/enhance
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-tools/unit-editor/package-lock.json
+
+      - name: Install web editor dependencies
+        working-directory: web-tools/unit-editor
+        run: npm install
+
+      - name: Performance regression check
+        working-directory: web-tools/unit-editor
+        run: npm run perf:benchmark:ci

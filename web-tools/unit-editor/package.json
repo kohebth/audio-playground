@@ -10,7 +10,9 @@
     "perf:fixtures": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-fixtures.mts",
     "perf:benchmark": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts",
     "perf:benchmark:check": "node --expose-gc --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts --check --thresholds scripts/perf-thresholds.json",
-    "perf:benchmark:baseline": "node --expose-gc --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts --out dist/perf-baseline.json",
+    "perf:benchmark:ci": "node --expose-gc --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts --check --thresholds scripts/perf-thresholds.json",
+    "perf:benchmark:regression": "node --expose-gc --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts --check --thresholds scripts/perf-thresholds.json --baseline scripts/perf-baseline.json",
+    "perf:benchmark:baseline": "node --expose-gc --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts --out scripts/perf-baseline.json",
     "test": "node scripts/contract-tests.mjs && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/unit-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/project-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/workspace-persistence-tests.mts",
     "preview": "vite preview"
   },

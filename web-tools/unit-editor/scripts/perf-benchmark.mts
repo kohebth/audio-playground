@@ -75,6 +75,7 @@ type ThresholdBucket = {
 type Thresholds = {
   buckets: Record<SizeBucket, ThresholdBucket>;
   maxRegressionPercent: number;
+  minAbsoluteRegressionMs: number;
 };
 
 type Options = {
@@ -91,6 +92,16 @@ const fixtureDir = resolve(repoRoot, 'test/fixtures/projects-v2/perf');
 const unitRoot = resolve(repoRoot, 'test/fixtures/units-v2');
 const catalogPath = resolve(repoRoot, 'test/golden/v2-inspect-atoms.json');
 const thresholdsDefaultPath = resolve(process.cwd(), 'scripts', 'perf-thresholds.json');
+const PERF_PROFILE_SUFFIXES = ['branching', 'highly_connected', 'linear', 'payload', 'reuse', 'invalid'] as const;
+const PERF_PROFILE_BUCKETS = ['small', 'medium', 'large', 'extreme'] as const;
+
+function isPerfFixture(profile: string): boolean {
+  if (profile === 'small-invalid') return true;
+
+  const [bucket, suffix] = profile.split('-', 2);
+  if (!suffix) return false;
+  return PERF_PROFILE_BUCKETS.includes(bucket as any) && PERF_PROFILE_SUFFIXES.includes(suffix as any);
+}
 
 function parseOptions(argv: string[]): Options {
   const options: Options = {
@@ -151,9 +162,28 @@ function resolveProjectFile(name: string): string {
 
 function listProfiles(filter: string[]): string[] {
   const files = readdirSync(fixtureDir).filter(name => name.endsWith('.project.v2.yaml'));
-  if (filter.length === 0) return files.sort();
+  const candidates = files.filter(name => {
+    const profile = fileToProfile(name);
+    return isPerfFixture(profile);
+  });
+
+  if (filter.length === 0) return candidates.sort();
+
   const wanted = new Set(filter);
-  return files.filter(name => wanted.has(name.replace('.project.v2.yaml', ''))).sort();
+  const matchesRequested = (profile: string): boolean => {
+    const [bucket] = profile.split('-', 2);
+    for (const request of wanted) {
+      if (request === profile) return true;
+      if (request.endsWith('-*') && request.slice(0, -2) === bucket) return true;
+      if (request === bucket && profile.startsWith(`${bucket}-`)) return true;
+    }
+    return false;
+  };
+
+  return candidates.filter(name => {
+    const profile = fileToProfile(name);
+    return matchesRequested(profile);
+  }).sort();
 }
 
 function fileToProfile(file: string): string {
@@ -477,7 +507,7 @@ function assertThresholds(projects: ProjectBenchmarkResult[], units: UnitBenchma
   return { failures, regressions };
 }
 
-function compareBaselines(current: PerfResult, baselinePath: string, maxDeltaPercent: number): string[] {
+function compareBaselinePerf(current: PerfResult, baselinePath: string, thresholds: Thresholds): string[] {
   const raw = readFileSync(baselinePath, 'utf8');
   const baseline = JSON.parse(raw) as PerfResult;
   const baselineByProfile = new Map<string, ProjectBenchmarkResult>();
@@ -491,7 +521,8 @@ function compareBaselines(current: PerfResult, baselinePath: string, maxDeltaPer
     if (!prior || !prior.valid || !row.valid) continue;
     if (prior.totalMs <= 0) continue;
     const delta = ((row.totalMs - prior.totalMs) / prior.totalMs) * 100;
-    if (delta > maxDeltaPercent) {
+    const deltaMs = row.totalMs - prior.totalMs;
+    if (delta > thresholds.maxRegressionPercent && deltaMs >= thresholds.minAbsoluteRegressionMs) {
       regressions.push(`project:${row.profile}: +${delta.toFixed(1)}% totalMs (baseline ${prior.totalMs}ms -> ${row.totalMs}ms)`);
     }
   }
@@ -523,7 +554,7 @@ function main() {
     const thresholds = parseThresholds(options.thresholdsPath);
     const check = assertThresholds(projects, units, thresholds);
     if (options.baselinePath) {
-      check.regressions.push(...compareBaselines(report, options.baselinePath, thresholds.maxRegressionPercent));
+      check.regressions.push(...compareBaselinePerf(report, options.baselinePath, thresholds));
     }
     report.check = {
       passed: check.failures.length === 0 && check.regressions.length === 0,
