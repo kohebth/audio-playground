@@ -11,6 +11,7 @@ import {
   moveUnitConnection,
   parseUnitGraphDraft,
   previewAtomReplacement,
+  reconnectUnitConnection,
   removeAtomNodeFromUnit,
   replaceAtomNodeInUnit,
   replaceUnitConnection,
@@ -120,6 +121,29 @@ assert.throws(
   () => connectUnitNodes(created, catalog, { nodeId: 'missing', field: 'signal' }, { nodeId: 'apply_gain', field: 'signal_a' }),
   /was not found/,
 );
+
+const alternateSource = addAtomNodeToUnit(created, catalog, 'generation_dc');
+const originalApplyGainInput = parseUnitGraphDraft(created).nodes.find(node => node.id === 'apply_gain')?.in.signal_a;
+const reconnectedInput = reconnectUnitConnection(
+  alternateSource.content,
+  catalog,
+  { nodeId: 'apply_gain', field: 'signal_a' },
+  { nodeId: alternateSource.id, field: 'signal' },
+  { nodeId: 'apply_gain', field: 'signal_a' },
+);
+const alternateSignal = parseUnitGraphDraft(alternateSource.content).nodes.find(node => node.id === alternateSource.id)?.out.signal;
+assert.equal(parseUnitGraphDraft(reconnectedInput).nodes.find(node => node.id === 'apply_gain')?.in.signal_a, alternateSignal);
+assert.throws(
+  () => reconnectUnitConnection(
+    created,
+    catalog,
+    { nodeId: 'apply_gain', field: 'signal_a' },
+    { nodeId: 'apply_gain', field: 'signal' },
+    { nodeId: 'apply_gain', field: 'signal_a' },
+  ),
+  /creates a cycle/,
+);
+assert.equal(parseUnitGraphDraft(created).nodes.find(node => node.id === 'apply_gain')?.in.signal_a, originalApplyGainInput);
 
 const firstClip = addAtomNodeToUnit(created, catalog, 'amplitude_clip_hard');
 let routedClips = replaceUnitConnection(

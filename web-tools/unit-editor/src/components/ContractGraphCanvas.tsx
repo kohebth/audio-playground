@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
 import {
+  BezierEdge,
   Controls,
   Handle,
   MiniMap,
@@ -7,6 +8,8 @@ import {
   ReactFlow,
   ReactFlowProvider,
   type Edge,
+  type EdgeProps,
+  type EdgeTypes,
   type Connection,
   type Node,
   type NodeProps,
@@ -33,6 +36,7 @@ type ContractNodeData = {
 };
 
 type ContractFlowNode = Node<ContractNodeData, 'contractNode'>;
+type ContractFlowEdge = Edge<Record<string, never>, 'contractEdge'>;
 
 type Props = {
   workspaceFile: WorkspaceFile;
@@ -99,6 +103,7 @@ function sameContractNodeData(left: ContractNodeData, right: ContractNodeData): 
 
 function sameEdge(left: Edge, right: Edge): boolean {
   return left.id === right.id
+    && left.type === right.type
     && left.source === right.source
     && left.sourceHandle === right.sourceHandle
     && left.target === right.target
@@ -148,6 +153,7 @@ function buildContractFlow(
       graph?.setEdge(source.nodeId, target);
       edges.push({
         id: `contract-edge-${source.nodeId}-${target}-${port}`,
+        type: 'contractEdge',
         source: source.nodeId,
         sourceHandle: source.handle,
         target,
@@ -225,6 +231,15 @@ const ContractNode = memo(({ data, selected }: NodeProps<ContractFlowNode>) => {
 ContractNode.displayName = 'ContractNode';
 
 const nodeTypes = { contractNode: ContractNode } satisfies NodeTypes;
+
+const ContractEdge = memo((props: EdgeProps<ContractFlowEdge>) => {
+  useEffect(() => markComponentRender('ContractEdge', props.id));
+  return <BezierEdge {...props} />;
+});
+
+ContractEdge.displayName = 'ContractEdge';
+
+const edgeTypes = { contractEdge: ContractEdge } satisfies EdgeTypes;
 
 export function ContractGraphCanvas({
   workspaceFile,
@@ -385,6 +400,7 @@ export function ContractGraphCanvas({
             <ReactFlow
               nodes={flowNodes}
               edges={flowEdges}
+              edgeTypes={edgeTypes}
               nodeTypes={nodeTypes}
               onConnect={connect}
               onEdgesDelete={deleteEdges}

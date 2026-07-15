@@ -701,6 +701,65 @@ test.describe('Contract graph atom scalability', () => {
     await runAndAssertBudget(page, 'contract.add.atom', 1);
   });
 
+  test('reconnect is atomic, undoable, and only rerenders affected nodes and edge', async ({ page }, testInfo) => {
+    const fixture = 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+
+    await dispatchContractDrag(page, 'drop', 'amplitude_clip_soft');
+    await expect(page.getByTestId('contract-canvas')).toHaveAttribute('data-atom-count', String(meta.atoms + 1));
+    const addedNode = page.locator('.contract-node--selected');
+    await expect(addedNode).toBeVisible();
+    const addedNodeTestId = await addedNode.getAttribute('data-testid');
+    expect(addedNodeTestId).toMatch(/^contract-node-/);
+    const addedNodeId = addedNodeTestId!.replace(/^contract-node-/, '');
+
+    const oldEdgeId = 'contract-edge-contract-atom_0002-contract-atom_0003-signal';
+    const nextEdgeId = `contract-edge-contract-atom_0002-contract-${addedNodeId}-signal`;
+    const oldEdge = page.getByTestId(`rf__edge-${oldEdgeId}`);
+    await expect(oldEdge).toBeVisible();
+    await oldEdge.dispatchEvent('click');
+    const targetUpdater = oldEdge.locator('.react-flow__edgeupdater-target');
+    await expect(targetUpdater).toBeVisible();
+    const targetUpdaterBox = await targetUpdater.boundingBox();
+    const replacementTarget = page.getByTestId(`contract-node-${addedNodeId}`).locator('.contract-node__handle--in');
+    const replacementTargetBox = await replacementTarget.boundingBox();
+    expect(targetUpdaterBox).not.toBeNull();
+    expect(replacementTargetBox).not.toBeNull();
+
+    await clearPerfSpans(page);
+    await page.mouse.move(
+      targetUpdaterBox!.x + targetUpdaterBox!.width / 2,
+      targetUpdaterBox!.y + targetUpdaterBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      replacementTargetBox!.x + replacementTargetBox!.width / 2,
+      replacementTargetBox!.y + replacementTargetBox!.height / 2,
+      { steps: 8 },
+    );
+    await page.mouse.up();
+
+    await waitForSpanCount(page, 'contract.reconnect.atom', 1);
+    await expect(page.getByTestId(`rf__edge-${nextEdgeId}`)).toBeVisible();
+    await expect(oldEdge).toHaveCount(0);
+    const reconnectMs = await runAndAssertBudget(page, 'contract.reconnect.atom', 1);
+    const renderedNodes = Object.keys(await getComponentRenders(page, 'ContractNode')).sort();
+    const renderedEdges = Object.keys(await getComponentRenders(page, 'ContractEdge'));
+    expect(renderedNodes).toEqual([`ContractNode:${addedNodeId}`, 'ContractNode:atom_0003'].sort());
+    expect(renderedEdges).toContain(`ContractEdge:${nextEdgeId}`);
+    expect(renderedEdges.every(key => key === `ContractEdge:${oldEdgeId}` || key === `ContractEdge:${nextEdgeId}`)).toBe(true);
+
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-undo').click();
+    await expect(page.getByTestId(`rf__edge-${oldEdgeId}`)).toBeVisible();
+    await expect(page.getByTestId(`rf__edge-${nextEdgeId}`)).toHaveCount(0);
+    await runAndAssertBudget(page, 'ui.undo', 1);
+    testInfo.annotations.push({ type: 'reconnect-ms', description: reconnectMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'reconnect-node-renders', description: renderedNodes.join(',') });
+    testInfo.annotations.push({ type: 'reconnect-edge-renders', description: renderedEdges.join(',') });
+  });
+
   test('editing config in a 500-atom graph stays local', async ({ page }, testInfo) => {
     test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The 500-atom interaction gate runs in scheduled performance CI.');
     const fixture = 'test/fixtures/projects-v2/perf/large-atoms.project.v2.yaml';

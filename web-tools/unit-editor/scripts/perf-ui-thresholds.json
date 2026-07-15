@@ -17,6 +17,7 @@
     "contract.remove.atom": 200,
     "contract.edit.atom": 300,
     "contract.move.atom": 100,
+    "contract.reconnect.atom": 200,
     "contract.replace.atom": 300,
     "ui.inspector.toggle": 100,
     "interaction.frame.average": 20,

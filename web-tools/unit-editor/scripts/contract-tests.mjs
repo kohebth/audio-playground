@@ -85,6 +85,7 @@ includesContent(atomPalette, 'event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.na
 includesContent(atomPalette, 'Add atom', 'atom palette must keep a click fallback for creation');
 includesContent(contractCanvas, 'onAddAtomAt(atomName', 'unit graph canvas must create dropped atoms at a pointer position');
 includesContent(contractCanvas, 'onNodeDragStop', 'unit graph canvas must persist atom moves');
+includesContent(contractCanvas, "markComponentRender('ContractEdge'", 'unit graph canvas must expose edge render scope');
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
 includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
