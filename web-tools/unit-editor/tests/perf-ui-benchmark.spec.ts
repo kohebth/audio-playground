@@ -14,7 +14,13 @@ type RuntimeSnapshot = {
   phase: string;
   activeRevision: number;
   preparedRevision: number;
-  meter: { frames: number; valid: boolean; underruns: number };
+  meter: {
+    frames: number;
+    valid: boolean;
+    underruns: number;
+    callbackDeadlineMisses: number;
+    maxCallbackMs: number;
+  };
   resources: {
     workerActive: boolean;
     workletActive: boolean;
@@ -1253,6 +1259,7 @@ test.describe('Live WASM runtime performance', () => {
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.valid ?? false, { timeout: 10_000 }).toBe(true);
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.frames ?? 0, { timeout: 10_000 }).toBeGreaterThan(0);
     const baselineUnderruns = (await getRuntimeSnapshot(page))?.meter.underruns ?? 0;
+    const baselineDeadlineMisses = (await getRuntimeSnapshot(page))?.meter.callbackDeadlineMisses ?? 0;
 
     await page.getByTestId('project-node-drive1').click();
     await page.getByTestId('inspector-tab-atom').click();
@@ -1269,6 +1276,7 @@ test.describe('Live WASM runtime performance', () => {
     const controlMs = await runAndAssertBudget(page, 'runtime.control.param', 1);
     const runningSnapshot = await getRuntimeSnapshot(page);
     expect(runningSnapshot?.meter.underruns).toBe(baselineUnderruns);
+    expect(runningSnapshot?.meter.callbackDeadlineMisses).toBe(baselineDeadlineMisses);
     expect(runningSnapshot?.resources.workletActive).toBe(true);
     expect(runningSnapshot?.resources.streamTracks).toBe(1);
 
@@ -1296,6 +1304,7 @@ test.describe('Live WASM runtime performance', () => {
     await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.valid ?? false, { timeout: 10_000 }).toBe(true);
     const baselineUnderruns = (await getRuntimeSnapshot(page))?.meter.underruns ?? 0;
+    const baselineDeadlineMisses = (await getRuntimeSnapshot(page))?.meter.callbackDeadlineMisses ?? 0;
     const swaps: Array<{ action: string; prepareMs: number; commitMs: number }> = [];
     const waitForHotSwap = async (action: string) => {
       const prepareMs = await runAndAssertBudget(page, 'runtime.prepare.workspace', 1);
@@ -1355,6 +1364,7 @@ test.describe('Live WASM runtime performance', () => {
 
     const finalSnapshot = await getRuntimeSnapshot(page);
     expect(finalSnapshot?.meter.underruns).toBe(baselineUnderruns);
+    expect(finalSnapshot?.meter.callbackDeadlineMisses).toBe(baselineDeadlineMisses);
     expect(finalSnapshot?.resources.workletActive).toBe(true);
     expect(pageErrors).toEqual([]);
     await page.getByTestId('preview-start-stop').click();

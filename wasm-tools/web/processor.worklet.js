@@ -20,6 +20,8 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     this.processor = 0;
     this.ready = false;
     this.underruns = 0;
+    this.callbackDeadlineMisses = 0;
+    this.maxCallbackMs = 0;
     this.latencyProbe = null;
     this.port.onmessage = (event) => void this.handle(event.data);
     const { moduleUrl, wasmBinary } = options?.processorOptions ?? {};
@@ -132,6 +134,8 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
           valid: (this.module.HEAPU32[floatWord + 3] ?? 0) !== 0,
           activeRevision: Number(this.module._apg_wasm_processor_active_revision(this.processor)),
           underruns: this.underruns,
+          callbackDeadlineMisses: this.callbackDeadlineMisses,
+          maxCallbackMs: this.maxCallbackMs,
         },
       });
       return;
@@ -179,6 +183,11 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
       }
     }
   }
+  recordCallbackTiming(startedAt, frames) {
+    const elapsedMs = Math.max(0, Date.now() - startedAt);
+    this.maxCallbackMs = Math.max(this.maxCallbackMs, elapsedMs);
+    if (elapsedMs > (frames / sampleRate) * 1000) this.callbackDeadlineMisses += 1;
+  }
   process(inputs, outputs) {
     const output = outputs[0]?.[0];
     if (!output) return true;
@@ -186,10 +195,12 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
       output.fill(0);
       return true;
     }
+    const startedAt = Date.now();
     const frames = output.length;
     if (frames > this.module._apg_wasm_processor_frame_capacity(this.processor)) {
       this.underruns += 1;
       output.fill(0);
+      this.recordCallbackTiming(startedAt, frames);
       return true;
     }
     const inputPointer = this.module._apg_wasm_processor_input_buffer(this.processor) >>> 2;
@@ -200,12 +211,14 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     if (status !== 0) {
       this.underruns += 1;
       output.fill(0);
+      this.recordCallbackTiming(startedAt, frames);
       return true;
     }
     const outputPointer = this.module._apg_wasm_processor_output_buffer(this.processor) >>> 2;
     for (let frame = 0; frame < frames; frame += 1) output[frame] = this.module.HEAPF32[outputPointer + frame];
     this.processLatencyProbe(input, output);
     for (let channel = 1; channel < (outputs[0]?.length ?? 0); channel += 1) outputs[0]?.[channel]?.set(output);
+    this.recordCallbackTiming(startedAt, frames);
     return true;
   }
 }

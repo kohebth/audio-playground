@@ -20,7 +20,7 @@ memory stability, and live WASM audio. The source requirements are the July 15 p
 | Residual edit memory | `< 10%` | Chromium collected-heap gate after bounded-history warm-up |
 | Interaction frame rate | `>= 50 FPS` | Scheduled 500-atom pointer drag/pan/zoom average-frame gate |
 | Runtime parameter control | `< 50 ms` | Real Worklet round trip during continuous knob drag |
-| Audio underruns from UI | `0` | Zero increase during rapid live parameter control |
+| Audio underruns from UI | `0` | Zero DSP underrun and callback-deadline-miss increase during live editing |
 
 The project import checks measure from browser file import through the expected rendered React Flow node count. Contract
 checks use the median of three opens, including the cold first open, through registering every actual atom and mounting
@@ -85,7 +85,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 
 - [x] Add atom/unit, reconnect, replacement, undo/redo, save, and import while audio runs.
 - [x] Separate UI mutation latency from worker compile/prepare and Worklet commit latency.
-- [ ] Assert zero meter underruns and zero callback deadline misses.
+- [x] Assert zero meter underruns and zero callback deadline misses.
 - [x] Rapid Worklet parameter-control latency under `50 ms`, with per-path diffing and in-flight coalescing.
 - [x] Repeated file/microphone start-stop ownership checks for the retained AudioContext/Worker and transient Worklet,
   request ports, streams, source nodes, and polling timers.
@@ -115,8 +115,8 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
    edges, inspectors, and navigation remain.
 5. **Editing during audio causes no underrun:** Proven for the scheduled structural workflow. Project-unit and atom
    insertion, atom replacement, reconnect, undo/redo, save, and a 100-atom import each hot-swap while fake microphone
-   audio remains running, revisions converge, and the meter underrun count does not increase. Callback deadline timing
-   remains unavailable and is tracked separately.
+   audio remains running, revisions converge, and neither the meter underrun nor measured Worklet callback-deadline-miss
+   count increases.
 6. **Explicit replacement stays controlled:** Proven. Pure transformer tests cover compatibility planning, the browser
    gate keeps medium-graph replacement under 300 ms, only the replaced node rerenders, undo/redo restore both types, and
    subsequent configuration editing remains isolated.

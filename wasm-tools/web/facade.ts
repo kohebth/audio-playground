@@ -35,7 +35,16 @@ export class WasmBackend {
   private muteShadow = false;
   private processorReadyResolve: (() => void) | null = null;
   private processorReadyReject: ((error: Error) => void) | null = null;
-  private meter: MeterSnapshot = { peak: 0, rms: 0, frames: 0, valid: false, activeRevision: 0, underruns: 0 };
+  private meter: MeterSnapshot = {
+    peak: 0,
+    rms: 0,
+    frames: 0,
+    valid: false,
+    activeRevision: 0,
+    underruns: 0,
+    callbackDeadlineMisses: 0,
+    maxCallbackMs: 0,
+  };
   private state: BackendState = {
     phase: 'idle',
     workspaceRevision: 0,

@@ -26,6 +26,8 @@ export type PerfRuntimeSnapshot = {
     frames: number;
     valid: boolean;
     underruns: number;
+    callbackDeadlineMisses: number;
+    maxCallbackMs: number;
   };
   resources: {
     workerActive: boolean;

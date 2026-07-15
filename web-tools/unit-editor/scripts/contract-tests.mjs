@@ -238,6 +238,8 @@ includesContent(previewPanel, "'Mute output'", 'preview mute action is missing')
 includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');
 includesContent(processorWorklet, 'request.type === "commit"', 'Worklet must commit only through an explicit message');
 includesContent(processorWorklet, 'request.type === "pollMeters"', 'meter snapshots must be copied outside process()');
+includesContent(processorWorklet, 'callbackDeadlineMisses', 'Worklet meters must report callback deadline misses');
+includesContent(processorWorklet, 'Date.now() - startedAt', 'Worklet callbacks must be timed without allocating');
 includesContent(processorWorklet, 'request.type === "startLatencyProbe"', 'AudioWorklet must support acoustic latency probes');
 includesContent(wasmFacade, 'measureLatencyProbe()', 'WASM facade must expose acoustic latency measurement');
 assert(!processorWorklet.slice(processorWorklet.indexOf('process(inputs, outputs)')).includes('this.reply('), 'process() must not allocate and post meter messages');

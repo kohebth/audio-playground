@@ -30,6 +30,8 @@ const emptyMeter: MeterSnapshot = {
   valid: false,
   activeRevision: 0,
   underruns: 0,
+  callbackDeadlineMisses: 0,
+  maxCallbackMs: 0,
 };
 
 function moduleUrl(file: string): string {
@@ -494,7 +496,13 @@ export function PreviewPanel({
       phase,
       activeRevision: state.activeRevision,
       preparedRevision: state.preparedRevision,
-      meter: { frames: meter.frames, valid: meter.valid, underruns: meter.underruns },
+      meter: {
+        frames: meter.frames,
+        valid: meter.valid,
+        underruns: meter.underruns,
+        callbackDeadlineMisses: meter.callbackDeadlineMisses,
+        maxCallbackMs: meter.maxCallbackMs,
+      },
       resources: {
         ...resources,
         streamTracks: streamRef.current?.getTracks().length ?? 0,
@@ -721,6 +729,14 @@ export function PreviewPanel({
         <div>
           <span>Underruns</span>
           <strong>{meter.underruns}</strong>
+        </div>
+        <div>
+          <span>Deadline misses</span>
+          <strong>{meter.callbackDeadlineMisses}</strong>
+        </div>
+        <div>
+          <span>Max callback</span>
+          <strong>{meter.maxCallbackMs.toFixed(1)} ms</strong>
         </div>
       </div>
 

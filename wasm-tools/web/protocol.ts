@@ -31,5 +31,5 @@ export type ProcessorResponse =
   | { id: number; ok: true; type: 'command' }
   | { id: number; ok: true; type: 'latencyProbe'; frames: number; sampleRate: number }
   | { id: number; ok: true; type: 'disposed' }
-  | { id: number; ok: true; type: 'meter'; meter: { peak: number; rms: number; frames: number; valid: boolean; activeRevision: number; underruns: number } }
+  | { id: number; ok: true; type: 'meter'; meter: { peak: number; rms: number; frames: number; valid: boolean; activeRevision: number; underruns: number; callbackDeadlineMisses: number; maxCallbackMs: number } }
   | { id: number; ok: false; type: 'error'; message: string };

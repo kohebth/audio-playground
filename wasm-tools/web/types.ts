@@ -47,6 +47,8 @@ export type MeterSnapshot = {
   valid: boolean;
   activeRevision: number;
   underruns: number;
+  callbackDeadlineMisses: number;
+  maxCallbackMs: number;
 };
 
 export type BackendPhase = 'idle' | 'validating' | 'preparing' | 'ready' | 'running' | 'error';
