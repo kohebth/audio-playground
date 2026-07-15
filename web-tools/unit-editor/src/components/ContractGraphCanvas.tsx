@@ -225,6 +225,7 @@ export function ContractGraphCanvas({
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(parsed.flow.edges);
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
   const reactFlowRef = useRef<ReactFlowInstance<ContractFlowNode, Edge> | null>(null);
+  const dragStartAtByNode = useRef<Record<string, number>>({});
 
   useEffect(() => {
     setFlowNodes(current => parsed.flow.nodes.map(node => {
@@ -313,7 +314,21 @@ export function ContractGraphCanvas({
               onEdgesChange={onEdgesChange}
               onNodeClick={(_, node) => onSelectAtom((node.data as ContractNodeData).id)}
               onNodeDoubleClick={(_, node) => onOpenAtomInspector((node.data as ContractNodeData).id)}
-              onNodeDragStop={(_, node) => onMoveAtom((node.data as ContractNodeData).id, node.position)}
+              onNodeDragStart={(_, node) => {
+                dragStartAtByNode.current[node.id] = performance.now();
+                markPerfSpan('ui.drag.contractAtom.start', () => undefined, { nodeId: node.id });
+              }}
+              onNodeDrag={(_, node) => {
+                markPerfSpan('ui.drag.contractAtom', () => undefined, { nodeId: node.id });
+              }}
+              onNodeDragStop={(_, node) => {
+                const startedAt = dragStartAtByNode.current[node.id];
+                delete dragStartAtByNode.current[node.id];
+                const atomId = (node.data as ContractNodeData).id;
+                markPerfSpan('ui.drag.contractAtom.stop', () => {
+                  onMoveAtom(atomId, node.position);
+                }, startedAt ? { nodeId: node.id, durationMs: performance.now() - startedAt } : { nodeId: node.id });
+              }}
               onNodesChange={onNodesChange}
               onInit={instance => {
                 reactFlowRef.current = instance;

@@ -21,6 +21,7 @@ import {
   type UnitGraphDraft,
   type UnitGraphNode,
 } from '../lib/unitV2Graph';
+import type { PerfRenderSpan, PerfSpan } from '../lib/perfTelemetry';
 
 type Props = {
   validation: ValidationResult;
@@ -43,6 +44,8 @@ type Props = {
   atomClipboard: UnitGraphNode | null;
   graphEditError: string | null;
   paramOverrides: ParamOverride[];
+  perfSpans: PerfSpan[];
+  renderPerfSpans: PerfRenderSpan[];
   onAddAtom: (atomName: string) => void;
   onDuplicateInstance: (instanceId: string) => void;
   onRemoveInstance: (instanceId: string) => void;
@@ -121,6 +124,8 @@ export function ProjectInspector({
   atomClipboard,
   graphEditError,
   paramOverrides,
+  perfSpans,
+  renderPerfSpans,
   onAddAtom,
   onDuplicateInstance,
   onRemoveInstance,
@@ -588,6 +593,41 @@ export function ProjectInspector({
               <span>Render Command</span>
               <code>{commands.renderProject}</code>
             </div>
+            {perfSpans.length > 0 ? (
+              <details className="inspector-block">
+                <summary className="inspector-block__label">Operation Spans ({perfSpans.length})</summary>
+                <pre className="workspace-editor" style={{ marginTop: '0.5rem', whiteSpace: 'pre-wrap' }}>
+                  {JSON.stringify(
+                    perfSpans.map(span => ({
+                      name: span.name,
+                      durationMs: Number(span.durationMs.toFixed(3)),
+                      at: new Date(span.at).toLocaleTimeString(),
+                      meta: span.meta,
+                    })),
+                    null,
+                    2,
+                  )}
+                </pre>
+              </details>
+            ) : null}
+            {renderPerfSpans.length > 0 ? (
+              <details className="inspector-block">
+                <summary className="inspector-block__label">Render Spans ({renderPerfSpans.length})</summary>
+                <pre className="workspace-editor" style={{ marginTop: '0.5rem', whiteSpace: 'pre-wrap' }}>
+                  {JSON.stringify(
+                    renderPerfSpans.map(span => ({
+                      id: span.id,
+                      phase: span.phase,
+                      actualDurationMs: Number(span.actualDurationMs.toFixed(3)),
+                      baseDurationMs: Number(span.baseDurationMs.toFixed(3)),
+                      at: new Date(span.at).toLocaleTimeString(),
+                    })),
+                    null,
+                    2,
+                  )}
+                </pre>
+              </details>
+            ) : null}
             <textarea
               aria-label={`Workspace file ${selectedUnitFile.path}`}
               className="workspace-editor"

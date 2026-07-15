@@ -10,7 +10,7 @@ import {
   type NodeTypes,
   useReactFlow,
 } from '@xyflow/react';
-import { useState, type DragEvent } from 'react';
+import { useRef, useState, type DragEvent } from 'react';
 
 import { ProjectNode } from './ProjectNode';
 import { UNIT_DRAG_TYPE } from './ProjectSidebar';
@@ -55,6 +55,7 @@ function ProjectFlow({
 }: ProjectFlowProps) {
   const reactFlow = useReactFlow();
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
+  const dragStartAtByNode = useRef<Record<string, number>>({});
 
   const dragState = (event: DragEvent) => event.dataTransfer.types.includes(UNIT_DRAG_TYPE) ? 'valid' : 'reject';
   const dragOver = (event: DragEvent) => {
@@ -91,9 +92,23 @@ function ProjectFlow({
         onEdgesChange={onEdgesChange}
         onNodeClick={(_, node) => onSelectNode(node.id)}
         onNodeDoubleClick={(_, node) => onOpenContractGraph(node.id)}
+        onNodeDragStart={(_, node) => {
+          dragStartAtByNode.current[node.id] = performance.now();
+          markPerfSpan('ui.drag.projectNode.start', () => undefined, { nodeId: node.id });
+        }}
+        onNodeDrag={(_, node) => {
+          markPerfSpan('ui.drag.projectNode', () => undefined, { nodeId: node.id });
+        }}
         onNodeDragStop={(_, node) => {
+          const startedAt = dragStartAtByNode.current[node.id];
+          delete dragStartAtByNode.current[node.id];
           const data = node.data as ProjectNodeData;
-          if (data.kind === 'unit') onMoveUnit(data.instance.id, node.position);
+          if (data.kind === 'unit') {
+            const durationMs = startedAt ? performance.now() - startedAt : 0;
+            const meta = { nodeId: data.instance.id, durationMs };
+            markPerfSpan('ui.drag.projectNode.stop', () => undefined, meta);
+            onMoveUnit(data.instance.id, node.position);
+          }
         }}
         onEdgeClick={(_, edge) => {
           const routeIndex = routeIndexFromEdge(edge);

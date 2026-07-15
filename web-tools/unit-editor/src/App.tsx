@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -60,7 +60,13 @@ import {
   WORKSPACE_FORMAT_VERSION,
   WORKSPACE_SCHEMA,
 } from './lib/workspacePersistence';
-import { PERFORMANCE_DEBOUNCE_MS, markPerfSpan } from './lib/perfTelemetry';
+import {
+  PERFORMANCE_DEBOUNCE_MS,
+  markPerfSpan,
+  markRenderPerfSpan,
+  readPerfRenderSpans,
+  readPerfSpans,
+} from './lib/perfTelemetry';
 import './App.css';
 
 function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): ProjectNodeData | null {
@@ -797,6 +803,28 @@ export default function App() {
     });
   }, [pushHistory]);
 
+  const handleRenderProfile = useCallback((
+    id: string,
+    phase: 'mount' | 'render' | 'update' | string,
+    actualDurationMs: number,
+    baseDurationMs: number,
+    startTime: number,
+    commitTime: number,
+  ) => {
+    markRenderPerfSpan({
+      id,
+      phase,
+      actualDurationMs,
+      baseDurationMs,
+      startTime,
+      commitTime,
+      at: Date.now(),
+    });
+  }, []);
+
+  const perfSpans = readPerfSpans(20);
+  const renderPerfSpans = readPerfRenderSpans(20);
+
   return (
     <LiveBypassContext.Provider value={{ controller: liveBypassController, setController: setLiveBypassController }}>
     {!workbenchLaunched && (
@@ -866,78 +894,86 @@ export default function App() {
         />
 
         {canvasMode === 'contract' && selectedNode?.kind === 'unit' ? (
-          <ContractGraphCanvas
-            catalog={backendSamples.atomCatalog}
-            selectedAtomId={selectedAtomId}
-            selectedUnitLabel={selectedNode.unit.name}
-            workspaceFile={selectedUnitWorkspaceFile}
-            onBackToProject={() => markPerfSpan('ui.returnToProject', () => setCanvasMode('project'))}
-            onAddAtomAt={addAtom}
-            onMoveAtom={moveAtom}
-            onConnectAtoms={connectAtoms}
-            onDisconnectAtom={disconnectAtom}
-            onOpenAtomInspector={openAtomInspector}
-            onReconnectAtoms={reconnectAtoms}
-            onSelectAtom={selectAtom}
-          />
+          <Profiler id="ContractGraphCanvas" onRender={handleRenderProfile}>
+            <ContractGraphCanvas
+              catalog={backendSamples.atomCatalog}
+              selectedAtomId={selectedAtomId}
+              selectedUnitLabel={selectedNode.unit.name}
+              workspaceFile={selectedUnitWorkspaceFile}
+              onBackToProject={() => markPerfSpan('ui.returnToProject', () => setCanvasMode('project'))}
+              onAddAtomAt={addAtom}
+              onMoveAtom={moveAtom}
+              onConnectAtoms={connectAtoms}
+              onDisconnectAtom={disconnectAtom}
+              onOpenAtomInspector={openAtomInspector}
+              onReconnectAtoms={reconnectAtoms}
+              onSelectAtom={selectAtom}
+            />
+          </Profiler>
         ) : (
-          <ProjectCanvas
-            nodes={nodes}
-            edges={edges}
-            selectedRouteIndex={selectedRouteIndex}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onSelectNode={selectProjectNode}
-            onOpenContractGraph={openContractGraph}
-            onSelectRoute={selectRoute}
-            onAddUnitAt={addProjectNodeFromLibrary}
-            onMoveUnit={moveProjectNode}
-          />
+          <Profiler id="ProjectCanvas" onRender={handleRenderProfile}>
+            <ProjectCanvas
+              nodes={nodes}
+              edges={edges}
+              selectedRouteIndex={selectedRouteIndex}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onSelectNode={selectProjectNode}
+              onOpenContractGraph={openContractGraph}
+              onSelectRoute={selectRoute}
+              onAddUnitAt={addProjectNodeFromLibrary}
+              onMoveUnit={moveProjectNode}
+            />
+          </Profiler>
         )}
 
-        <ProjectInspector
-          validation={backendSamples.validation}
-          render={backendSamples.render}
-          commands={backendCommands}
-          project={project}
-          inspectorView={inspectorView}
-          onInspectorViewChange={value => {
-            markPerfSpan('ui.change.inspectorView', () => setInspectorView(value));
-          }}
-          selectedNode={selectedNode}
-          selectedRoute={selectedRoute}
-          selectedRouteIndex={selectedRouteIndex}
-          unit={backendSamples.unit}
-          atomCatalog={backendSamples.atomCatalog}
-          atomCatalogManifest={backendSamples.atomCatalogManifest}
-          projectFile={project.file}
-          hasDirtyParamDrafts={hasDirtyDrafts}
-          selectedUnitFile={selectedUnitWorkspaceFile}
-          selectedUnitGraph={selectedUnitGraph}
-          selectedAtom={selectedAtom}
-          atomClipboard={atomClipboard}
-          graphEditError={graphEditError}
-          paramOverrides={paramOverrides}
-          onAddAtom={addAtom}
-          onDuplicateInstance={duplicateProjectNode}
-          onRemoveInstance={removeProjectNode}
-          onRenameInstance={renameProjectNode}
-          onReorderInstance={reorderProjectNode}
-          onUpdateRoute={updateProjectRoute}
-          onRemoveRoute={deleteProjectRoute}
-          onReorderRoute={reorderProjectRoute}
-          routeSources={routeSources}
-          routeTargets={routeTargets}
-          onCopyAtom={copySelectedAtom}
-          onCutAtom={cutSelectedAtom}
-          onPasteAtom={pasteAtom}
-          onRemoveAtom={removeSelectedAtom}
-          onReplaceAtom={replaceSelectedAtom}
-          onResetUnitParams={resetUnitParamDrafts}
-          onSelectAtom={setSelectedAtomId}
-          onSelectedAtomChange={updateSelectedAtom}
-          onWorkspaceFileChange={updateWorkspaceFile}
-        />
+        <Profiler id="ProjectInspector" onRender={handleRenderProfile}>
+          <ProjectInspector
+            validation={backendSamples.validation}
+            render={backendSamples.render}
+            commands={backendCommands}
+            project={project}
+            inspectorView={inspectorView}
+            onInspectorViewChange={value => {
+              markPerfSpan('ui.change.inspectorView', () => setInspectorView(value));
+            }}
+            selectedNode={selectedNode}
+            selectedRoute={selectedRoute}
+            selectedRouteIndex={selectedRouteIndex}
+            unit={backendSamples.unit}
+            atomCatalog={backendSamples.atomCatalog}
+            atomCatalogManifest={backendSamples.atomCatalogManifest}
+            projectFile={project.file}
+            hasDirtyParamDrafts={hasDirtyDrafts}
+            selectedUnitFile={selectedUnitWorkspaceFile}
+            selectedUnitGraph={selectedUnitGraph}
+            selectedAtom={selectedAtom}
+            atomClipboard={atomClipboard}
+            graphEditError={graphEditError}
+            paramOverrides={paramOverrides}
+            perfSpans={perfSpans}
+            renderPerfSpans={renderPerfSpans}
+            onAddAtom={addAtom}
+            onDuplicateInstance={duplicateProjectNode}
+            onRemoveInstance={removeProjectNode}
+            onRenameInstance={renameProjectNode}
+            onReorderInstance={reorderProjectNode}
+            onUpdateRoute={updateProjectRoute}
+            onRemoveRoute={deleteProjectRoute}
+            onReorderRoute={reorderProjectRoute}
+            routeSources={routeSources}
+            routeTargets={routeTargets}
+            onCopyAtom={copySelectedAtom}
+            onCutAtom={cutSelectedAtom}
+            onPasteAtom={pasteAtom}
+            onRemoveAtom={removeSelectedAtom}
+            onReplaceAtom={replaceSelectedAtom}
+            onResetUnitParams={resetUnitParamDrafts}
+            onSelectAtom={setSelectedAtomId}
+            onSelectedAtomChange={updateSelectedAtom}
+            onWorkspaceFileChange={updateWorkspaceFile}
+          />
+        </Profiler>
       </div>
     </div>
     <LiveLatencyBadge />

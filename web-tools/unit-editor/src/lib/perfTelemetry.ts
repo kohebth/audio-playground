@@ -8,8 +8,18 @@ export type PerfSpan = {
   at: number;
   meta?: PerfMarkerMeta;
 };
+export type PerfRenderSpan = {
+  id: string;
+  phase: 'mount' | 'render' | 'update' | string;
+  actualDurationMs: number;
+  baseDurationMs: number;
+  startTime: number;
+  commitTime: number;
+  at: number;
+};
 
-const MAX_SAMPLES = 120;
+const MAX_SAMPLES = 240;
+const MAX_RENDER_SAMPLES = 240;
 const AUTOSAVE_DEBOUNCE_MS = 350;
 const TRACE_WINDOW = '__apgPerfTrace';
 
@@ -17,6 +27,8 @@ type PerfStore = {
   enabled: boolean;
   samples: PerfSpan[];
   maxSamples: number;
+  renderSamples: PerfRenderSpan[];
+  maxRenderSamples: number;
 };
 
 declare global {
@@ -29,12 +41,24 @@ let spanCounter = 0;
 
 function getStore(): PerfStore {
   if (typeof window === 'undefined') {
-    return { enabled: false, samples: [], maxSamples: MAX_SAMPLES };
+    return {
+      enabled: false,
+      samples: [],
+      maxSamples: MAX_SAMPLES,
+      renderSamples: [],
+      maxRenderSamples: MAX_RENDER_SAMPLES,
+    };
   }
 
   let store = window[TRACE_WINDOW];
   if (!store) {
-    store = { enabled: import.meta.env.DEV, samples: [], maxSamples: MAX_SAMPLES };
+    store = {
+      enabled: import.meta.env.DEV,
+      samples: [],
+      maxSamples: MAX_SAMPLES,
+      renderSamples: [],
+      maxRenderSamples: MAX_RENDER_SAMPLES,
+    };
     window[TRACE_WINDOW] = store;
   }
 
@@ -79,6 +103,24 @@ export function readPerfSpans(limit = 10): PerfSpan[] {
   const samples = getStore().samples;
   if (limit <= 0) return [...samples];
   return samples.slice(-limit);
+}
+
+export function readPerfRenderSpans(limit = 10): PerfRenderSpan[] {
+  const samples = getStore().renderSamples;
+  if (limit <= 0) return [...samples];
+  return samples.slice(-limit);
+}
+
+export function markRenderPerfSpan(span: PerfRenderSpan): void {
+  if (!import.meta.env.DEV || !getStore().enabled || typeof performance === 'undefined') return;
+  const store = getStore();
+  store.renderSamples.push(span);
+  if (store.renderSamples.length > store.maxRenderSamples) store.renderSamples.shift();
+}
+
+export function clearPerfRenderSpans(): void {
+  const store = getStore();
+  store.renderSamples = [];
 }
 
 export function clearPerfSpans(): void {
