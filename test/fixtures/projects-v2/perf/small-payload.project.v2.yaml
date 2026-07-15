@@ -4,9 +4,9 @@ name: perf-payload-small
 version: 2.0.0
 units:
   - id: perf_fanwide_payload
-    file: ../units-v2/perf_fanwide_payload.unit.v2.yaml
+    file: ../../units-v2/perf_fanwide_payload.unit.v2.yaml
   - id: perf_fanwide_24in
-    file: ../units-v2/perf_fanwide_24in.unit.v2.yaml
+    file: ../../units-v2/perf_fanwide_24in.unit.v2.yaml
 chain:
   nodes:
     - id: u001

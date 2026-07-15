@@ -53,10 +53,17 @@ function getThreshold(name: string): number | null {
 
 function clearPerfSpans(page: Page) {
   return page.evaluate(() => {
-    const trace = (window as { __apgPerfTrace?: { samples?: unknown[]; renderSamples?: unknown[] } }).__apgPerfTrace;
+    const trace = (window as {
+      __apgPerfTrace?: {
+        samples?: unknown[];
+        renderSamples?: unknown[];
+        componentRenders?: Record<string, number>;
+      };
+    }).__apgPerfTrace;
     if (!trace) return;
     trace.samples = [];
     trace.renderSamples = [];
+    trace.componentRenders = {};
   });
 }
 
@@ -105,12 +112,13 @@ function normalizePosixPath(value: string): string {
   return value.split(path.sep).join('/');
 }
 
-function readPerfFixtureMeta(filePath: string): { nodes: number; routes: number } {
+function readPerfFixtureMeta(filePath: string): { nodes: number; routes: number; atoms: number } {
   const absolutePath = path.resolve(resolveRepoRoot(), filePath);
   const parsed = parseYaml(readFileSync(absolutePath, 'utf8')) as PerfFixture;
   return {
     nodes: Array.isArray(parsed.chain?.nodes) ? parsed.chain.nodes.length : 0,
     routes: Array.isArray(parsed.chain?.routes) ? parsed.chain.routes.length : 0,
+    atoms: parsed.meta?.perf?.target?.atoms ?? 0,
   };
 }
 
@@ -191,6 +199,35 @@ async function collectHeapBytes(page: Page): Promise<number> {
   const usage = await session.send('Runtime.getHeapUsage');
   await session.detach();
   return usage.usedSize;
+}
+
+async function getComponentRenders(page: Page, component: string): Promise<Record<string, number>> {
+  return page.evaluate(name => {
+    const trace = (window as {
+      __apgPerfTrace?: { componentRenders?: Record<string, number> };
+    }).__apgPerfTrace;
+    return Object.fromEntries(
+      Object.entries(trace?.componentRenders ?? {}).filter(([key]) => key.startsWith(`${name}:`)),
+    );
+  }, component);
+}
+
+async function openContractFixture(page: Page, fixturePath: string, expectedAtoms: number): Promise<number> {
+  await importPerfWorkspaceFixture(page, fixturePath, 1);
+  return openLoadedContract(page, expectedAtoms);
+}
+
+async function openLoadedContract(page: Page, expectedAtoms: number): Promise<number> {
+  const startedAt = await page.evaluate(() => performance.now());
+  await page.getByTestId('project-node-atom_stress').dblclick();
+  await expect(page.getByTestId('contract-canvas')).toBeVisible();
+  await expect.poll(() => page.locator('.contract-node').count(), { timeout: 30_000 }).toBe(expectedAtoms);
+  return page.evaluate(start => performance.now() - start, startedAt);
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.floor(sorted.length / 2)];
 }
 
 async function launchWorkspace(page: Page) {
@@ -453,5 +490,91 @@ test.describe('Scalability checkpoints', () => {
       description: `${(growth * 100).toFixed(2)}% (${baseHeap} -> ${endHeap})`,
     });
     expect(growth).toBeLessThanOrEqual(0.1);
+  });
+});
+
+test.describe('Contract graph atom scalability', () => {
+  test.beforeEach(async ({ page }) => {
+    await launchWorkspace(page);
+  });
+
+  const fixtures = [
+    { profile: 'small-atoms', bucket: 'small', path: 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml' },
+    { profile: 'medium-atoms', bucket: 'medium', path: 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml' },
+    { profile: 'large-atoms', bucket: 'large', path: 'test/fixtures/projects-v2/perf/large-atoms.project.v2.yaml' },
+  ];
+
+  for (const fixture of fixtures) {
+    test(`opens and renders ${fixture.profile}`, async ({ page }, testInfo) => {
+      const meta = readPerfFixtureMeta(fixture.path);
+      const samples = [await openContractFixture(page, fixture.path, meta.atoms)];
+      for (let trial = 1; trial < 3; trial += 1) {
+        await page.getByRole('button', { name: 'Project graph' }).click();
+        await expect(page.getByTestId('project-node-atom_stress')).toBeVisible();
+        samples.push(await openLoadedContract(page, meta.atoms));
+      }
+      const loadMs = median(samples);
+      assertDurationBudget(`contract.load.${fixture.bucket}`, loadMs);
+      testInfo.annotations.push({
+        type: 'contract-load-ms',
+        description: `${fixture.profile}:median=${loadMs.toFixed(2)} samples=${samples.map(value => value.toFixed(2)).join(',')}`,
+      });
+    });
+  }
+
+  test('opens the 1,000-atom failure boundary in scheduled runs', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The 1,000-atom boundary runs in scheduled performance CI.');
+    const fixture = 'test/fixtures/projects-v2/perf/extreme-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    const samples = [await openContractFixture(page, fixture, meta.atoms)];
+    for (let trial = 1; trial < 3; trial += 1) {
+      await page.getByRole('button', { name: 'Project graph' }).click();
+      await expect(page.getByTestId('project-node-atom_stress')).toBeVisible();
+      samples.push(await openLoadedContract(page, meta.atoms));
+    }
+    const loadMs = median(samples);
+    assertDurationBudget('contract.load.extreme', loadMs);
+    testInfo.annotations.push({
+      type: 'contract-load-ms',
+      description: `extreme-atoms:median=${loadMs.toFixed(2)} samples=${samples.map(value => value.toFixed(2)).join(',')}`,
+    });
+  });
+
+  test('selecting one atom does not rerender unrelated contract nodes', async ({ page }, testInfo) => {
+    const fixture = 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+
+    await clearPerfSpans(page);
+    const selected = page.getByTestId('contract-node-atom_0050');
+    await selected.click();
+    await expect(selected).toHaveClass(/contract-node--selected/);
+    await expect.poll(async () => Object.keys(await getComponentRenders(page, 'ContractNode')).length).toBeGreaterThan(0);
+
+    const renders = await getComponentRenders(page, 'ContractNode');
+    const renderedNodes = Object.keys(renders);
+    testInfo.annotations.push({ type: 'contract-node-renders', description: renderedNodes.join(',') });
+    expect(renderedNodes).toEqual(['ContractNode:atom_0050']);
+  });
+
+  test('editing one parameter does not rerender unrelated project nodes', async ({ page }, testInfo) => {
+    await page.getByTestId('project-node-drive1').click();
+    await page.getByTestId('inspector-tab-atom').click();
+    const knob = page.getByTestId('param-knob-drive1-drive');
+    const box = await knob.boundingBox();
+    expect(box).not.toBeNull();
+
+    await clearPerfSpans(page);
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 - 6);
+    await page.mouse.up();
+    await waitForSpanCount(page, 'param.update', 1);
+    await expect.poll(async () => Object.keys(await getComponentRenders(page, 'ProjectNode')).length).toBeGreaterThan(0);
+
+    const renders = await getComponentRenders(page, 'ProjectNode');
+    const renderedNodes = Object.keys(renders);
+    testInfo.annotations.push({ type: 'project-node-renders', description: renderedNodes.join(',') });
+    expect(renderedNodes).toEqual(['ProjectNode:drive1']);
   });
 });

@@ -29,6 +29,7 @@ type PerfStore = {
   maxSamples: number;
   renderSamples: PerfRenderSpan[];
   maxRenderSamples: number;
+  componentRenders: Record<string, number>;
 };
 
 declare global {
@@ -47,6 +48,7 @@ function getStore(): PerfStore {
       maxSamples: MAX_SAMPLES,
       renderSamples: [],
       maxRenderSamples: MAX_RENDER_SAMPLES,
+      componentRenders: {},
     };
   }
 
@@ -58,6 +60,7 @@ function getStore(): PerfStore {
       maxSamples: MAX_SAMPLES,
       renderSamples: [],
       maxRenderSamples: MAX_RENDER_SAMPLES,
+      componentRenders: {},
     };
     window[TRACE_WINDOW] = store;
   }
@@ -131,6 +134,18 @@ export function markRenderPerfSpan(span: PerfRenderSpan): void {
 export function clearPerfRenderSpans(): void {
   const store = getStore();
   store.renderSamples = [];
+}
+
+export function markComponentRender(component: string, id: string): void {
+  if (!import.meta.env.DEV) return;
+  const store = getStore();
+  store.componentRenders ??= {};
+  const key = `${component}:${id}`;
+  store.componentRenders[key] = (store.componentRenders[key] ?? 0) + 1;
+}
+
+export function clearPerfComponentRenders(): void {
+  getStore().componentRenders = {};
 }
 
 export function clearPerfSpans(): void {

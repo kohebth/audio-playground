@@ -15,15 +15,16 @@ memory stability, and live WASM audio. The source requirements are the July 15 p
 | Parameter edit | `< 50 ms` | Knob mutation mark |
 | Undo/redo | `< 100 ms` | Browser marks |
 | Autosave blocking | `< 16 ms` | Browser serialization/storage mark |
-| 100-node/atom load | `< 500 ms` | 20-unit/100-target-atom project import only |
-| 500-node/atom load | `< 2 s` | 50-unit/500-target-atom project import only |
+| 100-node/atom load | `< 500 ms` | 100-atom contract canvas and 20-unit project import |
+| 500-node/atom load | `< 2 s` | 500-atom contract canvas and 50-unit project import |
 | Residual edit memory | `< 10%` | Chromium collected-heap gate after bounded-history warm-up |
 | Interaction frame rate | `>= 50 FPS` | Not implemented |
 | Runtime parameter control | `< 50 ms` | UI mutation only; Worklet round-trip not implemented |
 | Audio underruns from UI | `0` | Not implemented |
 
-The project import checks measure from browser file import through the expected rendered React Flow node count. Fixture
-`meta.perf.target.atoms` is descriptive until real 25/100/500/1,000-atom unit graphs are generated and mounted.
+The project import checks measure from browser file import through the expected rendered React Flow node count. Contract
+checks use the median of three opens, including the cold first open, through mounting every actual atom node. The
+1,000-atom boundary is scheduled-only.
 
 ## Fixture Matrix
 
@@ -31,7 +32,7 @@ The project import checks measure from browser file import through the expected 
 - [x] Linear, branching, highly connected, reused-unit, payload, and invalid variants.
 - [x] Target route counts of 30/140/700/1,500 where the topology supports them.
 - [x] Large parameter payload and repeated unit instances.
-- [ ] Executable unit fixtures containing 25/100/500/1,000 actual atom nodes.
+- [x] Executable unit fixtures containing 25/100/500/1,000 actual atom nodes.
 - [ ] Contract-canvas fixtures for linear, branched, dense, payload, and invalid atom graphs.
 
 ## Implementation Phases
@@ -43,7 +44,8 @@ The project import checks measure from browser file import through the expected 
 - [x] Deterministic fixture generator and size metadata.
 - [x] Pure-operation and Chromium collected-heap reporting.
 - [x] Async operations remain open until their promises settle.
-- [ ] Per-node/per-edge render counters and store notification counters.
+- [x] Per-node render counters and selection/parameter render-scope assertions.
+- [ ] Per-edge render counters and store notification counters.
 - [ ] Long-task, dropped-frame, style, layout, and paint collection.
 - [ ] Worker compile/swap timing and Worklet control round-trip marks.
 
@@ -66,7 +68,8 @@ The project import checks measure from browser file import through the expected 
 - [ ] Unit drag/drop with large atom payloads.
 - [ ] Inspector open/close loops, reconnect, rename, explicit replacement, and replacement undo/redo.
 - [ ] Malformed import proving atom `fn` cannot mutate except through explicit replacement.
-- [ ] Assertions that local edits do not rerender unrelated nodes or the full canvas.
+- [x] Selection and parameter edits do not rerender unrelated project or contract nodes.
+- [ ] Assertions that drag, topology, and YAML edits do not rerender unrelated nodes or the full canvas.
 - [ ] Slow/failing storage and one-hour autosave scenarios.
 
 ### Phase 4: Live Runtime
@@ -87,9 +90,10 @@ The project import checks measure from browser file import through the expected 
 
 ## Primary Success Criteria Audit
 
-1. **500-node graph remains usable:** Not proven. Current browser coverage mounts at most 100 project units; atom counts are
-   metadata only, and pan/zoom/config editing are not combined in the 500 case.
-2. **Local changes avoid full graph rerender:** Not proven. Profiler data exists, but no per-node render-scope assertion does.
+1. **500-node graph remains usable:** Partially proven. The browser mounts the real 500-atom contract graph under 2 seconds,
+   but pan/zoom/config editing and interaction FPS are not yet combined in that case.
+2. **Local changes avoid full graph rerender:** Partially proven. Exact node counters show one-node selection and parameter
+   edits stay local; drag, topology, YAML, edge, and store-notification scope remain.
 3. **Autosave has no visible stall:** Partially proven. Default-workspace rapid edits keep synchronous persistence under
    16 ms; large payload, slow storage, drag, and long-session cases remain.
 4. **Removed objects are not retained:** Partially proven. A collected-heap browser gate stays below 10% across a second

@@ -282,6 +282,11 @@ function validateRoute(
   }
 }
 
+export function validateProjectRoutes(content: string, ports: ProjectPortCatalog): void {
+  const draft = parseProjectGraphDraft(content);
+  draft.routes.forEach((route, index) => validateRoute(draft, ports, route, index));
+}
+
 export function addProjectRoute(
   content: string,
   ports: ProjectPortCatalog,

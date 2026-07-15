@@ -1,0 +1,355 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: perf_atoms_25
+version: 2.0.0
+meta:
+  title: Performance 25 atom chain
+  description: Deterministic contract-canvas performance fixture.
+  category: test
+  perf:
+    profile: small
+    atoms: 25
+params: {}
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+graph:
+  signals:
+    - input
+    - signal_0001
+    - signal_0002
+    - signal_0003
+    - signal_0004
+    - signal_0005
+    - signal_0006
+    - signal_0007
+    - signal_0008
+    - signal_0009
+    - signal_0010
+    - signal_0011
+    - signal_0012
+    - signal_0013
+    - signal_0014
+    - signal_0015
+    - signal_0016
+    - signal_0017
+    - signal_0018
+    - signal_0019
+    - signal_0020
+    - signal_0021
+    - signal_0022
+    - signal_0023
+    - signal_0024
+    - output
+  nodes:
+    - id: atom_0001
+      atom: amplitude_clip_hard
+      in:
+        signal: input
+      out:
+        signal: signal_0001
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 0
+          y: 0
+    - id: atom_0002
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0001
+      out:
+        signal: signal_0002
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 260
+          y: 0
+    - id: atom_0003
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0002
+      out:
+        signal: signal_0003
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 520
+          y: 0
+    - id: atom_0004
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0003
+      out:
+        signal: signal_0004
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 780
+          y: 0
+    - id: atom_0005
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0004
+      out:
+        signal: signal_0005
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 1040
+          y: 0
+    - id: atom_0006
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0005
+      out:
+        signal: signal_0006
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 0
+          y: 180
+    - id: atom_0007
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0006
+      out:
+        signal: signal_0007
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 260
+          y: 180
+    - id: atom_0008
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0007
+      out:
+        signal: signal_0008
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 520
+          y: 180
+    - id: atom_0009
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0008
+      out:
+        signal: signal_0009
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 780
+          y: 180
+    - id: atom_0010
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0009
+      out:
+        signal: signal_0010
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 1040
+          y: 180
+    - id: atom_0011
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0010
+      out:
+        signal: signal_0011
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 0
+          y: 360
+    - id: atom_0012
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0011
+      out:
+        signal: signal_0012
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 260
+          y: 360
+    - id: atom_0013
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0012
+      out:
+        signal: signal_0013
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 520
+          y: 360
+    - id: atom_0014
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0013
+      out:
+        signal: signal_0014
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 780
+          y: 360
+    - id: atom_0015
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0014
+      out:
+        signal: signal_0015
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 1040
+          y: 360
+    - id: atom_0016
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0015
+      out:
+        signal: signal_0016
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 0
+          y: 540
+    - id: atom_0017
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0016
+      out:
+        signal: signal_0017
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 260
+          y: 540
+    - id: atom_0018
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0017
+      out:
+        signal: signal_0018
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 520
+          y: 540
+    - id: atom_0019
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0018
+      out:
+        signal: signal_0019
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 780
+          y: 540
+    - id: atom_0020
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0019
+      out:
+        signal: signal_0020
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 1040
+          y: 540
+    - id: atom_0021
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0020
+      out:
+        signal: signal_0021
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 0
+          y: 720
+    - id: atom_0022
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0021
+      out:
+        signal: signal_0022
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 260
+          y: 720
+    - id: atom_0023
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0022
+      out:
+        signal: signal_0023
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 520
+          y: 720
+    - id: atom_0024
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0023
+      out:
+        signal: signal_0024
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 780
+          y: 720
+    - id: atom_0025
+      atom: amplitude_clip_hard
+      in:
+        signal: signal_0024
+      out:
+        signal: output
+      config:
+        threshold: 1
+      ui:
+        position:
+          x: 1040
+          y: 720
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

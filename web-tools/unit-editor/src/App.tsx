@@ -171,6 +171,10 @@ export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
   const [liveBypassController, setLiveBypassController] = useState<LiveBypassController | null>(null);
+  const liveBypassContextValue = useMemo(
+    () => ({ controller: liveBypassController, setController: setLiveBypassController }),
+    [liveBypassController],
+  );
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
@@ -857,7 +861,7 @@ export default function App() {
   const renderPerfSpans = readPerfRenderSpans(20);
 
   return (
-    <LiveBypassContext.Provider value={{ controller: liveBypassController, setController: setLiveBypassController }}>
+    <LiveBypassContext.Provider value={liveBypassContextValue}>
     {!workbenchLaunched && (
       <section className="launch-screen" aria-live="polite">
         <div className="splash-bg-glow glow-1" />

@@ -1,0 +1,29 @@
+kind: apg.project
+schema: apg.project.v2
+name: perf-atoms-large
+version: 2.0.0
+units:
+  - id: perf_atoms_500
+    file: ../../units-v2/perf/perf_atoms_500.unit.v2.yaml
+chain:
+  nodes:
+    - id: atom_stress
+      unit: perf_atoms_500
+  routes:
+    - from: system.input
+      to: atom_stress.input
+    - from: atom_stress.output
+      to: system.output
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render
+meta:
+  perf:
+    profile: large
+    topology: linear
+    target:
+      units: 1
+      atoms: 500
+      routes: 2

@@ -20,6 +20,10 @@
     "graph.load.medium": 500,
     "graph.load.large": 2000,
     "graph.load.extreme": 4000,
+    "contract.load.small": 500,
+    "contract.load.medium": 500,
+    "contract.load.large": 2000,
+    "contract.load.extreme": 4000,
     "workspace.autosave.persist": 16
   }
 }

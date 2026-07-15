@@ -1,12 +1,15 @@
-import { memo, type CSSProperties } from 'react';
+import { memo, useEffect, type CSSProperties } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import { useLiveBypass } from '../lib/liveBypass';
 import { ParamKnob } from './ParamKnob';
+import { markComponentRender } from '../lib/perfTelemetry';
 
 type ProjectFlowNode = Node<ProjectNodeData, 'projectNode'>;
 
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
+  const renderId = data.kind === 'system' ? data.id : data.instance.id;
+  useEffect(() => markComponentRender('ProjectNode', renderId));
   const { controller } = useLiveBypass();
   const style = { '--node-color': data.color } as CSSProperties;
 

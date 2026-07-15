@@ -17,7 +17,12 @@ static const fixture_file_t fixture_files[] = {
     {                "test/fixtures/units-v2/tremolo.unit.v2.yaml",    APG_WASM_FILE_UNIT},
     {                  "test/fixtures/units-v2/delay.unit.v2.yaml",    APG_WASM_FILE_UNIT},
     {            "test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml",    APG_WASM_FILE_UNIT},
-    {          "test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml", APG_WASM_FILE_UNIT},
+    {       "test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml",    APG_WASM_FILE_UNIT},
+};
+
+static const fixture_file_t extreme_atom_files[] = {
+    {"test/fixtures/projects-v2/perf/extreme-atoms.project.v2.yaml", APG_WASM_FILE_PROJECT},
+    {    "test/fixtures/units-v2/perf/perf_atoms_1000.unit.v2.yaml",    APG_WASM_FILE_UNIT},
 };
 
 static int fail(const apg_wasm_control_t *control, const char *message) {
@@ -226,6 +231,20 @@ int main(void) {
     if (apg_wasm_control_validate_workspace(control) != APG_WASM_STATUS_OK ||
         apg_wasm_control_compile_workspace(control) != APG_WASM_STATUS_OK)
         return fail(control, "valid unreferenced unit draft did not validate and compile");
+
+    const char *extreme_entry = extreme_atom_files[0].path;
+    if (apg_wasm_control_begin_workspace(control, 6u, extreme_entry, strlen(extreme_entry)) != APG_WASM_STATUS_OK)
+        return fail(control, "cannot begin 1,000-atom workspace");
+    for (size_t i = 0u; i < sizeof(extreme_atom_files) / sizeof(extreme_atom_files[0]); ++i) {
+        if (put_fixture(control, &extreme_atom_files[i]))
+            return 1;
+    }
+    if (apg_wasm_control_validate_workspace(control) != APG_WASM_STATUS_OK ||
+        apg_wasm_control_compile_workspace(control) != APG_WASM_STATUS_OK)
+        return fail(control, "1,000-atom workspace did not validate and compile");
+    summary = apg_wasm_control_workspace_summary(control);
+    if (!summary || summary->node_count != 1000u || summary->schedule_count != 1000u)
+        return fail(control, "1,000-atom workspace summary is incomplete");
 
     apg_wasm_control_destroy(control);
     return 0;

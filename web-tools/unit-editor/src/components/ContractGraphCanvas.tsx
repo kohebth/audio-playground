@@ -20,7 +20,7 @@ import dagre from 'dagre';
 import type { AtomCatalog, WorkspaceFile } from '../lib/backendSamples';
 import { ATOM_DRAG_TYPE } from './AtomCatalogPanel';
 import { parseUnitGraphDraft, type GraphPosition, type UnitConnectionEndpoint, type UnitGraphDraft } from '../lib/unitV2Graph';
-import { markPerfSpan } from '../lib/perfTelemetry';
+import { markComponentRender, markPerfSpan } from '../lib/perfTelemetry';
 
 type ContractNodeData = {
   id: string;
@@ -84,28 +84,28 @@ const CATEGORY_COLORS: Record<string, string> = {
 function buildContractFlow(
   unit: UnitGraphDraft,
   catalog: AtomCatalog,
-  selectedAtomId: string | null,
 ): { nodes: ContractFlowNode[]; edges: Edge[] } {
-  const graph = new dagre.graphlib.Graph();
+  const needsLayout = unit.nodes.some(node => !node.ui?.position);
+  const graph = needsLayout ? new dagre.graphlib.Graph() : null;
   const nodes: ContractFlowNode[] = [];
   const edges: Edge[] = [];
   const signalSource = new Map<string, { nodeId: string; handle: string }>();
+  const catalogByName = new Map(catalog.atoms.map(atom => [atom.name, atom]));
 
-  graph.setGraph({ rankdir: 'LR', nodesep: 46, ranksep: 78, marginx: 34, marginy: 42 });
-  graph.setDefaultEdgeLabel(() => ({}));
+  graph?.setGraph({ rankdir: 'LR', nodesep: 46, ranksep: 78, marginx: 34, marginy: 42 });
+  graph?.setDefaultEdgeLabel(() => ({}));
 
   for (const graphNode of unit.nodes) {
-    const atom = catalog.atoms.find(item => item.name === graphNode.atom);
+    const atom = catalogByName.get(graphNode.atom);
     const category = atom?.category ?? 'unknown';
     const color = CATEGORY_COLORS[category] ?? '#64748b';
     const nodeId = `contract-${graphNode.id}`;
 
-    graph.setNode(nodeId, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    graph?.setNode(nodeId, { width: NODE_WIDTH, height: NODE_HEIGHT });
     nodes.push({
       id: nodeId,
       type: 'contractNode',
-      position: { x: 0, y: 0 },
-      selected: graphNode.id === selectedAtomId,
+      position: graphNode.ui?.position ?? { x: 0, y: 0 },
       data: { ...graphNode, category, color },
     });
 
@@ -120,7 +120,7 @@ function buildContractFlow(
       const source = signalSource.get(signal);
       if (!source) continue;
 
-      graph.setEdge(source.nodeId, target);
+      graph?.setEdge(source.nodeId, target);
       edges.push({
         id: `contract-edge-${source.nodeId}-${target}-${port}`,
         source: source.nodeId,
@@ -135,24 +135,30 @@ function buildContractFlow(
     }
   }
 
-  dagre.layout(graph);
-
-  for (const node of nodes) {
-    const position = graph.node(node.id);
-    const storedPosition = unit.nodes.find(item => `contract-${item.id}` === node.id)?.ui?.position;
-    node.position = storedPosition ?? { x: position.x - NODE_WIDTH / 2, y: position.y - NODE_HEIGHT / 2 };
+  if (graph) {
+    dagre.layout(graph);
+    for (let index = 0; index < nodes.length; index += 1) {
+      if (unit.nodes[index].ui?.position) continue;
+      const position = graph.node(nodes[index].id);
+      nodes[index].position = { x: position.x - NODE_WIDTH / 2, y: position.y - NODE_HEIGHT / 2 };
+    }
   }
 
   return { nodes, edges };
 }
 
 const ContractNode = memo(({ data, selected }: NodeProps<ContractFlowNode>) => {
+  useEffect(() => markComponentRender('ContractNode', data.id));
   const inputPorts = Object.keys(data.in);
   const outputPorts = Object.keys(data.out);
   const style = { '--contract-node-color': data.color } as CSSProperties;
 
   return (
-    <div className={`contract-node ${selected ? 'contract-node--selected' : ''}`} style={style}>
+    <div
+      className={`contract-node ${selected ? 'contract-node--selected' : ''}`}
+      data-testid={`contract-node-${data.id}`}
+      style={style}
+    >
       <div className="contract-node__header">
         <span>{data.atom}</span>
         <strong>{data.category}</strong>
@@ -212,7 +218,7 @@ export function ContractGraphCanvas({
   const parsed = useMemo<ParsedContractGraph>(() => {
     try {
       const unit = parseUnitGraphDraft(workspaceFile.content);
-      return { unit, error: null, flow: buildContractFlow(unit, catalog, selectedAtomId) };
+      return { unit, error: null, flow: buildContractFlow(unit, catalog) };
     } catch (error) {
       return {
         unit: null,
@@ -220,7 +226,7 @@ export function ContractGraphCanvas({
         flow: { nodes: [], edges: [] },
       };
     }
-  }, [catalog, selectedAtomId, workspaceFile.content]);
+  }, [catalog, workspaceFile.content]);
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<ContractFlowNode>(parsed.flow.nodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(parsed.flow.edges);
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
@@ -228,16 +234,35 @@ export function ContractGraphCanvas({
   const dragStartAtByNode = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    setFlowNodes(current => parsed.flow.nodes.map(node => {
-      const positioned = current.find(item => item.id === node.id);
-      const storedPosition = parsed.unit?.nodes.find(item => `contract-${item.id}` === node.id)?.ui?.position;
-      return positioned && !storedPosition ? { ...node, position: positioned.position } : node;
-    }));
+    setFlowNodes(current => {
+      if (current === parsed.flow.nodes) return current;
+      const currentById = new Map(current.map(node => [node.id, node]));
+      const storedPositionIds = new Set(
+        parsed.unit?.nodes.filter(node => node.ui?.position).map(node => `contract-${node.id}`) ?? [],
+      );
+      return parsed.flow.nodes.map(node => {
+        const positioned = currentById.get(node.id);
+        return positioned && !storedPositionIds.has(node.id) ? { ...node, position: positioned.position } : node;
+      });
+    });
   }, [parsed.flow.nodes, parsed.unit?.nodes, setFlowNodes]);
 
   useEffect(() => {
     setFlowEdges(parsed.flow.edges);
   }, [parsed.flow.edges, setFlowEdges]);
+
+  useEffect(() => {
+    setFlowNodes(current => {
+      let changed = false;
+      const next = current.map(node => {
+        const selected = (node.data as ContractNodeData).id === selectedAtomId;
+        if (Boolean(node.selected) === selected) return node;
+        changed = true;
+        return { ...node, selected };
+      });
+      return changed ? next : current;
+    });
+  }, [selectedAtomId, setFlowNodes]);
 
   const connect = (connection: Connection) => {
     const source = endpoint(connection.source, connection.sourceHandle, 'out');

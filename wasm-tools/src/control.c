@@ -16,7 +16,7 @@
 
 #include "image.h"
 
-#define APG_WASM_DEFAULT_ARENA_BYTES (4u * 1024u * 1024u)
+#define APG_WASM_DEFAULT_ARENA_BYTES (16u * 1024u * 1024u)
 #define APG_WASM_DIAGNOSTIC_TEXT     128u
 
 typedef struct {

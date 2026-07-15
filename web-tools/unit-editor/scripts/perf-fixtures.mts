@@ -7,6 +7,7 @@ import { parseUnitPortNames } from '../src/lib/projectV2Graph.ts';
 const repoRoot = resolve(process.cwd(), '..', '..');
 const fixtureRoot = resolve(repoRoot, 'test/fixtures/projects-v2', 'perf');
 const unitRoot = resolve(repoRoot, 'test/fixtures/units-v2');
+const perfUnitRoot = resolve(unitRoot, 'perf');
 
 const PERF_PORT_COUNT = 24;
 
@@ -92,10 +93,10 @@ function createFanoutUnitFile(name: string, paramCount: number, inputCount = PER
     inputs: Array.from({ length: inputCount }, (_, index) => ({
       name: `in${index}`,
       kind: 'signal',
-      type: 'signal',
+      type: 'audio',
       channels: 1,
     })),
-    outputs: [{ name: 'out', kind: 'signal', type: 'signal', channels: 1 }],
+    outputs: [{ name: 'out', kind: 'signal', type: 'audio', channels: 1 }],
   };
 
   const params: Record<string, { type: string; default: number; min?: number; max?: number }> = {};
@@ -116,7 +117,14 @@ function createFanoutUnitFile(name: string, paramCount: number, inputCount = PER
     params,
     ports,
     graph: {
-      nodes: [],
+      signals: [...ports.inputs.map(port => port.name), 'out'],
+      nodes: [{
+        id: 'pass_through',
+        atom: 'amplitude_clip_hard',
+        in: { signal: 'in0' },
+        out: { signal: 'out' },
+        config: { threshold: 1.0 },
+      }],
     },
     compatibility: {
       desktop_full: true,
@@ -135,6 +143,87 @@ function createFanoutUnitFile(name: string, paramCount: number, inputCount = PER
   return file;
 }
 
+function createAtomStressUnit(profile: Profile): UnitTemplate {
+  const name = `perf_atoms_${profile.atoms}`;
+  const file = `${name}.unit.v2.yaml`;
+  const signals = ['input'];
+  const columns = Math.ceil(Math.sqrt(profile.atoms));
+  const nodes = Array.from({ length: profile.atoms }, (_, index) => {
+    const sequence = String(index + 1).padStart(4, '0');
+    const output = index === profile.atoms - 1 ? 'output' : `signal_${sequence}`;
+    signals.push(output);
+    return {
+      id: `atom_${sequence}`,
+      atom: 'amplitude_clip_hard',
+      in: { signal: index === 0 ? 'input' : `signal_${String(index).padStart(4, '0')}` },
+      out: { signal: output },
+      config: { threshold: 1.0 },
+      ui: {
+        position: {
+          x: (index % columns) * 260,
+          y: Math.floor(index / columns) * 180,
+        },
+      },
+    };
+  });
+
+  ensureDir(perfUnitRoot);
+  writeYaml(resolve(perfUnitRoot, file), {
+    kind: 'apg.unit',
+    schema: 'apg.unit.v2',
+    name,
+    version: '2.0.0',
+    meta: {
+      title: `Performance ${profile.atoms} atom chain`,
+      description: 'Deterministic contract-canvas performance fixture.',
+      category: 'test',
+      perf: { profile: profile.name, atoms: profile.atoms },
+    },
+    params: {},
+    ports: {
+      inputs: [{ name: 'input', type: 'audio', channels: 1 }],
+      outputs: [{ name: 'output', type: 'audio', channels: 1 }],
+    },
+    graph: { signals, nodes },
+    compatibility: {
+      desktop_full: true,
+      wasm_realtime: true,
+      m7_static: true,
+      offline_render: true,
+    },
+  });
+
+  return { id: name, file: `../../units-v2/perf/${file}` };
+}
+
+function buildAtomStressProject(profile: Profile, unit: UnitTemplate): ProjectFixture {
+  return {
+    kind: 'apg.project',
+    schema: 'apg.project.v2',
+    name: `perf-atoms-${profile.name}`,
+    version: '2.0.0',
+    units: [{ id: unit.id, file: unit.file }],
+    chain: {
+      nodes: [{ id: 'atom_stress', unit: unit.id }],
+      routes: [
+        { from: 'system.input', to: 'atom_stress.input' },
+        { from: 'atom_stress.output', to: 'system.output' },
+      ],
+    },
+    targets: {
+      default: 'desktop_full',
+      export: ['wasm_realtime', 'offline_render'],
+    },
+    meta: {
+      perf: {
+        profile: profile.name,
+        topology: 'linear',
+        target: { units: 1, atoms: profile.atoms, routes: 2 },
+      },
+    },
+  };
+}
+
 function buildUnitTemplates(): UnitTemplate[] {
   const templates: UnitTemplate[] = [];
 
@@ -147,7 +236,7 @@ function buildUnitTemplates(): UnitTemplate[] {
     if (!input || !output) {
       continue;
     }
-    templates.push({ id: `${unitBase}_unit`, file: `../units-v2/${file}` });
+    templates.push({ id: `${unitBase}_unit`, file: `../../units-v2/${file}` });
   }
 
   if (templates.length < 2) {
@@ -155,13 +244,13 @@ function buildUnitTemplates(): UnitTemplate[] {
   }
 
   const fanWidePath = createFanoutUnitFile('perf_fanwide', 3);
-  templates.push({ id: 'perf_fanwide', file: `../units-v2/${fanWidePath}` });
+  templates.push({ id: 'perf_fanwide', file: `../../units-v2/${fanWidePath}` });
 
   const payloadPath = createFanoutUnitFile('perf_fanwide_payload', 64);
-  templates.push({ id: 'perf_fanwide_payload', file: `../units-v2/${payloadPath}` });
+  templates.push({ id: 'perf_fanwide_payload', file: `../../units-v2/${payloadPath}` });
 
   const fanWideManyPortsPath = createFanoutUnitFile('perf_fanwide_24in', 1, PERF_PORT_COUNT);
-  templates.push({ id: 'perf_fanwide_24in', file: `../units-v2/${fanWideManyPortsPath}` });
+  templates.push({ id: 'perf_fanwide_24in', file: `../../units-v2/${fanWideManyPortsPath}` });
 
   return templates;
 }
@@ -380,6 +469,18 @@ function generate(): void {
   const topologies: Topology[] = ['linear', 'branching', 'highly_connected', 'reuse'];
 
   for (const profile of PROFILES) {
+    const atomUnit = createAtomStressUnit(profile);
+    const atomProject = buildAtomStressProject(profile, atomUnit);
+    const atomProjectPath = resolve(fixtureRoot, `${profile.name}-atoms.project.v2.yaml`);
+    writeYaml(atomProjectPath, atomProject);
+    outputs.push({
+      profile: `${profile.name}-atoms`,
+      topology: 'linear',
+      path: atomProjectPath,
+      nodes: atomProject.chain.nodes.length,
+      routes: atomProject.chain.routes.length,
+    });
+
     for (const topology of topologies) {
       const payload = buildProject(profile, topology, templates);
       const output = writeOutput(profile, topology, payload);

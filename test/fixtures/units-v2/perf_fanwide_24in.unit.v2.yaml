@@ -12,107 +12,141 @@ ports:
   inputs:
     - name: in0
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in1
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in2
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in3
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in4
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in5
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in6
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in7
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in8
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in9
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in10
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in11
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in12
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in13
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in14
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in15
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in16
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in17
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in18
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in19
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in20
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in21
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in22
       kind: signal
-      type: signal
+      type: audio
       channels: 1
     - name: in23
       kind: signal
-      type: signal
+      type: audio
       channels: 1
   outputs:
     - name: out
       kind: signal
-      type: signal
+      type: audio
       channels: 1
 graph:
-  nodes: []
+  signals:
+    - in0
+    - in1
+    - in2
+    - in3
+    - in4
+    - in5
+    - in6
+    - in7
+    - in8
+    - in9
+    - in10
+    - in11
+    - in12
+    - in13
+    - in14
+    - in15
+    - in16
+    - in17
+    - in18
+    - in19
+    - in20
+    - in21
+    - in22
+    - in23
+    - out
+  nodes:
+    - id: pass_through
+      atom: amplitude_clip_hard
+      in:
+        signal: in0
+      out:
+        signal: out
+      config:
+        threshold: 1
 compatibility:
   desktop_full: true
   wasm_realtime: true

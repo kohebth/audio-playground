@@ -1,9 +1,20 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 
 import type { AtomCatalog, AtomCatalogAtom } from '../src/lib/backendSamples.ts';
-import { addProjectInstance, addProjectRoute, moveProjectInstance, moveProjectRoute, parseProjectGraphDraft, parseUnitPortNames, removeProjectInstance, removeProjectRoute, setProjectInstancePosition } from '../src/lib/projectV2Graph.ts';
+import {
+  addProjectInstance,
+  addProjectRoute,
+  moveProjectInstance,
+  moveProjectRoute,
+  parseProjectGraphDraft,
+  parseUnitPortNames,
+  removeProjectInstance,
+  removeProjectRoute,
+  setProjectInstancePosition,
+  validateProjectRoutes,
+} from '../src/lib/projectV2Graph.ts';
 import {
   addAtomNodeToUnit,
   connectUnitNodes,
@@ -223,10 +234,13 @@ function memoryMb(): number {
   return Number((process.memoryUsage().heapUsed / 1024 / 1024).toFixed(3));
 }
 
-function resolveUnitPorts(draft: ReturnType<typeof parseProjectGraphDraft>): ProjectPortCatalog {
+function resolveUnitPorts(
+  draft: ReturnType<typeof parseProjectGraphDraft>,
+  projectPath: string,
+): ProjectPortCatalog {
   const ports: ProjectPortCatalog = {};
   for (const reference of draft.units) {
-    const file = resolve(unitRoot, reference.file.replace('../units-v2/', ''));
+    const file = resolve(dirname(projectPath), reference.file);
     const content = readFileSync(file, 'utf8');
     const resolved = parseUnitPortNames(content);
     if (!resolved.inputs.length || !resolved.outputs.length) {
@@ -304,9 +318,10 @@ function benchmarkProjectFixture(file: string): ProjectBenchmarkResult {
     });
     const parsed = parseProjectFromFile(path);
     const unitPortResolutionMs = measure(() => {
-      resolveUnitPorts(parsed.draft);
+      resolveUnitPorts(parsed.draft, path);
     });
-    const ports = resolveUnitPorts(parsed.draft);
+    const ports = resolveUnitPorts(parsed.draft, path);
+    validateProjectRoutes(parsed.content, ports);
     const mutations = benchmarkProjectMutations(parsed.content, parsed.draft, ports);
     const totalMs = parseMs + unitPortResolutionMs + mutations.addRemoveMs + mutations.moveInstanceMs + mutations.routeMutationMs;
 
@@ -478,7 +493,14 @@ function assertThresholds(projects: ProjectBenchmarkResult[], units: UnitBenchma
   const regressions: string[] = [];
 
   for (const row of projects) {
-    if (!row.valid) continue;
+    if (!row.valid) {
+      if (!row.invalidExpected) failures.push(`project:${row.profile}: ${row.error ?? 'fixture failed'}`);
+      continue;
+    }
+    if (row.invalidExpected) {
+      failures.push(`project:${row.profile}: expected invalid fixture was accepted`);
+      continue;
+    }
     const bucket = thresholds.buckets[row.bucket];
     if (row.parseMs > bucket.maxParseMs) {
       failures.push(`project:${row.profile}: parseMs ${row.parseMs} > ${bucket.maxParseMs}`);

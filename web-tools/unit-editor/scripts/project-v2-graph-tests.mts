@@ -14,6 +14,7 @@ import {
   renameProjectInstance,
   replaceProjectRoute,
   setProjectInstancePosition,
+  validateProjectRoutes,
   type ProjectPortCatalog,
 } from '../src/lib/projectV2Graph.ts';
 
@@ -32,6 +33,7 @@ const ports: ProjectPortCatalog = {
 const draft = parseProjectGraphDraft(project);
 assert.equal(draft.nodes.length, 7);
 assert.equal(draft.routes.length, 9);
+assert.doesNotThrow(() => validateProjectRoutes(project, ports));
 
 const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' }, { x: 320, y: 180 });
 assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.id, 'drive2');
@@ -76,6 +78,10 @@ assert.throws(
 assert.throws(
   () => addProjectRoute(disconnected, ports, { from: 'drive1.input', to: 'tone1.input' }),
   /not a unit output/,
+);
+assert.throws(
+  () => validateProjectRoutes(project.replace('to: drive1.input', 'to: drive1.not_a_port'), ports),
+  /not a unit input/,
 );
 
 const replaced = parseProjectGraphDraft(replaceProjectRoute(project, ports, 5, {
