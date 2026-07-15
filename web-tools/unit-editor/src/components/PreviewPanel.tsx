@@ -444,17 +444,24 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
     <section className={compact ? 'transport-island preview-panel--compact' : 'inspector-block'}>
       {compact ? (
         <>
-          <div className="transport-group">
-            <button className={`transport-btn ${running ? 'active' : ''}`} disabled={!backend} onClick={() => void (running ? stop() : start())} type="button">
+      <div className="transport-group">
+            <button
+              className={`transport-btn ${running ? 'active' : ''}`}
+              data-testid="preview-start-stop"
+              disabled={!backend}
+              onClick={() => void (running ? stop() : start())}
+              type="button"
+            >
               <i className={`fa-solid ${running ? 'fa-stop' : 'fa-play'}`} aria-hidden="true" />
             </button>
-            <button className="transport-btn" disabled={!backend} onClick={() => void compile()} title="Compile" type="button">
+            <button className="transport-btn" data-testid="preview-compile" disabled={!backend} onClick={() => void compile()} title="Compile" type="button">
               <i className="fa-solid fa-hammer" aria-hidden="true" />
             </button>
-          </div>
+        </div>
           <div className="transport-group preview-panel__mode" aria-label="Audio input mode" role="group">
             <button
               aria-pressed={inputMode === 'file'}
+              data-testid="preview-mode-file"
               className={`source-toggle ${inputMode === 'file' ? 'active' : ''}`}
               disabled={running}
               onClick={() => setInputMode('file')}
@@ -465,6 +472,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
             </button>
             <button
               aria-pressed={inputMode === 'microphone'}
+              data-testid="preview-mode-mic"
               className={`source-toggle ${inputMode === 'microphone' ? 'active' : ''}`}
               disabled={running}
               onClick={() => setInputMode('microphone')}
@@ -541,22 +549,24 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
       )}
 
       <div className="preview-panel__actions">
-        <button className="btn btn--ghost" disabled={!backend} onClick={() => void compile()} type="button">
+        <button className="btn btn--ghost" data-testid="preview-compile" disabled={!backend} onClick={() => void compile()} type="button">
           Compile
         </button>
         <button
           className="btn btn--ghost"
+          data-testid="preview-start-stop"
           disabled={!backend}
           onClick={() => void (running ? stop() : start())}
           type="button"
         >
           {running ? 'Stop' : 'Start'}
         </button>
-        <button className="btn btn--ghost" disabled={!running} onClick={() => void reset()} type="button">
+        <button className="btn btn--ghost" data-testid="preview-reset" disabled={!running} onClick={() => void reset()} type="button">
           Reset
         </button>
         <button
           className="btn btn--ghost"
+          data-testid="preview-latency"
           disabled={!running || inputMode !== 'microphone' || measuringLatency}
           onClick={() => void measureAcousticLatency()}
           type="button"
@@ -588,7 +598,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
         <button className="btn btn--ghost" disabled={!running || !firstOverride} onClick={() => void sendFirstParam()} type="button">
           Send param
         </button>
-        <button className="btn btn--ghost" disabled={!running} onClick={() => void toggleMute()} type="button">
+        <button className="btn btn--ghost" data-testid="preview-mute" disabled={!running} onClick={() => void toggleMute()} type="button">
           {muted ? 'Unmute output' : 'Mute output'}
         </button>
       </div>

@@ -162,12 +162,13 @@ export function ProjectSidebar({
         </select>
         <input
           aria-label="New instance id"
+          data-testid="project-instance-id"
           onChange={event => setInstanceId(event.target.value)}
           placeholder="id"
           spellCheck={false}
           value={instanceId}
         />
-        <button disabled={!instanceUnit || !instanceId.trim()} title="Add unit" type="submit">
+        <button data-testid="project-instance-add" disabled={!instanceUnit || !instanceId.trim()} title="Add unit" type="submit">
           <i className="fa-solid fa-plus" aria-hidden="true" />
         </button>
       </form>
@@ -181,6 +182,7 @@ export function ProjectSidebar({
             <button
               key={instance.id}
               className={`project-list__item unit-item ${selectedNodeId === nodeId ? 'project-list__item--active' : ''}`}
+              data-testid={`project-instance-item-${instance.id}`}
               onClick={() => onSelectNode(nodeId)}
               onDoubleClick={() => onOpenContractGraph(nodeId)}
               type="button"
@@ -219,7 +221,7 @@ export function ProjectSidebar({
           <select aria-label="New route target" onChange={event => setRouteTarget(event.target.value)} value={routeTarget}>
             {routeTargets.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
           </select>
-          <button disabled={!routeSource || !routeTarget} type="submit">Connect</button>
+          <button data-testid="project-route-add" disabled={!routeSource || !routeTarget} type="submit">Connect</button>
         </form>
         {routeError ? <p className="workspace-ledger__error">{routeError}</p> : null}
         <div className="route-list__columns" aria-hidden="true">

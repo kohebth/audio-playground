@@ -44,6 +44,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           <span className="pedal-type-name">{data.unit.name}</span>
           <div className="project-node__tools">
             <button
+              data-testid={`project-node-bypass-${data.instance.id}`}
               aria-label={`Turn ${bypassed ? 'on' : 'off'} ${data.instance.id}`}
               aria-pressed={bypassed}
               className={`project-node__bypass bypass-btn ${bypassed ? 'off project-node__bypass--active' : 'on'} nodrag nopan`}

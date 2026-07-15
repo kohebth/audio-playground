@@ -845,7 +845,7 @@ export default function App() {
             <i><b className={runtimeReady ? 'launch-screen__progress-fill launch-screen__progress-fill--ready' : 'launch-screen__progress-fill'} /></i>
           </div>
           {runtimeReady && (
-            <button className="launch-screen__button" onClick={() => setWorkbenchLaunched(true)} type="button">
+            <button className="launch-screen__button" data-testid="launch-workspace" onClick={() => setWorkbenchLaunched(true)} type="button">
               <i className="fa-solid fa-rocket" aria-hidden="true" />
               Launch Workspace
             </button>

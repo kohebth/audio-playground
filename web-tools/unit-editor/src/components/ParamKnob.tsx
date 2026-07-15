@@ -12,6 +12,17 @@ type Props = {
   onChange: (next: string) => void;
 };
 
+function toTestId(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 90);
+}
+
 const RANGE_FRACTION_PER_DRAG_PIXEL = 0.005;
 
 function numberOrNull(value: string | undefined): number | null {
@@ -117,7 +128,6 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
       dragState.current = null;
     },
   };
-
   const control = compact ? (
     <div
       aria-label={`${ariaLabel} percent`}
@@ -125,6 +135,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
       aria-valuemin={0}
       aria-valuenow={Math.round(percent)}
       className="knob"
+      data-testid={`param-knob-${toTestId(ariaLabel)}`}
       role="slider"
       style={{ '--knob-percent': `${percent}%`, '--knob-angle': `${percent * 2.7 - 135}deg` } as CSSProperties}
       tabIndex={0}
@@ -139,6 +150,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
     <input
       aria-label={`${ariaLabel} percent`}
       className="param-list__knob-input"
+      data-testid={`param-knob-${toTestId(ariaLabel)}-dial`}
       inputMode="decimal"
       readOnly
       style={{ '--knob-percent': `${percent}%` } as CSSProperties}
@@ -146,11 +158,28 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
       {...pointerEvents}
     />
   );
+  const knobTestId = `param-knob-${toTestId(ariaLabel)}`;
 
   if (compact) {
     return (
       <label className="unit-knob knob-wrapper nodrag nopan" onPointerDown={event => event.stopPropagation()}>
-        {control}
+        <div
+          aria-label={`${ariaLabel} percent`}
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={Math.round(percent)}
+          className="knob"
+          data-testid={knobTestId}
+          role="slider"
+          style={{ '--knob-percent': `${percent}%`, '--knob-angle': `${percent * 2.7 - 135}deg` } as CSSProperties}
+          tabIndex={0}
+          {...pointerEvents}
+        >
+          <div className="knob-ring" />
+          <div className="knob-cap">
+            <div className="knob-pointer" />
+          </div>
+        </div>
         <span className="knob-label">{label ?? ariaLabel}</span>
         <output className="knob-value">{draft}{unit ? ` ${unit}` : ''}</output>
       </label>
@@ -164,6 +193,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
         <input
           aria-label={ariaLabel}
           className={outOfRange ? 'param-list__value-input param-list__value-input--invalid' : 'param-list__value-input'}
+          data-testid={`${knobTestId}-field`}
           inputMode="decimal"
           onBlur={() => commitValue(draft)}
           onChange={event => {

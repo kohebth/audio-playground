@@ -82,15 +82,30 @@ export function ProjectTopbar({
         </div>
         <span className="header-divider" />
         <div className="topbar__workspace-actions">
-        <button className="btn btn--ghost topbar__icon-btn" disabled={!canUndo} onClick={onUndo} title="Undo" type="button">
+        <button
+          className="btn btn--ghost topbar__icon-btn"
+          data-testid="topbar-undo"
+          disabled={!canUndo}
+          onClick={onUndo}
+          title="Undo"
+          type="button"
+        >
           <i className="fa-solid fa-rotate-left" aria-hidden="true" />
         </button>
-        <button className="btn btn--ghost topbar__icon-btn" disabled={!canRedo} onClick={onRedo} title="Redo" type="button">
+        <button
+          className="btn btn--ghost topbar__icon-btn"
+          data-testid="topbar-redo"
+          disabled={!canRedo}
+          onClick={onRedo}
+          title="Redo"
+          type="button"
+        >
           <i className="fa-solid fa-rotate-right" aria-hidden="true" />
         </button>
         <label className="btn btn--ghost">
           Import
           <input
+            data-testid="topbar-import-input"
             accept="application/json"
             onChange={event => {
               void onImportWorkspace(event.target.files?.[0] ?? null);
@@ -99,10 +114,10 @@ export function ProjectTopbar({
             type="file"
           />
         </label>
-        <button className="btn btn--ghost" onClick={onExportWorkspace} type="button">
+        <button className="btn btn--ghost" data-testid="topbar-export" onClick={onExportWorkspace} type="button">
           Export
         </button>
-        <button className="btn btn--ghost" disabled={!hasWorkspaceDrafts} onClick={onResetWorkspace} type="button">
+        <button className="btn btn--ghost" data-testid="topbar-reset" disabled={!hasWorkspaceDrafts} onClick={onResetWorkspace} type="button">
           Reset
         </button>
         </div>
