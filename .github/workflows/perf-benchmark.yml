@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - 'web-tools/unit-editor/**'
+      - 'wasm-tools/**'
+      - 'src/**'
+      - 'inc/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/perf-benchmark.yml'
       - 'test/fixtures/projects-v2/perf/**'
       - 'test/fixtures/units-v2/**'
       - 'test/golden/v2-inspect-atoms.json'
@@ -34,3 +39,50 @@ jobs:
       - name: Performance regression check
         working-directory: web-tools/unit-editor
         run: npm run perf:benchmark:ci
+
+  browser-medium:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            wasm-tools/package-lock.json
+            web-tools/unit-editor/package-lock.json
+
+      - name: Set up Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 5.0.1
+          actions-cache-folder: emsdk-cache
+
+      - name: Build and smoke-test WASM middleware
+        run: |
+          emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-wasm --target apg_control apg_processor -j2
+          node wasm-tools/test/emscripten_runtime_smoke.mjs build-wasm/wasm-tools .
+          mkdir -p web-tools/unit-editor/public/wasm
+          cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm web-tools/unit-editor/public/wasm/
+          cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm web-tools/unit-editor/public/wasm/
+          cp wasm-tools/web/processor.worklet.js web-tools/unit-editor/public/wasm/processor.worklet.js
+
+      - name: Build WASM web facade
+        working-directory: wasm-tools
+        run: npm install && npm run build
+
+      - name: Install web editor dependencies
+        working-directory: web-tools/unit-editor
+        run: npm install
+
+      - name: Install Chromium
+        working-directory: web-tools/unit-editor
+        run: npx playwright install --with-deps chromium
+
+      - name: Medium browser performance gate
+        working-directory: web-tools/unit-editor
+        run: npm run perf:ui:pr

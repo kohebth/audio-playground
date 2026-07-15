@@ -94,7 +94,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 
 - [x] Pull-request pure-operation threshold and baseline regression gate.
 - [x] Fixed threshold plus percentage/absolute baseline regression policy.
-- [ ] Stable medium-fixture browser checks on pull requests.
+- [x] Stable medium-fixture Chromium graph-load and replacement checks on pull requests.
 - [ ] Scheduled 500/1,000-atom, long-session, continuous-drag, live-audio, browser-matrix, and throttled runs.
 - [ ] Historical JSON browser results and trend artifact generation.
 

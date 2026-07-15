@@ -590,7 +590,7 @@ test.describe('Scalability checkpoints', () => {
   ];
 
   for (const fixture of fixtures) {
-    test(`graph load and synchronize ${fixture.profile}`, async ({ page }, testInfo) => {
+    test(`${fixture.bucket === 'medium' ? '@pr-medium ' : ''}graph load and synchronize ${fixture.profile}`, async ({ page }, testInfo) => {
       const meta = readPerfFixtureMeta(fixture.path);
       await clearPerfSpans(page);
       const loadMs = await importPerfWorkspaceFixture(page, fixture.path, meta.nodes);
@@ -1132,7 +1132,7 @@ test.describe('Contract graph atom scalability', () => {
     testInfo.annotations.push({ type: 'viewport-node-renders', description: String(viewportRenders.length) });
   });
 
-  test('explicit replacement is controlled and undoable in a medium graph', async ({ page }, testInfo) => {
+  test('@pr-medium explicit replacement is controlled and undoable in a medium graph', async ({ page }, testInfo) => {
     const fixture = 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml';
     const meta = readPerfFixtureMeta(fixture);
     await openContractFixture(page, fixture, meta.atoms);

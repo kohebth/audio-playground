@@ -49,7 +49,7 @@ jobs:
           mkdir -p web-tools/unit-editor/public/wasm
           cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm web-tools/unit-editor/public/wasm/
           cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm web-tools/unit-editor/public/wasm/
-          cp wasm-tools/web/processor.worklet.js web-tools/unit-editor/public/wasm/apg_processor.worklet.js
+          cp wasm-tools/web/processor.worklet.js web-tools/unit-editor/public/wasm/processor.worklet.js
 
       - name: Build WASM web facade
         working-directory: wasm-tools
