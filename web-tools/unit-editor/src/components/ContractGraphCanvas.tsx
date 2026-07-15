@@ -299,6 +299,7 @@ export function ContractGraphCanvas({
       ) : (
         <div
           className={`flow-shell flow-shell--contract flow-shell--drop-${dropState}`}
+          data-testid="contract-canvas"
           onDragLeave={() => setDropState('idle')}
           onDragOver={dragOver}
           onDrop={drop}

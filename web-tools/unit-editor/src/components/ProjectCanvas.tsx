@@ -79,6 +79,7 @@ function ProjectFlow({
   return (
     <div
       className={`flow-shell flow-shell--drop-${dropState}`}
+      data-testid="project-canvas"
       onDragLeave={() => setDropState('idle')}
       onDragOver={dragOver}
       onDrop={drop}

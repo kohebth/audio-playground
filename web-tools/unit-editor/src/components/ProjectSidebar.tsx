@@ -141,6 +141,7 @@ export function ProjectSidebar({
             key={unit.id}
             className="unit-library__item"
             draggable
+            data-testid={`project-unit-item-${unit.id}`}
             onClick={() => onAddUnitFromLibrary(unit.id)}
             onDragStart={event => {
               markPerfSpan('ui.dragStart.projectUnit', () => {
@@ -229,6 +230,7 @@ export function ProjectSidebar({
           <button
             key={`${index}-${route.from}-${route.to}`}
             className={`route-list__item route-item ${selectedRouteIndex === index ? 'route-list__item--active' : ''}`}
+            data-testid={`route-item-${index}`}
             onClick={() => onSelectRoute(index)}
             type="button"
           >

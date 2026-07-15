@@ -80,6 +80,7 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) 
             key={atom.name}
             className={`atom-palette__item ${atom.name === selectedAtomName ? 'atom-palette__item--active' : ''}`}
             draggable
+            data-testid={`atom-palette-item-${atom.name}`}
             onClick={() => setSelectedAtomName(atom.name)}
             onDragStart={event => {
               markPerfSpan('ui.dragStart.atomPalette', () => {
