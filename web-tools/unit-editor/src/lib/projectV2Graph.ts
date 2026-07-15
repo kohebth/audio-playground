@@ -161,6 +161,35 @@ export function addProjectInstance(
   return { content: dumpDocument(doc), id: requestedId };
 }
 
+export function insertProjectInstanceOnRoute(
+  content: string,
+  ports: ProjectPortCatalog,
+  unit: string,
+  requestedId: string,
+  routeIndex: number,
+  params: Record<string, string> = {},
+  position?: GraphPosition,
+): { content: string; id: string } {
+  const draft = parseProjectGraphDraft(content);
+  const route = draft.routes[routeIndex];
+  if (!route) throw new Error(`Project route ${routeIndex} was not found.`);
+  const unitPorts = ports[unit];
+  if (!unitPorts || unitPorts.inputs.length !== 1 || unitPorts.outputs.length !== 1) {
+    throw new Error(`Project unit "${unit}" must have exactly one input and one output for route insertion.`);
+  }
+  const added = addProjectInstance(content, unit, requestedId, params, position);
+  const doc = loadDocument(added.content);
+  const chain = ensureChain(doc);
+  const routes = (chain.routes as unknown[]).filter(isObject);
+  routes.splice(routeIndex, 1,
+    { from: route.from, to: `${added.id}.${unitPorts.inputs[0]}` },
+    { from: `${added.id}.${unitPorts.outputs[0]}`, to: route.to });
+  chain.routes = routes;
+  const next = dumpDocument(doc);
+  validateProjectRoutes(next, ports);
+  return { content: next, id: added.id };
+}
+
 export function duplicateProjectInstance(content: string, instanceId: string): { content: string; id: string } {
   const draft = parseProjectGraphDraft(content);
   const source = draft.nodes.find(node => node.id === instanceId);

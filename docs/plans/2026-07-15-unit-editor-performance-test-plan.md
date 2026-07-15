@@ -70,7 +70,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Scheduled 20x100 atom mount/remove retention gate after saturating bounded undo history.
 - [x] Pointer-event node drag while 500 atoms are mounted.
 - [x] Invalid drop, Escape cancel, rapid drop, zoom/pan drop, and filtered catalog.
-- [x] Edge drop with an explicit split-and-reconnect transaction and single-step undo.
+- [x] Atom and project-unit edge drops with explicit split-and-reconnect transactions and single-step undo.
 - [x] Unit drag/drop with a referenced 500-atom payload, without expanding internals on the project canvas.
 - [x] Explicit medium-graph replacement, replacement undo/redo, and post-replacement config isolation.
 - [x] Malformed import proving legacy `fn` cannot mutate the immutable `atom` type.
@@ -83,8 +83,8 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 
 ### Phase 4: Live Runtime
 
-- [ ] Add atom/unit, reconnect, replacement, undo/redo, save, and import while audio runs.
-- [ ] Separate UI commit latency from compile/prepare/commit latency.
+- [x] Add atom/unit, reconnect, replacement, undo/redo, save, and import while audio runs.
+- [x] Separate UI mutation latency from worker compile/prepare and Worklet commit latency.
 - [ ] Assert zero meter underruns and zero callback deadline misses.
 - [x] Rapid Worklet parameter-control latency under `50 ms`, with per-path diffing and in-flight coalescing.
 - [ ] Start/stop leak checks for AudioContexts, Worklets, Workers, ports, streams, and timers.
@@ -111,7 +111,10 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 4. **Removed objects are not retained:** Partially proven. Collected-heap browser gates stay below 10% across a second
    saturated undo-history window and 20 cycles that mount and remove 100 atoms; edges, inspectors, navigation, and
    runtime handles remain.
-5. **Editing during audio causes no underrun:** Not proven.
+5. **Editing during audio causes no underrun:** Proven for the scheduled structural workflow. Project-unit and atom
+   insertion, atom replacement, reconnect, undo/redo, save, and a 100-atom import each hot-swap while fake microphone
+   audio remains running, revisions converge, and the meter underrun count does not increase. Callback deadline timing
+   remains unavailable and is tracked separately.
 6. **Explicit replacement stays controlled:** Proven. Pure transformer tests cover compatibility planning, the browser
    gate keeps medium-graph replacement under 300 ms, only the replaced node rerenders, undo/redo restore both types, and
    subsequent configuration editing remains isolated.

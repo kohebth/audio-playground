@@ -410,6 +410,21 @@ async function dispatchContractEdgeDrop(page: Page, edgeId: string, atomName: st
   }, atomName);
 }
 
+async function dispatchProjectEdgeDrop(page: Page, edgeId: string, unitId: string): Promise<void> {
+  await page.getByTestId(`rf__edge-${edgeId}`).evaluate((edge, unit) => {
+    const dataTransfer = new DataTransfer();
+    dataTransfer.setData('application/x-apg-unit', unit);
+    const bounds = edge.getBoundingClientRect();
+    edge.dispatchEvent(new DragEvent('drop', {
+      bubbles: true,
+      cancelable: true,
+      clientX: bounds.left + bounds.width / 2,
+      clientY: bounds.top + bounds.height / 2,
+      dataTransfer,
+    }));
+  }, unitId);
+}
+
 async function launchWorkspace(page: Page) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const launch = page.getByTestId('launch-workspace');
@@ -1268,5 +1283,80 @@ test.describe('Live WASM runtime performance', () => {
     expect(stoppedSnapshot?.resources.workletStarts).toBe(stoppedSnapshot?.resources.workletStops);
     expect(pageErrors).toEqual([]);
     testInfo.annotations.push({ type: 'runtime-param-control-ms', description: controlMs.toFixed(2) });
+  });
+
+  test('structural edits hot-swap while live audio remains healthy', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The full live structural workflow runs in scheduled performance CI.');
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+    await page.getByTestId('preview-mode-mic').click();
+    await page.getByTestId('preview-start-stop').click();
+    await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+    await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.valid ?? false, { timeout: 10_000 }).toBe(true);
+    const baselineUnderruns = (await getRuntimeSnapshot(page))?.meter.underruns ?? 0;
+    const swaps: Array<{ action: string; prepareMs: number; commitMs: number }> = [];
+    const waitForHotSwap = async (action: string) => {
+      const prepareMs = await runAndAssertBudget(page, 'runtime.prepare.workspace', 1);
+      const commitMs = await runAndAssertBudget(page, 'runtime.commit.workspace', 1);
+      await expect(page.locator('.transport-state')).toHaveText('running');
+      await expect.poll(async () => {
+        const snapshot = await getRuntimeSnapshot(page);
+        return snapshot?.activeRevision === snapshot?.preparedRevision && (snapshot?.activeRevision ?? 0) > 0;
+      }).toBe(true);
+      swaps.push({ action, prepareMs, commitMs });
+    };
+
+    await clearPerfSpans(page);
+    await dispatchProjectEdgeDrop(page, 'route-2-unit-drive1-unit-tone1', 'tone_stack_unit');
+    await expect(page.getByTestId('project-node-tone_stack')).toBeVisible();
+    await waitForHotSwap('insert-unit');
+
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-undo').click();
+    await waitForHotSwap('undo-unit');
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-redo').click();
+    await waitForHotSwap('redo-unit');
+
+    await page.getByTestId('project-node-drive1').dblclick();
+    await expect(page.getByTestId('contract-canvas')).toBeVisible();
+    const edgeId = 'contract-edge-contract-apply_drive-contract-clip_drive-signal';
+    await clearPerfSpans(page);
+    await dispatchContractEdgeDrop(page, edgeId, 'amplitude_clip_hard');
+    await expect(page.getByTestId('contract-node-amplitude_clip_hard')).toBeVisible();
+    await waitForHotSwap('insert-atom');
+
+    await page.getByTestId('contract-atom-item-amplitude_clip_hard').click();
+    await page.getByTestId('contract-atom-replace-open').click();
+    await page.getByTestId('contract-atom-replace-type').selectOption('amplitude_clip_soft');
+    await page.getByTestId('contract-atom-replace-preserve').check();
+    await clearPerfSpans(page);
+    await page.getByTestId('contract-atom-replace-confirm').click();
+    await waitForHotSwap('replace-atom');
+
+    await page.getByTestId('contract-atom-item-clip_drive').click();
+    await clearPerfSpans(page);
+    await page.getByLabel('clip_drive in signal').fill('driven');
+    await waitForHotSwap('reconnect-input');
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-undo').click();
+    await waitForHotSwap('undo-reconnect');
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-redo').click();
+    await waitForHotSwap('redo-reconnect');
+
+    await page.keyboard.press('Control+s');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'))).not.toBeNull();
+    await clearPerfSpans(page);
+    await importPerfWorkspaceFixture(page, 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml', 1);
+    await waitForHotSwap('import-100-atoms');
+
+    const finalSnapshot = await getRuntimeSnapshot(page);
+    expect(finalSnapshot?.meter.underruns).toBe(baselineUnderruns);
+    expect(finalSnapshot?.resources.workletActive).toBe(true);
+    expect(pageErrors).toEqual([]);
+    await page.getByTestId('preview-start-stop').click();
+    await expect(page.locator('.transport-state')).toHaveText('ready');
+    testInfo.annotations.push({ type: 'live-hot-swaps', description: JSON.stringify(swaps) });
   });
 });

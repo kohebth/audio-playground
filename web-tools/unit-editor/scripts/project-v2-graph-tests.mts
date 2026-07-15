@@ -6,6 +6,7 @@ import {
   addProjectInstance,
   addProjectRoute,
   duplicateProjectInstance,
+  insertProjectInstanceOnRoute,
   moveProjectInstance,
   moveProjectRoute,
   parseProjectGraphDraft,
@@ -40,6 +41,28 @@ assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.id, 'drive2');
 assert.deepEqual(parseProjectGraphDraft(added.content).nodes.at(-1)?.ui?.position, { x: 320, y: 180 });
 assert.throws(() => addProjectInstance(project, 'missing_unit', 'missing1'), /was not found/);
 assert.throws(() => addProjectInstance(project, 'overdrive_unit', 'drive1'), /already exists/);
+
+const inserted = insertProjectInstanceOnRoute(
+  project,
+  ports,
+  'tone_stack_unit',
+  'tone_inserted',
+  2,
+  { bass: '1.0' },
+  { x: 400, y: 200 },
+);
+const insertedDraft = parseProjectGraphDraft(inserted.content);
+assert.equal(insertedDraft.nodes.find(node => node.id === inserted.id)?.unit, 'tone_stack_unit');
+assert.deepEqual(insertedDraft.nodes.find(node => node.id === inserted.id)?.ui?.position, { x: 400, y: 200 });
+assert.deepEqual(insertedDraft.routes.slice(2, 4), [
+  { from: 'drive1.output', to: 'tone_inserted.input' },
+  { from: 'tone_inserted.output', to: 'tone1.input' },
+]);
+assert.doesNotThrow(() => validateProjectRoutes(inserted.content, ports));
+assert.throws(
+  () => insertProjectInstanceOnRoute(project, ports, 'wet_dry_mix_unit', 'ambiguous_mix', 2),
+  /exactly one input and one output/,
+);
 
 const duplicated = duplicateProjectInstance(project, 'drive1');
 const duplicate = parseProjectGraphDraft(duplicated.content).nodes.find(node => node.id === duplicated.id);

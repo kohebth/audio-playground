@@ -30,6 +30,7 @@ type Props = {
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
   onAddUnitAt: (unitId: string, position: GraphPosition) => void;
+  onInsertUnitAtRoute: (unitId: string, routeIndex: number, position: GraphPosition) => void;
   onMoveUnit: (instanceId: string, position: GraphPosition) => void;
 };
 
@@ -51,6 +52,7 @@ function ProjectFlow({
   onOpenContractGraph,
   onSelectRoute,
   onAddUnitAt,
+  onInsertUnitAtRoute,
   onMoveUnit,
 }: ProjectFlowProps) {
   const reactFlow = useReactFlow();
@@ -72,7 +74,12 @@ function ProjectFlow({
       const unitId = event.dataTransfer.getData(UNIT_DRAG_TYPE);
       setDropState('idle');
       if (!unitId) return;
-      onAddUnitAt(unitId, reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+      const position = reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const edgeElement = event.target instanceof Element ? event.target.closest<SVGGElement>('.react-flow__edge') : null;
+      const edge = edgeElement ? displayedEdges.find(item => item.id === edgeElement.dataset.id) : null;
+      const routeIndex = edge ? routeIndexFromEdge(edge) : null;
+      if (routeIndex !== null) onInsertUnitAtRoute(unitId, routeIndex, position);
+      else onAddUnitAt(unitId, position);
     }, { valid: event.dataTransfer.types.includes(UNIT_DRAG_TYPE) });
   };
 

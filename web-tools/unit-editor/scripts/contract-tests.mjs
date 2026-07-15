@@ -91,6 +91,7 @@ includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph can
 includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
 includesContent(projectCanvas, 'onAddUnitAt(unitId', 'project canvas must create dropped units at a pointer position');
+includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops must use the atomic route insertion transaction');
 includesContent(projectCanvas, 'onNodeDragStop', 'project canvas must persist unit moves');
 includesContent(projectCanvas, 'flow-shell--drop-${dropState}', 'project canvas must expose valid/reject drop feedback');
 includesContent(projectInspector, 'atom-type-lock', 'selected atom type must render as read-only');

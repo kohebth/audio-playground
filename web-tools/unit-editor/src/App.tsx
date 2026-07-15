@@ -21,6 +21,7 @@ import {
   addProjectInstance,
   addProjectRoute,
   duplicateProjectInstance,
+  insertProjectInstanceOnRoute,
   moveProjectInstance,
   moveProjectRoute,
   parseProjectGraphDraft,
@@ -549,6 +550,37 @@ export default function App() {
     });
   }, [addProjectNode, project.nodes]);
 
+  const insertProjectNodeOnRoute = useCallback((
+    unitId: string,
+    routeIndex: number,
+    position: ProjectGraphPosition,
+  ) => {
+    markPerfSpan('graph.insert.projectNode', () => {
+      const reference = projectDraft.units.find(unit => unit.id === unitId);
+      if (!reference) return;
+      const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
+      const unitFile = workspaceFiles.find(file => file.path === unitPath);
+      const defaults = unitFile?.role === 'unit'
+        ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
+        : {};
+      const instanceId = uniqueInstanceId(project.nodes.map(node => node.id), unitId);
+      const result = insertProjectInstanceOnRoute(
+        projectWorkspaceFile.content,
+        projectPorts,
+        unitId,
+        instanceId,
+        routeIndex,
+        defaults,
+        position,
+      );
+      if (!updateProjectFile(() => result.content)) return;
+      const values = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value]));
+      setParamDrafts(current => ({ ...current, ...values }));
+      setParamOriginals(current => ({ ...current, ...values }));
+      setSelectedId(`unit-${result.id}`);
+    });
+  }, [project.nodes, projectDraft.units, projectPorts, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
+
   const duplicateProjectNode = useCallback((instanceId: string) => {
     markPerfSpan('graph.duplicate.projectNode', () => {
       try {
@@ -995,6 +1027,7 @@ export default function App() {
               onOpenContractGraph={openContractGraph}
               onSelectRoute={selectRoute}
               onAddUnitAt={addProjectNodeFromLibrary}
+              onInsertUnitAtRoute={insertProjectNodeOnRoute}
               onMoveUnit={moveProjectNode}
             />
           </Profiler>
