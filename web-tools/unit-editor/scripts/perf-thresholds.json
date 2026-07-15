@@ -33,6 +33,6 @@
       "maxUnitTotalMs": 1500
     }
   },
-  "maxRegressionPercent": 30,
+  "maxRegressionPercent": 20,
   "minAbsoluteRegressionMs": 12
 }

@@ -538,14 +538,35 @@ function compareBaselinePerf(current: PerfResult, baselinePath: string, threshol
   }
 
   const regressions: string[] = [];
+  const compareMetric = (label: string, value: number, prior: number) => {
+    if (prior <= 0) return;
+    const delta = ((value - prior) / prior) * 100;
+    const deltaMs = value - prior;
+    if (delta > thresholds.maxRegressionPercent && deltaMs >= thresholds.minAbsoluteRegressionMs) {
+      regressions.push(`${label}: +${delta.toFixed(1)}% (baseline ${prior}ms -> ${value}ms)`);
+    }
+  };
   for (const row of current.projects) {
     const prior = baselineByProfile.get(row.profile);
     if (!prior || !prior.valid || !row.valid) continue;
-    if (prior.totalMs <= 0) continue;
-    const delta = ((row.totalMs - prior.totalMs) / prior.totalMs) * 100;
-    const deltaMs = row.totalMs - prior.totalMs;
-    if (delta > thresholds.maxRegressionPercent && deltaMs >= thresholds.minAbsoluteRegressionMs) {
-      regressions.push(`project:${row.profile}: +${delta.toFixed(1)}% totalMs (baseline ${prior.totalMs}ms -> ${row.totalMs}ms)`);
+    compareMetric(`project:${row.profile}:totalMs`, row.totalMs, prior.totalMs);
+  }
+
+  const baselineUnitsByFile = new Map(baseline.units.map(row => [row.file, row]));
+  const unitMetrics: Array<keyof Pick<UnitBenchmarkResult,
+    'addMs' | 'replaceMs' | 'moveMs' | 'connectMs' | 'removeMs' | 'totalMs'>> = [
+      'addMs',
+      'replaceMs',
+      'moveMs',
+      'connectMs',
+      'removeMs',
+      'totalMs',
+    ];
+  for (const row of current.units) {
+    const prior = baselineUnitsByFile.get(row.file);
+    if (!prior) continue;
+    for (const metric of unitMetrics) {
+      compareMetric(`unit:${row.file}:${metric}`, row[metric], prior[metric]);
     }
   }
 

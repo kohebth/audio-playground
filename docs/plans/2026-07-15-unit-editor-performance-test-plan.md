@@ -12,7 +12,7 @@ memory stability, and live WASM audio. The source requirements are the July 15 p
 | Drag feedback | `< 16 ms` | Browser marks for drag start and drag over |
 | Node drop | `< 100 ms` | Browser drop and project mutation marks |
 | Inspector open | `< 100 ms` | Selection and inspector-switch marks |
-| Parameter edit | `< 50 ms` | Knob mutation mark |
+| Parameter/config edit | `< 50 ms` | Knob and immutable atom-config mutation marks |
 | Undo/redo | `< 100 ms` | Browser marks |
 | Autosave blocking | `< 16 ms` | Browser serialization/storage mark |
 | 100-node/atom load | `< 500 ms` | 100-atom contract canvas and 20-unit project import |
@@ -101,8 +101,9 @@ that rolling history is the representative baseline as runner data accumulates.
 
 ### Phase 5: Regression Gates
 
-- [x] Pull-request pure-operation threshold and baseline regression gate.
-- [x] Fixed threshold plus percentage/absolute baseline regression policy.
+- [x] Pull-request pure-operation threshold and baseline regression gate for project totals and unit add, replacement,
+  move, connect, remove, and total timings.
+- [x] Fixed threshold plus `>20%` and `>=12 ms` baseline regression policy.
 - [x] Stable Chromium drag/drop, medium-fixture graph-load, and replacement checks on pull requests.
 - [x] Weekly 500/1,000-atom, long-session, continuous-drag, live-audio, Chromium 4x/6x, mobile 6x,
   Chromium 256 MB, Firefox, and WebKit runs.
@@ -132,6 +133,13 @@ that rolling history is the representative baseline as runner data accumulates.
 6. **Explicit replacement stays controlled:** Proven. Pure transformer tests cover compatibility planning, the browser
    gate keeps medium-graph replacement under 300 ms, only the replaced node rerenders, undo/redo restore both types, and
    subsequent configuration editing remains isolated.
+
+## Completion Verification
+
+- Full scheduled Chromium suite: 41/41 passed, including 500/1,000 atoms, autosave, memory, live hot-swap, and repeated
+  file/microphone ownership checks.
+- Pure-operation regression: passed with the 20% plus 12 ms project/unit metric policy and no reported regressions.
+- Editor contract/unit tests, ESLint, production build, mobile 6x, Chromium 4x/6x, and 256 MB profiles: passed.
 
 ## Verification Commands
 

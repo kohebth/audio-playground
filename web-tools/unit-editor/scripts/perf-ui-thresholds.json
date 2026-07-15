@@ -17,7 +17,7 @@
     "contract.add.atom": 200,
     "contract.insert.atom": 300,
     "contract.remove.atom": 200,
-    "contract.edit.atom": 300,
+    "contract.edit.atom": 50,
     "contract.move.atom": 100,
     "contract.reconnect.atom": 200,
     "contract.replace.atom": 300,
