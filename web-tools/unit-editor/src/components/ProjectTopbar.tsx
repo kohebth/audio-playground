@@ -13,6 +13,7 @@ type Props = {
   onExportWorkspace: () => void;
   onImportWorkspace: (file: File | null) => void;
   onResetWorkspace: () => void;
+  onSaveWorkspace: () => void;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -33,6 +34,7 @@ export function ProjectTopbar({
   onExportWorkspace,
   onImportWorkspace,
   onResetWorkspace,
+  onSaveWorkspace,
   onUndo,
   onRedo,
   canUndo,
@@ -69,6 +71,7 @@ export function ProjectTopbar({
         onRuntimeReady={onRuntimeReady}
         paramOverrides={paramOverrides}
         workspaceFiles={workspaceFiles}
+        onSaveWorkspace={onSaveWorkspace}
       />
 
       <div className="header-right">

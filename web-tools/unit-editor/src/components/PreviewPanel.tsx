@@ -19,6 +19,7 @@ type Props = {
   paramOverrides: ParamOverride[];
   compact?: boolean;
   onRuntimeReady?: () => void;
+  onSaveWorkspace?: () => void;
 };
 
 const emptyMeter: MeterSnapshot = {
@@ -72,7 +73,14 @@ const lowLatencyMicrophoneConstraints = {
   noiseSuppression: false,
 } as MediaTrackConstraints & { latency: { ideal: number } };
 
-export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, compact = false, onRuntimeReady }: Props) {
+export function PreviewPanel({
+  entryProject,
+  workspaceFiles,
+  paramOverrides,
+  compact = false,
+  onRuntimeReady,
+  onSaveWorkspace,
+}: Props) {
   const { setController } = useLiveBypass();
   const [backend, setBackend] = useState<WasmBackend | null>(null);
   const [phase, setPhase] = useState<BackendPhase>('idle');
@@ -97,6 +105,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const fileSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const previousOverridesRef = useRef<Map<string, ParamOverride>>(new Map());
   const firstOverride = paramOverrides[0];
 
@@ -135,7 +144,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
       controlModuleUrl: moduleUrl('apg_control.mjs'),
       processorModuleUrl: moduleUrl('apg_processor.mjs'),
       processorWasmUrl: moduleUrl('apg_processor.wasm'),
-      processorWorkletUrl: moduleUrl('apg_processor.worklet.js'),
+      processorWorkletUrl: moduleUrl('processor.worklet.js'),
       audioContext: context,
     })
       .then(instance => {
@@ -163,45 +172,50 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
   }, [onRuntimeReady, reportError]);
 
   const syncWorkspace = useCallback(
-    async (prepare: boolean) => {
-      if (!backend || !contextRef.current) return false;
-      const revision = revisionRef.current;
-      if (validRevisionRef.current !== revision) {
-        setPhase('validating');
-        const validationPromise = backend.replaceWorkspace({
-          revision,
-          entryProject,
-          files: workspaceFiles.map(({ path, role, content }) => ({ path, role, content })),
-        });
-        refreshBackendState(true);
-        const validation: ValidationResult = await validationPromise;
-        if (revision !== revisionRef.current) return false;
-        refreshBackendState(validation.ok);
-        if (!validation.ok) {
-          setPhase('error');
-          setBackendDiagnostic(validation.diagnostic);
-          setDiagnostic(validation.diagnostic.message || validation.diagnostic.code);
-          return false;
+    (prepare: boolean) => {
+      const synchronize = async () => {
+        if (!backend || !contextRef.current) return false;
+        const revision = revisionRef.current;
+        if (validRevisionRef.current !== revision) {
+          setPhase('validating');
+          const validationPromise = backend.replaceWorkspace({
+            revision,
+            entryProject,
+            files: workspaceFiles.map(({ path, role, content }) => ({ path, role, content })),
+          });
+          refreshBackendState(true);
+          const validation: ValidationResult = await validationPromise;
+          if (revision !== revisionRef.current) return false;
+          refreshBackendState(validation.ok);
+          if (!validation.ok) {
+            setPhase('error');
+            setBackendDiagnostic(validation.diagnostic);
+            setDiagnostic(validation.diagnostic.message || validation.diagnostic.code);
+            return false;
+          }
+          validRevisionRef.current = revision;
+          setDiagnostic('Project validated.');
         }
-        validRevisionRef.current = revision;
-        setDiagnostic('Project validated.');
-      }
-      if (prepare) {
-        setPhase('preparing');
-        const preparePromise = backend.prepare(revision, {
-          sampleRate: Math.round(contextRef.current.sampleRate),
-          blockFrames: 128,
-        });
-        refreshBackendState(true);
-        await preparePromise;
-        if (revision !== revisionRef.current) return false;
-        if (runningRef.current) await backend.commitPrepared(revision);
-        if (revision !== revisionRef.current) return false;
-        refreshBackendState(true);
-        setDiagnostic('Project prepared for live audio.');
-      }
-      setPhase(runningRef.current ? 'running' : prepare ? 'ready' : 'idle');
-      return true;
+        if (prepare) {
+          setPhase('preparing');
+          const preparePromise = backend.prepare(revision, {
+            sampleRate: Math.round(contextRef.current.sampleRate),
+            blockFrames: 128,
+          });
+          refreshBackendState(true);
+          await preparePromise;
+          if (revision !== revisionRef.current) return false;
+          if (runningRef.current) await backend.commitPrepared(revision);
+          if (revision !== revisionRef.current) return false;
+          refreshBackendState(true);
+          setDiagnostic('Project prepared for live audio.');
+        }
+        setPhase(runningRef.current ? 'running' : prepare ? 'ready' : 'idle');
+        return true;
+      };
+      const result = syncQueueRef.current.then(synchronize, synchronize);
+      syncQueueRef.current = result.then(() => undefined, () => undefined);
+      return result;
     },
     [backend, entryProject, refreshBackendState, workspaceFiles],
   );
@@ -230,7 +244,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
         .pollMeters()
         .then(setMeter)
         .catch(error => {
-          reportError(error, 'meter');
+          if (runningRef.current) reportError(error, 'meter');
         })
         .finally(() => {
           polling = false;
@@ -267,14 +281,19 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
   }, [backend, paramOverrides, reportError, running]);
 
   const compile = useCallback(async () => {
+    if (!backend) return false;
     try {
-      await syncWorkspace(true);
+      const prepared = await syncWorkspace(true);
+      return prepared;
     } catch (error) {
       reportError(error, 'compile');
+      return false;
     }
-  }, [reportError, syncWorkspace]);
+  }, [backend, reportError, syncWorkspace]);
 
   const stopPlayback = useCallback(async () => {
+    runningRef.current = false;
+    setRunning(false);
     const fileSource = fileSourceRef.current;
     if (fileSource) {
       fileSource.onended = null;
@@ -292,8 +311,6 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
     streamRef.current = null;
     await backendRef.current?.stop();
     refreshBackendState(true);
-    runningRef.current = false;
-    setRunning(false);
     setPhase('ready');
     setMeter(emptyMeter);
     setCaptureLatency(null);
@@ -429,7 +446,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
   useEffect(() => () => setController(null), [setController]);
 
   const toggleMute = useCallback(async () => {
-    if (!backend) return;
+    if (!backend || !running) return;
     const next = !muted;
     try {
       await backend.setMute(next);
@@ -438,7 +455,58 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
     } catch (error) {
       reportError(error, 'control');
     }
-  }, [backend, muted, reportError]);
+  }, [backend, muted, reportError, running]);
+
+  const togglePlayback = useCallback(() => {
+    void (running ? stop() : start());
+  }, [running, start, stop]);
+
+  const handleBuildAndSave = useCallback(async () => {
+    if (backend) {
+      const compiled = await compile();
+      if (!compiled) return;
+    }
+    onSaveWorkspace?.();
+  }, [backend, compile, onSaveWorkspace]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.isContentEditable || target.closest('[contenteditable="true"]')) return;
+      const tag = target.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'option') return;
+
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === 's') {
+        event.preventDefault();
+        onSaveWorkspace?.();
+        return;
+      }
+
+      if (key === ' ' || event.code === 'Space') {
+        event.preventDefault();
+        togglePlayback();
+        return;
+      }
+
+      if (key === 'm') {
+        event.preventDefault();
+        void toggleMute();
+        return;
+      }
+
+      if (key === 'b') {
+        event.preventDefault();
+        void handleBuildAndSave();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleBuildAndSave, onSaveWorkspace, toggleMute, togglePlayback]);
 
   return (
     <section className={compact ? 'transport-island preview-panel--compact' : 'inspector-block'}>
@@ -449,7 +517,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
               className={`transport-btn ${running ? 'active' : ''}`}
               data-testid="preview-start-stop"
               disabled={!backend}
-              onClick={() => void (running ? stop() : start())}
+              onClick={() => void togglePlayback()}
               type="button"
             >
               <i className={`fa-solid ${running ? 'fa-stop' : 'fa-play'}`} aria-hidden="true" />
@@ -556,7 +624,7 @@ export function PreviewPanel({ entryProject, workspaceFiles, paramOverrides, com
           className="btn btn--ghost"
           data-testid="preview-start-stop"
           disabled={!backend}
-          onClick={() => void (running ? stop() : start())}
+          onClick={() => void togglePlayback()}
           type="button"
         >
           {running ? 'Stop' : 'Start'}

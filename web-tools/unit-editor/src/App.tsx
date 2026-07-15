@@ -779,6 +779,20 @@ export default function App() {
     });
   }, [pushHistory]);
 
+  const saveWorkspace = useCallback(() => {
+    markPerfSpan('workspace.save', () => {
+      const payload = createWorkspacePayload(entryProject, workspaceFiles);
+      const serialized = JSON.stringify(payload);
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, serialized);
+      lastSavedWorkspace.current = serialized;
+      setParamOriginals(values => ({ ...values, ...paramDrafts }));
+      setWorkspaceFiles(files =>
+        files.map(file => (file.content === file.originalContent ? file : { ...file, originalContent: file.content })),
+      );
+    });
+  }, [entryProject, paramDrafts, workspaceFiles]);
+
   const exportWorkspace = useCallback(() => {
     markPerfSpan('workspace.export', () => {
       const payload = createWorkspacePayload(entryProject, workspaceFiles);
@@ -835,6 +849,10 @@ export default function App() {
     });
   }, []);
 
+  const handleRuntimeReady = useCallback(() => {
+    setRuntimeReady(true);
+  }, []);
+
   const perfSpans = readPerfSpans(20);
   const renderPerfSpans = readPerfRenderSpans(20);
 
@@ -884,7 +902,8 @@ export default function App() {
           entryProject={entryProject}
           workspaceFiles={workspaceFiles}
           paramOverrides={paramOverrides}
-          onRuntimeReady={() => setRuntimeReady(true)}
+          onSaveWorkspace={saveWorkspace}
+          onRuntimeReady={handleRuntimeReady}
         />
 
       <div className="layout">

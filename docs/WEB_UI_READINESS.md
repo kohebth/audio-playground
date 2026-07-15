@@ -30,6 +30,11 @@ before commit, while failure state retains the affected revision and diagnostic.
 decode through WebAudio and feed the real processor Worklet; microphone capture remains a separate selectable input
 using the same runtime.
 
+The compact transport keeps one WASM backend alive across parent UI renders, starts and stops both decoded files and
+microphone streams, and suppresses stale meter failures while a Worklet is being disposed. Browser regression coverage
+exercises both transport modes. Workspace shortcuts map `Ctrl/Cmd+S` to local save, `B` to build and save, `M` to mute,
+and `Space` to start or stop playback while leaving text-editing controls unaffected.
+
 The live preview exposes workspace, prepared, active, and failed revisions independently. Worker and processor failures
 render the structured diagnostic code, phase, revision, file, and schema path instead of collapsing the backend result
 to message text. Beginning a newer revision clears the stale diagnostic display while retaining the failed revision
