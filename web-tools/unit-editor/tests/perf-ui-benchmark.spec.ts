@@ -558,6 +558,25 @@ test.describe('Scalability checkpoints', () => {
     await expect.poll(() => countProjectNodes(page), { timeout: 5000 }).toBe(before);
   });
 
+  test('native unit drop stays bounded when the referenced unit contains 500 atoms', async ({ page }, testInfo) => {
+    const profile = 'test/fixtures/projects-v2/perf/large-atoms.project.v2.yaml';
+    await importPerfWorkspaceFixture(page, profile, 1);
+    await clearPerfSpans(page);
+
+    await page.getByTestId('project-unit-item-perf_atoms_500').dragTo(page.getByTestId('project-canvas'), {
+      targetPosition: { x: 420, y: 260 },
+    });
+    await expect.poll(() => countProjectNodes(page), { timeout: 5000 }).toBe(2);
+    expect(await page.locator('.contract-node').count()).toBe(0);
+
+    const addMs = await runAndAssertBudget(page, 'graph.add.projectNode', 1);
+    await runAndAssertBudget(page, 'ui.dragStart.projectUnit', 1);
+    await runAndAssertBudget(page, 'ui.drop.projectNode', 1);
+    await page.getByTestId('project-node-perf_atoms_500').dblclick();
+    await expect(page.getByTestId('contract-canvas')).toHaveAttribute('data-atom-count', '500');
+    testInfo.annotations.push({ type: 'large-unit-drop-ms', description: addMs.toFixed(2) });
+  });
+
   test('autosave persists below budget during rapid edits', async ({ page }, testInfo) => {
     await page.getByTestId('project-node-drive1').click();
     await page.getByTestId('inspector-tab-atom').click();
