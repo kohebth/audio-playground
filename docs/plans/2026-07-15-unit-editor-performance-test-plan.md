@@ -18,13 +18,13 @@ memory stability, and live WASM audio. The source requirements are the July 15 p
 | 100-node/atom load | `< 500 ms` | 100-atom contract canvas and 20-unit project import |
 | 500-node/atom load | `< 2 s` | 500-atom contract canvas and 50-unit project import |
 | Residual edit memory | `< 10%` | Chromium collected-heap gate after bounded-history warm-up |
-| Interaction frame rate | `>= 50 FPS` | Not implemented |
+| Interaction frame rate | `>= 50 FPS` | Scheduled 500-atom pointer drag/pan/zoom average-frame gate |
 | Runtime parameter control | `< 50 ms` | UI mutation only; Worklet round-trip not implemented |
 | Audio underruns from UI | `0` | Not implemented |
 
 The project import checks measure from browser file import through the expected rendered React Flow node count. Contract
-checks use the median of three opens, including the cold first open, through mounting every actual atom node. The
-1,000-atom boundary is scheduled-only.
+checks use the median of three opens, including the cold first open, through registering every actual atom and mounting
+the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 
 ## Fixture Matrix
 
@@ -46,7 +46,8 @@ checks use the median of three opens, including the cold first open, through mou
 - [x] Async operations remain open until their promises settle.
 - [x] Per-node render counters and selection/parameter render-scope assertions.
 - [ ] Per-edge render counters and store notification counters.
-- [ ] Long-task, dropped-frame, style, layout, and paint collection.
+- [x] Scheduled 500-atom frame-interval and long-task collection.
+- [ ] Style, layout, paint, and full browser-trace collection.
 - [ ] Worker compile/swap timing and Worklet control round-trip marks.
 
 ### Phase 2: Baseline
@@ -64,7 +65,8 @@ checks use the median of three opens, including the cold first open, through mou
 - [x] Project add/remove, route create/delete, parameter, inspector, undo, and redo checks.
 - [x] Autosave debounce and synchronous blocking budget.
 - [x] Bounded residual heap growth after repeated add/remove.
-- [ ] Pointer-event drag tests, invalid drop, Escape cancel, rapid drop, zoom/pan drop, edge drop, and filtered catalog.
+- [x] Pointer-event node drag while 500 atoms are mounted.
+- [ ] Invalid drop, Escape cancel, rapid drop, zoom/pan drop, edge drop, and filtered catalog.
 - [ ] Unit drag/drop with large atom payloads.
 - [ ] Inspector open/close loops, reconnect, rename, explicit replacement, and replacement undo/redo.
 - [ ] Malformed import proving atom `fn` cannot mutate except through explicit replacement.
@@ -90,10 +92,12 @@ checks use the median of three opens, including the cold first open, through mou
 
 ## Primary Success Criteria Audit
 
-1. **500-node graph remains usable:** Partially proven. The browser mounts the real 500-atom contract graph under 2 seconds,
-   but pan/zoom/config editing and interaction FPS are not yet combined in that case.
+1. **500-node graph remains usable:** Proven for the required interaction set. The browser registers the real 500-atom
+   graph under 2 seconds, virtualizes offscreen nodes, and passes pointer drag, pan, zoom, configuration editing, and
+   `>= 50 FPS` average-frame gates.
 2. **Local changes avoid full graph rerender:** Partially proven. Exact node counters show one-node selection and parameter
-   edits stay local; drag, topology, YAML, edge, and store-notification scope remain.
+   edits stay local, and the 500-atom drag/config gates touch only the affected node; topology, YAML, edge, and
+   store-notification scope remain.
 3. **Autosave has no visible stall:** Partially proven. Default-workspace rapid edits keep synchronous persistence under
    16 ms; large payload, slow storage, drag, and long-session cases remain.
 4. **Removed objects are not retained:** Partially proven. A collected-heap browser gate stays below 10% across a second

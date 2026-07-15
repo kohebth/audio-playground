@@ -81,6 +81,31 @@ const CATEGORY_COLORS: Record<string, string> = {
   nonlinear: '#ef4444',
 };
 
+function sameStringRecord(left: Record<string, string>, right: Record<string, string>): boolean {
+  const leftEntries = Object.entries(left);
+  return leftEntries.length === Object.keys(right).length
+    && leftEntries.every(([key, value]) => right[key] === value);
+}
+
+function sameContractNodeData(left: ContractNodeData, right: ContractNodeData): boolean {
+  return left.id === right.id
+    && left.atom === right.atom
+    && left.category === right.category
+    && left.color === right.color
+    && sameStringRecord(left.in, right.in)
+    && sameStringRecord(left.out, right.out)
+    && sameStringRecord(left.config, right.config);
+}
+
+function sameEdge(left: Edge, right: Edge): boolean {
+  return left.id === right.id
+    && left.source === right.source
+    && left.sourceHandle === right.sourceHandle
+    && left.target === right.target
+    && left.targetHandle === right.targetHandle
+    && left.label === right.label;
+}
+
 function buildContractFlow(
   unit: UnitGraphDraft,
   catalog: AtomCatalog,
@@ -240,15 +265,31 @@ export function ContractGraphCanvas({
       const storedPositionIds = new Set(
         parsed.unit?.nodes.filter(node => node.ui?.position).map(node => `contract-${node.id}`) ?? [],
       );
-      return parsed.flow.nodes.map(node => {
+      const next = parsed.flow.nodes.map(node => {
         const positioned = currentById.get(node.id);
-        return positioned && !storedPositionIds.has(node.id) ? { ...node, position: positioned.position } : node;
+        if (!positioned) return node;
+        const position = storedPositionIds.has(node.id) ? node.position : positioned.position;
+        if (sameContractNodeData(positioned.data as ContractNodeData, node.data as ContractNodeData)
+          && positioned.position.x === position.x
+          && positioned.position.y === position.y) {
+          return positioned;
+        }
+        return { ...positioned, data: node.data, position };
       });
+      return next.length === current.length && next.every((node, index) => node === current[index]) ? current : next;
     });
   }, [parsed.flow.nodes, parsed.unit?.nodes, setFlowNodes]);
 
   useEffect(() => {
-    setFlowEdges(parsed.flow.edges);
+    setFlowEdges(current => {
+      if (current === parsed.flow.edges) return current;
+      const currentById = new Map(current.map(edge => [edge.id, edge]));
+      const next = parsed.flow.edges.map(edge => {
+        const existing = currentById.get(edge.id);
+        return existing && sameEdge(existing, edge) ? existing : edge;
+      });
+      return next.length === current.length && next.every((edge, index) => edge === current[index]) ? current : next;
+    });
   }, [parsed.flow.edges, setFlowEdges]);
 
   useEffect(() => {
@@ -324,6 +365,7 @@ export function ContractGraphCanvas({
       ) : (
         <div
           className={`flow-shell flow-shell--contract flow-shell--drop-${dropState}`}
+          data-atom-count={flowNodes.length}
           data-testid="contract-canvas"
           onDragLeave={() => setDropState('idle')}
           onDragOver={dragOver}
@@ -364,12 +406,15 @@ export function ContractGraphCanvas({
               edgesReconnectable
               fitView
               fitViewOptions={{ padding: 0.18 }}
-              minZoom={0.35}
+              minZoom={flowNodes.length >= 500 ? 0.8 : flowNodes.length >= 100 ? 0.6 : 0.35}
               maxZoom={1.6}
               nodesDraggable
+              onlyRenderVisibleElements
             >
               <Controls />
-              <MiniMap nodeColor={node => (node.data as ContractNodeData).color} pannable zoomable style={{ background: '#111827' }} />
+              {flowNodes.length <= 50 ? (
+                <MiniMap nodeColor={node => (node.data as ContractNodeData).color} pannable zoomable style={{ background: '#111827' }} />
+              ) : null}
             </ReactFlow>
           </ReactFlowProvider>
         </div>

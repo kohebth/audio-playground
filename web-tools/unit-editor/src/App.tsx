@@ -669,7 +669,9 @@ export default function App() {
   }, [pushHistory, selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path]);
 
   const updateSelectedAtom = useCallback((node: UnitGraphNode, originalId = node.id) => {
-    updateSelectedUnitFile(content => serializeUnitGraphNodeUpdate(content, node, originalId), node.id);
+    markPerfSpan('contract.edit.atom', () => {
+      updateSelectedUnitFile(content => serializeUnitGraphNodeUpdate(content, node, originalId), node.id);
+    });
   }, [updateSelectedUnitFile]);
 
   const addAtom = useCallback((atomName: string, position?: UnitGraphPosition) => {

@@ -220,14 +220,85 @@ async function openContractFixture(page: Page, fixturePath: string, expectedAtom
 async function openLoadedContract(page: Page, expectedAtoms: number): Promise<number> {
   const startedAt = await page.evaluate(() => performance.now());
   await page.getByTestId('project-node-atom_stress').dblclick();
-  await expect(page.getByTestId('contract-canvas')).toBeVisible();
-  await expect.poll(() => page.locator('.contract-node').count(), { timeout: 30_000 }).toBe(expectedAtoms);
+  const canvas = page.getByTestId('contract-canvas');
+  await expect(canvas).toBeVisible();
+  await expect(canvas).toHaveAttribute('data-atom-count', String(expectedAtoms));
+  await expect.poll(() => page.locator('.contract-node').count(), { timeout: 30_000 }).toBeGreaterThan(0);
   return page.evaluate(start => performance.now() - start, startedAt);
 }
 
 function median(values: number[]): number {
   const sorted = [...values].sort((left, right) => left - right);
   return sorted[Math.floor(sorted.length / 2)];
+}
+
+async function startInteractionProbe(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const probe = {
+      active: true,
+      frameIntervals: [] as number[],
+      lastFrameAt: performance.now(),
+      longTasks: [] as number[],
+      observer: null as PerformanceObserver | null,
+    };
+    const frame = (now: number) => {
+      if (!probe.active) return;
+      probe.frameIntervals.push(now - probe.lastFrameAt);
+      probe.lastFrameAt = now;
+      requestAnimationFrame(frame);
+    };
+    if (typeof PerformanceObserver !== 'undefined') {
+      probe.observer = new PerformanceObserver(list => {
+        probe.longTasks.push(...list.getEntries().map(entry => entry.duration));
+      });
+      try {
+        probe.observer.observe({ type: 'longtask', buffered: false });
+      } catch {
+        probe.observer = null;
+      }
+    }
+    (window as typeof window & { __apgInteractionProbe?: typeof probe }).__apgInteractionProbe = probe;
+    requestAnimationFrame(frame);
+  });
+}
+
+async function stopInteractionProbe(page: Page): Promise<{ frameIntervals: number[]; longTasks: number[] }> {
+  await page.waitForTimeout(250);
+  return page.evaluate(() => {
+    const host = window as typeof window & {
+      __apgInteractionProbe?: {
+        active: boolean;
+        frameIntervals: number[];
+        longTasks: number[];
+        observer: PerformanceObserver | null;
+      };
+    };
+    const probe = host.__apgInteractionProbe;
+    if (!probe) return { frameIntervals: [], longTasks: [] };
+    probe.active = false;
+    probe.observer?.disconnect();
+    return { frameIntervals: probe.frameIntervals, longTasks: probe.longTasks };
+  });
+}
+
+async function getVisibleContractAtom(page: Page): Promise<{ id: string; x: number; y: number } | null> {
+  return page.evaluate(() => {
+    const canvas = document.querySelector<HTMLElement>('[data-testid="contract-canvas"]');
+    if (!canvas) return null;
+    const canvasRect = canvas.getBoundingClientRect();
+    for (const node of document.querySelectorAll<HTMLElement>('.react-flow__node[data-id^="contract-atom_"]')) {
+      const rect = node.getBoundingClientRect();
+      if (rect.left >= canvasRect.left + 40 && rect.right <= canvasRect.right - 40
+        && rect.top >= canvasRect.top + 40 && rect.bottom <= canvasRect.bottom - 40) {
+        return {
+          id: (node.dataset.id ?? '').replace(/^contract-/, ''),
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        };
+      }
+    }
+    return null;
+  });
 }
 
 async function launchWorkspace(page: Page) {
@@ -546,7 +617,9 @@ test.describe('Contract graph atom scalability', () => {
     await openContractFixture(page, fixture, meta.atoms);
 
     await clearPerfSpans(page);
-    const selected = page.getByTestId('contract-node-atom_0050');
+    const visibleAtom = await getVisibleContractAtom(page);
+    expect(visibleAtom).not.toBeNull();
+    const selected = page.getByTestId(`contract-node-${visibleAtom!.id}`);
     await selected.click();
     await expect(selected).toHaveClass(/contract-node--selected/);
     await expect.poll(async () => Object.keys(await getComponentRenders(page, 'ContractNode')).length).toBeGreaterThan(0);
@@ -554,7 +627,81 @@ test.describe('Contract graph atom scalability', () => {
     const renders = await getComponentRenders(page, 'ContractNode');
     const renderedNodes = Object.keys(renders);
     testInfo.annotations.push({ type: 'contract-node-renders', description: renderedNodes.join(',') });
-    expect(renderedNodes).toEqual(['ContractNode:atom_0050']);
+    expect(renderedNodes).toEqual([`ContractNode:${visibleAtom!.id}`]);
+  });
+
+  test('editing config in a 500-atom graph stays local', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The 500-atom interaction gate runs in scheduled performance CI.');
+    const fixture = 'test/fixtures/projects-v2/perf/large-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+
+    const visibleAtom = await getVisibleContractAtom(page);
+    expect(visibleAtom).not.toBeNull();
+    await page.getByTestId(`contract-atom-item-${visibleAtom!.id}`).click();
+    const config = page.getByLabel(`${visibleAtom!.id} config threshold`);
+    await expect(config).toBeVisible();
+
+    await clearPerfSpans(page);
+    await config.fill('0.8');
+    await waitForSpanCount(page, 'contract.edit.atom', 1);
+    await expect(config).toHaveValue('0.8');
+    await expect.poll(async () => Object.keys(await getComponentRenders(page, 'ContractNode')).length).toBeGreaterThan(0);
+
+    const editMs = await runAndAssertBudget(page, 'contract.edit.atom', 1);
+    const renderedNodes = Object.keys(await getComponentRenders(page, 'ContractNode'));
+    testInfo.annotations.push({ type: 'contract-config-ms', description: editMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'contract-node-renders', description: renderedNodes.join(',') });
+    expect(renderedNodes).toEqual([`ContractNode:${visibleAtom!.id}`]);
+  });
+
+  test('500-atom pointer drag, pan, and zoom remain responsive', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The 500-atom interaction gate runs in scheduled performance CI.');
+    const fixture = 'test/fixtures/projects-v2/perf/large-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+
+    const visibleNode = await getVisibleContractAtom(page);
+    expect(visibleNode).not.toBeNull();
+
+    await clearPerfSpans(page);
+    await page.mouse.move(visibleNode!.x, visibleNode!.y);
+    await page.mouse.down();
+    await page.mouse.move(visibleNode!.x + 32, visibleNode!.y + 24, { steps: 6 });
+    await page.mouse.up();
+    await waitForSpanCount(page, 'contract.move.atom', 1);
+    const moveMs = await runAndAssertBudget(page, 'contract.move.atom', 1);
+    const movedAtomId = visibleNode!.id;
+    const dragRenders = Object.keys(await getComponentRenders(page, 'ContractNode'));
+    expect(dragRenders).toEqual([`ContractNode:${movedAtomId}`]);
+
+    const pane = page.locator('.react-flow__pane');
+    const paneBox = await pane.boundingBox();
+    expect(paneBox).not.toBeNull();
+    await clearPerfSpans(page);
+    await startInteractionProbe(page);
+    await page.mouse.move(paneBox!.x + 24, paneBox!.y + 24);
+    await page.mouse.down();
+    await page.mouse.move(paneBox!.x + 124, paneBox!.y + 84, { steps: 20 });
+    await page.mouse.up();
+    await page.mouse.move(paneBox!.x + paneBox!.width / 2, paneBox!.y + paneBox!.height / 2);
+    await page.mouse.wheel(0, -360);
+    await page.mouse.wheel(0, 360);
+    const probe = await stopInteractionProbe(page);
+
+    expect(probe.frameIntervals.length).toBeGreaterThan(5);
+    const averageFrameMs = probe.frameIntervals.reduce((sum, value) => sum + value, 0) / probe.frameIntervals.length;
+    assertDurationBudget('interaction.frame.average', averageFrameMs);
+    expect(probe.longTasks.filter(duration => duration > 50).length).toBeLessThanOrEqual(1);
+    const viewportRenders = Object.keys(await getComponentRenders(page, 'ContractNode'));
+    expect(viewportRenders.length).toBeLessThan(meta.atoms * 0.25);
+    testInfo.annotations.push({ type: 'contract-move-ms', description: moveMs.toFixed(2) });
+    testInfo.annotations.push({
+      type: 'interaction-frames',
+      description: `average=${averageFrameMs.toFixed(2)}ms frames=${probe.frameIntervals.length}`,
+    });
+    testInfo.annotations.push({ type: 'interaction-long-tasks', description: probe.longTasks.join(',') || 'none' });
+    testInfo.annotations.push({ type: 'viewport-node-renders', description: String(viewportRenders.length) });
   });
 
   test('editing one parameter does not rerender unrelated project nodes', async ({ page }, testInfo) => {
