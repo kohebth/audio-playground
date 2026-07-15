@@ -610,6 +610,53 @@ test.describe('Scalability checkpoints', () => {
     testInfo.annotations.push({ type: 'slow-autosave-ms', description: slowAutosaveMs.toFixed(2) });
   });
 
+  test('one-hour autosave session keeps writes and residual heap bounded', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The one-hour emulation runs in scheduled performance CI.');
+    const fixture = 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml';
+    const meta = readPerfFixtureMeta(fixture);
+    await openContractFixture(page, fixture, meta.atoms);
+    await page.getByTestId('contract-atom-item-atom_0001').click();
+    const threshold = page.getByLabel('atom_0001 config threshold');
+    await expect(threshold).toBeVisible();
+    await waitForWorkspaceQuiescence(page);
+    await page.clock.install();
+    await page.evaluate(() => {
+      const original = Storage.prototype.setItem;
+      const host = window as typeof window & { __apgLongSessionWrites?: number };
+      host.__apgLongSessionWrites = 0;
+      Storage.prototype.setItem = function setItem(key, value) {
+        if (key === 'apg.unit-editor.workspace.v2') {
+          host.__apgLongSessionWrites = (host.__apgLongSessionWrites ?? 0) + 1;
+        }
+        return original.call(this, key, value);
+      };
+    });
+
+    const runHalfHour = async (offset: number) => {
+      for (let index = 0; index < 60; index += 1) {
+        await threshold.fill((0.5 + (offset + index) / 1000).toFixed(3));
+        await page.clock.fastForward(30_000);
+      }
+    };
+
+    await runHalfHour(0);
+    const halfHourHeap = await collectHeapBytes(page);
+    await runHalfHour(60);
+    const oneHourHeap = await collectHeapBytes(page);
+    const writes = await page.evaluate(() =>
+      (window as typeof window & { __apgLongSessionWrites?: number }).__apgLongSessionWrites ?? 0);
+    const growth = (oneHourHeap - halfHourHeap) / halfHourHeap;
+
+    expect(writes).toBe(120);
+    expect(growth).toBeLessThanOrEqual(0.1);
+    await expect(page.getByTestId('workspace-save-status')).not.toHaveText('Save failed');
+    testInfo.annotations.push({ type: 'long-session-writes', description: String(writes) });
+    testInfo.annotations.push({
+      type: 'long-session-heap-growth',
+      description: `${(growth * 100).toFixed(2)}% (${halfHourHeap} -> ${oneHourHeap})`,
+    });
+  });
+
   test('memory growth stays bounded after repeated add/remove', async ({ page }, testInfo) => {
     const profile = 'test/fixtures/projects-v2/perf/extreme-linear.project.v2.yaml';
     const meta = readPerfFixtureMeta(profile);

@@ -78,7 +78,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Selection and parameter edits do not rerender unrelated project or contract nodes.
 - [ ] Assertions that drag, topology, and YAML edits do not rerender unrelated nodes or the full canvas.
 - [x] Slow and failing storage, including last-good-snapshot retention and visible failure state.
-- [ ] One-hour autosave scenario.
+- [x] Scheduled one-hour autosave emulation with exact write count and saturated-history heap gate.
 
 ### Phase 4: Live Runtime
 
