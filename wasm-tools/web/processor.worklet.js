@@ -162,6 +162,8 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
         endFrame: currentFrame + Math.round(sampleRate * AUDIO_TRACE_DURATION_SECONDS),
         callbackCount: 0,
         sampleCount: 0,
+        cadenceSampleCount: 0,
+        cadenceWriteIndex: 0,
         quantumFrames: 0,
         previousCallbackAt: -1,
         previousFrames: 0,
@@ -249,7 +251,8 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     const deadlineMs = quantumFrames > 0 ? (quantumFrames / sampleRate) * 1000 : 0;
     const stages = {};
     for (const name of AUDIO_TRACE_STAGE_NAMES) {
-      stages[name] = trace ? traceStageStats(trace.stages[name], trace.sampleCount, deadlineMs) : emptyTraceStageStats();
+      const sampleCount = name === "schedulingJitter" ? trace?.cadenceSampleCount : trace?.sampleCount;
+      stages[name] = trace ? traceStageStats(trace.stages[name], sampleCount, deadlineMs) : emptyTraceStageStats();
     }
     return {
       status: trace?.status ?? "idle",
@@ -288,12 +291,14 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     if (trace?.status === "running") {
       trace.callbackCount += 1;
       trace.quantumFrames = frames;
+      trace.stages.schedulingJitter[trace.cadenceWriteIndex] = trace.previousCallbackAt < 0
+        ? 0
+        : Math.max(0, startedAt - trace.previousCallbackAt - (trace.previousFrames / sampleRate) * 1000);
+      trace.cadenceWriteIndex = (trace.cadenceWriteIndex + 1) % AUDIO_TRACE_SAMPLE_CAPACITY;
+      trace.cadenceSampleCount = Math.min(trace.cadenceSampleCount + 1, AUDIO_TRACE_SAMPLE_CAPACITY);
       if ((trace.callbackCount - 1) % AUDIO_TRACE_SAMPLE_EVERY === 0 && trace.sampleCount < AUDIO_TRACE_SAMPLE_CAPACITY) {
         traceSampleIndex = trace.sampleCount;
         trace.sampleCount += 1;
-        trace.stages.schedulingJitter[traceSampleIndex] = trace.previousCallbackAt < 0
-          ? 0
-          : Math.max(0, startedAt - trace.previousCallbackAt - (trace.previousFrames / sampleRate) * 1000);
       }
       trace.previousCallbackAt = startedAt;
       trace.previousFrames = frames;

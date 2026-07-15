@@ -142,6 +142,8 @@ assert.equal(response.trace.status, 'complete');
 assert.equal(response.trace.callbackCount, 1_875);
 assert.equal(response.trace.sampleCount, 235);
 assert(response.trace.sampleCount <= 512);
+assert.equal(response.trace.stages.schedulingJitter.sampleCount, 512);
+assert.equal(response.trace.stages.callbackTotal.sampleCount, 235);
 for (const stage of Object.values(response.trace.stages)) {
   assert(Number.isFinite(stage.meanMs));
   assert(stage.meanMs <= stage.p95Ms);
@@ -155,6 +157,7 @@ const resetResponse = processor.port.messages.at(-1) as { trace: AudioTraceSnaps
 assert.equal(resetResponse.trace.status, 'running');
 assert.equal(resetResponse.trace.callbackCount, 1);
 assert.equal(resetResponse.trace.sampleCount, 1);
+assert.equal(resetResponse.trace.stages.schedulingJitter.sampleCount, 1);
 assert.equal(resetResponse.trace.underrunsDelta, 0);
 assert.equal(resetResponse.trace.callbackDeadlineMissesDelta, 0);
 
