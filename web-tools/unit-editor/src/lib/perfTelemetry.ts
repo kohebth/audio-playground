@@ -80,10 +80,7 @@ export function markPerfSpan<T>(name: string, action: () => T, meta?: PerfMarker
   const end = `${markerId}:end`;
   const startedAt = performance.now();
 
-  performance.mark(start);
-  try {
-    return action();
-  } finally {
+  const finish = () => {
     const endedAt = performance.now();
     const durationMs = endedAt - startedAt;
 
@@ -96,6 +93,19 @@ export function markPerfSpan<T>(name: string, action: () => T, meta?: PerfMarker
     performance.clearMarks(start);
     performance.clearMarks(end);
     performance.clearMeasures(name);
+  };
+
+  performance.mark(start);
+  try {
+    const result = action();
+    if (result instanceof Promise) {
+      return result.finally(finish) as T;
+    }
+    finish();
+    return result;
+  } catch (error) {
+    finish();
+    throw error;
   }
 }
 
