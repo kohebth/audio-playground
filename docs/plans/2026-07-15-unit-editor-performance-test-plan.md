@@ -50,7 +50,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [ ] Store notification counters.
 - [x] Scheduled 500-atom frame-interval and long-task collection.
 - [ ] Style, layout, paint, and full browser-trace collection.
-- [ ] Worker compile/swap timing and Worklet control round-trip marks.
+- [x] Worker validation/prepare, Worklet commit/control/meter round-trip marks, and runtime resource snapshots.
 
 ### Phase 2: Baseline
 

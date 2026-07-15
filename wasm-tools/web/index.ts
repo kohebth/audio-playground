@@ -2,6 +2,7 @@ export { WasmBackend } from './facade';
 export type {
   AudioConfig,
   BackendPhase,
+  BackendResourceSnapshot,
   BackendState,
   MeterSnapshot,
   PreparedRuntime,

@@ -18,6 +18,31 @@ export type PerfRenderSpan = {
   at: number;
 };
 
+export type PerfRuntimeSnapshot = {
+  phase: string;
+  activeRevision: number;
+  preparedRevision: number;
+  meter: {
+    frames: number;
+    valid: boolean;
+    underruns: number;
+  };
+  resources: {
+    workerActive: boolean;
+    workletActive: boolean;
+    pendingControlRequests: number;
+    pendingProcessorRequests: number;
+    contextState: string;
+    workletStarts: number;
+    workletStops: number;
+    preparedImageBytes: number;
+    streamTracks: number;
+    inputNodeActive: boolean;
+    fileSourceActive: boolean;
+  };
+  at: number;
+};
+
 const MAX_SAMPLES = 240;
 const MAX_RENDER_SAMPLES = 240;
 const AUTOSAVE_DEBOUNCE_MS = 350;
@@ -30,6 +55,7 @@ type PerfStore = {
   renderSamples: PerfRenderSpan[];
   maxRenderSamples: number;
   componentRenders: Record<string, number>;
+  runtime?: PerfRuntimeSnapshot;
 };
 
 declare global {
@@ -142,6 +168,11 @@ export function markComponentRender(component: string, id: string): void {
   store.componentRenders ??= {};
   const key = `${component}:${id}`;
   store.componentRenders[key] = (store.componentRenders[key] ?? 0) + 1;
+}
+
+export function recordRuntimeSnapshot(snapshot: PerfRuntimeSnapshot): void {
+  if (!import.meta.env.DEV) return;
+  getStore().runtime = snapshot;
 }
 
 export function clearPerfComponentRenders(): void {

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { WorkspaceFile } from '../lib/backendSamples';
 import { useLiveBypass } from '../lib/liveBypass';
 import type { ParamOverride } from '../lib/projectParams';
+import { markPerfSpan, recordRuntimeSnapshot } from '../lib/perfTelemetry';
 
 type InputMode = 'file' | 'microphone';
 
@@ -174,15 +175,16 @@ export function PreviewPanel({
   const syncWorkspace = useCallback(
     (prepare: boolean) => {
       const synchronize = async () => {
-        if (!backend || !contextRef.current) return false;
+        const context = contextRef.current;
+        if (!backend || !context) return false;
         const revision = revisionRef.current;
         if (validRevisionRef.current !== revision) {
           setPhase('validating');
-          const validationPromise = backend.replaceWorkspace({
+          const validationPromise = markPerfSpan('runtime.validate.workspace', () => backend.replaceWorkspace({
             revision,
             entryProject,
             files: workspaceFiles.map(({ path, role, content }) => ({ path, role, content })),
-          });
+          }), { revision });
           refreshBackendState(true);
           const validation: ValidationResult = await validationPromise;
           if (revision !== revisionRef.current) return false;
@@ -198,14 +200,16 @@ export function PreviewPanel({
         }
         if (prepare) {
           setPhase('preparing');
-          const preparePromise = backend.prepare(revision, {
-            sampleRate: Math.round(contextRef.current.sampleRate),
+          const preparePromise = markPerfSpan('runtime.prepare.workspace', () => backend.prepare(revision, {
+            sampleRate: Math.round(context.sampleRate),
             blockFrames: 128,
-          });
+          }), { revision });
           refreshBackendState(true);
           await preparePromise;
           if (revision !== revisionRef.current) return false;
-          if (runningRef.current) await backend.commitPrepared(revision);
+          if (runningRef.current) {
+            await markPerfSpan('runtime.commit.workspace', () => backend.commitPrepared(revision), { revision });
+          }
           if (revision !== revisionRef.current) return false;
           refreshBackendState(true);
           setDiagnostic('Project prepared for live audio.');
@@ -213,7 +217,8 @@ export function PreviewPanel({
         setPhase(runningRef.current ? 'running' : prepare ? 'ready' : 'idle');
         return true;
       };
-      const result = syncQueueRef.current.then(synchronize, synchronize);
+      const instrumented = () => markPerfSpan('runtime.sync.workspace', synchronize, { revision: revisionRef.current });
+      const result = syncQueueRef.current.then(instrumented, instrumented);
       syncQueueRef.current = result.then(() => undefined, () => undefined);
       return result;
     },
@@ -240,8 +245,7 @@ export function PreviewPanel({
     const timer = window.setInterval(() => {
       if (polling) return;
       polling = true;
-      void backend
-        .pollMeters()
+      void markPerfSpan('runtime.meter.poll', () => backend.pollMeters())
         .then(setMeter)
         .catch(error => {
           if (runningRef.current) reportError(error, 'meter');
@@ -273,7 +277,7 @@ export function PreviewPanel({
     for (const command of commands) {
       const value = Number(command.value);
       if (Number.isFinite(value)) {
-        void backend.setParam(command.path, value).catch(error => {
+        void markPerfSpan('runtime.control.param', () => backend.setParam(command.path, value), { path: command.path }).catch(error => {
           reportError(error, 'control');
         });
       }
@@ -309,7 +313,7 @@ export function PreviewPanel({
     inputRef.current = null;
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
-    await backendRef.current?.stop();
+    if (backendRef.current) await markPerfSpan('runtime.stop', () => backendRef.current!.stop());
     refreshBackendState(true);
     setPhase('ready');
     setMeter(emptyMeter);
@@ -342,7 +346,7 @@ export function PreviewPanel({
         inputRef.current = source;
         input = source;
       }
-      await backend.start({ input });
+      await markPerfSpan('runtime.start', () => backend.start({ input }));
       refreshBackendState(true);
       runningRef.current = true;
       setRunning(true);
@@ -444,6 +448,25 @@ export function PreviewPanel({
   }, [bypassByInstance, captureLatency, latencyMs, measuredLatencyMs, running, setController, setInstanceBypass]);
 
   useEffect(() => () => setController(null), [setController]);
+
+  useEffect(() => {
+    if (!backend) return;
+    const state = backend.getState();
+    const resources = backend.getResourceSnapshot();
+    recordRuntimeSnapshot({
+      phase,
+      activeRevision: state.activeRevision,
+      preparedRevision: state.preparedRevision,
+      meter: { frames: meter.frames, valid: meter.valid, underruns: meter.underruns },
+      resources: {
+        ...resources,
+        streamTracks: streamRef.current?.getTracks().length ?? 0,
+        inputNodeActive: inputRef.current !== null,
+        fileSourceActive: fileSourceRef.current !== null,
+      },
+      at: Date.now(),
+    });
+  }, [backend, meter, phase, running]);
 
   const toggleMute = useCallback(async () => {
     if (!backend || !running) return;

@@ -4,6 +4,7 @@ import type { ControlRequest, ControlResponse, ProcessorRequest, ProcessorRespon
 import type {
   AudioConfig,
   BackendState,
+  BackendResourceSnapshot,
   MeterSnapshot,
   PreparedRuntime,
   StartOptions,
@@ -22,6 +23,9 @@ export class WasmBackend {
   private readonly pending = new Map<number, Pending<ControlResponse>>();
   private readonly processorPending = new Map<number, Pending<ProcessorResponse>>();
   private requestId = 1;
+  private workerActive = true;
+  private workletStarts = 0;
+  private workletStops = 0;
   private context: AudioContext | null = null;
   private node: AudioWorkletNode | null = null;
   private prepared: PreparedRuntime | null = null;
@@ -238,6 +242,7 @@ export class WasmBackend {
       outputChannelCount: [1],
       processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary },
     });
+    this.workletStarts += 1;
     this.node.port.onmessage = event => this.handleProcessorResponse(event.data as ProcessorResponse);
     await processorReady;
     options.input?.connect(this.node);
@@ -251,6 +256,7 @@ export class WasmBackend {
     await this.processorRequest({ type: 'dispose' }).catch(() => undefined);
     this.node.disconnect();
     this.node = null;
+    this.workletStops += 1;
     this.state = { ...this.state, phase: this.prepared ? 'ready' : 'idle', activeRevision: 0 };
   }
 
@@ -304,10 +310,24 @@ export class WasmBackend {
     return this.state.lastError;
   }
 
+  getResourceSnapshot(): BackendResourceSnapshot {
+    return {
+      workerActive: this.workerActive,
+      workletActive: this.node !== null,
+      pendingControlRequests: this.pending.size,
+      pendingProcessorRequests: this.processorPending.size,
+      contextState: this.context?.state ?? 'none',
+      workletStarts: this.workletStarts,
+      workletStops: this.workletStops,
+      preparedImageBytes: this.preparedImage?.byteLength ?? 0,
+    };
+  }
+
   async destroy(): Promise<void> {
     await this.stop();
     await this.controlRequest({ type: 'dispose' }).catch(() => undefined);
     this.worker.terminate();
+    this.workerActive = false;
     if (!this.options.audioContext) await this.context?.close();
     this.context = null;
   }

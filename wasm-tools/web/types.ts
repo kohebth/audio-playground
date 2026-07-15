@@ -60,6 +60,17 @@ export type BackendState = {
   lastError: WasmDiagnostic | null;
 };
 
+export type BackendResourceSnapshot = {
+  workerActive: boolean;
+  workletActive: boolean;
+  pendingControlRequests: number;
+  pendingProcessorRequests: number;
+  contextState: AudioContextState | 'none';
+  workletStarts: number;
+  workletStops: number;
+  preparedImageBytes: number;
+};
+
 export type WasmBackendOptions = {
   controlModuleUrl: string;
   processorModuleUrl: string;
