@@ -85,6 +85,10 @@ that rolling history is the representative baseline as runner data accumulates.
 - [x] Assertions that drag, topology, and YAML metadata edits do not rerender unrelated nodes or edges.
 - [x] Slow and failing storage, including last-good-snapshot retention and visible failure state.
 - [x] Scheduled one-hour autosave emulation with exact write count and saturated-history heap gate.
+- [x] Scheduled 30-second parameter burst, continuous node drag, 100-atom add burst, repeated routing, and 500-atom
+  payload autosave gates with payload size, duplicate-write, and main-thread blocking assertions.
+- [x] Scheduled matched-window lifecycle heap gate covering 1,000 inspector cycles, repeated route edges, atom
+  replacements, project load/unload, and project/contract navigation.
 
 ### Phase 4: Live Runtime
 
@@ -113,13 +117,14 @@ that rolling history is the representative baseline as runner data accumulates.
 2. **Local changes avoid full graph rerender:** Proven for the required interaction set. Exact node/edge and centralized
    state-dispatch counters keep selection, parameter editing, 500-atom drag/config, project drag/drop, route topology,
    atom insertion/reconnect, and raw YAML metadata edits limited to the affected graph objects.
-3. **Autosave has no visible stall:** Partially proven. Default-workspace rapid edits and an injected 6 ms storage write
-   keep synchronous persistence under 16 ms with one debounced write. Storage and serialization failures are isolated,
-   retain the last good snapshot, and remain visible without uncaught errors. Large payload, drag, and long-session cases remain.
-4. **Removed objects are not retained:** Partially proven. Collected-heap browser gates stay below 10% across a second
-   saturated undo-history window and 20 cycles that mount and remove 100 atoms. Twenty alternating file/microphone
-   playback cycles also balance Worklet starts/stops and release request, stream, source-node, and timer resources;
-   edges, inspectors, and navigation remain.
+3. **Autosave has no visible stall:** Proven across rapid default edits, 120 parameter edits over a simulated 30 seconds,
+   an 80-step continuous node drag, 20 route add/delete cycles, 100 rapid atom additions, a real 500-atom payload,
+   an emulated one-hour session, and injected slow/failing storage. Persistence remains under 16 ms, duplicate snapshots
+   are rejected, and the last good snapshot survives failures.
+4. **Removed objects are not retained:** Proven. Collected-heap browser gates stay below 10% across saturated-history
+   project add/remove windows, 20 cycles that mount/remove 100 atoms, and matched lifecycle windows containing 1,000
+   inspector cycles plus repeated edge, replacement, reload, and navigation operations. Twenty alternating file/microphone
+   playback cycles also balance Worklet starts/stops and release request, stream, source-node, and timer resources.
 5. **Editing during audio causes no underrun:** Proven for the scheduled structural workflow. Project-unit and atom
    insertion, atom replacement, reconnect, undo/redo, save, and a 100-atom import each hot-swap while fake microphone
    audio remains running, revisions converge, and neither the meter underrun nor measured Worklet callback-deadline-miss

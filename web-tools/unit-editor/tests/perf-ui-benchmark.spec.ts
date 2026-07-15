@@ -10,6 +10,12 @@ type PerfSample = {
   endedAt: number;
 };
 
+type AutosaveWrite = {
+  at: number;
+  bytes: number;
+  signature: string;
+};
+
 type RuntimeSnapshot = {
   phase: string;
   activeRevision: number;
@@ -514,6 +520,53 @@ async function waitForWorkspaceQuiescence(page: Page) {
   await expect(page.locator('.transport-state')).not.toHaveText(/validating|preparing/, { timeout: 12_000 });
 }
 
+async function installAutosaveProbe(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    const host = window as typeof window & { __apgAutosaveWrites?: AutosaveWrite[] };
+    host.__apgAutosaveWrites = [];
+    Storage.prototype.setItem = function setItem(key, value) {
+      if (key === 'apg.unit-editor.workspace.v2') {
+        let hash = 2166136261;
+        for (let index = 0; index < value.length; index += 1) {
+          hash ^= value.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        host.__apgAutosaveWrites?.push({
+          at: performance.now(),
+          bytes: new Blob([value]).size,
+          signature: `${value.length}:${hash >>> 0}`,
+        });
+      }
+      return original.call(this, key, value);
+    };
+  });
+}
+
+async function resetAutosaveProbe(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as typeof window & { __apgAutosaveWrites?: AutosaveWrite[] }).__apgAutosaveWrites = [];
+  });
+}
+
+async function readAutosaveProbe(page: Page): Promise<AutosaveWrite[]> {
+  return page.evaluate(() =>
+    [...((window as typeof window & { __apgAutosaveWrites?: AutosaveWrite[] }).__apgAutosaveWrites ?? [])]);
+}
+
+function assertUniqueAutosaves(writes: AutosaveWrite[]): void {
+  expect(writes.length).toBeGreaterThan(0);
+  expect(new Set(writes.map(write => write.signature)).size).toBe(writes.length);
+}
+
+async function assertAutosaveBudget(page: Page): Promise<number> {
+  const samples = await getSpans(page, 'workspace.autosave.persist');
+  expect(samples.length).toBeGreaterThan(0);
+  const maxMs = Math.max(...samples.map(sample => sample.durationMs));
+  assertDurationBudget('workspace.autosave.persist', maxMs);
+  return maxMs;
+}
+
 test.describe('UI performance checkpoints', () => {
   test.beforeEach(async ({ page }) => {
     await launchWorkspace(page);
@@ -809,6 +862,127 @@ test.describe('Scalability checkpoints', () => {
     testInfo.annotations.push({ type: 'slow-autosave-ms', description: slowAutosaveMs.toFixed(2) });
   });
 
+  test('thirty-second continuous parameter editing coalesces to one autosave', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The continuous autosave gate runs in scheduled performance CI.');
+    const fixture = 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml';
+    await openContractFixture(page, fixture, readPerfFixtureMeta(fixture).atoms);
+    await page.getByTestId('contract-atom-item-atom_0001').click();
+    const threshold = page.getByLabel('atom_0001 config threshold');
+    await expect(threshold).toBeVisible();
+    await waitForWorkspaceQuiescence(page);
+    await installAutosaveProbe(page);
+    await page.clock.install();
+    await clearPerfSpans(page);
+
+    for (let index = 0; index < 120; index += 1) {
+      await threshold.fill((0.5 + index / 1000).toFixed(3));
+      await page.clock.fastForward(250);
+    }
+    await page.clock.fastForward(400);
+
+    await waitForSpanCount(page, 'workspace.autosave.persist', 1);
+    const editSamples = await getSpans(page, 'contract.edit.atom');
+    expect(editSamples.length).toBeGreaterThanOrEqual(60);
+    assertDurationBudget('contract.edit.atom', Math.max(...editSamples.map(sample => sample.durationMs)));
+    const writes = await readAutosaveProbe(page);
+    expect(writes).toHaveLength(1);
+    const autosaveMs = await assertAutosaveBudget(page);
+    testInfo.annotations.push({ type: 'parameter-burst-autosave-ms', description: autosaveMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'parameter-burst-autosave-writes', description: String(writes.length) });
+    testInfo.annotations.push({ type: 'parameter-burst-edits', description: '120 over 30 seconds' });
+  });
+
+  test('drag and routing bursts avoid redundant autosaves', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The drag and routing autosave gate runs in scheduled performance CI.');
+    await waitForWorkspaceQuiescence(page);
+    await installAutosaveProbe(page);
+    await clearPerfSpans(page);
+
+    const drive = page.getByTestId('project-node-drive1');
+    const driveBox = await drive.boundingBox();
+    expect(driveBox).not.toBeNull();
+    const dragStart = { x: driveBox!.x + 20, y: driveBox!.y + 20 };
+    await page.mouse.move(dragStart.x, dragStart.y);
+    await page.mouse.down();
+    await page.mouse.move(dragStart.x + 120, dragStart.y + 60, { steps: 80 });
+    await page.mouse.up();
+    await waitForSpanCount(page, 'workspace.autosave.persist', 1);
+    await runAndAssertBudget(page, 'graph.move.projectNode', 1);
+    expect(await readAutosaveProbe(page)).toHaveLength(1);
+
+    await clearPerfSpans(page);
+    await page.getByTestId('project-instance-unit').selectOption('tone_stack_unit');
+    await page.getByTestId('project-instance-id').fill('autosave_route_unit');
+    await page.getByTestId('project-instance-add').click();
+    await waitForWorkspaceQuiescence(page);
+    await page.getByTestId('inspector-tab-atom').click();
+    await page.getByTestId('project-route-source').selectOption('trem1.output');
+    await page.getByTestId('project-route-target').selectOption('autosave_route_unit.input');
+    await resetAutosaveProbe(page);
+    await clearPerfSpans(page);
+    const baselineRoutes = await page.getByTestId(/^route-item-/).count();
+
+    for (let index = 0; index < 20; index += 1) {
+      await page.getByTestId('project-route-add').click();
+      await expect(page.getByTestId(/^route-item-/)).toHaveCount(baselineRoutes + 1);
+      await page.getByTestId(/^route-item-/).last().click();
+      await page.getByTestId('inspector-route-disconnect').click();
+      await expect(page.getByTestId(/^route-item-/)).toHaveCount(baselineRoutes);
+    }
+    await page.waitForTimeout(450);
+    await waitForSpanCount(page, 'workspace.autosave.persist', 1);
+    const writes = await readAutosaveProbe(page);
+    expect(new Set(writes.map(write => write.signature)).size).toBe(writes.length);
+    expect(writes.length).toBeLessThanOrEqual(40);
+    const autosaveMs = await assertAutosaveBudget(page);
+    testInfo.annotations.push({ type: 'routing-burst-autosave-ms', description: autosaveMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'routing-burst-autosave-writes', description: String(writes.length) });
+  });
+
+  test('one hundred atom additions and a large payload keep autosave bounded', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The structural autosave gate runs in scheduled performance CI.');
+    test.setTimeout(300_000);
+    const smallFixture = 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml';
+    await openContractFixture(page, smallFixture, readPerfFixtureMeta(smallFixture).atoms);
+    await waitForWorkspaceQuiescence(page);
+    await installAutosaveProbe(page);
+    await clearPerfSpans(page);
+    const atomList = page.locator('[data-testid^="contract-atom-item-"]');
+    const initialAtoms = await atomList.count();
+    const add = page.getByTestId('contract-atom-add');
+
+    for (let index = 0; index < 100; index += 1) {
+      await add.click();
+      await expect(atomList).toHaveCount(initialAtoms + index + 1);
+    }
+    await page.waitForTimeout(450);
+    await waitForSpanCount(page, 'workspace.autosave.persist', 1);
+    const addSamples = await getSpans(page, 'contract.add.atom');
+    expect(addSamples.length).toBeGreaterThanOrEqual(60);
+    assertDurationBudget('contract.add.atom', Math.max(...addSamples.map(sample => sample.durationMs)));
+    let writes = await readAutosaveProbe(page);
+    assertUniqueAutosaves(writes);
+    expect(writes.length).toBeLessThanOrEqual(100);
+    const atomBurstWrites = writes.length;
+    const atomBurstAutosaveMs = await assertAutosaveBudget(page);
+
+    const largeFixture = 'test/fixtures/projects-v2/perf/large-atoms.project.v2.yaml';
+    await resetAutosaveProbe(page);
+    await clearPerfSpans(page);
+    await importPerfWorkspaceFixture(page, largeFixture, 1);
+    await page.waitForTimeout(450);
+    await waitForSpanCount(page, 'workspace.autosave.persist', 1);
+    writes = await readAutosaveProbe(page);
+    assertUniqueAutosaves(writes);
+    expect(Math.max(...writes.map(write => write.bytes))).toBeGreaterThan(100_000);
+    const largePayloadAutosaveMs = await assertAutosaveBudget(page);
+
+    testInfo.annotations.push({ type: 'atom-burst-autosave-ms', description: atomBurstAutosaveMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'atom-burst-autosave-writes', description: String(atomBurstWrites) });
+    testInfo.annotations.push({ type: 'large-payload-autosave-ms', description: largePayloadAutosaveMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'large-payload-bytes', description: String(Math.max(...writes.map(write => write.bytes))) });
+  });
+
   test('one-hour autosave session keeps writes and residual heap bounded', async ({ page }, testInfo) => {
     test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The one-hour emulation runs in scheduled performance CI.');
     const fixture = 'test/fixtures/projects-v2/perf/small-atoms.project.v2.yaml';
@@ -921,6 +1095,88 @@ test.describe('Scalability checkpoints', () => {
     testInfo.annotations.push({
       type: 'atom-retention-heap-growth',
       description: `${(growth * 100).toFixed(2)}% (${saturatedHeap} -> ${finalHeap})`,
+    });
+  });
+
+  test('inspector, edge, replacement, reload, and navigation lifecycles stay bounded', async ({ page }, testInfo) => {
+    test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The complete UI lifecycle memory gate runs in scheduled performance CI.');
+    test.setTimeout(300_000);
+    const defaultPayload = buildPerfWorkspacePayload('test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml');
+    const mediumPayload = buildPerfWorkspacePayload('test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml');
+
+    const exerciseWindow = async (suffix: string) => {
+      await importWorkspacePayload(page, defaultPayload, 7);
+      await page.getByTestId('project-instance-unit').selectOption('tone_stack_unit');
+      await page.getByTestId('project-instance-id').fill(`lifecycle_route_${suffix}`);
+      await page.getByTestId('project-instance-add').click();
+      await page.getByTestId('inspector-tab-atom').click();
+      await page.getByTestId('project-route-source').selectOption('trem1.output');
+      await page.getByTestId('project-route-target').selectOption(`lifecycle_route_${suffix}.input`);
+      const baselineRoutes = await page.getByTestId(/^route-item-/).count();
+
+      for (let index = 0; index < 10; index += 1) {
+        await page.getByTestId('project-route-add').click();
+        await expect(page.getByTestId(/^route-item-/)).toHaveCount(baselineRoutes + 1);
+        await page.getByTestId(/^route-item-/).last().click();
+        await page.getByTestId('inspector-route-disconnect').click();
+        await expect(page.getByTestId(/^route-item-/)).toHaveCount(baselineRoutes);
+      }
+
+      await page.getByTestId('project-node-drive1').dblclick();
+      await expect(page.getByTestId('contract-canvas')).toBeVisible();
+      await page.getByTestId('contract-atom-item-clip_drive').click();
+      const type = page.getByTestId('contract-atom-type');
+      for (let index = 0; index < 10; index += 1) {
+        const nextType = index % 2 === 0 ? 'amplitude_clip_hard' : 'amplitude_clip_soft';
+        await page.getByTestId('contract-atom-replace-open').click();
+        await page.getByTestId('contract-atom-replace-type').selectOption(nextType);
+        await page.getByTestId('contract-atom-replace-preserve').check();
+        await page.getByTestId('contract-atom-replace-confirm').click();
+        await expect(type).toHaveText(new RegExp(nextType));
+      }
+
+      const panel = page.getByTestId('contract-selected-atom-panel');
+      const inspectorCycles = await panel.evaluate((details: HTMLDetailsElement) => {
+        const summary = details.querySelector('summary');
+        if (!summary) throw new Error('Selected atom summary is missing.');
+        for (let index = 0; index < 500; index += 1) {
+          summary.click();
+          summary.click();
+        }
+        return 500;
+      });
+      expect(inspectorCycles).toBe(500);
+      await expect(panel).toHaveJSProperty('open', true);
+
+      for (let index = 0; index < 10; index += 1) {
+        await page.getByRole('button', { name: 'Project graph' }).click();
+        await expect(page.getByTestId('project-canvas')).toBeVisible();
+        await page.getByTestId('project-node-drive1').dblclick();
+        await expect(page.getByTestId('contract-canvas')).toBeVisible();
+      }
+
+      for (let index = 0; index < 5; index += 1) {
+        await importWorkspacePayload(page, mediumPayload, 1);
+        await importWorkspacePayload(page, defaultPayload, 7);
+      }
+      await page.waitForTimeout(450);
+    };
+
+    await exerciseWindow('warm');
+    const baselineHeap = await collectHeapBytes(page);
+    await exerciseWindow('measure');
+    const finalHeap = await collectHeapBytes(page);
+    const growth = (finalHeap - baselineHeap) / baselineHeap;
+
+    expect(growth).toBeLessThanOrEqual(0.1);
+    testInfo.annotations.push({ type: 'lifecycle-inspector-cycles', description: '1000' });
+    testInfo.annotations.push({ type: 'lifecycle-route-cycles', description: '20' });
+    testInfo.annotations.push({ type: 'lifecycle-replacement-cycles', description: '20' });
+    testInfo.annotations.push({ type: 'lifecycle-reload-cycles', description: '20' });
+    testInfo.annotations.push({ type: 'lifecycle-navigation-cycles', description: '20' });
+    testInfo.annotations.push({
+      type: 'lifecycle-heap-growth',
+      description: `${(growth * 100).toFixed(2)}% (${baselineHeap} -> ${finalHeap})`,
     });
   });
 });
