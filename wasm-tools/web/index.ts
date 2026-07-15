@@ -1,6 +1,11 @@
 export { WasmBackend } from './facade';
 export type {
   AudioConfig,
+  AudioTraceReport,
+  AudioTraceSnapshot,
+  AudioTraceStageName,
+  AudioTraceStageStats,
+  AudioTraceStatus,
   BackendPhase,
   BackendResourceSnapshot,
   BackendState,

@@ -14,6 +14,8 @@ import type {
   WorkspaceFile,
 } from '../lib/backendSamples';
 import { type ParamOverride } from '../lib/projectParams';
+import { AUDIO_TRACE_STAGE_LABELS, exportAudioTraceReport } from '../lib/audioTrace';
+import { useLiveBypass } from '../lib/liveBypass';
 import {
   previewAtomReplacement,
   type AtomReplacementPreview,
@@ -75,6 +77,10 @@ function compatibilityLabel(flags: Record<string, boolean>): string {
 
 function formatNumber(value: number): string {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function formatLatency(value: number | null): string {
+  return value === null ? 'Unavailable' : `${value.toFixed(3)} ms`;
 }
 
 function updateMapValue(
@@ -145,6 +151,7 @@ export function ProjectInspector({
   onSelectedAtomChange,
   onWorkspaceFileChange,
 }: Props) {
+  const { controller: liveAudio } = useLiveBypass();
   const [atomToAdd, setAtomToAdd] = useState(atomCatalog.atoms[0]?.name ?? '');
   const [replacementAtom, setReplacementAtom] = useState(atomCatalog.atoms[0]?.name ?? '');
   const [preserveReplacementId, setPreserveReplacementId] = useState(false);
@@ -631,6 +638,91 @@ export function ProjectInspector({
               <span>Render Command</span>
               <code>{commands.renderProject}</code>
             </div>
+            <section className="audio-trace-panel" data-testid="audio-trace-panel">
+              <div className="audio-trace-panel__header">
+                <div>
+                  <span>Audio latency profile</span>
+                  <strong data-testid="audio-trace-status">{liveAudio?.audioTraceStatus ?? 'idle'}</strong>
+                </div>
+                <div className="audio-trace-panel__actions">
+                  <button
+                    data-testid="audio-trace-profile"
+                    disabled={!liveAudio?.running || liveAudio.inputMode !== 'microphone' || liveAudio.audioTraceStatus === 'running'}
+                    onClick={() => void liveAudio?.profileAudio()}
+                    title="Profile microphone audio"
+                    type="button"
+                  >
+                    <i className="fa-solid fa-stopwatch" aria-hidden="true" />
+                    Profile audio
+                  </button>
+                  {liveAudio?.audioTraceReport ? (
+                    <>
+                      <button
+                        aria-label="Export audio latency profile"
+                        className="icon-button"
+                        data-testid="audio-trace-export"
+                        onClick={() => exportAudioTraceReport(liveAudio.audioTraceReport!)}
+                        title="Export audio latency profile"
+                        type="button"
+                      >
+                        <i className="fa-solid fa-file-export" aria-hidden="true" />
+                      </button>
+                      <button
+                        aria-label="Clear audio latency profile"
+                        className="icon-button"
+                        onClick={liveAudio.clearAudioTrace}
+                        title="Clear audio latency profile"
+                        type="button"
+                      >
+                        <i className="fa-solid fa-xmark" aria-hidden="true" />
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+              {liveAudio?.audioTraceStatus === 'running' ? (
+                <div className="audio-trace-progress" aria-label="Audio profile progress">
+                  <span style={{ width: `${Math.round(liveAudio.audioTraceProgress * 100)}%` }} />
+                </div>
+              ) : null}
+              {liveAudio?.audioTraceReport ? (
+                <div className="audio-trace-report" data-testid="audio-trace-report">
+                  <p className={`audio-trace-verdict audio-trace-verdict--${liveAudio.audioTraceReport.verdict}`}>
+                    {liveAudio.audioTraceReport.message}
+                  </p>
+                  <div className="audio-trace-summary">
+                    <div><span>Sample rate</span><strong>{liveAudio.audioTraceReport.trace.sampleRate} Hz</strong></div>
+                    <div><span>Quantum</span><strong>{liveAudio.audioTraceReport.trace.quantumFrames} frames</strong></div>
+                    <div><span>Deadline</span><strong>{formatLatency(liveAudio.audioTraceReport.trace.deadlineMs)}</strong></div>
+                    <div><span>Capture est.</span><strong>{formatLatency(liveAudio.audioTraceReport.browser.captureLatencyMs)}</strong></div>
+                    <div><span>Base est.</span><strong>{formatLatency(liveAudio.audioTraceReport.browser.baseLatencyMs)}</strong></div>
+                    <div><span>Output est.</span><strong>{formatLatency(liveAudio.audioTraceReport.browser.outputLatencyMs)}</strong></div>
+                    <div><span>Loopback</span><strong>{formatLatency(liveAudio.audioTraceReport.browser.acousticLoopbackMs)}</strong></div>
+                    <div><span>Underruns</span><strong>{liveAudio.audioTraceReport.trace.underrunsDelta}</strong></div>
+                    <div><span>Deadline misses</span><strong>{liveAudio.audioTraceReport.trace.callbackDeadlineMissesDelta}</strong></div>
+                  </div>
+                  <div className="audio-trace-table" role="table" aria-label="Audio callback stage timings">
+                    <div className="audio-trace-table__header" role="row">
+                      <span>Stage</span><span>Mean</span><span>P95</span><span>Max</span><span>Budget</span>
+                    </div>
+                    {Object.entries(liveAudio.audioTraceReport.trace.stages).map(([name, stage]) => (
+                      <div className="audio-trace-table__row" key={name} role="row">
+                        <strong>{AUDIO_TRACE_STAGE_LABELS[name as keyof typeof AUDIO_TRACE_STAGE_LABELS]}</strong>
+                        <span>{stage.meanMs.toFixed(3)}</span>
+                        <span>{stage.p95Ms.toFixed(3)}</span>
+                        <span>{stage.maxMs.toFixed(3)}</span>
+                        <span>{stage.deadlineUtilization.toFixed(1)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="audio-trace-slowest">
+                    Slowest internal stage: <strong>{liveAudio.audioTraceReport.slowestInternalStage
+                      ? AUDIO_TRACE_STAGE_LABELS[liveAudio.audioTraceReport.slowestInternalStage]
+                      : 'Unavailable'}</strong>
+                  </p>
+                </div>
+              ) : null}
+            </section>
             {perfSpans.length > 0 ? (
               <details className="inspector-block">
                 <summary className="inspector-block__label">Operation Spans ({perfSpans.length})</summary>

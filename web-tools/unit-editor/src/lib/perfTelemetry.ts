@@ -43,6 +43,7 @@ export type PerfRuntimeSnapshot = {
     fileSourceActive: boolean;
     meterTimerActive: boolean;
     latencyTimerActive: boolean;
+    audioTracePollingActive: boolean;
   };
   at: number;
 };

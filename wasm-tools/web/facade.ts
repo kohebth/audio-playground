@@ -3,6 +3,7 @@ import ControlWorker from './control.worker?worker';
 import type { ControlRequest, ControlResponse, ProcessorRequest, ProcessorResponse } from './protocol';
 import type {
   AudioConfig,
+  AudioTraceSnapshot,
   BackendState,
   BackendResourceSnapshot,
   MeterSnapshot,
@@ -298,6 +299,17 @@ export class WasmBackend {
     const response = await this.processorRequest({ type: 'startLatencyProbe' });
     if (response.type !== 'latencyProbe') throw new Error(`Unexpected processor response: ${response.type}`);
     return (response.frames / response.sampleRate) * 1000;
+  }
+
+  async startAudioTrace(): Promise<void> {
+    const response = await this.processorRequest({ type: 'startAudioTrace' });
+    if (response.type !== 'audioTraceStarted') throw new Error(`Unexpected processor response: ${response.type}`);
+  }
+
+  async pollAudioTrace(): Promise<AudioTraceSnapshot> {
+    const response = await this.processorRequest({ type: 'pollAudioTrace' });
+    if (response.type !== 'audioTrace') throw new Error(`Unexpected processor response: ${response.type}`);
+    return response.trace;
   }
 
   getMeters(): MeterSnapshot {

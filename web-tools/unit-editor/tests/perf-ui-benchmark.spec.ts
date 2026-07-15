@@ -41,6 +41,7 @@ type RuntimeSnapshot = {
     fileSourceActive: boolean;
     meterTimerActive: boolean;
     latencyTimerActive: boolean;
+    audioTracePollingActive: boolean;
   };
 };
 
@@ -1670,6 +1671,64 @@ test.describe('Live WASM runtime performance', () => {
     expect(stoppedSnapshot?.resources.workletStarts).toBe(stoppedSnapshot?.resources.workletStops);
     expect(pageErrors).toEqual([]);
     testInfo.annotations.push({ type: 'runtime-param-control-ms', description: controlMs.toFixed(2) });
+  });
+
+  test('microphone profiler attributes callback cost and releases polling on stop', async ({ page }, testInfo) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+    await page.getByTestId('preview-mode-mic').click();
+    await page.getByTestId('preview-start-stop').click();
+    await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+    await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.valid ?? false, { timeout: 10_000 }).toBe(true);
+    const baseline = await getRuntimeSnapshot(page);
+
+    await page.getByTestId('inspector-tab-contract').click();
+    const diagnostics = page.locator('details.developer-diagnostics');
+    await diagnostics.locator(':scope > summary').click();
+    await page.getByTestId('audio-trace-profile').click();
+    await expect(page.getByTestId('audio-trace-status')).toHaveText('running');
+    await expect(page.getByTestId('audio-trace-report')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('audio-trace-status')).toHaveText('complete');
+
+    const profiled = await getRuntimeSnapshot(page);
+    expect(profiled?.meter.underruns).toBe(baseline?.meter.underruns);
+    expect(profiled?.meter.callbackDeadlineMisses).toBe(baseline?.meter.callbackDeadlineMisses);
+    expect(profiled?.resources.audioTracePollingActive).toBe(false);
+    await expect(page.getByTestId('audio-trace-report')).toContainText('Sample rate');
+    await expect(page.getByTestId('audio-trace-report')).toContainText('WASM graph');
+    await expect(page.getByTestId('audio-trace-report')).toContainText('Deadline misses');
+    await page.getByTestId('audio-trace-report').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath('audio-trace-report.png'), fullPage: true });
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('audio-trace-export').click();
+    const download = await downloadPromise;
+    const downloadPath = await download.path();
+    expect(downloadPath).not.toBeNull();
+    const report = JSON.parse(readFileSync(downloadPath!, 'utf8')) as {
+      schema: string;
+      browser: Record<string, number | null>;
+      trace: { status: string; sampleCount: number; stages: Record<string, { p95Ms: number }> };
+    };
+    expect(report.schema).toBe('apg.audio-trace.v1');
+    expect(report.trace.status).toBe('complete');
+    expect(report.trace.sampleCount).toBeGreaterThan(0);
+    expect(report.trace.stages.wasmProcess.p95Ms).toBeGreaterThanOrEqual(0);
+    expect(report.browser).toHaveProperty('captureLatencyMs');
+
+    await page.getByTestId('audio-trace-profile').click();
+    await expect(page.getByTestId('audio-trace-status')).toHaveText('running');
+    await expect.poll(async () => (await getRuntimeSnapshot(page))?.resources.audioTracePollingActive ?? false).toBe(true);
+    await page.getByTestId('preview-start-stop').click();
+    await expect(page.locator('.transport-state')).toHaveText('ready');
+    await expect(page.getByTestId('audio-trace-status')).toHaveText('idle');
+    await expect.poll(async () => (await getRuntimeSnapshot(page))?.resources.audioTracePollingActive ?? true).toBe(false);
+    const stopped = await getRuntimeSnapshot(page);
+    expect(stopped?.resources.streamTracks).toBe(0);
+    expect(stopped?.resources.workletActive).toBe(false);
+    expect(stopped?.resources.pendingProcessorRequests).toBe(0);
+    expect(pageErrors).toEqual([]);
+    testInfo.annotations.push({ type: 'audio-trace-samples', description: String(report.trace.sampleCount) });
   });
 
   test('structural edits hot-swap while live audio remains healthy', async ({ page }, testInfo) => {

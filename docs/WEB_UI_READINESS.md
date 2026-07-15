@@ -53,6 +53,14 @@ layout, preventing control drags from flashing the canvas.
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
 
+Developer Diagnostics includes an opt-in five-second microphone latency profile. The AudioWorklet measures callback
+scheduling jitter and samples input copy, WASM graph execution, output copy, latency-probe work, channel copy, and total
+callback time every eighth quantum into fixed-capacity buffers. Polling constructs mean, p95, maximum, deadline
+utilization, underrun, and deadline-miss results outside `process()`. Reports distinguish internal deadline overruns from
+browser scheduling delay and otherwise leave opaque capture/output buffering attributed to the browser or device. The
+UI combines those results with browser latency estimates and an available acoustic-loopback result, and exports the
+versioned `apg.audio-trace.v1` JSON contract. APGCore and embedded runtime boundaries remain unchanged.
+
 The processor keeps an active, staged, and retired runtime slot. It only promotes a staged slot at a block boundary and
 crossfades that block; retired-slot destruction occurs during a later control-thread staging operation, never in the
 audio callback. A CMake boundary test rejects allocation, slot destruction, formatting, parsing, compilation, image

@@ -1,0 +1,61 @@
+import type { AudioTraceReport, AudioTraceSnapshot, AudioTraceStageName } from '@audio-playground/wasm-tools';
+
+export type AudioTraceBrowserLatency = AudioTraceReport['browser'];
+
+export const AUDIO_TRACE_STAGE_LABELS: Record<AudioTraceStageName, string> = {
+  schedulingJitter: 'Scheduling jitter',
+  inputCopy: 'Input copy',
+  wasmProcess: 'WASM graph',
+  outputCopy: 'Output copy',
+  latencyProbe: 'Latency probe',
+  channelCopy: 'Channel copy',
+  callbackTotal: 'Total callback',
+};
+
+const INTERNAL_STAGES = [
+  'inputCopy',
+  'wasmProcess',
+  'outputCopy',
+  'latencyProbe',
+  'channelCopy',
+] as const;
+
+export function createAudioTraceReport(
+  trace: AudioTraceSnapshot,
+  browser: AudioTraceBrowserLatency,
+  capturedAt = new Date().toISOString(),
+): AudioTraceReport {
+  const slowestInternalStage = trace.sampleCount === 0
+    ? null
+    : INTERNAL_STAGES.reduce((slowest, stage) => (
+      trace.stages[stage].p95Ms > trace.stages[slowest].p95Ms ? stage : slowest
+    ));
+  const overBudget = trace.callbackDeadlineMissesDelta > 0
+    || (trace.deadlineMs > 0 && trace.stages.callbackTotal.maxMs > trace.deadlineMs);
+  const schedulingDelayed = trace.deadlineMs > 0 && trace.stages.schedulingJitter.p95Ms > trace.deadlineMs;
+  const verdict = overBudget ? 'internal-over-budget' : schedulingDelayed ? 'scheduling-delayed' : 'internal-healthy';
+
+  return {
+    schema: 'apg.audio-trace.v1',
+    capturedAt,
+    browser,
+    trace,
+    slowestInternalStage,
+    verdict,
+    message: verdict === 'internal-over-budget'
+      ? `Internal processing exceeded the ${trace.deadlineMs.toFixed(3)} ms callback deadline.`
+      : verdict === 'scheduling-delayed'
+        ? 'Internal processing remained within its deadline, but callback scheduling jitter exceeded one audio quantum.'
+        : 'Internal processing and callback scheduling remained within budget. Remaining delay is in opaque browser or device buffering.',
+  };
+}
+
+export function exportAudioTraceReport(report: AudioTraceReport): void {
+  const blob = new Blob([`${JSON.stringify(report, null, 2)}\n`], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `apg-audio-trace-${report.capturedAt.replace(/[:.]/g, '-')}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}

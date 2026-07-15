@@ -51,6 +51,54 @@ export type MeterSnapshot = {
   maxCallbackMs: number;
 };
 
+export type AudioTraceStatus = 'idle' | 'running' | 'complete';
+
+export type AudioTraceStageName =
+  | 'schedulingJitter'
+  | 'inputCopy'
+  | 'wasmProcess'
+  | 'outputCopy'
+  | 'latencyProbe'
+  | 'channelCopy'
+  | 'callbackTotal';
+
+export type AudioTraceStageStats = {
+  sampleCount: number;
+  meanMs: number;
+  p95Ms: number;
+  maxMs: number;
+  deadlineUtilization: number;
+};
+
+export type AudioTraceSnapshot = {
+  status: AudioTraceStatus;
+  sampleRate: number;
+  quantumFrames: number;
+  deadlineMs: number;
+  elapsedMs: number;
+  durationMs: number;
+  callbackCount: number;
+  sampleCount: number;
+  underrunsDelta: number;
+  callbackDeadlineMissesDelta: number;
+  stages: Record<AudioTraceStageName, AudioTraceStageStats>;
+};
+
+export type AudioTraceReport = {
+  schema: 'apg.audio-trace.v1';
+  capturedAt: string;
+  browser: {
+    captureLatencyMs: number | null;
+    baseLatencyMs: number | null;
+    outputLatencyMs: number | null;
+    acousticLoopbackMs: number | null;
+  };
+  trace: AudioTraceSnapshot;
+  slowestInternalStage: Exclude<AudioTraceStageName, 'schedulingJitter' | 'callbackTotal'> | null;
+  verdict: 'internal-over-budget' | 'scheduling-delayed' | 'internal-healthy';
+  message: string;
+};
+
 export type BackendPhase = 'idle' | 'validating' | 'preparing' | 'ready' | 'running' | 'error';
 
 export type BackendState = {

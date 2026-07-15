@@ -1,4 +1,11 @@
-import type { AudioConfig, PreparedRuntime, ValidationResult, WasmDiagnostic, WorkspaceSnapshot } from './types';
+import type {
+  AudioConfig,
+  AudioTraceSnapshot,
+  PreparedRuntime,
+  ValidationResult,
+  WasmDiagnostic,
+  WorkspaceSnapshot,
+} from './types';
 
 export type ControlRequest =
   | { id: number; type: 'init'; moduleUrl: string }
@@ -21,6 +28,8 @@ export type ProcessorRequest =
   | { id: number; type: 'setMute'; enabled: boolean }
   | { id: number; type: 'reset' }
   | { id: number; type: 'startLatencyProbe' }
+  | { id: number; type: 'startAudioTrace' }
+  | { id: number; type: 'pollAudioTrace' }
   | { id: number; type: 'pollMeters' }
   | { id: number; type: 'dispose' };
 
@@ -30,6 +39,8 @@ export type ProcessorResponse =
   | { id: number; ok: true; type: 'committed'; revision: number }
   | { id: number; ok: true; type: 'command' }
   | { id: number; ok: true; type: 'latencyProbe'; frames: number; sampleRate: number }
+  | { id: number; ok: true; type: 'audioTraceStarted' }
+  | { id: number; ok: true; type: 'audioTrace'; trace: AudioTraceSnapshot }
   | { id: number; ok: true; type: 'disposed' }
   | { id: number; ok: true; type: 'meter'; meter: { peak: number; rms: number; frames: number; valid: boolean; activeRevision: number; underruns: number; callbackDeadlineMisses: number; maxCallbackMs: number } }
   | { id: number; ok: false; type: 'error'; message: string };

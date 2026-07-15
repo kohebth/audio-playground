@@ -1,5 +1,41 @@
 import createApgProcessorModule from './apg_processor.mjs';
 
+const AUDIO_TRACE_DURATION_SECONDS = 5;
+const AUDIO_TRACE_SAMPLE_EVERY = 8;
+const AUDIO_TRACE_SAMPLE_CAPACITY = 512;
+const AUDIO_TRACE_STAGE_NAMES = [
+  "schedulingJitter",
+  "inputCopy",
+  "wasmProcess",
+  "outputCopy",
+  "latencyProbe",
+  "channelCopy",
+  "callbackTotal",
+];
+
+function monotonicNow() {
+  return globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+}
+
+function emptyTraceStageStats() {
+  return { sampleCount: 0, meanMs: 0, p95Ms: 0, maxMs: 0, deadlineUtilization: 0 };
+}
+
+function traceStageStats(samples, count, deadlineMs) {
+  if (count === 0) return emptyTraceStageStats();
+  const sorted = Array.from(samples.subarray(0, count)).sort((a, b) => a - b);
+  const meanMs = sorted.reduce((sum, value) => sum + value, 0) / count;
+  const p95Ms = sorted[Math.max(0, Math.ceil(count * 0.95) - 1)];
+  const maxMs = sorted[count - 1];
+  return {
+    sampleCount: count,
+    meanMs,
+    p95Ms,
+    maxMs,
+    deadlineUtilization: deadlineMs > 0 ? (p95Ms / deadlineMs) * 100 : 0,
+  };
+}
+
 function resolveSibling(path, base) {
   if (/^[a-z]+:/i.test(path)) return path;
   const directory = base.slice(0, base.lastIndexOf('/') + 1);
@@ -23,6 +59,7 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
     this.callbackDeadlineMisses = 0;
     this.maxCallbackMs = 0;
     this.latencyProbe = null;
+    this.audioTrace = null;
     this.port.onmessage = (event) => void this.handle(event.data);
     const { moduleUrl, wasmBinary } = options?.processorOptions ?? {};
     if (!moduleUrl || !(wasmBinary instanceof ArrayBuffer)) {
@@ -116,6 +153,29 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
       };
       return;
     }
+    if (request.type === "startAudioTrace") {
+      const stages = {};
+      for (const name of AUDIO_TRACE_STAGE_NAMES) stages[name] = new Float64Array(AUDIO_TRACE_SAMPLE_CAPACITY);
+      this.audioTrace = {
+        status: "running",
+        startFrame: currentFrame,
+        endFrame: currentFrame + Math.round(sampleRate * AUDIO_TRACE_DURATION_SECONDS),
+        callbackCount: 0,
+        sampleCount: 0,
+        quantumFrames: 0,
+        previousCallbackAt: -1,
+        previousFrames: 0,
+        underrunsAtStart: this.underruns,
+        deadlineMissesAtStart: this.callbackDeadlineMisses,
+        stages,
+      };
+      this.reply({ id: request.id, ok: true, type: "audioTraceStarted" });
+      return;
+    }
+    if (request.type === "pollAudioTrace") {
+      this.reply({ id: request.id, ok: true, type: "audioTrace", trace: this.snapshotAudioTrace() });
+      return;
+    }
     if (request.type === "pollMeters") {
       const meter = this.module._apg_wasm_processor_output_meter(this.processor);
       if (!meter) {
@@ -183,10 +243,36 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
       }
     }
   }
-  recordCallbackTiming(startedAt, frames) {
-    const elapsedMs = Math.max(0, Date.now() - startedAt);
+  snapshotAudioTrace() {
+    const trace = this.audioTrace;
+    const quantumFrames = trace?.quantumFrames ?? 0;
+    const deadlineMs = quantumFrames > 0 ? (quantumFrames / sampleRate) * 1000 : 0;
+    const stages = {};
+    for (const name of AUDIO_TRACE_STAGE_NAMES) {
+      stages[name] = trace ? traceStageStats(trace.stages[name], trace.sampleCount, deadlineMs) : emptyTraceStageStats();
+    }
+    return {
+      status: trace?.status ?? "idle",
+      sampleRate,
+      quantumFrames,
+      deadlineMs,
+      elapsedMs: trace ? Math.min(AUDIO_TRACE_DURATION_SECONDS * 1000, Math.max(0, ((currentFrame - trace.startFrame) / sampleRate) * 1000)) : 0,
+      durationMs: AUDIO_TRACE_DURATION_SECONDS * 1000,
+      callbackCount: trace?.callbackCount ?? 0,
+      sampleCount: trace?.sampleCount ?? 0,
+      underrunsDelta: trace ? this.underruns - trace.underrunsAtStart : 0,
+      callbackDeadlineMissesDelta: trace ? this.callbackDeadlineMisses - trace.deadlineMissesAtStart : 0,
+      stages,
+    };
+  }
+  recordCallbackTiming(startedAt, endedAt, frames, traceSampleIndex) {
+    const elapsedMs = Math.max(0, endedAt - startedAt);
     this.maxCallbackMs = Math.max(this.maxCallbackMs, elapsedMs);
     if (elapsedMs > (frames / sampleRate) * 1000) this.callbackDeadlineMisses += 1;
+    if (traceSampleIndex >= 0 && this.audioTrace) this.audioTrace.stages.callbackTotal[traceSampleIndex] = elapsedMs;
+    if (this.audioTrace?.status === "running" && currentFrame + frames >= this.audioTrace.endFrame) {
+      this.audioTrace.status = "complete";
+    }
   }
   process(inputs, outputs) {
     const output = outputs[0]?.[0];
@@ -195,30 +281,56 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
       output.fill(0);
       return true;
     }
-    const startedAt = Date.now();
+    const startedAt = monotonicNow();
     const frames = output.length;
+    const trace = this.audioTrace;
+    let traceSampleIndex = -1;
+    if (trace?.status === "running") {
+      trace.callbackCount += 1;
+      trace.quantumFrames = frames;
+      if ((trace.callbackCount - 1) % AUDIO_TRACE_SAMPLE_EVERY === 0 && trace.sampleCount < AUDIO_TRACE_SAMPLE_CAPACITY) {
+        traceSampleIndex = trace.sampleCount;
+        trace.sampleCount += 1;
+        trace.stages.schedulingJitter[traceSampleIndex] = trace.previousCallbackAt < 0
+          ? 0
+          : Math.max(0, startedAt - trace.previousCallbackAt - (trace.previousFrames / sampleRate) * 1000);
+      }
+      trace.previousCallbackAt = startedAt;
+      trace.previousFrames = frames;
+    }
     if (frames > this.module._apg_wasm_processor_frame_capacity(this.processor)) {
       this.underruns += 1;
       output.fill(0);
-      this.recordCallbackTiming(startedAt, frames);
+      this.recordCallbackTiming(startedAt, monotonicNow(), frames, traceSampleIndex);
       return true;
     }
+    const inputCopyStartedAt = traceSampleIndex >= 0 ? monotonicNow() : 0;
     const inputPointer = this.module._apg_wasm_processor_input_buffer(this.processor) >>> 2;
     const input = inputs[0]?.[0];
     if (input) this.module.HEAPF32.set(input, inputPointer);
     else this.module.HEAPF32.fill(0, inputPointer, inputPointer + frames);
+    const wasmStartedAt = traceSampleIndex >= 0 ? monotonicNow() : 0;
+    if (traceSampleIndex >= 0 && trace) trace.stages.inputCopy[traceSampleIndex] = wasmStartedAt - inputCopyStartedAt;
     const status = this.module._apg_wasm_processor_process(this.processor, frames);
+    const outputCopyStartedAt = traceSampleIndex >= 0 ? monotonicNow() : 0;
+    if (traceSampleIndex >= 0 && trace) trace.stages.wasmProcess[traceSampleIndex] = outputCopyStartedAt - wasmStartedAt;
     if (status !== 0) {
       this.underruns += 1;
       output.fill(0);
-      this.recordCallbackTiming(startedAt, frames);
+      this.recordCallbackTiming(startedAt, monotonicNow(), frames, traceSampleIndex);
       return true;
     }
     const outputPointer = this.module._apg_wasm_processor_output_buffer(this.processor) >>> 2;
     for (let frame = 0; frame < frames; frame += 1) output[frame] = this.module.HEAPF32[outputPointer + frame];
+    const probeStartedAt = traceSampleIndex >= 0 ? monotonicNow() : 0;
+    if (traceSampleIndex >= 0 && trace) trace.stages.outputCopy[traceSampleIndex] = probeStartedAt - outputCopyStartedAt;
     this.processLatencyProbe(input, output);
+    const channelCopyStartedAt = traceSampleIndex >= 0 ? monotonicNow() : 0;
+    if (traceSampleIndex >= 0 && trace) trace.stages.latencyProbe[traceSampleIndex] = channelCopyStartedAt - probeStartedAt;
     for (let channel = 1; channel < (outputs[0]?.length ?? 0); channel += 1) outputs[0]?.[channel]?.set(output);
-    this.recordCallbackTiming(startedAt, frames);
+    const endedAt = monotonicNow();
+    if (traceSampleIndex >= 0 && trace) trace.stages.channelCopy[traceSampleIndex] = endedAt - channelCopyStartedAt;
+    this.recordCallbackTiming(startedAt, endedAt, frames, traceSampleIndex);
     return true;
   }
 }

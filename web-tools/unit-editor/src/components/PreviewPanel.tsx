@@ -1,5 +1,7 @@
 import {
   WasmBackend,
+  type AudioTraceReport,
+  type AudioTraceStatus,
   type BackendPhase,
   type MeterSnapshot,
   type ValidationResult,
@@ -9,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { WorkspaceFile } from '../lib/backendSamples';
 import { useLiveBypass } from '../lib/liveBypass';
+import { createAudioTraceReport } from '../lib/audioTrace';
 import type { ParamOverride } from '../lib/projectParams';
 import { markPerfSpan, recordRuntimeSnapshot } from '../lib/perfTelemetry';
 
@@ -38,11 +41,15 @@ function moduleUrl(file: string): string {
   return new URL(`wasm/${file}`, `${window.location.origin}${import.meta.env.BASE_URL}`).href;
 }
 
-function outputLatencyMs(context: AudioContext): number | null {
-  const base = Number.isFinite(context.baseLatency) ? Math.max(context.baseLatency, 0) : 0;
+function browserOutputLatency(context: AudioContext) {
+  const base = Number.isFinite(context.baseLatency) && context.baseLatency > 0 ? context.baseLatency * 1000 : null;
   const output = (context as AudioContext & { outputLatency?: number }).outputLatency;
-  const device = Number.isFinite(output) ? Math.max(output ?? 0, 0) : 0;
-  return base > 0 || device > 0 ? (base + device) * 1000 : null;
+  const device = Number.isFinite(output) && (output ?? 0) > 0 ? output! * 1000 : null;
+  return {
+    baseLatencyMs: base,
+    outputLatencyMs: device,
+    totalLatencyMs: base !== null || device !== null ? (base ?? 0) + (device ?? 0) : null,
+  };
 }
 
 function captureLatencyMs(stream: MediaStream): number | null {
@@ -94,6 +101,9 @@ export function PreviewPanel({
   const [captureLatency, setCaptureLatency] = useState<number | null>(null);
   const [measuredLatencyMs, setMeasuredLatencyMs] = useState<number | null>(null);
   const [measuringLatency, setMeasuringLatency] = useState(false);
+  const [audioTraceStatus, setAudioTraceStatus] = useState<AudioTraceStatus>('idle');
+  const [audioTraceProgress, setAudioTraceProgress] = useState(0);
+  const [audioTraceReport, setAudioTraceReport] = useState<AudioTraceReport | null>(null);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -110,6 +120,8 @@ export function PreviewPanel({
   const fileSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const meterTimerActiveRef = useRef(false);
   const latencyTimerActiveRef = useRef(false);
+  const audioTracePollingActiveRef = useRef(false);
+  const audioTraceTokenRef = useRef(0);
   const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const previousOverridesRef = useRef<Map<string, ParamOverride>>(new Map());
   const paramControlQueueRef = useRef<Map<string, { draining: boolean; pendingValue: number | null }>>(new Map());
@@ -168,6 +180,9 @@ export function PreviewPanel({
       });
     return () => {
       disposed = true;
+      runningRef.current = false;
+      audioTraceTokenRef.current += 1;
+      audioTracePollingActiveRef.current = false;
       streamRef.current?.getTracks().forEach(track => track.stop());
       inputRef.current?.disconnect();
       fileSourceRef.current?.disconnect();
@@ -268,7 +283,7 @@ export function PreviewPanel({
 
   useEffect(() => {
     if (!running || !contextRef.current) return;
-    const refreshLatency = () => setLatencyMs(outputLatencyMs(contextRef.current!));
+    const refreshLatency = () => setLatencyMs(browserOutputLatency(contextRef.current!).totalLatencyMs);
     refreshLatency();
     latencyTimerActiveRef.current = true;
     const timer = window.setInterval(refreshLatency, 500);
@@ -334,6 +349,10 @@ export function PreviewPanel({
   }, [backend, reportError, syncWorkspace]);
 
   const stopPlayback = useCallback(async () => {
+    audioTraceTokenRef.current += 1;
+    audioTracePollingActiveRef.current = false;
+    setAudioTraceStatus(current => current === 'running' ? 'idle' : current);
+    setAudioTraceProgress(current => current < 1 ? 0 : current);
     runningRef.current = false;
     paramControlQueueRef.current.clear();
     setRunning(false);
@@ -475,16 +494,67 @@ export function PreviewPanel({
     }
   }, [backend, inputMode, reportError, running]);
 
+  const clearAudioTrace = useCallback(() => {
+    setAudioTraceReport(null);
+    setAudioTraceProgress(0);
+    setAudioTraceStatus('idle');
+  }, []);
+
+  const profileAudio = useCallback(async () => {
+    if (!backend || !running || inputMode !== 'microphone' || audioTracePollingActiveRef.current) return;
+    const token = audioTraceTokenRef.current + 1;
+    audioTraceTokenRef.current = token;
+    setAudioTraceReport(null);
+    setAudioTraceProgress(0);
+    setAudioTraceStatus('running');
+    audioTracePollingActiveRef.current = true;
+    try {
+      await backend.startAudioTrace();
+      while (audioTraceTokenRef.current === token && runningRef.current) {
+        await new Promise(resolve => window.setTimeout(resolve, 250));
+        if (audioTraceTokenRef.current !== token || !runningRef.current) return;
+        const trace = await backend.pollAudioTrace();
+        setAudioTraceProgress(Math.min(1, trace.durationMs > 0 ? trace.elapsedMs / trace.durationMs : 0));
+        if (trace.status !== 'complete') continue;
+        const context = contextRef.current;
+        const outputLatency = context ? browserOutputLatency(context) : null;
+        setAudioTraceReport(createAudioTraceReport(trace, {
+          captureLatencyMs: captureLatency,
+          baseLatencyMs: outputLatency?.baseLatencyMs ?? null,
+          outputLatencyMs: outputLatency?.outputLatencyMs ?? null,
+          acousticLoopbackMs: measuredLatencyMs,
+        }));
+        setAudioTraceProgress(1);
+        setAudioTraceStatus('complete');
+        setDiagnostic('Audio latency profile complete.');
+        return;
+      }
+    } catch (error) {
+      if (audioTraceTokenRef.current === token) {
+        setAudioTraceStatus('idle');
+        reportError(error, 'audio-trace');
+      }
+    } finally {
+      if (audioTraceTokenRef.current === token) audioTracePollingActiveRef.current = false;
+    }
+  }, [backend, captureLatency, inputMode, measuredLatencyMs, reportError, running]);
+
   useEffect(() => {
     setController({
       running,
       latencyMs,
       captureLatencyMs: captureLatency,
       measuredLatencyMs,
+      inputMode,
+      audioTraceStatus,
+      audioTraceProgress,
+      audioTraceReport,
       bypassByInstance,
       setBypass: setInstanceBypass,
+      profileAudio,
+      clearAudioTrace,
     });
-  }, [bypassByInstance, captureLatency, latencyMs, measuredLatencyMs, running, setController, setInstanceBypass]);
+  }, [audioTraceProgress, audioTraceReport, audioTraceStatus, bypassByInstance, captureLatency, clearAudioTrace, inputMode, latencyMs, measuredLatencyMs, profileAudio, running, setController, setInstanceBypass]);
 
   useEffect(() => () => setController(null), [setController]);
 
@@ -510,10 +580,11 @@ export function PreviewPanel({
         fileSourceActive: fileSourceRef.current !== null,
         meterTimerActive: meterTimerActiveRef.current,
         latencyTimerActive: latencyTimerActiveRef.current,
+        audioTracePollingActive: audioTracePollingActiveRef.current,
       },
       at: Date.now(),
     });
-  }, [backend, meter, phase, running]);
+  }, [audioTraceStatus, backend, meter, phase, running]);
 
   const toggleMute = useCallback(async () => {
     if (!backend || !running) return;

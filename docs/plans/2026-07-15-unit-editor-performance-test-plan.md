@@ -98,6 +98,8 @@ that rolling history is the representative baseline as runner data accumulates.
 - [x] Rapid Worklet parameter-control latency under `50 ms`, with per-path diffing and in-flight coalescing.
 - [x] Repeated file/microphone start-stop ownership checks for the retained AudioContext/Worker and transient Worklet,
   request ports, streams, source nodes, and polling timers.
+- [x] Opt-in five-second microphone trace separating scheduling jitter, JS/WASM copies, graph execution, latency-probe
+  work, channel copies, and total callback cost, with bounded real-time sampling and versioned JSON export.
 
 ### Phase 5: Regression Gates
 

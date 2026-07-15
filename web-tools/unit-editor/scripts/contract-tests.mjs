@@ -239,10 +239,17 @@ includesContent(processorWorklet, "import createApgProcessorModule from './apg_p
 includesContent(processorWorklet, 'request.type === "commit"', 'Worklet must commit only through an explicit message');
 includesContent(processorWorklet, 'request.type === "pollMeters"', 'meter snapshots must be copied outside process()');
 includesContent(processorWorklet, 'callbackDeadlineMisses', 'Worklet meters must report callback deadline misses');
-includesContent(processorWorklet, 'Date.now() - startedAt', 'Worklet callbacks must be timed without allocating');
+includesContent(processorWorklet, 'monotonicNow()', 'Worklet callbacks must use the high-resolution timer');
+includesContent(processorWorklet, 'request.type === "startAudioTrace"', 'AudioWorklet must start bounded audio traces outside process()');
+includesContent(processorWorklet, 'request.type === "pollAudioTrace"', 'AudioWorklet must build audio trace reports outside process()');
+includesContent(wasmFacade, 'startAudioTrace()', 'WASM facade must expose audio trace start');
+includesContent(wasmFacade, 'pollAudioTrace()', 'WASM facade must expose audio trace polling');
+includesContent(projectInspector, 'data-testid="audio-trace-profile"', 'Developer Diagnostics must expose microphone profiling');
+includesContent(projectInspector, 'exportAudioTraceReport', 'Developer Diagnostics must export audio trace JSON');
 includesContent(processorWorklet, 'request.type === "startLatencyProbe"', 'AudioWorklet must support acoustic latency probes');
 includesContent(wasmFacade, 'measureLatencyProbe()', 'WASM facade must expose acoustic latency measurement');
 assert(!processorWorklet.slice(processorWorklet.indexOf('process(inputs, outputs)')).includes('this.reply('), 'process() must not allocate and post meter messages');
+assert(!processorWorklet.slice(processorWorklet.indexOf('process(inputs, outputs)')).includes('new Float'), 'process() must not allocate trace buffers');
 assert(!processorWorklet.includes('HEAPF32.subarray'), 'process() must not allocate a typed-array view per block');
 assert(!processorWorklet.includes('import(moduleUrl)'), 'dynamic import must not run in WorkletGlobalScope');
 assert(!previewPanel.includes('createDeterministicPreviewAdapter'), 'deterministic preview adapter must not remain active');
