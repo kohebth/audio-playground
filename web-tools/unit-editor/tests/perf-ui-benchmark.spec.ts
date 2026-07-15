@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type CDPSession, type Page, test } from '@playwright/test';
 import { dump as serializeYaml, load as parseYaml } from 'js-yaml';
 
 type PerfSample = {
@@ -379,6 +379,43 @@ async function stopInteractionProbe(page: Page): Promise<{ frameIntervals: numbe
     probe.observer?.disconnect();
     return { frameIntervals: probe.frameIntervals, longTasks: probe.longTasks };
   });
+}
+
+type DevtoolsTraceEvent = { name?: string; cat?: string; ph?: string; dur?: number };
+
+async function startDevtoolsTrace(page: Page): Promise<{ session: CDPSession; events: DevtoolsTraceEvent[] }> {
+  const session = await page.context().newCDPSession(page);
+  const events: DevtoolsTraceEvent[] = [];
+  session.on('Tracing.dataCollected', payload => events.push(...(payload.value as DevtoolsTraceEvent[])));
+  await session.send('Tracing.start', {
+    categories: [
+      'devtools.timeline',
+      'blink.user_timing',
+      'disabled-by-default-devtools.timeline',
+      'disabled-by-default-devtools.screenshot',
+    ].join(','),
+    options: 'sampling-frequency=10000',
+    transferMode: 'ReportEvents',
+  });
+  return { session, events };
+}
+
+async function stopDevtoolsTrace(trace: { session: CDPSession; events: DevtoolsTraceEvent[] }) {
+  const complete = new Promise<void>(resolve => trace.session.once('Tracing.tracingComplete', () => resolve()));
+  await trace.session.send('Tracing.end');
+  await complete;
+  await trace.session.detach();
+  const duration = (names: Set<string>) => trace.events.reduce(
+    (total, event) => total + (event.ph === 'X' && event.name && names.has(event.name) ? (event.dur ?? 0) / 1000 : 0),
+    0,
+  );
+  return {
+    events: trace.events,
+    styleMs: duration(new Set(['RecalculateStyles', 'UpdateLayoutTree'])),
+    layoutMs: duration(new Set(['Layout'])),
+    paintMs: duration(new Set(['Paint', 'CompositeLayers'])),
+    userTimingEvents: trace.events.filter(event => event.cat?.includes('blink.user_timing')).length,
+  };
 }
 
 async function getVisibleContractAtom(page: Page): Promise<{ id: string; x: number; y: number } | null> {
@@ -1139,6 +1176,7 @@ test.describe('Contract graph atom scalability', () => {
     const visibleNode = await getVisibleContractAtom(page);
     expect(visibleNode).not.toBeNull();
 
+    const devtoolsTrace = await startDevtoolsTrace(page);
     await clearPerfSpans(page);
     await page.mouse.move(visibleNode!.x, visibleNode!.y);
     await page.mouse.down();
@@ -1163,6 +1201,8 @@ test.describe('Contract graph atom scalability', () => {
     await page.mouse.wheel(0, -360);
     await page.mouse.wheel(0, 360);
     const probe = await stopInteractionProbe(page);
+    const trace = await stopDevtoolsTrace(devtoolsTrace);
+    writeFileSync(testInfo.outputPath('devtools-trace.json'), JSON.stringify({ traceEvents: trace.events }));
 
     expect(probe.frameIntervals.length).toBeGreaterThan(5);
     const averageFrameMs = probe.frameIntervals.reduce((sum, value) => sum + value, 0) / probe.frameIntervals.length;
@@ -1177,6 +1217,11 @@ test.describe('Contract graph atom scalability', () => {
     });
     testInfo.annotations.push({ type: 'interaction-long-tasks', description: probe.longTasks.join(',') || 'none' });
     testInfo.annotations.push({ type: 'viewport-node-renders', description: String(viewportRenders.length) });
+    testInfo.annotations.push({
+      type: 'devtools-render-costs',
+      description: `style=${trace.styleMs.toFixed(2)}ms layout=${trace.layoutMs.toFixed(2)}ms paint=${trace.paintMs.toFixed(2)}ms`,
+    });
+    testInfo.annotations.push({ type: 'devtools-user-timing-events', description: String(trace.userTimingEvents) });
   });
 
   test('@pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph', async ({ page }, testInfo) => {

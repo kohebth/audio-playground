@@ -49,7 +49,7 @@ the visible viewport subset. The 1,000-atom boundary is scheduled-only.
 - [x] Per-edge render counters.
 - [x] Centralized workspace state-dispatch counters; the editor has no external subscription store.
 - [x] Scheduled 500-atom frame-interval and long-task collection.
-- [ ] Style, layout, paint, and full browser-trace collection.
+- [x] Scheduled DevTools style, layout, paint, screenshot, and user-timing trace collection for 500-atom interaction.
 - [x] Worker validation/prepare, Worklet commit/control/meter round-trip marks, and runtime resource snapshots.
 
 ### Phase 2: Baseline
