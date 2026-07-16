@@ -179,6 +179,30 @@ int main(void) {
         return 1;
     if (expect_field("filter_comb_fb", APG_ATOM_CONTRACT_IN, "delay", APG_ATOM_FIELD_SIGNAL_OPTIONAL, false))
         return 1;
+    if (apg_atom_contract_field_count("filter_biquad", APG_ATOM_CONTRACT_CONFIG) != 4u ||
+        expect_field("filter_biquad", APG_ATOM_CONTRACT_IN, "cutoff", APG_ATOM_FIELD_SIGNAL_OPTIONAL, false) ||
+        expect_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "cutoff", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "q", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "mode", APG_ATOM_FIELD_INT, true) ||
+        expect_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "smoothing_ms", APG_ATOM_FIELD_FLOAT, true))
+        return 1;
+    if (apg_atom_contract_find_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "b0", NULL))
+        return fail("designed biquad exposes a raw coefficient");
+    if (apg_atom_contract_field_count("filter_biquad_coefficients", APG_ATOM_CONTRACT_CONFIG) != 5u ||
+        expect_field("filter_biquad_coefficients", APG_ATOM_CONTRACT_CONFIG, "b0", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("filter_biquad_coefficients", APG_ATOM_CONTRACT_CONFIG, "a2", APG_ATOM_FIELD_FLOAT, true))
+        return 1;
+    if (expect_field("detect_peak", APG_ATOM_CONTRACT_IN, "signal", APG_ATOM_FIELD_SIGNAL, true) ||
+        expect_field("detect_peak", APG_ATOM_CONTRACT_OUT, "level", APG_ATOM_FIELD_SIGNAL, true) ||
+        expect_field("detect_peak", APG_ATOM_CONTRACT_CONFIG, "attack", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("detect_peak", APG_ATOM_CONTRACT_CONFIG, "release", APG_ATOM_FIELD_FLOAT, true))
+        return 1;
+    if (expect_field("mix_crossfade", APG_ATOM_CONTRACT_CONFIG, "t", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("mix_pan_stereo", APG_ATOM_CONTRACT_CONFIG, "position", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("nonlinear_bitcrush", APG_ATOM_CONTRACT_CONFIG, "bit_depth", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("freq_fft", APG_ATOM_CONTRACT_CONFIG, "block_size", APG_ATOM_FIELD_INT, true) ||
+        expect_field("freq_window", APG_ATOM_CONTRACT_CONFIG, "window_type", APG_ATOM_FIELD_INT, true))
+        return 1;
     if (apg_atom_contract_find_field("generation_dc", APG_ATOM_CONTRACT_CONFIG, "missing", NULL))
         return fail("unknown metadata field lookup succeeded");
     if (apg_atom_contract_field_type("missing_atom", APG_ATOM_CONTRACT_IN, "signal") != APG_ATOM_FIELD_UNKNOWN)

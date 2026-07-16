@@ -1,31 +1,48 @@
 # Canonical Atom Definitions
 
-`inc/atom/atom_definitions.h` is the authoritative atom inventory. Each `APG_ATOM_DEFINITIONS` row defines:
+`schema/atoms/atoms.json` is the authoritative inventory for atom ABI and binding metadata. It records:
 
-```text
-name, category, input descriptor count, config descriptor count,
-state descriptor count, capability flags, maturity, dispatch kind
+- family headers, reusable I/O layouts, and family capacity constants;
+- ordered atom-specific params and state fields with explicit ownership;
+- input/config/state descriptors and state-buffer capacities;
+- category, capability, maturity, and dispatch kind;
+- backend, TypeScript, and JSON binding contracts.
+
+Field order is C ABI order. Atom order is canonical registry order. Empty roles use the standard one-byte
+`uint8_t _reserved` layout, which is never emitted as a logical contract field.
+
+`tools/generate_atom_artifacts.pl` validates that source and owns these checked-in outputs:
+
+- `inc/atom/types/dsp_type_macros.h` and all 11 family `*_types.h` headers;
+- `inc/atom/generated/atom_definitions.generated.h` and `dsp_atoms.generated.h`;
+- all 11 family `*_field_descriptors.c` files;
+- `src/apgcore/metadata/atom_catalog_contracts.generated.inc`;
+- `web-tools/unit-editor/src/atoms/atomCatalog.generated.ts`;
+- `schema/atoms/atom.schema.json`.
+
+`inc/atom/atom_definitions.h`, `inc/atom/dsp_atoms.h`, and the TypeScript `atomCatalog.ts` module are thin handwritten
+wrappers for shared flags, runtime context includes, and category colors. `dsp_types.h` remains the stable include
+umbrella. DSP algorithms, shared enums, runtime allocation, and compiler behavior remain handwritten.
+
+## Workflow
+
+To change or add an atom:
+
+1. Edit `schema/atoms/atoms.json`; do not edit a generated output.
+2. Reuse an I/O profile only when C member names and semantics match exactly.
+3. Record pointer ownership and a bounded capacity for every runtime-owned state buffer.
+4. Add or update the handwritten DSP implementation and focused behavior tests.
+5. Regenerate and verify:
+
+```sh
+cmake --build build --target generate_atom_artifacts
+cmake --build build --target check_atom_artifacts
+./build-and-test.sh
 ```
 
-The list generates the public atom declarations, thunk declarations and implementations, registry rows, field-table
-declarations, capability/profile data, and the registry metadata consumed by the JSON/UI catalog. `dsp_types.h` remains
-the stable include umbrella for the structures named by each row. ABI rows are owned by category headers under
-`inc/atom/types/`; each row selects reusable output/input layout profiles followed by parameter and state field bodies
-and still generates distinct atom-specific structures. Family `*_field_descriptors.c` files remain the definitions of
-member offsets and buffer defaults.
+Update `test/golden/v2-inspect-atoms.json` and its manifest when the public catalog changes. Run `npm run build` and
+`npm run lint` in `web-tools/unit-editor/` when generated TypeScript changes.
 
-`APG_ATOM_CONTRACT_DEFINITIONS` maps contract-bearing atoms to reusable input, output, and configuration profiles. The
-compiler validator and JSON/UI catalog consume the generated contract table from `atom_catalog.c`.
-
-To add an atom:
-
-1. Add one ABI row to the matching `inc/atom/types/<family>_types.h` table, reusing an exact I/O layout profile or
-   defining one when the member layout is new, and preserve the `out`, `in`, `params`, and `state` column order.
-2. Define any input, config, or state field arrays in the family descriptor source.
-3. Add one `APG_ATOM_DEFINITIONS` row with matching descriptor counts and the appropriate dispatch kind.
-4. Add a contract-profile row only when the YAML compiler exposes a structured binding contract.
-
-Compilation fails when a canonical row has no matching family type declaration or when a descriptor count has no
-matching fixed-size declaration. The atom registry contract test also verifies every generated row and rejects duplicate
-or non-canonical contract names. See `docs/architecture/dsp-type-system.md` for ownership, ABI, enum, and contributor
-rules.
+`test_atom_artifact_generation` renders every output twice, compares each file byte for byte, checks the checked-in
+tree, then deliberately modifies one output and proves the stale check rejects it. The ABI snapshot and public symbol
+tests independently catch unintended C layout or declaration changes.

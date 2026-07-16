@@ -193,16 +193,34 @@ else()
     add_test(NAME test_dsp_types_abi COMMAND test_dsp_types_abi_snapshot)
 endif()
 
+add_custom_target(generate_atom_artifacts
+        COMMAND ${PERL_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tools/generate_atom_artifacts.pl
+                ${CMAKE_SOURCE_DIR}/schema/atoms/atoms.json
+                ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Generating atom ABI and catalog artifacts"
+)
+
+add_custom_target(check_atom_artifacts
+        COMMAND ${PERL_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tools/generate_atom_artifacts.pl
+                --check
+                ${CMAKE_SOURCE_DIR}/schema/atoms/atoms.json
+                ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Checking generated atom artifacts"
+)
+
 add_test(
-        NAME test_dsp_type_schema_generation
+        NAME test_atom_artifact_generation
         COMMAND ${CMAKE_COMMAND}
                 -DPERL_EXECUTABLE=${PERL_EXECUTABLE}
-                -DGENERATOR=${CMAKE_SOURCE_DIR}/tools/generate_dsp_type_family.pl
-                -DSCHEMA=${CMAKE_SOURCE_DIR}/schema/atoms/src.json
-                -DSOURCE_LABEL=schema/atoms/src.json
-                -DEXPECTED_HEADER=${CMAKE_SOURCE_DIR}/inc/atom/types/src_types.h
-                -DOUTPUT_DIR=${CMAKE_BINARY_DIR}/test-artifacts/generated-dsp-types
-                -P ${CMAKE_SOURCE_DIR}/test/abi/verify_dsp_type_generation.cmake
+                -DGENERATOR=${CMAKE_SOURCE_DIR}/tools/generate_atom_artifacts.pl
+                -DSCHEMA=${CMAKE_SOURCE_DIR}/schema/atoms/atoms.json
+                -DSOURCE_ROOT=${CMAKE_SOURCE_DIR}
+                -DOUTPUT_DIR=${CMAKE_BINARY_DIR}/test-artifacts/generated-atoms
+                -P ${CMAKE_SOURCE_DIR}/test/abi/verify_atom_artifact_generation.cmake
 )
 
 set_tests_properties(
@@ -210,7 +228,7 @@ set_tests_properties(
         test_dsp_headers_cpp
         test_dsp_atom_symbols
         test_dsp_types_abi
-        test_dsp_type_schema_generation
+        test_atom_artifact_generation
         PROPERTIES LABELS "types;v2"
 )
 

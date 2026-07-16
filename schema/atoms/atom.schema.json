@@ -1,0 +1,3668 @@
+{
+   "$id" : "https://audio-playground.dev/schema/atom.schema.json",
+   "$schema" : "https://json-schema.org/draft/2020-12/schema",
+   "description" : "Generated atom binding contracts from schema/atoms/atoms.json.",
+   "oneOf" : [
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_accumulate"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_accumulate",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_latch"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "threshold" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "threshold"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "gate" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal",
+                  "gate"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_latch",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_add"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal_a" : {
+                     "type" : "string"
+                  },
+                  "signal_b" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal_a",
+                  "signal_b"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_add",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_clip_hard"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "threshold" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "threshold"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_clip_hard",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_clip_soft"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "curve" : {
+                     "type" : "integer"
+                  },
+                  "threshold" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "threshold",
+                  "curve"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_clip_soft",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_divide"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "epsilon" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "epsilon"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "denominator" : {
+                     "type" : "string"
+                  },
+                  "numerator" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "numerator",
+                  "denominator"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_divide",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_multiply"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal_a" : {
+                     "type" : "string"
+                  },
+                  "signal_b" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal_a",
+                  "signal_b"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_multiply",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_normalize"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "mode" : {
+                     "type" : "integer"
+                  },
+                  "target_level" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "target_level",
+                  "mode"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_normalize",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_smooth"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "attack" : {
+                     "type" : "number"
+                  },
+                  "release" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "attack",
+                  "release"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_smooth",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "amplitude_subtract"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal_a" : {
+                     "type" : "string"
+                  },
+                  "signal_b" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal_a",
+                  "signal_b"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_subtract",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "delay_fractional"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "delay_samples" : {
+                     "type" : "number"
+                  },
+                  "interpolation" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "delay_samples",
+                  "interpolation"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "delay_fractional",
+         "type" : "object",
+         "x-apg-category" : "delay",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "delay_line"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "length" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "length"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "delay_line",
+         "type" : "object",
+         "x-apg-category" : "delay",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "delay_tap_feedback"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "coefficient" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "coefficient"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "buffer" : {
+                     "type" : "string"
+                  },
+                  "tap_position" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "buffer",
+                  "tap_position"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "delay_tap_feedback",
+         "type" : "object",
+         "x-apg-category" : "delay",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "delay_tap_feedforward"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "coefficient" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "coefficient"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "buffer" : {
+                     "type" : "string"
+                  },
+                  "tap_position" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "buffer",
+                  "tap_position"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "delay_tap_feedforward",
+         "type" : "object",
+         "x-apg-category" : "delay",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "delay_unit"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "delay_unit",
+         "type" : "object",
+         "x-apg-category" : "delay",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "detect_autocorrelate"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "max_lag" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "max_lag"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "correlation" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "correlation"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "detect_autocorrelate",
+         "type" : "object",
+         "x-apg-category" : "detect",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "detect_pitch"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "max_lag" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "max_lag"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "pitch" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "pitch"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "detect_pitch",
+         "type" : "object",
+         "x-apg-category" : "detect",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "detect_envelope"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "attack" : {
+                     "type" : "number"
+                  },
+                  "release" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "attack",
+                  "release"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "envelope" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "envelope"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "detect_envelope",
+         "type" : "object",
+         "x-apg-category" : "detect",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "detect_peak"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "attack" : {
+                     "type" : "number"
+                  },
+                  "release" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "attack",
+                  "release"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "level" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "level"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "detect_peak",
+         "type" : "object",
+         "x-apg-category" : "detect",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "detect_rms"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "window_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "window_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "level" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "level"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "detect_rms",
+         "type" : "object",
+         "x-apg-category" : "detect",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "detect_slope"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "slope" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "slope"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "detect_slope",
+         "type" : "object",
+         "x-apg-category" : "detect",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "detect_threshold"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "threshold" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "threshold"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "gate" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "gate"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "detect_threshold",
+         "type" : "object",
+         "x-apg-category" : "detect",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "detect_zero_crossing"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "trigger" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "trigger"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "detect_zero_crossing",
+         "type" : "object",
+         "x-apg-category" : "detect",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_allpass"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "coefficient" : {
+                     "type" : "number"
+                  },
+                  "delay_samples" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "delay_samples",
+                  "coefficient"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_allpass",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_biquad_coefficients"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "a1" : {
+                     "type" : "number"
+                  },
+                  "a2" : {
+                     "type" : "number"
+                  },
+                  "b0" : {
+                     "type" : "number"
+                  },
+                  "b1" : {
+                     "type" : "number"
+                  },
+                  "b2" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "b0",
+                  "b1",
+                  "b2",
+                  "a1",
+                  "a2"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_biquad_coefficients",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_biquad"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "cutoff" : {
+                     "type" : "number"
+                  },
+                  "mode" : {
+                     "type" : "integer"
+                  },
+                  "q" : {
+                     "type" : "number"
+                  },
+                  "smoothing_ms" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "cutoff",
+                  "q",
+                  "mode",
+                  "smoothing_ms"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "cutoff" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_biquad",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_comb_fb"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "coefficient" : {
+                     "type" : "number"
+                  },
+                  "delay_samples" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "delay_samples",
+                  "coefficient"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "delay" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_comb_fb",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_comb_ff"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "coefficient" : {
+                     "type" : "number"
+                  },
+                  "delay_samples" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "delay_samples",
+                  "coefficient"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_comb_ff",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_dc_block"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "coefficient" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "coefficient"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_dc_block",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_differentiate"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_differentiate",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_fir"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "kernel" : {
+                     "type" : "string"
+                  },
+                  "kernel_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "kernel",
+                  "kernel_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_fir",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "filter_integrate"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "filter_integrate",
+         "type" : "object",
+         "x-apg-category" : "filter",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "freq_fft"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "block_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "block_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "imag" : {
+                     "type" : "string"
+                  },
+                  "real" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "real",
+                  "imag"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "freq_fft",
+         "type" : "object",
+         "x-apg-category" : "freq",
+         "x-apg-dispatch" : "fft"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "freq_ifft"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "block_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "block_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "imag" : {
+                     "type" : "string"
+                  },
+                  "real" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "real",
+                  "imag"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "freq_ifft",
+         "type" : "object",
+         "x-apg-category" : "freq",
+         "x-apg-dispatch" : "ifft"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "freq_multiply"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "block_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "block_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "imag_a" : {
+                     "type" : "string"
+                  },
+                  "imag_b" : {
+                     "type" : "string"
+                  },
+                  "real_a" : {
+                     "type" : "string"
+                  },
+                  "real_b" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "real_a",
+                  "imag_a",
+                  "real_b",
+                  "imag_b"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "imag" : {
+                     "type" : "string"
+                  },
+                  "real" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "real",
+                  "imag"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "freq_multiply",
+         "type" : "object",
+         "x-apg-category" : "freq",
+         "x-apg-dispatch" : "multiply"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "freq_overlap_add"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "block_size" : {
+                     "type" : "integer"
+                  },
+                  "hop_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "block_size",
+                  "hop_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "frame" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "frame"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "freq_overlap_add",
+         "type" : "object",
+         "x-apg-category" : "freq",
+         "x-apg-dispatch" : "overlap_add"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "freq_overlap_save"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "block_size" : {
+                     "type" : "integer"
+                  },
+                  "hop_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "block_size",
+                  "hop_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "frame" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "frame"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "freq_overlap_save",
+         "type" : "object",
+         "x-apg-category" : "freq",
+         "x-apg-dispatch" : "overlap_save"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "freq_window"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "block_size" : {
+                     "type" : "integer"
+                  },
+                  "window_type" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "window_type",
+                  "block_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "freq_window",
+         "type" : "object",
+         "x-apg-category" : "freq",
+         "x-apg-dispatch" : "window"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "freq_shift"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "block_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "block_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "pitch_shift" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "freq_shift",
+         "type" : "object",
+         "x-apg-category" : "freq",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "generation_dc"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "value" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "value"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "generation_dc",
+         "type" : "object",
+         "x-apg-category" : "generation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "generation_envelope"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "attack" : {
+                     "type" : "number"
+                  },
+                  "decay" : {
+                     "type" : "number"
+                  },
+                  "release" : {
+                     "type" : "number"
+                  },
+                  "sustain" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "attack",
+                  "decay",
+                  "sustain",
+                  "release"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "gate" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "gate"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "generation_envelope",
+         "type" : "object",
+         "x-apg-category" : "generation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "generation_impulse"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "interval" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "interval"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "generation_impulse",
+         "type" : "object",
+         "x-apg-category" : "generation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "generation_lfo"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "frequency" : {
+                     "type" : "number"
+                  },
+                  "phase_offset" : {
+                     "type" : "number"
+                  },
+                  "waveform" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "frequency",
+                  "waveform",
+                  "phase_offset"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "generation_lfo",
+         "type" : "object",
+         "x-apg-category" : "generation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "generation_noise"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "amplitude" : {
+                     "type" : "number"
+                  },
+                  "color" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "amplitude",
+                  "color"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "generation_noise",
+         "type" : "object",
+         "x-apg-category" : "generation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "generation_oscillator"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "frequency" : {
+                     "type" : "number"
+                  },
+                  "phase_offset" : {
+                     "type" : "number"
+                  },
+                  "waveform" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "frequency",
+                  "waveform",
+                  "phase_offset"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "frequency" : {
+                     "type" : "string"
+                  }
+               },
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "generation_oscillator",
+         "type" : "object",
+         "x-apg-category" : "generation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "interpolation_cubic"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal_a" : {
+                     "type" : "string"
+                  },
+                  "signal_b" : {
+                     "type" : "string"
+                  },
+                  "signal_c" : {
+                     "type" : "string"
+                  },
+                  "signal_n1" : {
+                     "type" : "string"
+                  },
+                  "t" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal_n1",
+                  "signal_a",
+                  "signal_b",
+                  "signal_c",
+                  "t"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "interpolation_cubic",
+         "type" : "object",
+         "x-apg-category" : "interpolation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "interpolation_lagrange"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "order" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "order"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "samples" : {
+                     "type" : "string"
+                  },
+                  "t" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "samples",
+                  "t"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "interpolation_lagrange",
+         "type" : "object",
+         "x-apg-category" : "interpolation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "interpolation_linear"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal_a" : {
+                     "type" : "string"
+                  },
+                  "signal_b" : {
+                     "type" : "string"
+                  },
+                  "t" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal_a",
+                  "signal_b",
+                  "t"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "interpolation_linear",
+         "type" : "object",
+         "x-apg-category" : "interpolation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "interpolation_sinc"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "num_taps" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "num_taps"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "buffer" : {
+                     "type" : "string"
+                  },
+                  "position" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "buffer",
+                  "position"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "interpolation_sinc",
+         "type" : "object",
+         "x-apg-category" : "interpolation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "mix_crossfade"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "t" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "t"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal_a" : {
+                     "type" : "string"
+                  },
+                  "signal_b" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal_a",
+                  "signal_b"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "mix_crossfade",
+         "type" : "object",
+         "x-apg-category" : "mix",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "mix_decode_ms"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "mid" : {
+                     "type" : "string"
+                  },
+                  "side" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "mid",
+                  "side"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "left" : {
+                     "type" : "string"
+                  },
+                  "right" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "left",
+                  "right"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "mix_decode_ms",
+         "type" : "object",
+         "x-apg-category" : "mix",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "mix_encode_ms"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "left" : {
+                     "type" : "string"
+                  },
+                  "right" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "left",
+                  "right"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "mid" : {
+                     "type" : "string"
+                  },
+                  "side" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "mid",
+                  "side"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "mix_encode_ms",
+         "type" : "object",
+         "x-apg-category" : "mix",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "mix_matrix"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "coefficients" : {
+                     "items" : {
+                        "items" : {
+                           "type" : "number"
+                        },
+                        "minItems" : 1,
+                        "type" : "array"
+                     },
+                     "minItems" : 1,
+                     "type" : "array"
+                  }
+               },
+               "required" : [
+                  "coefficients"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signals" : {
+                     "items" : {
+                        "type" : "string"
+                     },
+                     "minItems" : 1,
+                     "type" : "array"
+                  }
+               },
+               "required" : [
+                  "signals"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signals" : {
+                     "items" : {
+                        "type" : "string"
+                     },
+                     "minItems" : 1,
+                     "type" : "array"
+                  }
+               },
+               "required" : [
+                  "signals"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "mix_matrix",
+         "type" : "object",
+         "x-apg-category" : "mix",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "mix_pan_stereo"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "position" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "position"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "left" : {
+                     "type" : "string"
+                  },
+                  "right" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "left",
+                  "right"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "mix_pan_stereo",
+         "type" : "object",
+         "x-apg-category" : "mix",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "mix_wet_dry"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "mix" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "mix"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "dry" : {
+                     "type" : "string"
+                  },
+                  "wet" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "dry",
+                  "wet"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "mix_wet_dry",
+         "type" : "object",
+         "x-apg-category" : "mix",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "modulation_amplitude"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "depth" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "depth"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "modulator" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal",
+                  "modulator"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "modulation_amplitude",
+         "type" : "object",
+         "x-apg-category" : "modulation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "modulation_frequency"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "depth" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "depth"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "modulator" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal",
+                  "modulator"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "modulation_frequency",
+         "type" : "object",
+         "x-apg-category" : "modulation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "modulation_phase"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "depth" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "depth"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "modulator" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal",
+                  "modulator"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "modulation_phase",
+         "type" : "object",
+         "x-apg-category" : "modulation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "modulation_ring"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "modulator" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal",
+                  "modulator"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "modulation_ring",
+         "type" : "object",
+         "x-apg-category" : "modulation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "modulation_scrub"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "buffer_size" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "buffer_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "buffer" : {
+                     "type" : "string"
+                  },
+                  "position" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "buffer",
+                  "position"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "modulation_scrub",
+         "type" : "object",
+         "x-apg-category" : "modulation",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "nonlinear_bitcrush"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "bit_depth" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "bit_depth"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "nonlinear_bitcrush",
+         "type" : "object",
+         "x-apg-category" : "nonlinear",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "nonlinear_sample_hold"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "factor" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "factor"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "nonlinear_sample_hold",
+         "type" : "object",
+         "x-apg-category" : "nonlinear",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "nonlinear_waveshape"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "table_size" : {
+                     "type" : "integer"
+                  },
+                  "transfer_table" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "transfer_table",
+                  "table_size"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "nonlinear_waveshape",
+         "type" : "object",
+         "x-apg-category" : "nonlinear",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "src_antialias"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "cutoff" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "cutoff"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "src_antialias",
+         "type" : "object",
+         "x-apg-category" : "src",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "src_antiimage"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "cutoff" : {
+                     "type" : "number"
+                  }
+               },
+               "required" : [
+                  "cutoff"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "src_antiimage",
+         "type" : "object",
+         "x-apg-category" : "src",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "src_convert_format"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "from_format" : {
+                     "type" : "integer"
+                  },
+                  "to_format" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "from_format",
+                  "to_format"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "src_convert_format",
+         "type" : "object",
+         "x-apg-category" : "src",
+         "x-apg-dispatch" : "process"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "src_downsample"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "factor" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "factor"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "src_downsample",
+         "type" : "object",
+         "x-apg-category" : "src",
+         "x-apg-dispatch" : "stream"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "src_upsample"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "factor" : {
+                     "type" : "integer"
+                  }
+               },
+               "required" : [
+                  "factor"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "src_upsample",
+         "type" : "object",
+         "x-apg-category" : "src",
+         "x-apg-dispatch" : "stream"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "freq_quantize"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "freq_quantize",
+         "type" : "object",
+         "x-apg-category" : "freq",
+         "x-apg-dispatch" : "process"
+      }
+   ],
+   "title" : "Audio Playground Atom Binding"
+}

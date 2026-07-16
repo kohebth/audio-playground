@@ -15,11 +15,12 @@ need one family may include that family's header directly.
 | `dsp_primitives.h` | Public `Signal`, `Spectrum`, and `Buffer` pointer aliases |
 | `dsp_enums.h` | Shared enum tags, preferred namespaced typedefs, and legacy typedef aliases |
 | `dsp_ports.h` | Generic public port-shape compatibility types |
-| `dsp_type_macros.h` | Shared I/O member profiles and atom type declaration machinery |
-| `*_types.h` | One family's atom-specific output, input, params, and state layouts |
+| `dsp_type_macros.h` | Generated shared I/O member profiles and atom type declaration machinery |
+| `*_types.h` | Generated family-owned output, input, params, and state layouts |
 | `dsp_type_checks.h` | Canonical-list coverage, duplicate-count protection, and macro cleanup for the umbrella |
 | `dsp_types.h` | Include-only umbrella in dependency order |
-| `dsp_atoms.h` | Process, spectral, and stream declarations generated from `APG_ATOM_DEFINITIONS` |
+| `atom_definitions.h` | Shared flag policy plus generated canonical registry rows |
+| `dsp_atoms.h` | Runtime context includes plus generated process, spectral, and stream declarations |
 
 Families are `amplitude`, `delay`, `detect`, `filter`, `frequency`, `generation`, `interpolation`, `mix`,
 `modulation`, `nonlinear`, and `src`. Every header is guarded and compiles standalone.
@@ -102,38 +103,39 @@ separate runtime ABI version.
 
 ## Adding An Atom
 
-1. Add one row to the correct `APG_<FAMILY>_DSP_TYPE_TABLE` in `inc/atom/types/<family>_types.h`.
-2. Reuse an I/O profile only when member names and semantics match exactly; add a profile to `dsp_type_macros.h` when
-   the layout is genuinely new.
+1. Add one atom object to `schema/atoms/atoms.json` in canonical registry order.
+2. Reuse an I/O profile only when member names and semantics match exactly; add a schema profile when the layout is
+   genuinely new.
 3. Put process-call bindings in input/output, configuration/control values in params, and persistent mutable data in
-   state.
-4. Add matching field descriptors in the family `*_field_descriptors.c`; record buffer bounds where applicable.
-5. Add the canonical `APG_ATOM_DEFINITIONS` row with exact descriptor counts, capabilities, maturity, and dispatch.
-6. Add a compiler/catalog contract row only when v2 metadata exposes that binding contract.
-7. Implement the required process entry point without process-time allocation.
-8. Update focused behavior tests, regenerate ABI evidence only for intentional changes, and run `./build-and-test.sh`.
-9. Update the frozen atom catalog and TypeScript-facing fixtures when public metadata changes.
+   state. Record ownership for every field and capacity metadata for every runtime-owned state buffer.
+4. Select the capability, maturity, dispatch, descriptor, and catalog metadata in the same atom object.
+5. Regenerate through `cmake --build build --target generate_atom_artifacts`; never edit generated family headers or
+   descriptor sources directly.
+6. Implement the required handwritten process entry point without process-time allocation.
+7. Update focused behavior tests, regenerate ABI evidence only for intentional changes, and run `./build-and-test.sh`.
+8. Update the frozen atom catalog when public metadata changes, then build and lint `web-tools/unit-editor`.
 
 Contributor checklist:
 
 ```text
-[ ] Atom placed in correct category header
+[ ] Atom placed in the correct schema family and registry order
 [ ] Input/output fields represent process-call buffer bindings
 [ ] Params contain configuration/control values only
 [ ] State contains persistent runtime state only
 [ ] Pointer ownership and lifetime are explicit
+[ ] Runtime-owned state buffers have explicit capacity and buffer_len metadata
 [ ] No process-time allocation introduced
-[ ] Header compiles standalone
+[ ] Generated artifacts are current and family headers compile standalone
 [ ] ABI test updated intentionally
 [ ] C and TypeScript catalogs remain synchronized
 ```
 
-## Generation Roadmap
+## Generation Ownership
 
-Production family headers remain authoritative. `schema/atoms/src.json` and
-`tools/generate_dsp_type_family.pl` are a candidate-only proof: CTest generates twice in the build tree, checks
-determinism, and requires the body to match `src_types.h` byte for byte.
+`schema/atoms/atoms.json` is authoritative for all family type tables, canonical rows, public declarations, field
+descriptors, backend catalog contracts, the TypeScript catalog, and atom-binding JSON Schema. Generated outputs are
+checked in and carry a do-not-edit banner.
 
-Migrate one family at a time only after schema output also matches canonical rows, field descriptors, catalog data, and
-ownership/capacity metadata. Do not overwrite handwritten headers or generate algorithm sources until those comparison
-tests exist. See `docs/refactor/dsp-type-generation-design.md` for the migration gate.
+`test_atom_artifact_generation` proves deterministic output, checks the repository for drift, and verifies that a
+deliberately changed output is rejected. Use `generate_atom_artifacts` to rewrite outputs and `check_atom_artifacts` in
+local or CI verification. See `docs/refactor/dsp-type-generation-design.md` for the complete boundary and commands.

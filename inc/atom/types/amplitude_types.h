@@ -1,3 +1,4 @@
+/* Generated from schema/atoms/atoms.json by tools/generate_atom_artifacts.pl. Do not edit. */
 #ifndef AUDIO_PLAYGROUND_AMPLITUDE_TYPES_H
 #define AUDIO_PLAYGROUND_AMPLITUDE_TYPES_H
 

@@ -1,0 +1,3274 @@
+{
+   "$schema" : "apg.atom-definitions.v1",
+   "atoms" : [
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "amplitude_accumulate",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "accumulator",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_GATE",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "amplitude_latch",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "threshold",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "latched_value",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "prev_gate",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_PAIR",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "amplitude_add",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "amplitude_clip_hard",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "threshold",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "amplitude_clip_soft",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "threshold",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "curve",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "DIVISION",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "amplitude_divide",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "epsilon",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_PAIR",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "amplitude_multiply",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "amplitude_normalize",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "target_level",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "mode",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "running_peak",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "amplitude_smooth",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "attack",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "release",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_value",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_PAIR",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "amplitude_subtract",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "delay",
+         "dispatch" : "PROCESS",
+         "family" : "delay",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "delay_fractional",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "delay_samples",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "interpolation",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "192000u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "delay",
+         "dispatch" : "PROCESS",
+         "family" : "delay",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "delay_line",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "length",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "192000u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "delay",
+         "dispatch" : "PROCESS",
+         "family" : "delay",
+         "input_descriptors" : [
+            {
+               "field_type" : "FIELD_SIGNAL",
+               "member" : "buffer",
+               "name" : "buffer"
+            },
+            {
+               "field_type" : "FIELD_INT",
+               "member" : "tap_position",
+               "name" : "tap_position"
+            }
+         ],
+         "input_profile" : "BUFFER_TAP",
+         "maturity" : "MUSICAL",
+         "name" : "delay_tap_feedback",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "coefficient",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "delay",
+         "dispatch" : "PROCESS",
+         "family" : "delay",
+         "input_descriptors" : [
+            {
+               "field_type" : "FIELD_SIGNAL",
+               "member" : "buffer",
+               "name" : "buffer"
+            },
+            {
+               "field_type" : "FIELD_INT",
+               "member" : "tap_position",
+               "name" : "tap_position"
+            }
+         ],
+         "input_profile" : "BUFFER_TAP",
+         "maturity" : "MUSICAL",
+         "name" : "delay_tap_feedforward",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "coefficient",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "delay",
+         "dispatch" : "PROCESS",
+         "family" : "delay",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "delay_unit",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_sample",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "detect",
+         "dispatch" : "PROCESS",
+         "family" : "detect",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "detect_autocorrelate",
+         "output_profile" : "CORRELATION",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "max_lag",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "APG_DETECT_AUTOCORRELATION_CAPACITY",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "detect",
+         "dispatch" : "PROCESS",
+         "family" : "detect",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "detect_pitch",
+         "output_profile" : "PITCH",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "max_lag",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "APG_DETECT_AUTOCORRELATION_CAPACITY",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "detect",
+         "dispatch" : "PROCESS",
+         "family" : "detect",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "detect_envelope",
+         "output_profile" : "ENVELOPE",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "attack",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "release",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_envelope",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "detect",
+         "dispatch" : "PROCESS",
+         "family" : "detect",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "detect_peak",
+         "output_profile" : "LEVEL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "attack",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "release",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_peak",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "detect",
+         "dispatch" : "PROCESS",
+         "family" : "detect",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "detect_rms",
+         "output_profile" : "LEVEL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "window_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "APG_DETECT_RMS_CAPACITY",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "sum",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "detect",
+         "dispatch" : "PROCESS",
+         "family" : "detect",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "detect_slope",
+         "output_profile" : "SLOPE",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_sample",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "detect",
+         "dispatch" : "PROCESS",
+         "family" : "detect",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "detect_threshold",
+         "output_profile" : "GATE",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "threshold",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "detect",
+         "dispatch" : "PROCESS",
+         "family" : "detect",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "detect_zero_crossing",
+         "output_profile" : "TRIGGER",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_sample",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "filter_allpass",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "delay_samples",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "coefficient",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "48000u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "filter_biquad_coefficients",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "b0",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "b1",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "b2",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "a1",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "a2",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "z1",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "z2",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [
+            {
+               "field_type" : "FIELD_SIGNAL",
+               "member" : "signal",
+               "name" : "signal"
+            },
+            {
+               "field_type" : "FIELD_SIGNAL",
+               "member" : "cutoff",
+               "name" : "cutoff"
+            }
+         ],
+         "input_profile" : "SIGNAL_CUTOFF",
+         "maturity" : "MUSICAL",
+         "name" : "filter_biquad",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "cutoff",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "q",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "mode",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "smoothing_ms",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "z1",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "z2",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "current_cutoff",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "current_q",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "name" : "current_b0",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "name" : "current_b1",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "name" : "current_b2",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "name" : "current_a1",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "name" : "current_a2",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_DELAY",
+         "maturity" : "MUSICAL",
+         "name" : "filter_comb_fb",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "delay_samples",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "coefficient",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "48000u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "filter_comb_ff",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "delay_samples",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "coefficient",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "48000u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "filter_dc_block",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "coefficient",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_input",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_output",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "filter_differentiate",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_sample",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "filter_fir",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "kernel",
+               "ownership" : "borrowed"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "kernel_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "1024u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "filter",
+         "dispatch" : "PROCESS",
+         "family" : "filter",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "filter_integrate",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "accumulator",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "EXPERIMENTAL",
+         "category" : "freq",
+         "dispatch" : "FFT",
+         "family" : "frequency",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "freq_fft",
+         "output_profile" : "COMPLEX",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "block_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "4096u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "workspace",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "EXPERIMENTAL",
+         "category" : "freq",
+         "dispatch" : "IFFT",
+         "family" : "frequency",
+         "input_descriptors" : [],
+         "input_profile" : "COMPLEX",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "freq_ifft",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "block_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "4096u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "workspace",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "EXPERIMENTAL",
+         "category" : "freq",
+         "dispatch" : "MULTIPLY",
+         "family" : "frequency",
+         "input_descriptors" : [],
+         "input_profile" : "COMPLEX_PAIR",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "freq_multiply",
+         "output_profile" : "COMPLEX",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "block_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "freq",
+         "dispatch" : "OVERLAP_ADD",
+         "family" : "frequency",
+         "input_descriptors" : [],
+         "input_profile" : "FRAME",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "freq_overlap_add",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "block_size",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "hop_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "8192u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "freq",
+         "dispatch" : "OVERLAP_SAVE",
+         "family" : "frequency",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "freq_overlap_save",
+         "output_profile" : "FRAME",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "block_size",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "hop_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "1024u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "freq",
+         "dispatch" : "WINDOW",
+         "family" : "frequency",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "freq_window",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "window_type",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "block_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "freq",
+         "dispatch" : "PROCESS",
+         "family" : "frequency",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_PITCH_SHIFT",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "freq_shift",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "block_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "8192u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "read_ptr",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "generation",
+         "dispatch" : "PROCESS",
+         "family" : "generation",
+         "input_descriptors" : [],
+         "input_profile" : "EMPTY",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "generation_dc",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "catalog" : {
+                  "required" : true,
+                  "type" : "scalar"
+               },
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "value",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "generation",
+         "dispatch" : "PROCESS",
+         "family" : "generation",
+         "input_descriptors" : [],
+         "input_profile" : "GATE",
+         "maturity" : "MUSICAL",
+         "name" : "generation_envelope",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "attack",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "decay",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "sustain",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "release",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "current_level",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "stage",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "generation",
+         "dispatch" : "PROCESS",
+         "family" : "generation",
+         "input_descriptors" : [],
+         "input_profile" : "EMPTY",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "generation_impulse",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "interval",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "counter",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "generation",
+         "dispatch" : "PROCESS",
+         "family" : "generation",
+         "input_descriptors" : [],
+         "input_profile" : "EMPTY",
+         "maturity" : "MUSICAL",
+         "name" : "generation_lfo",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "frequency",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "waveform",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "phase_offset",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "phase",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "generation",
+         "dispatch" : "PROCESS",
+         "family" : "generation",
+         "input_descriptors" : [],
+         "input_profile" : "EMPTY",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "generation_noise",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "amplitude",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "color",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "seed",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_value",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "generation",
+         "dispatch" : "PROCESS",
+         "family" : "generation",
+         "input_descriptors" : [],
+         "input_profile" : "FREQUENCY",
+         "maturity" : "MUSICAL",
+         "name" : "generation_oscillator",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "frequency",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "waveform",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "phase_offset",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "phase",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "interpolation",
+         "dispatch" : "PROCESS",
+         "family" : "interpolation",
+         "input_descriptors" : [],
+         "input_profile" : "INTERPOLATION_CUBIC",
+         "maturity" : "MUSICAL",
+         "name" : "interpolation_cubic",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "interpolation",
+         "dispatch" : "PROCESS",
+         "family" : "interpolation",
+         "input_descriptors" : [],
+         "input_profile" : "SAMPLES_T",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "interpolation_lagrange",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "order",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "interpolation",
+         "dispatch" : "PROCESS",
+         "family" : "interpolation",
+         "input_descriptors" : [],
+         "input_profile" : "INTERPOLATION_LINEAR",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "interpolation_linear",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "interpolation",
+         "dispatch" : "PROCESS",
+         "family" : "interpolation",
+         "input_descriptors" : [],
+         "input_profile" : "BUFFER_POSITION",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "interpolation_sinc",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "num_taps",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "mix",
+         "dispatch" : "PROCESS",
+         "family" : "mix",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_PAIR",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "mix_crossfade",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "t",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "mix",
+         "dispatch" : "PROCESS",
+         "family" : "mix",
+         "input_descriptors" : [],
+         "input_profile" : "MS",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "mix_decode_ms",
+         "output_profile" : "STEREO",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "mix",
+         "dispatch" : "PROCESS",
+         "family" : "mix",
+         "input_descriptors" : [],
+         "input_profile" : "STEREO",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "mix_encode_ms",
+         "output_profile" : "MS",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "mix",
+         "dispatch" : "PROCESS",
+         "family" : "mix",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_MATRIX",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "mix_matrix",
+         "output_profile" : "SIGNAL_MATRIX",
+         "params" : [
+            {
+               "c_type" : "float **",
+               "catalog" : {
+                  "required" : true,
+                  "type" : "float_matrix"
+               },
+               "name" : "coefficients",
+               "ownership" : "borrowed"
+            },
+            {
+               "c_type" : "int",
+               "catalog" : false,
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "num_in",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "catalog" : false,
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "num_out",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "mix",
+         "dispatch" : "PROCESS",
+         "family" : "mix",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "mix_pan_stereo",
+         "output_profile" : "STEREO",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "position",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "mix",
+         "dispatch" : "PROCESS",
+         "family" : "mix",
+         "input_descriptors" : [],
+         "input_profile" : "WET_DRY",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "mix_wet_dry",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "mix",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "modulation",
+         "dispatch" : "PROCESS",
+         "family" : "modulation",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_MODULATOR",
+         "maturity" : "MUSICAL",
+         "name" : "modulation_amplitude",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "depth",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "modulation",
+         "dispatch" : "PROCESS",
+         "family" : "modulation",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_MODULATOR",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "modulation_frequency",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "depth",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "APG_MODULATION_DELAY_CAPACITY",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "current_delay",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "modulation",
+         "dispatch" : "PROCESS",
+         "family" : "modulation",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_MODULATOR",
+         "maturity" : "MUSICAL",
+         "name" : "modulation_phase",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "depth",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "APG_MODULATION_DELAY_CAPACITY",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "write_pos",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "modulation",
+         "dispatch" : "PROCESS",
+         "family" : "modulation",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_MODULATOR",
+         "maturity" : "MUSICAL",
+         "name" : "modulation_ring",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "modulation",
+         "dispatch" : "PROCESS",
+         "family" : "modulation",
+         "input_descriptors" : [],
+         "input_profile" : "BUFFER_POSITION",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "modulation_scrub",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "nonlinear",
+         "dispatch" : "PROCESS",
+         "family" : "nonlinear",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "nonlinear_bitcrush",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "bit_depth",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "nonlinear",
+         "dispatch" : "PROCESS",
+         "family" : "nonlinear",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "nonlinear_sample_hold",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "factor",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "last_val",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "counter",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "nonlinear",
+         "dispatch" : "PROCESS",
+         "family" : "nonlinear",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "nonlinear_waveshape",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "transfer_table",
+               "ownership" : "borrowed"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "table_size",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM_ANTIALIASED",
+         "category" : "src",
+         "dispatch" : "PROCESS",
+         "family" : "src",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "src_antialias",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "cutoff",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "z1",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "z2",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM_ANTIALIASED",
+         "category" : "src",
+         "dispatch" : "PROCESS",
+         "family" : "src",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "MUSICAL",
+         "name" : "src_antiimage",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "cutoff",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "z1",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "z2",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "src",
+         "dispatch" : "PROCESS",
+         "family" : "src",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "src_convert_format",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "from_format",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "to_format",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "src",
+         "dispatch" : "STREAM",
+         "family" : "src",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "src_downsample",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "factor",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "phase",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "src",
+         "dispatch" : "STREAM",
+         "family" : "src",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "src_upsample",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "int",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "factor",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "phase",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "WASM",
+         "category" : "freq",
+         "dispatch" : "PROCESS",
+         "family" : "frequency",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "EXPERIMENTAL",
+         "name" : "freq_quantize",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "name" : "unused",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "name" : "unused",
+               "ownership" : "value"
+            }
+         ]
+      }
+   ],
+   "empty_layout" : {
+      "c_type" : "uint8_t",
+      "name" : "_reserved"
+   },
+   "families" : [
+      {
+         "category" : "generation",
+         "descriptor_source" : "src/atom/generation/generation_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_GENERATION_TYPES_H",
+         "header" : "inc/atom/types/generation_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "generation",
+         "table_macro" : "APG_GENERATION_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "amplitude",
+         "descriptor_source" : "src/atom/amplitude/amplitude_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_AMPLITUDE_TYPES_H",
+         "header" : "inc/atom/types/amplitude_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "amplitude",
+         "table_macro" : "APG_AMPLITUDE_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "delay",
+         "descriptor_source" : "src/atom/delay/delay_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_DELAY_TYPES_H",
+         "header" : "inc/atom/types/delay_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "delay",
+         "table_macro" : "APG_DELAY_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "filter",
+         "descriptor_source" : "src/atom/filter/filter_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_FILTER_TYPES_H",
+         "header" : "inc/atom/types/filter_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "filter",
+         "table_macro" : "APG_FILTER_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "detect",
+         "constants" : [
+            {
+               "name" : "APG_DETECT_RMS_CAPACITY",
+               "value" : "4096u"
+            },
+            {
+               "name" : "APG_DETECT_AUTOCORRELATION_CAPACITY",
+               "value" : "1024u"
+            }
+         ],
+         "descriptor_source" : "src/atom/detect/detect_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_DETECT_TYPES_H",
+         "header" : "inc/atom/types/detect_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "detect",
+         "table_macro" : "APG_DETECT_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "modulation",
+         "constants" : [
+            {
+               "name" : "APG_MODULATION_DELAY_CAPACITY",
+               "value" : "4096u"
+            }
+         ],
+         "descriptor_source" : "src/atom/modulation/modulation_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_MODULATION_TYPES_H",
+         "header" : "inc/atom/types/modulation_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "modulation",
+         "table_macro" : "APG_MODULATION_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "interpolation",
+         "descriptor_source" : "src/atom/interpolation/interpolation_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_INTERPOLATION_TYPES_H",
+         "header" : "inc/atom/types/interpolation_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "interpolation",
+         "table_macro" : "APG_INTERPOLATION_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "src",
+         "descriptor_source" : "src/atom/source/source_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_SRC_TYPES_H",
+         "header" : "inc/atom/types/src_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "src",
+         "table_macro" : "APG_SRC_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "freq",
+         "descriptor_source" : "src/atom/frequency/frequency_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_FREQUENCY_TYPES_H",
+         "header" : "inc/atom/types/frequency_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "frequency",
+         "table_macro" : "APG_FREQUENCY_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "mix",
+         "descriptor_source" : "src/atom/mix/mix_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_MIX_TYPES_H",
+         "header" : "inc/atom/types/mix_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "mix",
+         "table_macro" : "APG_MIX_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "nonlinear",
+         "descriptor_source" : "src/atom/nonlinear/nonlinear_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_NONLINEAR_TYPES_H",
+         "header" : "inc/atom/types/nonlinear_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "nonlinear",
+         "table_macro" : "APG_NONLINEAR_DSP_TYPE_TABLE"
+      }
+   ],
+   "io_profiles" : [
+      {
+         "fields" : [
+            {
+               "c_type" : "uint8_t",
+               "contract_type" : "signal",
+               "name" : "_reserved",
+               "required" : true
+            }
+         ],
+         "name" : "EMPTY"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal",
+               "required" : true
+            }
+         ],
+         "name" : "SIGNAL"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal_a",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal_b",
+               "required" : true
+            }
+         ],
+         "name" : "SIGNAL_PAIR"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "left",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "right",
+               "required" : true
+            }
+         ],
+         "name" : "STEREO"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "real",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "imag",
+               "required" : true
+            }
+         ],
+         "name" : "COMPLEX"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "mid",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "side",
+               "required" : true
+            }
+         ],
+         "name" : "MS"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "dry",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "wet",
+               "required" : true
+            }
+         ],
+         "name" : "WET_DRY"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "numerator",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "denominator",
+               "required" : true
+            }
+         ],
+         "name" : "DIVISION"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "correlation",
+               "required" : true
+            }
+         ],
+         "name" : "CORRELATION"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "pitch",
+               "required" : true
+            }
+         ],
+         "name" : "PITCH"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "envelope",
+               "required" : true
+            }
+         ],
+         "name" : "ENVELOPE"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "level",
+               "required" : true
+            }
+         ],
+         "name" : "LEVEL"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "slope",
+               "required" : true
+            }
+         ],
+         "name" : "SLOPE"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "gate",
+               "required" : true
+            }
+         ],
+         "name" : "GATE"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "trigger",
+               "required" : true
+            }
+         ],
+         "name" : "TRIGGER"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "buffer",
+               "name" : "buffer",
+               "required" : true
+            },
+            {
+               "c_type" : "int",
+               "contract_type" : "scalar",
+               "name" : "tap_position",
+               "required" : true
+            }
+         ],
+         "name" : "BUFFER_TAP"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "real_a",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "imag_a",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "real_b",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "imag_b",
+               "required" : true
+            }
+         ],
+         "name" : "COMPLEX_PAIR"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "frame",
+               "required" : true
+            }
+         ],
+         "name" : "FRAME"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal_optional",
+               "name" : "pitch_shift",
+               "required" : false
+            }
+         ],
+         "name" : "SIGNAL_PITCH_SHIFT"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal_optional",
+               "name" : "frequency",
+               "required" : false
+            }
+         ],
+         "name" : "FREQUENCY"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal_n1",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal_a",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal_b",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal_c",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "t",
+               "required" : true
+            }
+         ],
+         "name" : "INTERPOLATION_CUBIC"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "samples",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "t",
+               "required" : true
+            }
+         ],
+         "name" : "SAMPLES_T"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal_a",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal_b",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "t",
+               "required" : true
+            }
+         ],
+         "name" : "INTERPOLATION_LINEAR"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "buffer",
+               "name" : "buffer",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "position",
+               "required" : true
+            }
+         ],
+         "name" : "BUFFER_POSITION"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float **",
+               "contract_type" : "signal_array",
+               "name" : "signals",
+               "required" : true
+            }
+         ],
+         "name" : "SIGNAL_MATRIX"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal_optional",
+               "name" : "cutoff",
+               "required" : false
+            }
+         ],
+         "name" : "SIGNAL_CUTOFF"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal_optional",
+               "name" : "delay",
+               "required" : false
+            }
+         ],
+         "name" : "SIGNAL_DELAY"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "gate",
+               "required" : true
+            }
+         ],
+         "name" : "SIGNAL_GATE"
+      },
+      {
+         "fields" : [
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "signal",
+               "required" : true
+            },
+            {
+               "c_type" : "float *",
+               "contract_type" : "signal",
+               "name" : "modulator",
+               "required" : true
+            }
+         ],
+         "name" : "SIGNAL_MODULATOR"
+      }
+   ],
+   "source" : "schema/atoms/atoms.json"
+}

@@ -1,3 +1,4 @@
+/* Generated from schema/atoms/atoms.json by tools/generate_atom_artifacts.pl. Do not edit. */
 #include "atom/atom_field_descriptors.h"
 #include "atom/dsp_atoms.h"
 
@@ -5,6 +6,7 @@
 
 #define FIELD_COUNT(name) const int name##_count = (int)(sizeof(name) / sizeof((name)[0]))
 
+// clang-format off
 const atom_field_desc_t detect_autocorrelate_config_fields[] = {
     {"max_lag", FIELD_INT, offsetof(detect_autocorrelate_params_t, max_lag)},
 };
@@ -30,7 +32,7 @@ const atom_field_desc_t detect_pitch_state_fields[] = {
 FIELD_COUNT(detect_pitch_state_fields);
 
 const atom_field_desc_t detect_envelope_config_fields[] = {
-    { "attack", FIELD_FLOAT, offsetof(detect_envelope_params_t,  attack)},
+    {"attack", FIELD_FLOAT, offsetof(detect_envelope_params_t, attack)},
     {"release", FIELD_FLOAT, offsetof(detect_envelope_params_t, release)},
 };
 FIELD_COUNT(detect_envelope_config_fields);
@@ -41,7 +43,7 @@ const atom_field_desc_t detect_envelope_state_fields[] = {
 FIELD_COUNT(detect_envelope_state_fields);
 
 const atom_field_desc_t detect_peak_config_fields[] = {
-    { "attack", FIELD_FLOAT, offsetof(detect_peak_params_t,  attack)},
+    {"attack", FIELD_FLOAT, offsetof(detect_peak_params_t, attack)},
     {"release", FIELD_FLOAT, offsetof(detect_peak_params_t, release)},
 };
 FIELD_COUNT(detect_peak_config_fields);
@@ -78,5 +80,7 @@ const atom_field_desc_t detect_zero_crossing_state_fields[] = {
     {"prev_sample", FIELD_FLOAT, offsetof(detect_zero_crossing_state_t, prev_sample)},
 };
 FIELD_COUNT(detect_zero_crossing_state_fields);
+
+// clang-format on
 
 #undef FIELD_COUNT

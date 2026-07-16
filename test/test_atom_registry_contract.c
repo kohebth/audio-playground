@@ -94,22 +94,6 @@ static int test_registry_matches_canonical_definitions(void) {
     return 0;
 }
 
-#define CONTRACT_ATOM_NAME(name, input_profile, output_profile, config_profile) #name,
-static const char *const contract_atom_names[] = {APG_ATOM_CONTRACT_DEFINITIONS(CONTRACT_ATOM_NAME)};
-#undef CONTRACT_ATOM_NAME
-
-static int test_contract_atoms_are_canonical(void) {
-    for (size_t i = 0; i < sizeof(contract_atom_names) / sizeof(contract_atom_names[0]); i++) {
-        if (!atom_registry_find(contract_atom_names[i]))
-            return fail("contract definition references an unregistered atom");
-        for (size_t j = i + 1u; j < sizeof(contract_atom_names) / sizeof(contract_atom_names[0]); j++) {
-            if (strcmp(contract_atom_names[i], contract_atom_names[j]) == 0)
-                return fail("canonical contract atom is duplicated");
-        }
-    }
-    return 0;
-}
-
 static int test_registry_names_are_unique(void) {
     int count = atom_registry_count();
     for (int i = 0; i < count; i++) {
@@ -299,8 +283,6 @@ int main(void) {
     if (test_registry_entries_are_complete())
         return 1;
     if (test_registry_matches_canonical_definitions())
-        return 1;
-    if (test_contract_atoms_are_canonical())
         return 1;
     if (test_registry_names_are_unique())
         return 1;

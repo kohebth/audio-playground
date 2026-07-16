@@ -1,8 +1,7 @@
 # DSP Type Refactor Final Audit
 
-> This audit records the first type-header refactor as completed at `2f84b17`. The subsequent execution-API
-> convergence intentionally removes the 69 legacy function symbols, makes process input/config pointers const, and
-> evolves the current ABI snapshot. The phase-1 evidence remains frozen separately.
+> This living audit records the type-header split completed at `2f84b17` and the subsequent execution-context,
+> state-capacity, and production-generation convergence. Historical phase-1 evidence remains frozen separately.
 
 ## Inventory Comparison
 
@@ -12,19 +11,20 @@
 | Atom ABI typedefs | 276 | 276 | All four names retained per atom |
 | Total public ABI type records | 286 | 286 | Exact name set retained |
 | Non-empty public type records | 240 | 240 | Size, alignment, and fields unchanged |
-| Field records | 370 | 416 | 46 documented `_reserved` fields added |
+| Field records | 370 | 405 | Reserved fields added; parameter sample-rate duplication removed |
 | Zero-size GNU structures | 46 | 0 | Replaced by standard one-byte C11 layouts |
 | Shared enum values | 17 | 17 | Names and numeric values unchanged |
-| Public atom function symbols | 141 | 141 | Typed link test covers every symbol |
+| Public atom function symbols | 141 | 72 | Legacy non-context symbols removed; 69 primary and 3 spectral variants remain |
 
 The immutable GNU-layout reference is `test/abi/dsp_types_abi_baseline_lp64.csv`; the first C11 result is
 `test/abi/dsp_types_abi_phase1_lp64.csv`; and `test/abi/dsp_types_abi_c11_lp64.csv` tracks the current ABI. CTest
 checks the current snapshot exactly and separately proves that the historical GNU-to-phase-1 delta contains only the
 46 documented empty-layout transitions.
 
-No file under `src/atom/` changed during the refactor. The only production C behavior adjustment keeps atom-catalog
-`stateful` semantics independent of one-byte reserved storage. The frozen catalog now reports actual C sizes and the
-unit-editor build consumes that updated contract.
+The family type tables, descriptor sources, canonical rows, public declarations, backend catalog contracts,
+TypeScript catalog, and atom-binding JSON Schema are now generated from `schema/atoms/atoms.json`. DSP algorithms
+remain handwritten. The frozen catalog reports all 69 atoms with current ports and fields, and the unit-editor consumes
+the generated TypeScript counterpart.
 
 ## Verification Matrix
 
@@ -50,14 +50,14 @@ unit-editor build consumes that updated contract.
 - [x] Shared primitives, enums, ports, and 11 family ABI headers have explicit ownership.
 - [x] Every new header compiles standalone with strict C11 warnings as errors.
 - [x] Existing umbrella and `dsp_atoms.h` includes compile in C and C++.
-- [x] All public atom type names and all 141 function symbols are retained.
-- [x] Non-empty ABI is unchanged; the 46 empty-layout exceptions are isolated and documented.
+- [x] All public atom type names are retained; the 69 context-only entry points and three spectral variants link.
+- [x] Intentional ABI changes are isolated in the current snapshot; historical empty-layout evidence remains frozen.
 - [x] Include-order tests pass and no circular include was introduced.
 - [x] Canonical coverage rejects missing, duplicate-count, and orphan family rows.
-- [x] No DSP algorithm source changed and no new production warning was observed.
+- [x] DSP algorithms remain handwritten and no generated output contains behavior.
 - [x] Registry, unit runtime, CLI/export, live-swap, WASM, M7, and sanitizer tests pass.
 - [x] Type ownership, enum policy, empty layouts, new-atom workflow, and ABI rules are documented.
-- [x] Candidate generation is deterministic and byte-equivalent without replacing production headers.
+- [x] Production generation is deterministic and stale checked across C, TypeScript, and JSON Schema outputs.
 - [x] C catalog golden data and the TypeScript consumer build remain synchronized.
 
 ## Commits
@@ -72,11 +72,15 @@ unit-editor build consumes that updated contract.
 | `93380fa` | Namespaced enums and explicit values |
 | `13afc07` | Canonical atom declarations and 141-symbol link test |
 | `465618e` | Candidate schema generation and deterministic equivalence gate |
+| `1cab3a7` | Context-only public atom execution API |
+| `66ecd02` | Separate fixed-rate process and variable-rate stream contexts |
+| `9aeaff0` | Context-only sample rate and explicit runtime state capacities |
 
 ## Follow-Ups
 
 - Run the permanent header tests under Clang, Emscripten, and a Windows compiler when those toolchains are added to CI.
-- Expand the candidate schema next to a pointer-owning state family before considering generated production ownership.
+- Add editor visibility and rich parameter metadata to the authoritative schema and generated catalog.
+- Consolidate oscillator/LFO, difference/slope, integration/accumulation, and wet/dry/crossfade implementation pairs.
 - Resolve the pre-existing `freq_quantize` zero-descriptor versus four-byte `unused` params/state mismatch as a separate
   metadata/API decision.
 - Keep atom-specific I/O structures distinct; alias deduplication was rejected because profile macros already remove

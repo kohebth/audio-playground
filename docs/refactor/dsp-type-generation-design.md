@@ -2,60 +2,67 @@
 
 ## Status
 
-Production type headers remain handwritten and authoritative. Phase 7 adds a candidate schema and generator for the
-low-risk `src` family only; generated output is written under the build directory and is never installed over
-`inc/atom/types/src_types.h`.
+Production generation is active for all 69 atoms and all 11 families. `schema/atoms/atoms.json` uses
+`apg.atom-definitions.v1` and is authoritative; the former `src`-only candidate schema and generator have been removed.
 
-The prototype proves that a structured source can reproduce the current family ABI table exactly before ownership is
-transferred to generated files.
+JSON keeps generation dependency-free through Perl's core `JSON::PP` parser. Generated files are checked in so C,
+TypeScript, package builds, and downstream target exports do not require generation at consumer build time.
 
-## Schema
+## Source Model
 
-`schema/atoms/src.json` uses `apg.dsp-type-family.v1`. JSON was selected so the generator can use Perl's core
-`JSON::PP` parser without a new YAML dependency or ad hoc text parsing.
+The schema contains three ordered collections:
 
-Each family document records:
+- families: generated paths, guards, table macros, categories, and reusable capacity constants;
+- I/O profiles: exact C member layouts plus binding type and required/optional metadata;
+- atoms: family/profile selection, params, state, ownership, descriptors, capability, maturity, dispatch, and catalog
+  overrides.
 
-- category, public header guard/include, and family table macro;
-- ordered atom names and input/output ABI profiles;
-- ordered parameter and state fields with C type, metadata type, and ownership;
-- the standard one-byte empty-layout policy;
-- dispatch, capability profile, maturity, and registry field counts.
+The generator rejects unsupported C and contract types, duplicate names, parent-path traversal, sample-rate params,
+unowned pointers, state buffers without explicit `buffer_len`, unknown capacity constants, invalid descriptor counts,
+and unsupported dispatch/capability values. Pointer ownership is one of `borrowed`, `runtime_owned`, or `external`;
+scalars use `value`.
 
-Field order is ABI order. Atom order must be lexical for deterministic output. Registry config/state counts must equal
-their schema field counts. The prototype accepts the C field shapes currently used by the repository, including
-scalars, `uint32_t`, `float *`, and `float **`; pointer fields require explicit `borrowed`, `runtime_owned`, or
-`external` ownership instead of the scalar `value` policy. Optional capacities provide the existing buffer-bound
-metadata hook.
+## Generated Surfaces
+
+One invocation generates:
+
+1. reusable I/O macros and every family ABI header;
+2. canonical atom rows and context-correct public declarations;
+3. family input/config/state descriptor definitions;
+4. backend catalog contracts for all atoms;
+5. the unit-editor TypeScript catalog;
+6. a draft-2020-12 JSON Schema for atom bindings.
+
+The generator does not emit DSP algorithms, runtime thunks, allocation code, shared enums, or UI category colors.
+Those surfaces contain behavior or policy beyond declarative atom metadata.
+
+## Commands
+
+```sh
+perl tools/generate_atom_artifacts.pl schema/atoms/atoms.json .
+perl tools/generate_atom_artifacts.pl --check schema/atoms/atoms.json .
+cmake --build build --target generate_atom_artifacts
+cmake --build build --target check_atom_artifacts
+ctest --test-dir build -R '^test_atom_artifact_generation$' --output-on-failure
+```
+
+Every output carries a generated-file banner. `--check` performs an exact in-memory comparison and reports every
+missing or stale path without rewriting it.
 
 ## Verification
 
-`tools/generate_dsp_type_family.pl` validates the schema and emits a readable candidate header with a generated-file
-banner. `test_dsp_type_schema_generation` runs the generator twice, requires byte-identical outputs, verifies the
-banner, strips it, and compares the remaining body byte for byte with the handwritten `src_types.h`.
+`test_atom_artifact_generation` generates two independent trees and compares a fixed output manifest byte for byte. It
+then checks the repository tree, mutates a generated declaration in one temporary tree, and requires `--check` to name
+that stale path. Header smoke tests, the 69-atom registry contract, the 72-symbol link test, and the LP64 ABI snapshot
+remain independent gates.
 
-The test belongs to the `types` and `v2` labels. A schema change that alters layout must therefore update the
-handwritten candidate target deliberately and then pass the independent DSP ABI snapshot. Algorithm sources are never
-generated.
+Public catalog changes also require the frozen backend JSON sample and frontend build/lint checks. Algorithm behavior
+continues to be covered by the normal CTest suite.
 
-Local equivalence check:
+## Change Rules
 
-```sh
-perl tools/generate_dsp_type_family.pl schema/atoms/src.json /tmp/src_types.candidate.h
-ctest --test-dir build -R '^test_dsp_type_schema_generation$' --output-on-failure
-```
-
-## Migration Rules
-
-1. Keep the C family header authoritative until its schema reproduces the header, canonical atom rows, field
-   descriptors, and catalog contract.
-2. Add one family at a time and compare generated artifacts in the build tree.
-3. Add explicit schema support for any new C field shape, ownership policy, or capacity before migrating that family.
-4. Generate declaration rows, registry metadata, TypeScript catalog data, and docs only after cross-output comparison
-   tests exist.
-5. Mark production outputs with a generated banner only when schema ownership is activated.
-6. Make CI fail on dirty regeneration before deleting any handwritten source.
-7. Keep DSP algorithms and custom processing logic handwritten.
-
-The next candidate should cover a pointer-owning state family so ownership/capacity validation is exercised before
-schema expansion across all categories.
+1. Change schema and generator together when introducing a new field shape or metadata capability.
+2. Preserve ordered fields unless an intentional ABI change is documented and snapshotted.
+3. Never hand-edit a generated file to repair drift.
+4. Keep runtime allocation and process behavior outside the generator.
+5. Review regenerated C, TypeScript, schema, and golden diffs as one contract change.

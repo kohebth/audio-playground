@@ -9,6 +9,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - Reusable test metadata fixtures exist in `test/fixtures/units-v2/`, including representative overdrive, delay, tremolo, tone stack, noise gate, and wet/dry mix graphs.
 - Project/session schema, deterministic test metadata fixtures, referenced-unit resolution, mono project compilation, and `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml` exist. The default pedalboard includes a Schroeder reverb that is exercised for tail continuity by native and Emscripten/WASM tests; it supports desktop, WASM real-time, and offline render, but not M7 static export.
 - The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, deterministic project render/benchmark JSON, and export surfaces for `wasm_realtime` and `m7_static`. Validation, unit inspect, project inspect, render, and atom catalog sample contracts are frozen under `test/golden/`.
+- `schema/atoms/atoms.json` now generates the C atom ABI/registry contracts, TypeScript atom catalog, and atom-binding JSON Schema together; a CTest stale-output gate prevents frontend and backend field drift.
 
 ## Readiness Declaration
 
@@ -160,7 +161,7 @@ The UI needs a structured view of one unit:
 
 ### Atom Catalog Contract
 
-The UI needs a structured atom palette:
+The generated TypeScript catalog and backend inspect contract provide a structured atom palette:
 
 - atom name and category
 - input, output, config, and state fields

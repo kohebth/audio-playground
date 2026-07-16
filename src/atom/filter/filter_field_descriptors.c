@@ -1,3 +1,4 @@
+/* Generated from schema/atoms/atoms.json by tools/generate_atom_artifacts.pl. Do not edit. */
 #include "atom/atom_field_descriptors.h"
 #include "atom/dsp_atoms.h"
 
@@ -5,9 +6,10 @@
 
 #define FIELD_COUNT(name) const int name##_count = (int)(sizeof(name) / sizeof((name)[0]))
 
+// clang-format off
 const atom_field_desc_t filter_allpass_config_fields[] = {
-    {"delay_samples",   FIELD_INT, offsetof(filter_allpass_params_t, delay_samples)},
-    {  "coefficient", FIELD_FLOAT, offsetof(filter_allpass_params_t,   coefficient)},
+    {"delay_samples", FIELD_INT, offsetof(filter_allpass_params_t, delay_samples)},
+    {"coefficient", FIELD_FLOAT, offsetof(filter_allpass_params_t, coefficient)},
 };
 FIELD_COUNT(filter_allpass_config_fields);
 
@@ -40,24 +42,24 @@ const atom_field_desc_t filter_biquad_in_fields[] = {
 FIELD_COUNT(filter_biquad_in_fields);
 
 const atom_field_desc_t filter_biquad_config_fields[] = {
-    {      "cutoff", FIELD_FLOAT, offsetof(filter_biquad_params_t,       cutoff)},
-    {           "q", FIELD_FLOAT, offsetof(filter_biquad_params_t,            q)},
-    {        "mode",   FIELD_INT, offsetof(filter_biquad_params_t,         mode)},
+    {"cutoff", FIELD_FLOAT, offsetof(filter_biquad_params_t, cutoff)},
+    {"q", FIELD_FLOAT, offsetof(filter_biquad_params_t, q)},
+    {"mode", FIELD_INT, offsetof(filter_biquad_params_t, mode)},
     {"smoothing_ms", FIELD_FLOAT, offsetof(filter_biquad_params_t, smoothing_ms)},
 };
 FIELD_COUNT(filter_biquad_config_fields);
 
 const atom_field_desc_t filter_biquad_state_fields[] = {
-    {            "z1", FIELD_FLOAT, offsetof(filter_biquad_state_t,             z1)},
-    {            "z2", FIELD_FLOAT, offsetof(filter_biquad_state_t,             z2)},
+    {"z1", FIELD_FLOAT, offsetof(filter_biquad_state_t, z1)},
+    {"z2", FIELD_FLOAT, offsetof(filter_biquad_state_t, z2)},
     {"current_cutoff", FIELD_FLOAT, offsetof(filter_biquad_state_t, current_cutoff)},
-    {     "current_q", FIELD_FLOAT, offsetof(filter_biquad_state_t,      current_q)},
+    {"current_q", FIELD_FLOAT, offsetof(filter_biquad_state_t, current_q)},
 };
 FIELD_COUNT(filter_biquad_state_fields);
 
 const atom_field_desc_t filter_comb_fb_config_fields[] = {
-    {"delay_samples",   FIELD_INT, offsetof(filter_comb_fb_params_t, delay_samples)},
-    {  "coefficient", FIELD_FLOAT, offsetof(filter_comb_fb_params_t,   coefficient)},
+    {"delay_samples", FIELD_INT, offsetof(filter_comb_fb_params_t, delay_samples)},
+    {"coefficient", FIELD_FLOAT, offsetof(filter_comb_fb_params_t, coefficient)},
 };
 FIELD_COUNT(filter_comb_fb_config_fields);
 
@@ -69,8 +71,8 @@ const atom_field_desc_t filter_comb_fb_state_fields[] = {
 FIELD_COUNT(filter_comb_fb_state_fields);
 
 const atom_field_desc_t filter_comb_ff_config_fields[] = {
-    {"delay_samples",   FIELD_INT, offsetof(filter_comb_ff_params_t, delay_samples)},
-    {  "coefficient", FIELD_FLOAT, offsetof(filter_comb_ff_params_t,   coefficient)},
+    {"delay_samples", FIELD_INT, offsetof(filter_comb_ff_params_t, delay_samples)},
+    {"coefficient", FIELD_FLOAT, offsetof(filter_comb_ff_params_t, coefficient)},
 };
 FIELD_COUNT(filter_comb_ff_config_fields);
 
@@ -87,7 +89,7 @@ const atom_field_desc_t filter_dc_block_config_fields[] = {
 FIELD_COUNT(filter_dc_block_config_fields);
 
 const atom_field_desc_t filter_dc_block_state_fields[] = {
-    { "prev_input", FIELD_FLOAT, offsetof(filter_dc_block_state_t,  prev_input)},
+    {"prev_input", FIELD_FLOAT, offsetof(filter_dc_block_state_t, prev_input)},
     {"prev_output", FIELD_FLOAT, offsetof(filter_dc_block_state_t, prev_output)},
 };
 FIELD_COUNT(filter_dc_block_state_fields);
@@ -98,8 +100,8 @@ const atom_field_desc_t filter_differentiate_state_fields[] = {
 FIELD_COUNT(filter_differentiate_state_fields);
 
 const atom_field_desc_t filter_fir_config_fields[] = {
-    {     "kernel", FIELD_BUFFER, offsetof(filter_fir_params_t,      kernel)},
-    {"kernel_size",    FIELD_INT, offsetof(filter_fir_params_t, kernel_size)},
+    {"kernel", FIELD_BUFFER, offsetof(filter_fir_params_t, kernel)},
+    {"kernel_size", FIELD_INT, offsetof(filter_fir_params_t, kernel_size)},
 };
 FIELD_COUNT(filter_fir_config_fields);
 
@@ -114,5 +116,7 @@ const atom_field_desc_t filter_integrate_state_fields[] = {
     {"accumulator", FIELD_FLOAT, offsetof(filter_integrate_state_t, accumulator)},
 };
 FIELD_COUNT(filter_integrate_state_fields);
+
+// clang-format on
 
 #undef FIELD_COUNT
