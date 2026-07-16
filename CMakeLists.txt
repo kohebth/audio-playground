@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(audio_playground)
 enable_testing()
+find_package(Perl REQUIRED)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -191,11 +192,24 @@ else()
     add_test(NAME test_dsp_types_abi COMMAND test_dsp_types_abi_snapshot)
 endif()
 
+add_test(
+        NAME test_dsp_type_schema_generation
+        COMMAND ${CMAKE_COMMAND}
+                -DPERL_EXECUTABLE=${PERL_EXECUTABLE}
+                -DGENERATOR=${CMAKE_SOURCE_DIR}/tools/generate_dsp_type_family.pl
+                -DSCHEMA=${CMAKE_SOURCE_DIR}/schema/atoms/src.json
+                -DSOURCE_LABEL=schema/atoms/src.json
+                -DEXPECTED_HEADER=${CMAKE_SOURCE_DIR}/inc/atom/types/src_types.h
+                -DOUTPUT_DIR=${CMAKE_BINARY_DIR}/test-artifacts/generated-dsp-types
+                -P ${CMAKE_SOURCE_DIR}/test/abi/verify_dsp_type_generation.cmake
+)
+
 set_tests_properties(
         test_dsp_headers_c
         test_dsp_headers_cpp
         test_dsp_atom_symbols
         test_dsp_types_abi
+        test_dsp_type_schema_generation
         PROPERTIES LABELS "types;v2"
 )
 

@@ -1,0 +1,90 @@
+{
+  "$schema": "apg.dsp-type-family.v1",
+  "source": "schema/atoms/src.json",
+  "category": "src",
+  "header": {
+    "guard": "AUDIO_PLAYGROUND_SRC_TYPES_H",
+    "include": "atom/types/dsp_type_macros.h",
+    "table_macro": "APG_SRC_DSP_TYPE_TABLE"
+  },
+  "empty_layout": {
+    "c_type": "uint8_t",
+    "name": "_reserved"
+  },
+  "atoms": [
+    {
+      "name": "src_antialias",
+      "output_profile": "SIGNAL",
+      "input_profile": "SIGNAL",
+      "dispatch": "PROCESS",
+      "capability_profile": "WASM_ANTIALIASED",
+      "maturity": "MUSICAL",
+      "registry": { "input_fields": 0, "config_fields": 2, "state_fields": 2 },
+      "params": [
+        { "name": "cutoff", "c_type": "float", "metadata_type": "float", "ownership": "value" },
+        { "name": "sample_rate", "c_type": "float", "metadata_type": "float", "ownership": "value" }
+      ],
+      "state": [
+        { "name": "z1", "c_type": "float", "metadata_type": "float", "ownership": "value" },
+        { "name": "z2", "c_type": "float", "metadata_type": "float", "ownership": "value" }
+      ]
+    },
+    {
+      "name": "src_antiimage",
+      "output_profile": "SIGNAL",
+      "input_profile": "SIGNAL",
+      "dispatch": "PROCESS",
+      "capability_profile": "WASM_ANTIALIASED",
+      "maturity": "MUSICAL",
+      "registry": { "input_fields": 0, "config_fields": 2, "state_fields": 2 },
+      "params": [
+        { "name": "cutoff", "c_type": "float", "metadata_type": "float", "ownership": "value" },
+        { "name": "sample_rate", "c_type": "float", "metadata_type": "float", "ownership": "value" }
+      ],
+      "state": [
+        { "name": "z1", "c_type": "float", "metadata_type": "float", "ownership": "value" },
+        { "name": "z2", "c_type": "float", "metadata_type": "float", "ownership": "value" }
+      ]
+    },
+    {
+      "name": "src_convert_format",
+      "output_profile": "SIGNAL",
+      "input_profile": "SIGNAL",
+      "dispatch": "PROCESS",
+      "capability_profile": "PORTABLE",
+      "maturity": "SAFE_SCALAR",
+      "registry": { "input_fields": 0, "config_fields": 2, "state_fields": 0 },
+      "params": [
+        { "name": "from_format", "c_type": "int", "metadata_type": "int", "ownership": "value" },
+        { "name": "to_format", "c_type": "int", "metadata_type": "int", "ownership": "value" }
+      ],
+      "state": []
+    },
+    {
+      "name": "src_downsample",
+      "output_profile": "SIGNAL",
+      "input_profile": "SIGNAL",
+      "dispatch": "PROCESS",
+      "capability_profile": "WASM",
+      "maturity": "SAFE_SCALAR",
+      "registry": { "input_fields": 0, "config_fields": 1, "state_fields": 0 },
+      "params": [
+        { "name": "factor", "c_type": "int", "metadata_type": "int", "ownership": "value" }
+      ],
+      "state": []
+    },
+    {
+      "name": "src_upsample",
+      "output_profile": "SIGNAL",
+      "input_profile": "SIGNAL",
+      "dispatch": "PROCESS",
+      "capability_profile": "WASM",
+      "maturity": "SAFE_SCALAR",
+      "registry": { "input_fields": 0, "config_fields": 1, "state_fields": 0 },
+      "params": [
+        { "name": "factor", "c_type": "int", "metadata_type": "int", "ownership": "value" }
+      ],
+      "state": []
+    }
+  ]
+}
