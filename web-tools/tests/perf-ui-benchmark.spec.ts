@@ -502,9 +502,8 @@ async function dispatchProjectEdgeDrop(page: Page, edgeId: string, unitId: strin
 
 async function launchWorkspace(page: Page) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  const launch = page.getByTestId('launch-workspace');
-  await expect(launch).toBeVisible({ timeout: 180_000 });
-  await launch.click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 180_000 });
+  await expect(page.getByTestId('launch-workspace')).toHaveCount(0);
 
   await expect(page.getByTestId('project-canvas')).toBeVisible();
   await expect(page.getByTestId('project-instance-item-gate1')).toBeVisible();

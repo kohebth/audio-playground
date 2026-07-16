@@ -34,7 +34,8 @@ using the same runtime.
 The compact transport keeps one WASM backend alive across parent UI renders, starts and stops both decoded files and
 microphone streams, and suppresses stale meter failures while a Worklet is being disposed. Browser regression coverage
 exercises both transport modes. Workspace shortcuts map `Ctrl/Cmd+S` to local save, `B` to build and save, `M` to mute,
-and `Space` to start or stop playback while leaving text-editing controls unaffected.
+and `Space` to start or stop playback while leaving text-editing controls unaffected. The v2 initialization splash uses
+the bundled APG grid mark and dismisses automatically when the audio runtime is ready, without a manual launch gate.
 
 The right inspector exposes persisted browser audio input/output selection. AudioContext output routing is
 feature-detected, microphone constraints request the selected device, mono capture, matching sample rate, and disabled

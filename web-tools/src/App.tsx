@@ -2,6 +2,7 @@ import { Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import { AppLogo } from './components/AppLogo';
 import { ContractGraphCanvas } from './components/ContractGraphCanvas';
 import { LiveLatencyBadge } from './components/LiveLatencyBadge';
 import { ProjectCanvas } from './components/ProjectCanvas';
@@ -153,7 +154,6 @@ function loadWorkspaceState(): { entryProject: string; files: WorkspaceFile[] } 
 
 export default function App() {
   const [runtimeReady, setRuntimeReady] = useState(false);
-  const [workbenchLaunched, setWorkbenchLaunched] = useState(false);
   const [initialWorkspace] = useState(loadWorkspaceState);
   const initialProjectInspect = useMemo(() => {
     try {
@@ -947,7 +947,7 @@ export default function App() {
 
   return (
     <LiveBypassContext.Provider value={liveBypassContextValue}>
-    {!workbenchLaunched && (
+    {!runtimeReady && (
       <section className="launch-screen" aria-live="polite">
         <div className="splash-bg-glow glow-1" />
         <div className="splash-bg-glow glow-2" />
@@ -955,21 +955,15 @@ export default function App() {
         <div className="launch-screen__content">
           <div className="launch-screen__mark splash-logo" aria-hidden="true">
             <span className="splash-logo-inner">
-              <i className="fa-solid fa-wave-square" />
+              <AppLogo />
             </span>
           </div>
-          <h1>Audio Playground <span>v3.0</span></h1>
+          <h1>Audio Playground <span>v2.0</span></h1>
           <p>Interactive real-time DSP visual workbench<br />and audio routing matrix</p>
           <div className="launch-screen__progress">
-            <div><span>{runtimeReady ? 'System ready' : 'Initializing audio engine...'}</span><span>{runtimeReady ? '100%' : 'Loading'}</span></div>
-            <i><b className={runtimeReady ? 'launch-screen__progress-fill launch-screen__progress-fill--ready' : 'launch-screen__progress-fill'} /></i>
+            <div><span>Initializing audio engine...</span><span>Loading</span></div>
+            <i><b className="launch-screen__progress-fill" /></i>
           </div>
-          {runtimeReady && (
-            <button className="launch-screen__button" data-testid="launch-workspace" onClick={() => setWorkbenchLaunched(true)} type="button">
-              <i className="fa-solid fa-rocket" aria-hidden="true" />
-              Launch Workspace
-            </button>
-          )}
         </div>
       </section>
     )}

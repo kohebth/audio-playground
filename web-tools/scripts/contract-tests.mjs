@@ -36,6 +36,7 @@ const unit = json('test/golden/v2-inspect-unit-simple_gain.json');
 const render = json('test/golden/v2-render-project-guitar-pedalboard.json');
 
 const app = read('web-tools/src/App.tsx');
+const appLogo = read('web-tools/src/components/AppLogo.tsx');
 const backendSamples = read('web-tools/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
 const projectSidebar = read('web-tools/src/components/ProjectSidebar.tsx');
@@ -220,6 +221,13 @@ includesContent(previewPanel, 'captureLatencyMs', 'live preview must read microp
 includesContent(previewPanel, 'measureAcousticLatency', 'live preview must expose an acoustic latency calibration action');
 includesContent(previewPanel, "'Latency chirp'", 'live preview latency calibration button is missing');
 includesContent(app, '<LiveLatencyBadge />', 'live output latency must remain visible outside the inspector');
+includesContent(app, '{!runtimeReady && (', 'launch screen must dismiss automatically when the runtime is ready');
+includesContent(app, 'Audio Playground <span>v2.0</span>', 'launch screen must use v2 branding');
+assert(!app.includes('launch-workspace'), 'launch screen must not require a manual launch action');
+includesContent(app, '<AppLogo />', 'launch screen must use the stable application logo');
+includesContent(projectTopbar, '<AppLogo />', 'project header must use the stable application logo');
+includesContent(appLogo, 'icon.svg', 'application logo component must load the bundled SVG');
+includes('web-tools/public/icon.svg', 'M0 0h1v1H0zM2 0h1v2H2zM4 0h1v4H4zM0 2h3v1H0zM0 4h5v1H0z', 'application logo must preserve the supplied 5x5 mark');
 includesContent(liveLatencyBadge, "'Mic path est.'", 'live latency badge must distinguish microphone path estimates');
 includesContent(liveLatencyBadge, 'micPathLatencySeverity(totalLatencyMs)', 'microphone path estimate must expose latency severity');
 includesContent(liveLatencyBadge, 'Loopback ready', 'live latency badge must show measured loopback results');

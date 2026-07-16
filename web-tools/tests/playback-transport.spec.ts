@@ -1,13 +1,16 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
+async function openWorkspace(page: Page) {
+  await page.goto('/');
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 15_000 });
+  await expect(page.getByTestId('launch-workspace')).toHaveCount(0);
+}
 
 test('controls file and microphone playback with transport shortcuts', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
 
-  await page.goto('/');
-  await expect(page.getByTestId('launch-workspace')).toBeVisible({ timeout: 15_000 });
-  await page.getByTestId('launch-workspace').click();
-  await expect(page.getByTestId('launch-workspace')).toBeHidden();
+  await openWorkspace(page);
   await page.locator('.topbar__logo').click();
 
   const state = page.locator('.transport-state');
@@ -43,8 +46,7 @@ test('reconfigures live audio devices and restores running controls', async ({ p
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
 
-  await page.goto('/');
-  await page.getByTestId('launch-workspace').click();
+  await openWorkspace(page);
   await page.locator('.topbar__logo').click();
   await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 15_000 });
   await page.getByTestId('preview-mode-mic').click();
@@ -95,8 +97,7 @@ test('calibrates latency candidates and retains a stable configuration', async (
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
 
-  await page.goto('/');
-  await page.getByTestId('launch-workspace').click();
+  await openWorkspace(page);
   await page.locator('.topbar__logo').click();
   await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 15_000 });
   await page.getByTestId('preview-mode-mic').click();

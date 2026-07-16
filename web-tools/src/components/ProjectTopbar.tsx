@@ -1,4 +1,5 @@
 import type { ProjectInspect, ValidationResult } from '../lib/backendSamples';
+import { AppLogo } from './AppLogo';
 import { PreviewPanel } from './PreviewPanel';
 import type { ParamOverride } from '../lib/projectParams';
 import type { WorkspaceFile } from '../lib/backendSamples';
@@ -53,7 +54,7 @@ export function ProjectTopbar({
       <div className="header-left">
         <div className="header-brand">
           <span className="topbar__logo" aria-hidden="true">
-            <i className="fa-solid fa-wave-square" />
+            <AppLogo />
           </span>
           <span className="header-brand-name">APG</span>
         </div>
