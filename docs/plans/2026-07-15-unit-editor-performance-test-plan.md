@@ -146,7 +146,7 @@ that rolling history is the representative baseline as runner data accumulates.
 ## Verification Commands
 
 ```sh
-cd web-tools/unit-editor
+cd web-tools
 npm run perf:benchmark:regression
 npm run perf:ui:pr
 npm run perf:ui -- --reporter=line --workers=1

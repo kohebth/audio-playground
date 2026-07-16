@@ -19,7 +19,7 @@ import {
   type ProjectPortCatalog,
 } from '../src/lib/projectV2Graph.ts';
 
-const repo = resolve(import.meta.dirname, '../../..');
+const repo = resolve(import.meta.dirname, '../..');
 const project = readFileSync(resolve(repo, 'test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml'), 'utf8');
 const ports: ProjectPortCatalog = {
   noise_gate_unit: { inputs: ['input'], outputs: ['output'] },

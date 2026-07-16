@@ -1,7 +1,7 @@
 {
   "profile": "perf-benchmark",
   "generatedAt": "2026-07-15T00:20:17.335Z",
-  "command": "/home/duync/.nvm/versions/node/v22.14.0/bin/node /home/duync/repo/audio-playground/web-tools/unit-editor/scripts/perf-benchmark.mts --out scripts/perf-baseline.json",
+  "command": "/home/duync/.nvm/versions/node/v22.14.0/bin/node /home/duync/repo/audio-playground/web-tools/scripts/perf-benchmark.mts --out scripts/perf-baseline.json",
   "projects": [
     {
       "profile": "extreme-branching",

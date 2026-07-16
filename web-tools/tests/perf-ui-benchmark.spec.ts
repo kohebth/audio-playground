@@ -170,7 +170,7 @@ function assertDurationBudget(name: string, durationMs: number) {
 }
 
 function resolveRepoRoot(): string {
-  return path.resolve(process.cwd(), '..', '..');
+  return path.resolve(process.cwd(), '..');
 }
 
 function normalizePosixPath(value: string): string {

@@ -4,7 +4,7 @@ import yaml from 'js-yaml';
 
 import { parseUnitPortNames } from '../src/lib/projectV2Graph.ts';
 
-const repoRoot = resolve(process.cwd(), '..', '..');
+const repoRoot = resolve(process.cwd(), '..');
 const fixtureRoot = resolve(repoRoot, 'test/fixtures/projects-v2', 'perf');
 const unitRoot = resolve(repoRoot, 'test/fixtures/units-v2');
 const perfUnitRoot = resolve(unitRoot, 'perf');

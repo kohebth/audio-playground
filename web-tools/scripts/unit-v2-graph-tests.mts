@@ -20,7 +20,7 @@ import {
   setAtomNodePosition,
 } from '../src/lib/unitV2Graph.ts';
 
-const repo = resolve(import.meta.dirname, '../../..');
+const repo = resolve(import.meta.dirname, '../..');
 const catalog = JSON.parse(readFileSync(resolve(repo, 'test/golden/v2-inspect-atoms.json'), 'utf8')) as AtomCatalog;
 
 const created = createUnitV2({ name: 'browser_gain', title: 'Browser Gain' });

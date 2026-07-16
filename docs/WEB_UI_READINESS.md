@@ -13,7 +13,7 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 ## Readiness Declaration
 
-The APGCore v2 backend and web MVP surfaces are ready for production hardening. Final MVP backend verification passed with `./build-and-test.sh` across all 20 CTest targets. Web verification passed with `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/unit-editor/`.
+The APGCore v2 backend and web MVP surfaces are ready for production hardening. Final MVP backend verification passed with `./build-and-test.sh` across all 20 CTest targets. Web verification passed with `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/`.
 
 This is not a hardware readiness declaration. STM32H7/M7 production deployment is not ready yet: the `m7_static` path is a bounded C11 export surface for compatible/simple projects, not proof that the full guitar-pedalboard project runs on target hardware. The generic browser runtime now lives in `wasm-tools/`; the older project-specific `wasm_realtime` export remains a compatibility scaffold.
 

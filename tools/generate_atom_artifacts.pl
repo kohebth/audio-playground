@@ -983,7 +983,7 @@ for my $family (@$families) {
 $outputs{'inc/atom/generated/atom_definitions.generated.h'} = render_atom_definitions();
 $outputs{'inc/atom/generated/dsp_atoms.generated.h'} = render_dsp_declarations();
 $outputs{'src/apgcore/metadata/atom_catalog_contracts.generated.inc'} = render_catalog_contracts();
-$outputs{'web-tools/unit-editor/src/atoms/atomCatalog.generated.ts'} = render_typescript_catalog();
+$outputs{'web-tools/src/atoms/atomCatalog.generated.ts'} = render_typescript_catalog();
 $outputs{'schema/atoms/atom.schema.json'} = render_json_schema();
 
 my @stale;

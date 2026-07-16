@@ -20,7 +20,7 @@ Field order is C ABI order. Atom order is canonical registry order. Empty roles 
 - `inc/atom/generated/atom_definitions.generated.h` and `dsp_atoms.generated.h`;
 - all 12 family `*_field_descriptors.c` files;
 - `src/apgcore/metadata/atom_catalog_contracts.generated.inc`;
-- `web-tools/unit-editor/src/atoms/atomCatalog.generated.ts`;
+- `web-tools/src/atoms/atomCatalog.generated.ts`;
 - `schema/atoms/atom.schema.json`.
 
 `inc/atom/atom_definitions.h`, `inc/atom/dsp_atoms.h`, and the TypeScript `atomCatalog.ts` module are thin handwritten
@@ -46,7 +46,7 @@ cmake --build build --target check_atom_artifacts
 ```
 
 Update `test/golden/v2-inspect-atoms.json` and its manifest when the public catalog changes. Run `npm run build` and
-`npm run lint` in `web-tools/unit-editor/` when generated TypeScript changes.
+`npm run lint` in `web-tools/` when generated TypeScript changes.
 
 `test_atom_artifact_generation` renders every output twice, compares each file byte for byte, checks the checked-in
 tree, then deliberately modifies one output and proves the stale check rejects it. Generation also rejects incomplete

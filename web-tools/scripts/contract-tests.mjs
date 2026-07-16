@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repo = resolve(here, '../../..');
+const repo = resolve(here, '../..');
 
 function read(path) {
   return readFileSync(resolve(repo, path), 'utf8');
@@ -35,23 +35,23 @@ const project = json('test/golden/v2-inspect-project-guitar-pedalboard.json');
 const unit = json('test/golden/v2-inspect-unit-simple_gain.json');
 const render = json('test/golden/v2-render-project-guitar-pedalboard.json');
 
-const app = read('web-tools/unit-editor/src/App.tsx');
-const backendSamples = read('web-tools/unit-editor/src/lib/backendSamples.ts');
-const projectTopbar = read('web-tools/unit-editor/src/components/ProjectTopbar.tsx');
-const projectSidebar = read('web-tools/unit-editor/src/components/ProjectSidebar.tsx');
-const projectInspector = read('web-tools/unit-editor/src/components/ProjectInspector.tsx');
-const projectCanvas = read('web-tools/unit-editor/src/components/ProjectCanvas.tsx');
-const projectNode = read('web-tools/unit-editor/src/components/ProjectNode.tsx');
-const paramKnob = read('web-tools/unit-editor/src/components/ParamKnob.tsx');
-const atomPalette = read('web-tools/unit-editor/src/components/AtomCatalogPanel.tsx');
-const contractCanvas = read('web-tools/unit-editor/src/components/ContractGraphCanvas.tsx');
-const previewPanel = read('web-tools/unit-editor/src/components/PreviewPanel.tsx');
-const liveLatencyBadge = read('web-tools/unit-editor/src/components/LiveLatencyBadge.tsx');
-const audioIo = read('web-tools/unit-editor/src/lib/audioIo.ts');
+const app = read('web-tools/src/App.tsx');
+const backendSamples = read('web-tools/src/lib/backendSamples.ts');
+const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
+const projectSidebar = read('web-tools/src/components/ProjectSidebar.tsx');
+const projectInspector = read('web-tools/src/components/ProjectInspector.tsx');
+const projectCanvas = read('web-tools/src/components/ProjectCanvas.tsx');
+const projectNode = read('web-tools/src/components/ProjectNode.tsx');
+const paramKnob = read('web-tools/src/components/ParamKnob.tsx');
+const atomPalette = read('web-tools/src/components/AtomCatalogPanel.tsx');
+const contractCanvas = read('web-tools/src/components/ContractGraphCanvas.tsx');
+const previewPanel = read('web-tools/src/components/PreviewPanel.tsx');
+const liveLatencyBadge = read('web-tools/src/components/LiveLatencyBadge.tsx');
+const audioIo = read('web-tools/src/lib/audioIo.ts');
 const wasmFacade = read('wasm-tools/web/facade.ts');
 const processorWorklet = read('wasm-tools/web/processor.worklet.js');
-const compatibility = read('web-tools/unit-editor/src/components/CompatibilityExportPanel.tsx');
-const workspacePersistence = read('web-tools/unit-editor/src/lib/workspacePersistence.ts');
+const compatibility = read('web-tools/src/components/CompatibilityExportPanel.tsx');
+const workspacePersistence = read('web-tools/src/lib/workspacePersistence.ts');
 
 // AC: Contract-accurate web data is sourced from a frozen backend atom catalog fixture.
 assert(atomCatalog.schema === 'apg.atom_catalog.v2', 'atom catalog fixture schema changed');
@@ -70,12 +70,12 @@ assert(
   'atom catalog schema assertion should fail visibly if fixture schema drifts',
 );
 includes(
-  'web-tools/unit-editor/src/lib/backendSamples.ts',
+  'web-tools/src/lib/backendSamples.ts',
   'v2-inspect-atoms.json?raw',
   'backendSamples must load the frozen backend atom catalog JSON',
 );
 assert(!backendSamples.includes('../atoms/atomCatalog'), 'project workbench backend samples must not use the local atom catalog fallback');
-includes('web-tools/unit-editor/src/components/ProjectInspector.tsx', '<strong>{atomCatalog.schema}</strong>', 'contract view must expose atom catalog schema');
+includes('web-tools/src/components/ProjectInspector.tsx', '<strong>{atomCatalog.schema}</strong>', 'contract view must expose atom catalog schema');
 includesContent(atomPalette, 'filteredAtoms.map(', 'atom palette must render its filtered backend atoms');
 includesContent(atomPalette, "atom.visibility === 'public'", 'atom palette must show public atoms by default');
 includesContent(atomPalette, "atom.visibility === 'advanced'", 'atom palette must make advanced atoms opt-in');
@@ -118,7 +118,7 @@ assert(
   'workspace autosave restore must read from localStorage',
 );
 includes(
-  'web-tools/unit-editor/src/lib/backendSamples.ts',
+  'web-tools/src/lib/backendSamples.ts',
   'test/golden/v2-inspect-atoms.json',
   'frozen backend contract source path should be explicit',
 );

@@ -1,17 +1,17 @@
-import atomCatalogRaw from '../../../../test/golden/v2-inspect-atoms.json?raw';
-import atomCatalogManifestRaw from '../../../../test/golden/v2-inspect-atoms.manifest.txt?raw';
-import delayUnitYaml from '../../../../test/fixtures/units-v2/delay.unit.v2.yaml?raw';
-import noiseGateUnitYaml from '../../../../test/fixtures/units-v2/noise_gate.unit.v2.yaml?raw';
-import overdriveUnitYaml from '../../../../test/fixtures/units-v2/overdrive.unit.v2.yaml?raw';
-import projectYaml from '../../../../test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml?raw';
-import projectInspectRaw from '../../../../test/golden/v2-inspect-project-guitar-pedalboard.json?raw';
-import projectRenderRaw from '../../../../test/golden/v2-render-project-guitar-pedalboard.json?raw';
-import projectValidationRaw from '../../../../test/golden/v2-validate-project-guitar-pedalboard.json?raw';
-import schroederReverbUnitYaml from '../../../../test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml?raw';
-import toneStackUnitYaml from '../../../../test/fixtures/units-v2/tone_stack.unit.v2.yaml?raw';
-import tremoloUnitYaml from '../../../../test/fixtures/units-v2/tremolo.unit.v2.yaml?raw';
-import unitInspectRaw from '../../../../test/golden/v2-inspect-unit-simple_gain.json?raw';
-import wetDryMixUnitYaml from '../../../../test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml?raw';
+import atomCatalogRaw from '../../../test/golden/v2-inspect-atoms.json?raw';
+import atomCatalogManifestRaw from '../../../test/golden/v2-inspect-atoms.manifest.txt?raw';
+import delayUnitYaml from '../../../test/fixtures/units-v2/delay.unit.v2.yaml?raw';
+import noiseGateUnitYaml from '../../../test/fixtures/units-v2/noise_gate.unit.v2.yaml?raw';
+import overdriveUnitYaml from '../../../test/fixtures/units-v2/overdrive.unit.v2.yaml?raw';
+import projectYaml from '../../../test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml?raw';
+import projectInspectRaw from '../../../test/golden/v2-inspect-project-guitar-pedalboard.json?raw';
+import projectRenderRaw from '../../../test/golden/v2-render-project-guitar-pedalboard.json?raw';
+import projectValidationRaw from '../../../test/golden/v2-validate-project-guitar-pedalboard.json?raw';
+import schroederReverbUnitYaml from '../../../test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml?raw';
+import toneStackUnitYaml from '../../../test/fixtures/units-v2/tone_stack.unit.v2.yaml?raw';
+import tremoloUnitYaml from '../../../test/fixtures/units-v2/tremolo.unit.v2.yaml?raw';
+import unitInspectRaw from '../../../test/golden/v2-inspect-unit-simple_gain.json?raw';
+import wetDryMixUnitYaml from '../../../test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml?raw';
 
 export type Compatibility = Record<string, boolean>;
 

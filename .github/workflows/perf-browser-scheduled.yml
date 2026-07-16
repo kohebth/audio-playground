@@ -109,48 +109,48 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web-tools/unit-editor/package-lock.json
+          cache-dependency-path: web-tools/package-lock.json
 
       - name: Download WASM middleware
         uses: actions/download-artifact@v4
         with:
           name: browser-wasm
-          path: web-tools/unit-editor/public/wasm
+          path: web-tools/public/wasm
 
       - name: Install web editor dependencies
-        working-directory: web-tools/unit-editor
+        working-directory: web-tools
         run: npm install
 
       - name: Install browser
-        working-directory: web-tools/unit-editor
+        working-directory: web-tools
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Restore rolling browser baseline
         uses: actions/cache/restore@v4
         with:
-          path: web-tools/unit-editor/perf-history/rolling/${{ matrix.profile }}.json
+          path: web-tools/perf-history/rolling/${{ matrix.profile }}.json
           key: browser-perf-${{ runner.os }}-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             browser-perf-${{ runner.os }}-${{ matrix.profile }}-
 
       - name: Run full scheduled Chromium suite
         if: matrix.full
-        working-directory: web-tools/unit-editor
+        working-directory: web-tools
         run: npm run perf:ui -- --project=${{ matrix.project }} --reporter=line,json --workers=1
 
       - name: Run throttled or cross-browser medium suite
         if: matrix.full == false
-        working-directory: web-tools/unit-editor
+        working-directory: web-tools
         run: npm run perf:ui -- --project=${{ matrix.project }} --grep @browser-matrix --reporter=line,json --workers=1
 
       - name: Create trend record
         if: always()
-        working-directory: web-tools/unit-editor
+        working-directory: web-tools
         run: npm run perf:ui:report -- --input perf-results-${{ matrix.profile }}.json --output perf-history/${{ matrix.profile }}.json
 
       - name: Update rolling baseline and chart
         if: success()
-        working-directory: web-tools/unit-editor
+        working-directory: web-tools
         run: >-
           npm run perf:ui:baseline --
           --input perf-history/${{ matrix.profile }}.json
@@ -163,7 +163,7 @@ jobs:
         if: success()
         uses: actions/cache/save@v4
         with:
-          path: web-tools/unit-editor/perf-history/rolling/${{ matrix.profile }}.json
+          path: web-tools/perf-history/rolling/${{ matrix.profile }}.json
           key: browser-perf-${{ runner.os }}-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload browser performance history
@@ -172,10 +172,10 @@ jobs:
         with:
           name: browser-perf-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            web-tools/unit-editor/perf-results-${{ matrix.profile }}.json
-            web-tools/unit-editor/perf-history/${{ matrix.profile }}.json
-            web-tools/unit-editor/perf-history/rolling/${{ matrix.profile }}.json
-            web-tools/unit-editor/perf-history/${{ matrix.profile }}.html
-            web-tools/unit-editor/test-results/perf-ui
+            web-tools/perf-results-${{ matrix.profile }}.json
+            web-tools/perf-history/${{ matrix.profile }}.json
+            web-tools/perf-history/rolling/${{ matrix.profile }}.json
+            web-tools/perf-history/${{ matrix.profile }}.html
+            web-tools/test-results/perf-ui
           if-no-files-found: warn
           retention-days: 90

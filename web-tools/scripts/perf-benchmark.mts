@@ -98,7 +98,7 @@ type Options = {
   baselinePath?: string;
 };
 
-const repoRoot = resolve(process.cwd(), '..', '..');
+const repoRoot = resolve(process.cwd(), '..');
 const fixtureDir = resolve(repoRoot, 'test/fixtures/projects-v2/perf');
 const unitRoot = resolve(repoRoot, 'test/fixtures/units-v2');
 const catalogPath = resolve(repoRoot, 'test/golden/v2-inspect-atoms.json');

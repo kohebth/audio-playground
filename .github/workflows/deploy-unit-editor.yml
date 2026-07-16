@@ -34,7 +34,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             wasm-tools/package-lock.json
-            web-tools/unit-editor/package-lock.json
+            web-tools/package-lock.json
 
       - name: Set up Emscripten
         uses: emscripten-core/setup-emsdk@v16
@@ -46,17 +46,17 @@ jobs:
         run: |
           emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
           cmake --build build-wasm --target apg_control apg_processor -j2
-          mkdir -p web-tools/unit-editor/public/wasm
-          cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm web-tools/unit-editor/public/wasm/
-          cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm web-tools/unit-editor/public/wasm/
-          cp wasm-tools/web/processor.worklet.js web-tools/unit-editor/public/wasm/processor.worklet.js
+          mkdir -p web-tools/public/wasm
+          cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm web-tools/public/wasm/
+          cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm web-tools/public/wasm/
+          cp wasm-tools/web/processor.worklet.js web-tools/public/wasm/processor.worklet.js
 
       - name: Build WASM web facade
         working-directory: wasm-tools
         run: npm install && npm run build
 
       - name: Install dependencies
-        working-directory: web-tools/unit-editor
+        working-directory: web-tools
         run: npm install
 
       - name: Resolve pages base path
@@ -70,7 +70,7 @@ jobs:
           fi
 
       - name: Build UI
-        working-directory: web-tools/unit-editor
+        working-directory: web-tools
         env:
           VITE_GITHUB_PAGES_BASE: ${{ steps.pages-base.outputs.base }}
         run: npm run build
@@ -78,7 +78,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: web-tools/unit-editor/dist
+          path: web-tools/dist
 
   deploy:
     needs: build

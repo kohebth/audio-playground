@@ -148,7 +148,7 @@ separate runtime ABI version.
    descriptor sources directly.
 7. Implement the required handwritten process entry point without process-time allocation.
 8. Update focused behavior tests, regenerate ABI evidence only for intentional changes, and run `./build-and-test.sh`.
-9. Update the frozen atom catalog when public metadata changes, then build and lint `web-tools/unit-editor`.
+9. Update the frozen atom catalog when public metadata changes, then build and lint `web-tools`.
 
 Contributor checklist:
 

@@ -10,7 +10,7 @@ This repository contains several independent project areas:
 - `test/fixtures/units-v2/` and `test/fixtures/projects-v2/`: v2 test metadata fixtures for parser/validator/compiler/runtime and UI contract checks. These are not APGCore source paths or production module roots.
 - `test/golden/`: frozen JSON samples for frontend contract tests and mock data.
 - `docs/schemas/unit-v2.md`, `docs/schemas/project-v2.md`, `docs/UNIT_V2_ARCHITECTURE.md`, and `docs/WEB_UI_READINESS.md`: current v2 schemas, compiler/runtime design notes, and web handoff context.
-- `web-tools/unit-editor/`, `audio-mcp/`, `search-mcp/`: separate frontend and MCP packages with their own dependencies.
+- `web-tools/`, `audio-mcp/`, `search-mcp/`: separate frontend and MCP packages with their own dependencies.
 - `samples/` and `analysis/`: audio inputs and generated inspection outputs. Commit large generated audio only as intentional fixtures.
 
 Keep C headers under `inc/` paired with implementation files under `src/` where practical.
@@ -38,7 +38,7 @@ cmake --build ./build-asan && ctest --test-dir ./build-asan
 For web and MCP packages, run commands inside their package directories:
 
 ```sh
-cd web-tools/unit-editor && npm run build && npm run lint
+cd web-tools && npm run build && npm run lint
 cd audio-mcp && python -m pytest tests/ -v
 cd search-mcp && npm run build
 ```
@@ -79,4 +79,4 @@ Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documen
 
 For web UI work, start from `docs/WEB_UI_READINESS.md`, fixture metadata such as `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml`, and the frozen files in `test/golden/`. Treat those samples as frontend data contracts only, not source paths. Build the project-level pedalboard workflow before unit-internals editing, and avoid changing backend JSON contracts unless a tracked UI requirement needs it.
 
-After each slice, stage only the files that belong to that slice and commit with `git commit -m "<which tasks are done>"`. Docs-only tracker updates do not require `./build-and-test.sh`. Web implementation slices require `npm run build` inside `web-tools/unit-editor`; backend implementation slices require `./build-and-test.sh` when compile confidence is needed. Before ending a turn, report the phase, committed slice, verification run, and next planned task.
+After each slice, stage only the files that belong to that slice and commit with `git commit -m "<which tasks are done>"`. Docs-only tracker updates do not require `./build-and-test.sh`. Web implementation slices require `npm run build` inside `web-tools`; backend implementation slices require `./build-and-test.sh` when compile confidence is needed. Before ending a turn, report the phase, committed slice, verification run, and next planned task.
