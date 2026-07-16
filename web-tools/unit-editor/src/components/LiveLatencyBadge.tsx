@@ -1,4 +1,5 @@
 import { useLiveBypass } from '../lib/liveBypass';
+import { micPathLatencySeverity } from '../lib/audioIo';
 
 export function LiveLatencyBadge() {
   const { controller } = useLiveBypass();
@@ -17,10 +18,13 @@ export function LiveLatencyBadge() {
   }
   const microphonePath = controller.captureLatencyMs !== null;
   const totalLatencyMs = controller.latencyMs + (controller.captureLatencyMs ?? 0);
+  const severityClass = microphonePath
+    ? ` live-latency-badge--${micPathLatencySeverity(totalLatencyMs)}`
+    : '';
 
   return (
     <output
-      className="live-latency-badge"
+      className={`live-latency-badge${severityClass}`}
       title={
         microphonePath
           ? 'Estimated microphone capture, browser render, and output latency. Values can vary with the browser and device.'

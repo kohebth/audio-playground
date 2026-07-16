@@ -5,6 +5,7 @@ import {
   calibrationCandidate,
   collectAudioDevices,
   loadAudioIoPreference,
+  micPathLatencySeverity,
   microphoneConstraints,
   recommendedOutputDeviceId,
   resolveAudioIoPreference,
@@ -13,6 +14,11 @@ import {
   type AudioRuntimeSettings,
 } from '../src/lib/audioIo.ts';
 import type { AudioTraceSnapshot, AudioTraceStageStats } from '@audio-playground/wasm-tools';
+
+assert.equal(micPathLatencySeverity(20), 'normal');
+assert.equal(micPathLatencySeverity(20.001), 'warning');
+assert.equal(micPathLatencySeverity(30), 'warning');
+assert.equal(micPathLatencySeverity(30.001), 'danger');
 
 const rawDevices = [
   { deviceId: 'default', groupId: '', kind: 'audioinput', label: 'Default input' },

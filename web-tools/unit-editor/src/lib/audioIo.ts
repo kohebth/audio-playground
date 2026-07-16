@@ -4,6 +4,13 @@ export const AUDIO_IO_STORAGE_KEY = 'apg.audio-io.v1';
 export const AUDIO_CALIBRATION_HINTS = [0.0027, 0.0053, 0.0107, 'interactive'] as const;
 
 export type AudioLatencyHint = number | 'interactive';
+export type MicPathLatencySeverity = 'normal' | 'warning' | 'danger';
+
+export function micPathLatencySeverity(latencyMs: number): MicPathLatencySeverity {
+  if (latencyMs > 30) return 'danger';
+  if (latencyMs > 20) return 'warning';
+  return 'normal';
+}
 
 export type AudioDeviceOption = {
   deviceId: string;

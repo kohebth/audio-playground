@@ -221,6 +221,7 @@ includesContent(previewPanel, 'measureAcousticLatency', 'live preview must expos
 includesContent(previewPanel, "'Latency chirp'", 'live preview latency calibration button is missing');
 includesContent(app, '<LiveLatencyBadge />', 'live output latency must remain visible outside the inspector');
 includesContent(liveLatencyBadge, "'Mic path est.'", 'live latency badge must distinguish microphone path estimates');
+includesContent(liveLatencyBadge, 'micPathLatencySeverity(totalLatencyMs)', 'microphone path estimate must expose latency severity');
 includesContent(liveLatencyBadge, 'Loopback ready', 'live latency badge must show measured loopback results');
 includesContent(audioIo, "latencyHint: 'interactive'", 'live preview must request interactive browser latency');
 includesContent(audioIo, 'latency: { ideal: 0 }', 'microphone preview must request the lowest available capture latency');

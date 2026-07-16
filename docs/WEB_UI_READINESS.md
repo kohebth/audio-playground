@@ -72,6 +72,9 @@ versioned `apg.audio-trace.v2` JSON contract. Device-aware calibration measures 
 path, and retains the chirp as the authoritative under-15-ms round-trip check. APGCore and embedded runtime boundaries
 remain unchanged.
 
+The live microphone-path estimate remains neutral through 20 ms, warns above 20 ms, and shows danger above 30 ms.
+Output-only estimates and measured acoustic-loopback status retain their existing presentation.
+
 The processor keeps an active, staged, and retired runtime slot. It only promotes a staged slot at a block boundary and
 crossfades that block; retired-slot destruction occurs during a later control-thread staging operation, never in the
 audio callback. A CMake boundary test rejects allocation, slot destruction, formatting, parsing, compilation, image

@@ -2089,13 +2089,24 @@ body {
   color: #86efac;
 }
 
-.live-latency-badge--high {
+.live-latency-badge--high,
+.live-latency-badge--warning {
   border-color: var(--accent-orange);
   color: #ffedd5;
 }
 
-.live-latency-badge--high span {
+.live-latency-badge--high span,
+.live-latency-badge--warning span {
   color: #fdba74;
+}
+
+.live-latency-badge--danger {
+  border-color: var(--accent-red);
+  color: #fee2e2;
+}
+
+.live-latency-badge--danger span {
+  color: #fca5a5;
 }
 
 .wasm-diagnostic {
