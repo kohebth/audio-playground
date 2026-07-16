@@ -8,14 +8,16 @@ void src_antialias_process(
     const src_antialias_in_t     *in,
     const src_antialias_params_t *params,
     src_antialias_state_t        *state,
-    const apg_process_info_t     *info
+    const apg_process_context_t  *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL)
         return;
 
-    const float    sample_rate = apg_sample_rate_or_default(info);
+    const float    sample_rate = apg_process_context_sample_rate(info);
     const float    cutoff      = apg_clamp_float(params->cutoff, 1.0f, sample_rate * 0.49f);
     const float    ff          = cutoff / sample_rate;
     const float    ita         = 1.0f / tanf((float)M_PI * ff);
@@ -25,7 +27,7 @@ void src_antialias_process(
     const float    b2          = b0;
     const float    a1          = 2.0f * (1.0f - ita * ita) * b0;
     const float    a2          = (1.0f - ita / q + ita * ita) * b0;
-    const uint32_t frames      = apg_process_frames_or_default(info);
+    const uint32_t frames      = apg_process_context_frames(info);
 
     if (!apg_biquad_coefficients_are_finite(b0, b1, b2, a1, a2) || !apg_biquad_denominator_is_stable(a1, a2)) {
         for (uint32_t i = 0; i < frames; ++i)

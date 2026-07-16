@@ -454,7 +454,7 @@ static uc_status init_node_calls(const apg_v2_registry_t *registry, apg_v2_runti
         node->call.in            = node->in_storage;
         node->call.config        = node->config_storage;
         node->call.state         = node->state_storage;
-        node->call.info          = &out->process_info;
+        node->call.context       = &out->process_context;
         node->call.spectral_info = layout->has_spectral_info ? &layout->spectral_info : NULL;
 
         status = init_state_buffers(layout, out, node, err);
@@ -507,11 +507,10 @@ uc_status apg_v2_runtime_init_from_registry(const apg_v2_registry_t *registry, a
     if (registry->frame_capacity == 0u)
         return set_error(err, UC_E_RANGE, "v2 runtime frame capacity must be greater than zero");
 
-    out->frame_capacity             = registry->frame_capacity;
-    out->process_info.sample_rate   = registry->sample_rate;
-    out->process_info.frames        = registry->frame_capacity;
-    out->process_info.output_frames = registry->frame_capacity;
-    out->process_info.channels      = 1u;
+    out->frame_capacity                  = registry->frame_capacity;
+    out->process_context.frames          = registry->frame_capacity;
+    out->process_context.sample_rate     = registry->sample_rate;
+    out->process_context.sample_position = 0u;
 
     uc_status status = init_signal_buffers(registry, out, err);
     if (status != UC_OK)
@@ -803,10 +802,9 @@ static bool reset_dispatch(apg_runtime_reset_context_t *ctx) {
             }
             break;
         case APG_RUNTIME_RESET_RESET_PROCESS_INFO:
-            ctx->runtime->process_info.frames        = ctx->runtime->frame_capacity;
-            ctx->runtime->process_info.output_frames = ctx->runtime->frame_capacity;
-            ctx->runtime->process_info.channels      = 1u;
-            ctx->state                               = APG_RUNTIME_RESET_DONE;
+            ctx->runtime->process_context.frames          = ctx->runtime->frame_capacity;
+            ctx->runtime->process_context.sample_position = 0u;
+            ctx->state                                    = APG_RUNTIME_RESET_DONE;
             break;
         case APG_RUNTIME_RESET_DONE:
         case APG_RUNTIME_RESET_FAIL:

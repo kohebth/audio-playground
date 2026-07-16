@@ -6,16 +6,21 @@
 and runtime thunk definitions. `dsp_atoms.h` now expands it through dispatch-aware declaration macros instead of
 maintaining a separate handwritten process declaration block.
 
-The dispatch mapping preserves the existing function types:
+The dispatch mapping defines three execution contracts:
 
-- `PROCESS`, `WINDOW`, `OVERLAP_ADD`, and `OVERLAP_SAVE` primary functions take `const apg_process_info_t *`;
+- `PROCESS`, `WINDOW`, `OVERLAP_ADD`, and `OVERLAP_SAVE` primary functions take
+  `const apg_process_context_t *`;
 - `FFT`, `IFFT`, and `MULTIPLY` primary functions take `const apg_spectral_info_t *`;
+- `STREAM` functions return `apg_stream_result_t` and take `const apg_stream_context_t *`;
 - `WINDOW`, `OVERLAP_ADD`, and `OVERLAP_SAVE` also declare their existing `*_spectral_process` variants with
   `const apg_spectral_info_t *`.
 
 Every process entry takes `const atom_name_in_t *` and `const atom_name_params_t *`. Output and state remain mutable.
 The obsolete context-free `atom_name(...)` declarations and implementations were removed after all callers migrated
 to explicit process metadata.
+
+`src_downsample_process` and `src_upsample_process` are the two stream entries. They retain phase across calls,
+report consumed and produced frame counts, and are rejected by the fixed-rate unit compiler.
 
 ## Symbol Set
 

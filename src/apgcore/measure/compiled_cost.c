@@ -3,14 +3,10 @@
 #include <limits.h>
 #include <string.h>
 
-static uint64_t sat_add_u64(uint64_t a, uint64_t b) {
-    return UINT64_MAX - a < b ? UINT64_MAX : a + b;
-}
+static uint64_t sat_add_u64(uint64_t a, uint64_t b) { return UINT64_MAX - a < b ? UINT64_MAX : a + b; }
 
 bool apg_compiled_unit_estimate_cost(
-    const apg_v2_compiled_unit_t *compiled,
-    const apg_process_info_t *process_info,
-    apg_graph_cost_result_t *out
+    const apg_v2_compiled_unit_t *compiled, const apg_process_context_t *process_context, apg_graph_cost_result_t *out
 ) {
     if (!compiled || !out)
         return false;
@@ -27,17 +23,17 @@ bool apg_compiled_unit_estimate_cost(
         if (node_index >= compiled->nodes_len)
             return false;
 
-        const apg_v2_compiled_node_t *node = &compiled->nodes[node_index];
-        const atom_registry_entry_t *entry = node->atom ? node->atom : atom_registry_find(node->atom_name);
+        const apg_v2_compiled_node_t *node  = &compiled->nodes[node_index];
+        const atom_registry_entry_t  *entry = node->atom ? node->atom : atom_registry_find(node->atom_name);
         if (!entry)
             return false;
 
-        apg_atom_cost_result_t atom_cost;
+        apg_atom_cost_result_t     atom_cost;
         const apg_spectral_info_t *spectral = node->has_spectral_info ? &node->spectral_info : NULL;
-        if (!apg_atom_estimate_cost(entry, NULL, process_info, spectral, &atom_cost))
+        if (!apg_atom_estimate_cost(entry, NULL, process_context, spectral, &atom_cost))
             return false;
 
-        out->cpu_acu = sat_add_u64(out->cpu_acu, atom_cost.cpu_acu);
+        out->cpu_acu          = sat_add_u64(out->cpu_acu, atom_cost.cpu_acu);
         out->persistent_bytes = sat_add_u64(out->persistent_bytes, atom_cost.persistent_bytes);
         if (atom_cost.scratch_bytes > out->scratch_bytes)
             out->scratch_bytes = atom_cost.scratch_bytes;

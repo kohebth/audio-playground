@@ -15,9 +15,7 @@ int test_amplitude_multiply(void) {
     amplitude_multiply_in_t     in  = {.signal_a = a, .signal_b = b};
     amplitude_multiply_params_t params;
     amplitude_multiply_state_t  state;
-    const apg_process_info_t    info = {
-           .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
-    };
+    const apg_process_context_t info = {.sample_rate = 48000.0f, .frames = TEST_CHUNK};
     amplitude_multiply_process(&out, &in, &params, &state, &info);
 
     for (int i = 0; i < TEST_CHUNK; i++) {
@@ -41,9 +39,7 @@ int test_soft_clip_bounds_and_monotonicity(void) {
     amplitude_clip_soft_in_t     in     = {.signal = x};
     amplitude_clip_soft_params_t params = {.threshold = 0.8f, .curve = 1};
     amplitude_clip_soft_state_t  state;
-    const apg_process_info_t     info = {
-            .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
-    };
+    const apg_process_context_t  info = {.sample_rate = 48000.0f, .frames = TEST_CHUNK};
     amplitude_clip_soft_process(&out, &in, &params, &state, &info);
 
     if (assert_finite_buffer(y, TEST_CHUNK, "amplitude_clip_soft"))
@@ -67,13 +63,11 @@ int test_delay_line_impulse_position(void) {
     memset(buffer, 0, sizeof(buffer));
     x[0] = 1.0f;
 
-    delay_line_out_t         out    = {.signal = y};
-    delay_line_in_t          in     = {.signal = x};
-    delay_line_params_t      params = {.length = 12};
-    delay_line_state_t       state  = {.buffer = buffer, .write_pos = 0};
-    const apg_process_info_t info   = {
-          .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
-    };
+    delay_line_out_t            out    = {.signal = y};
+    delay_line_in_t             in     = {.signal = x};
+    delay_line_params_t         params = {.length = 12};
+    delay_line_state_t          state  = {.buffer = buffer, .write_pos = 0};
+    const apg_process_context_t info   = {.sample_rate = 48000.0f, .frames = TEST_CHUNK};
     delay_line_process(&out, &in, &params, &state, &info);
 
     for (int i = 0; i < TEST_CHUNK; i++) {
@@ -90,11 +84,11 @@ int test_delay_extreme_bounds(void) {
     static float buffer[192000];
     memset(buffer, 0, sizeof(buffer));
 
-    delay_line_out_t    out    = {.signal = y};
-    delay_line_in_t     in     = {.signal = x};
-    delay_line_params_t params = {.length = 192000};
-    delay_line_state_t  state  = {.buffer = buffer, .write_pos = -1};
-    apg_process_info_t  info   = {.sample_rate = 48000.0f, .frames = 8u, .output_frames = 8u, .channels = 1u};
+    delay_line_out_t      out    = {.signal = y};
+    delay_line_in_t       in     = {.signal = x};
+    delay_line_params_t   params = {.length = 192000};
+    delay_line_state_t    state  = {.buffer = buffer, .write_pos = -1};
+    apg_process_context_t info   = {.sample_rate = 48000.0f, .frames = 8u};
 
     delay_line_process(&out, &in, &params, &state, &info);
     if (assert_finite_buffer(y, 8, "delay_line extreme bounds"))
@@ -133,9 +127,7 @@ int test_biquad_impulse_stability(void) {
         .a2 = 0.0f,
     };
     filter_biquad_coefficients_state_t state = {0};
-    const apg_process_info_t           info  = {
-                   .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
-    };
+    const apg_process_context_t        info  = {.sample_rate = 48000.0f, .frames = TEST_CHUNK};
     filter_biquad_coefficients_process(&out, &in, &params, &state, &info);
 
     if (assert_finite_buffer(y, TEST_CHUNK, "filter_biquad"))
@@ -161,7 +153,7 @@ int test_biquad_invalid_coefficients_bypass(void) {
     filter_biquad_coefficients_in_t     in     = {.signal = x};
     filter_biquad_coefficients_params_t params = {.b0 = NAN, .b1 = 0.0f, .b2 = 0.0f, .a1 = 0.0f, .a2 = 2.0f};
     filter_biquad_coefficients_state_t  state  = {.z1 = 1.0f, .z2 = 1.0f};
-    apg_process_info_t info = {.sample_rate = 48000.0f, .frames = 8u, .output_frames = 8u, .channels = 1u};
+    apg_process_context_t               info   = {.sample_rate = 48000.0f, .frames = 8u};
 
     filter_biquad_coefficients_process(&out, &in, &params, &state, &info);
     for (int i = 0; i < 8; ++i) {
@@ -194,9 +186,7 @@ int test_biquad_cutoff_smoothing(void) {
         .smoothing_ms = 5.0f,
     };
     filter_biquad_state_t state = {0};
-    apg_process_info_t    info  = {
-            .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
-    };
+    apg_process_context_t info  = {.sample_rate = 48000.0f, .frames = TEST_CHUNK};
 
     filter_biquad_process(&out, &in, &params, &state, &info);
 
@@ -227,10 +217,8 @@ int test_biquad_modes_are_finite(void) {
             .sample_rate  = 48000.0f,
             .smoothing_ms = 0.0f,
         };
-        filter_biquad_state_t    state = {0};
-        const apg_process_info_t info  = {
-             .sample_rate = 48000.0f, .frames = TEST_CHUNK, .output_frames = TEST_CHUNK, .channels = 1u
-        };
+        filter_biquad_state_t       state = {0};
+        const apg_process_context_t info  = {.sample_rate = 48000.0f, .frames = TEST_CHUNK};
 
         filter_biquad_process(&out, &in, &params, &state, &info);
 
@@ -250,7 +238,7 @@ int test_runtime_sample_rate_overrides_legacy_params(void) {
         .frequency = 100.0f, .waveform = WAVEFORM_SINE, .phase_offset = 0.0f, .sample_rate = 1000.0f
     };
     generation_lfo_state_t state = {0};
-    apg_process_info_t     info  = {.sample_rate = 10000.0f, .frames = 4u, .output_frames = 4u, .channels = 1u};
+    apg_process_context_t  info  = {.sample_rate = 10000.0f, .frames = 4u};
 
     generation_lfo_process(&out, &in, &params, &state, &info);
     if (fabsf(state.phase - 0.04f) > 1e-6f)

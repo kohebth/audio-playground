@@ -15,7 +15,7 @@ int test_process_info_remaining_spectral_frame_limits(void) {
             quantized[i] = -99.0f;
         }
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         freq_window_out_t    win_out    = {.signal = windowed};
         freq_window_in_t     win_in     = {.signal = signal};

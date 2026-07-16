@@ -278,6 +278,28 @@ static const char *field_type_name(atom_field_type_t type) {
     return "unknown";
 }
 
+static const char *dispatch_name(apg_atom_dispatch_t dispatch) {
+    switch (dispatch) {
+    case APG_ATOM_DISPATCH_PROCESS:
+        return "process";
+    case APG_ATOM_DISPATCH_FFT:
+        return "fft";
+    case APG_ATOM_DISPATCH_IFFT:
+        return "ifft";
+    case APG_ATOM_DISPATCH_MULTIPLY:
+        return "multiply";
+    case APG_ATOM_DISPATCH_WINDOW:
+        return "window";
+    case APG_ATOM_DISPATCH_OVERLAP_ADD:
+        return "overlap_add";
+    case APG_ATOM_DISPATCH_OVERLAP_SAVE:
+        return "overlap_save";
+    case APG_ATOM_DISPATCH_STREAM:
+        return "stream";
+    }
+    return "unknown";
+}
+
 bool apg_atom_profile_known(const char *profile) {
     return profile && (strcmp(profile, "desktop_full") == 0 || strcmp(profile, "wasm_realtime") == 0 ||
                        strcmp(profile, "m7_static") == 0 || strcmp(profile, "offline_render") == 0);
@@ -447,6 +469,8 @@ void apg_atom_catalog_write_json(FILE *out) {
         write_json_string(out, entry->name);
         fputs(",\"category\":", out);
         write_category(out, entry->name);
+        fputs(",\"dispatch\":", out);
+        write_json_string(out, dispatch_name(entry->dispatch));
         fprintf(
             out, ",\"sizes\":{\"out\":%zu,\"in\":%zu,\"config\":%zu,\"state\":%zu}", entry->out_size, entry->in_size,
             entry->config_size, entry->state_size

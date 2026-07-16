@@ -76,8 +76,8 @@
     X(src_antialias, src, 0, 2, 2, APG_ATOM_FLAGS_WASM | APG_ATOM_ANTIALIASED, APG_ATOM_MATURITY_MUSICAL, PROCESS)   \
     X(src_antiimage, src, 0, 2, 2, APG_ATOM_FLAGS_WASM | APG_ATOM_ANTIALIASED, APG_ATOM_MATURITY_MUSICAL, PROCESS)   \
     X(src_convert_format, src, 0, 2, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)             \
-    X(src_downsample, src, 0, 1, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)                     \
-    X(src_upsample, src, 0, 1, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)                       \
+    X(src_downsample, src, 0, 1, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR, STREAM)                      \
+    X(src_upsample, src, 0, 1, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR, STREAM)                        \
     X(freq_quantize, freq, 0, 0, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)
 
 /* atom, input contract profile, output contract profile, config contract profile */

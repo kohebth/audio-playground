@@ -4,12 +4,14 @@
 #include <stddef.h>
 
 void detect_rms_process(
-    detect_rms_out_t          *out,
-    const detect_rms_in_t     *in,
-    const detect_rms_params_t *params,
-    detect_rms_state_t        *state,
-    const apg_process_info_t  *info
+    detect_rms_out_t            *out,
+    const detect_rms_in_t       *in,
+    const detect_rms_params_t   *params,
+    detect_rms_state_t          *state,
+    const apg_process_context_t *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->level == NULL || in->signal == NULL ||
@@ -23,7 +25,7 @@ void detect_rms_process(
     if (w_size < 1)
         w_size = 1;
 
-    const uint32_t frames    = apg_process_frames_or_default(info);
+    const uint32_t frames    = apg_process_context_frames(info);
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, (uint32_t)w_size);
     float          sum_sq    = state->sum;
     if (!isfinite(sum_sq)) {

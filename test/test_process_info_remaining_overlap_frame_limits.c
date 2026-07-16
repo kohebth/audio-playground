@@ -17,7 +17,7 @@ int test_process_info_remaining_overlap_frame_limits(void) {
         }
         memset(buffer, 0, sizeof(buffer));
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         freq_overlap_add_out_t    add_out    = {.signal = output};
         freq_overlap_add_in_t     add_in     = {.frame = frame};

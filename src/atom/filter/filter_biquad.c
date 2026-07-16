@@ -72,15 +72,17 @@ void filter_biquad_process(
     const filter_biquad_in_t     *in,
     const filter_biquad_params_t *params,
     filter_biquad_state_t        *state,
-    const apg_process_info_t     *info
+    const apg_process_context_t  *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL)
         return;
 
-    const uint32_t frames      = apg_process_frames_or_default(info);
-    const float    sample_rate = apg_sample_rate_or_default(info);
+    const uint32_t frames      = apg_process_context_frames(info);
+    const float    sample_rate = apg_process_context_sample_rate(info);
     const float    max_cutoff  = sample_rate * 0.49f;
     const float smooth_ms = isfinite(params->smoothing_ms) && params->smoothing_ms > 0.0f ? params->smoothing_ms : 0.0f;
     const float smooth    = smooth_ms > 0.0f ? expf(-1000.0f / (smooth_ms * sample_rate)) : 0.0f;

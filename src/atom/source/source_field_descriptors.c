@@ -40,9 +40,19 @@ const atom_field_desc_t src_downsample_config_fields[] = {
 };
 FIELD_COUNT(src_downsample_config_fields);
 
+const atom_field_desc_t src_downsample_state_fields[] = {
+    {"phase", FIELD_INT, offsetof(src_downsample_state_t, phase)},
+};
+FIELD_COUNT(src_downsample_state_fields);
+
 const atom_field_desc_t src_upsample_config_fields[] = {
     {"factor", FIELD_INT, offsetof(src_upsample_params_t, factor)},
 };
 FIELD_COUNT(src_upsample_config_fields);
+
+const atom_field_desc_t src_upsample_state_fields[] = {
+    {"phase", FIELD_INT, offsetof(src_upsample_state_t, phase)},
+};
+FIELD_COUNT(src_upsample_state_fields);
 
 #undef FIELD_COUNT

@@ -2,12 +2,12 @@
 #include <limits.h>
 
 static int test_detector_safety_and_pitch_accuracy(void) {
-    float              input[1024];
-    float              output[1025];
-    static float       rms_buffer[APG_DETECT_RMS_CAPACITY];
-    static float       correlation_buffer[APG_DETECT_AUTOCORRELATION_CAPACITY];
-    static float       pitch_buffer[APG_DETECT_AUTOCORRELATION_CAPACITY];
-    apg_process_info_t info = {.sample_rate = 48000.0f, .frames = 1024u, .output_frames = 1024u, .channels = 1u};
+    float                 input[1024];
+    float                 output[1025];
+    static float          rms_buffer[APG_DETECT_RMS_CAPACITY];
+    static float          correlation_buffer[APG_DETECT_AUTOCORRELATION_CAPACITY];
+    static float          pitch_buffer[APG_DETECT_AUTOCORRELATION_CAPACITY];
+    apg_process_context_t info = {.sample_rate = 48000.0f, .frames = 1024u};
 
     for (size_t i = 0; i < 1024u; ++i) {
         input[i]  = i == 7u ? NAN : 1.0f;
@@ -54,8 +54,7 @@ static int test_detector_safety_and_pitch_accuracy(void) {
     detect_autocorrelate_state_t  correlation_state  = {
           .buffer = correlation_buffer, .buffer_len = 512u, .write_pos = -2049
     };
-    info.frames        = 256u;
-    info.output_frames = 256u;
+    info.frames = 256u;
     detect_autocorrelate_process(&correlation_out, &correlation_in, &correlation_params, &correlation_state, &info);
     if (assert_finite_buffer(output, 256, "detect_autocorrelate_process invalid state"))
         return 1;
@@ -81,7 +80,6 @@ static int test_detector_safety_and_pitch_accuracy(void) {
     detect_pitch_params_t pitch_params = {.max_lag = 256, .sample_rate = 8000.0f};
     detect_pitch_state_t  pitch_state  = {.buffer = pitch_buffer, .buffer_len = 1024u, .write_pos = -1};
     info.frames                        = 1024u;
-    info.output_frames                 = 1024u;
     detect_pitch_process(&pitch_out, &pitch_in, &pitch_params, &pitch_state, &info);
     if (fabsf(output[0] - 1000.0f) > 25.0f)
         return fail("detect_pitch_process did not use runtime sample rate for known tone");
@@ -95,7 +93,6 @@ static int test_detector_safety_and_pitch_accuracy(void) {
     pitch_params.max_lag  = 128;
     pitch_state.write_pos = -5;
     info.frames           = 64u;
-    info.output_frames    = 64u;
     detect_pitch_process(&pitch_out, &pitch_in, &pitch_params, &pitch_state, &info);
     if (!isfinite(output[0]) || output[0] != 0.0f)
         return fail("detect_pitch_process did not reject invalid input and history");
@@ -108,7 +105,6 @@ static int test_detector_safety_and_pitch_accuracy(void) {
     }
     pitch_state.write_pos = 0;
     info.frames           = 1024u;
-    info.output_frames    = 1024u;
     detect_pitch_process(&pitch_out, &pitch_in, &pitch_params, &pitch_state, &info);
     if (output[0] != 0.0f)
         return fail("detect_pitch_process accepted uncorrelated noise");
@@ -140,7 +136,7 @@ int test_process_info_remaining_detector_frame_limits(void) {
         memset(autocorr_buffer, 0, sizeof(autocorr_buffer));
         memset(pitch_buffer, 0, sizeof(pitch_buffer));
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         detect_slope_out_t    slope_out = {.slope = y};
         detect_slope_in_t     slope_in  = {.signal = x};

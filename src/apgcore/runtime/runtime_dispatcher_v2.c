@@ -111,10 +111,7 @@ static bool process_import_input(apg_runtime_process_context_t *ctx) {
 static bool process_prepare_block(apg_runtime_process_context_t *ctx) {
     if (!ctx || !ctx->runtime)
         return false;
-    ctx->runtime->process_info.frames        = ctx->frames;
-    ctx->runtime->process_info.output_frames = ctx->frames;
-    if (ctx->io == APG_RUNTIME_PROCESS_IO_INTERLEAVED)
-        ctx->runtime->process_info.channels = (uint32_t)ctx->output_channels;
+    ctx->runtime->process_context.frames = ctx->frames;
     apg_v2_runtime_advance_smoothed_params(ctx->runtime, ctx->frames);
     ctx->schedule_cursor = 0u;
     ctx->state           = APG_RUNTIME_PROCESS_RUN_NODE;
@@ -150,7 +147,11 @@ static bool process_export_output(apg_runtime_process_context_t *ctx) {
         }
     }
     ctx->runtime->has_processed = true;
-    ctx->state                  = APG_RUNTIME_PROCESS_DONE;
+    if (ctx->runtime->process_context.sample_position <= UINT64_MAX - ctx->frames)
+        ctx->runtime->process_context.sample_position += ctx->frames;
+    else
+        ctx->runtime->process_context.sample_position = UINT64_MAX;
+    ctx->state = APG_RUNTIME_PROCESS_DONE;
     return true;
 }
 

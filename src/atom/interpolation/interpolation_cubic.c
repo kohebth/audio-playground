@@ -7,15 +7,17 @@ void interpolation_cubic_process(
     const interpolation_cubic_in_t     *in,
     const interpolation_cubic_params_t *params,
     interpolation_cubic_state_t        *state,
-    const apg_process_info_t           *info
+    const apg_process_context_t        *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->signal_n1 == NULL || in->signal_a == NULL || in->signal_b == NULL ||
         in->signal_c == NULL || in->t == NULL)
         return;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     for (uint32_t i = 0; i < frames; ++i) {
         const float t  = apg_clamp_float(in->t[i], 0.0f, 1.0f);
         const float t2 = t * t;

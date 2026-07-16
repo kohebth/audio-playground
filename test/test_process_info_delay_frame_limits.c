@@ -20,7 +20,7 @@ int test_process_info_delay_frame_limits(void) {
         buffer[7]      = 0.80f;
         buffer[191999] = 0.60f;
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         delay_unit_out_t    unit_out = {.signal = y};
         delay_unit_in_t     unit_in  = {.signal = x};
@@ -90,14 +90,14 @@ int test_process_info_delay_frame_limits(void) {
             return fail("delay_fractional_process wrote past info.frames");
     }
 
-    float               small_input[8]  = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f};
-    float               small_output[8] = {0.0f};
-    float               small_buffer[5] = {0.0f, 0.0f, 0.0f, 0.0f, -77.0f};
-    apg_process_info_t  small_info      = {.sample_rate = 48000.0f, .frames = 8u, .output_frames = 8u, .channels = 1u};
-    delay_line_out_t    line_out        = {.signal = small_output};
-    delay_line_in_t     line_in         = {.signal = small_input};
-    delay_line_params_t line_params     = {.length = INT_MAX};
-    delay_line_state_t  line_state      = {.buffer = small_buffer, .buffer_len = 4u, .write_pos = -1};
+    float                 small_input[8]  = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f};
+    float                 small_output[8] = {0.0f};
+    float                 small_buffer[5] = {0.0f, 0.0f, 0.0f, 0.0f, -77.0f};
+    apg_process_context_t small_info      = {.sample_rate = 48000.0f, .frames = 8u};
+    delay_line_out_t      line_out        = {.signal = small_output};
+    delay_line_in_t       line_in         = {.signal = small_input};
+    delay_line_params_t   line_params     = {.length = INT_MAX};
+    delay_line_state_t    line_state      = {.buffer = small_buffer, .buffer_len = 4u, .write_pos = -1};
     delay_line_process(&line_out, &line_in, &line_params, &line_state, &small_info);
     if (small_buffer[4] != -77.0f || line_state.write_pos < 0 || line_state.write_pos >= 4)
         return fail("delay_line_process ignored runtime buffer length");

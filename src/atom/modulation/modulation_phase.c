@@ -8,8 +8,10 @@ void modulation_phase_process(
     const modulation_phase_in_t     *in,
     const modulation_phase_params_t *params,
     modulation_phase_state_t        *state,
-    const apg_process_info_t        *info
+    const apg_process_context_t     *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
@@ -19,7 +21,7 @@ void modulation_phase_process(
     const uint32_t capacity = state->buffer_len > 0u ? state->buffer_len : APG_MODULATION_DELAY_CAPACITY;
     if (capacity < 4u)
         return;
-    const uint32_t frames    = apg_process_frames_or_default(info);
+    const uint32_t frames    = apg_process_context_frames(info);
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     const float    max_delay = (float)capacity - 2.0f;
     const float    depth     = isfinite(params->depth) ? apg_clamp_float(params->depth, 0.0f, max_delay) : 0.0f;

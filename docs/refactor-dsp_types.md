@@ -1,5 +1,10 @@
 # DSP Type System Refactor Plan
 
+> Historical plan: this document records the constraints used for the first header split. The later execution-API
+> convergence supersedes its compatibility requirements: context-free atom symbols are removed, process input/config
+> pointers are const, and fixed-rate processing now uses `apg_process_context_t`. See
+> `docs/architecture/dsp-type-system.md` and `docs/refactor/dsp-atom-declarations.md` for the current contracts.
+
 ## 1. Mission
 
 Refactor `inc/atom/dsp_types.h` into a maintainable, portable, and verifiable DSP type system without changing DSP behavior.

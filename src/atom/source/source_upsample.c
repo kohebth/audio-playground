@@ -13,32 +13,35 @@ static int clamp_upsample_factor(const src_upsample_params_t *params) {
     return factor;
 }
 
-void src_upsample_process(
+apg_stream_result_t src_upsample_process(
     src_upsample_out_t          *out,
     const src_upsample_in_t     *in,
     const src_upsample_params_t *params,
     src_upsample_state_t        *state,
-    const apg_process_info_t    *info
+    const apg_stream_context_t  *context
 ) {
-    if (out == NULL || in == NULL || params == NULL || state == NULL)
-        return;
-    (void)state;
+    apg_stream_result_t result = apg_stream_result_empty();
+    if (!apg_stream_context_valid(context) || out == NULL || in == NULL || params == NULL || state == NULL ||
+        out->signal == NULL || in->signal == NULL)
+        return result;
 
-    if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL)
-        return;
+    const uint32_t factor = (uint32_t)clamp_upsample_factor(params);
+    uint32_t       phase  = state->phase < factor ? state->phase : 0u;
 
-    const int      factor = clamp_upsample_factor(params);
-    const uint32_t frames = apg_process_frames_or_default(info);
-    const uint32_t output_frames =
-        info != NULL && info->output_frames > 0u ? info->output_frames : (factor == 1 ? frames : 0u);
-    uint32_t out_index = 0u;
-
-    for (uint32_t i = 0; i < frames && out_index < output_frames; ++i) {
-        const float sample       = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
-        out->signal[out_index++] = sample;
-
-        for (int phase = 1; phase < factor && out_index < output_frames; ++phase) {
-            out->signal[out_index++] = 0.0f;
+    while (result.produced_frames < context->output_capacity) {
+        if (phase > 0u) {
+            out->signal[result.produced_frames++] = 0.0f;
+            --phase;
+            continue;
         }
+        if (result.consumed_frames >= context->input_frames)
+            break;
+
+        const float sample                    = in->signal[result.consumed_frames++];
+        out->signal[result.produced_frames++] = isfinite(sample) ? sample : 0.0f;
+        phase                                 = factor - 1u;
     }
+
+    state->phase = phase;
+    return result;
 }

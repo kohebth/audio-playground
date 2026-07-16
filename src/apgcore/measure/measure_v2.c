@@ -58,7 +58,7 @@ bool apg_v2_measure_runtime_snapshot(const apg_v2_runtime_t *runtime, apg_v2_mea
         return false;
     *out = (apg_v2_measure_runtime_snapshot_t){
         .frame_capacity    = runtime->frame_capacity,
-        .sample_rate       = runtime->process_info.sample_rate,
+        .sample_rate       = runtime->process_context.sample_rate,
         .signals_len       = runtime->signals_len,
         .params_len        = runtime->params_len,
         .nodes_len         = runtime->nodes_len,
@@ -88,7 +88,7 @@ bool apg_v2_measure_get_input_meter(
         *out = (apg_v2_meter_snapshot_t){0};
         return true;
     }
-    uint32_t frames = runtime->process_info.output_frames;
+    uint32_t frames = runtime->process_context.frames;
     *out            = meter_snapshot_from_signal(signal, frames);
     return true;
 }
@@ -111,7 +111,7 @@ bool apg_v2_measure_get_output_meter(
         *out = (apg_v2_meter_snapshot_t){0};
         return true;
     }
-    uint32_t frames = runtime->process_info.output_frames;
+    uint32_t frames = runtime->process_context.frames;
     *out            = meter_snapshot_from_signal(signal, frames);
     return true;
 }

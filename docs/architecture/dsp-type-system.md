@@ -19,7 +19,7 @@ need one family may include that family's header directly.
 | `*_types.h` | One family's atom-specific output, input, params, and state layouts |
 | `dsp_type_checks.h` | Canonical-list coverage, duplicate-count protection, and macro cleanup for the umbrella |
 | `dsp_types.h` | Include-only umbrella in dependency order |
-| `dsp_atoms.h` | Legacy and process function declarations generated from `APG_ATOM_DEFINITIONS` |
+| `dsp_atoms.h` | Process, spectral, and stream declarations generated from `APG_ATOM_DEFINITIONS` |
 
 Families are `amplitude`, `delay`, `detect`, `filter`, `frequency`, `generation`, `interpolation`, `mix`,
 `modulation`, `nonlinear`, and `src`. Every header is guarded and compiles standalone.
@@ -36,14 +36,18 @@ Each atom owns four distinct public types:
   fields outside the atom algorithm. Pointer members are borrowed references; the pointee must outlive every process
   call that can read it. Atoms never free parameter pointees.
 - `*_state_t`: persistent mutable state across calls. The v2 runtime owns the structure and any descriptor-backed
-  state-buffer pool. Legacy callers own both and must keep them valid until processing ends.
+  state-buffer pool. Direct callers must keep both valid until processing ends.
 
-Parameter and state pointer ownership is intentionally not changed through `const` qualifiers in this ABI refactor.
-New schema entries must record `value`, `borrowed`, `runtime_owned`, or `external` ownership explicitly.
+Process input and parameter structures are read-only. State remains mutable. New schema entries must record `value`,
+`borrowed`, `runtime_owned`, or `external` ownership explicitly.
 
 ## Real-Time Rules
 
-- Process functions receive fully prepared bindings, params, state, and process metadata.
+- Fixed-rate process functions receive a valid immutable `apg_process_context_t` containing `frames`, `sample_rate`,
+  and `sample_position`. Null, zero-frame, or invalid-rate contexts are no-ops; processing never falls back to 512
+  frames implicitly.
+- Variable-rate SRC functions receive `apg_stream_context_t`, report `apg_stream_result_t`, and retain phase in atom
+  state. They cannot be placed in a fixed-rate unit schedule.
 - No type declaration authorizes allocation, file/network I/O, locking, or unbounded setup in the process path.
 - State-buffer sizing and allocation happen in registry/runtime preparation. Atoms may mutate their state but may not
   replace or free runtime-owned buffers.
@@ -57,10 +61,10 @@ versioned API surfaces. The LP64 ABI snapshot records 286 public types, 416 fiel
 link test resolves 69 primary process functions and three additional spectral variants. Process inputs and params are
 read-only; output and state remain mutable.
 
-The only intentional baseline layout exception is the 46 former GNU zero-member structures. They are now distinct
-standard C11 structures containing `uint8_t _reserved`, changing size 0 to size 1 while preserving alignment 1. The
-runtime already reserved one byte for those layouts, so physical arena offsets remain unchanged. The exact transition
-is enforced separately from all other ABI records.
+The historical phase-1 layout exception is the 46 former GNU zero-member structures. They became distinct standard
+C11 structures containing `uint8_t _reserved`, changing size 0 to size 1 while preserving alignment 1. That exact
+transition is checked against `dsp_types_abi_phase1_lp64.csv`. The current exact snapshot additionally records the
+intentional `uint32_t phase` state for streaming up/down sampling.
 
 Pointer-containing sizes are platform-dependent. Do not copy LP64 size assertions to 32-bit targets. Atom structures
 are not raw persistence formats; YAML, registry plans, WASM images, and M7 bundles use explicit metadata and planned

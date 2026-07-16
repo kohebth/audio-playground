@@ -10,8 +10,10 @@ void delay_fractional_process(
     const delay_fractional_in_t     *in,
     const delay_fractional_params_t *params,
     delay_fractional_state_t        *state,
-    const apg_process_info_t        *info
+    const apg_process_context_t     *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL ||
@@ -22,7 +24,7 @@ void delay_fractional_process(
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     float delay = capacity > 1u ? apg_clamp_float(params->delay_samples, 0.0f, (float)capacity - 1.001f) : 0.0f;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     for (uint32_t i = 0; i < frames; ++i) {
         float read_pos = (float)write_pos - delay;
         while (read_pos < 0.0f)

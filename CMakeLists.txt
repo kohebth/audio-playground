@@ -184,6 +184,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
                     -DSNAPSHOT_EXE=$<TARGET_FILE:test_dsp_types_abi_snapshot>
                     -DEXPECTED_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_c11_lp64.csv
                     -DBASELINE_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_baseline_lp64.csv
+                    -DEMPTY_EXPECTED_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_phase1_lp64.csv
                     -DEXPECTED_EMPTY_TRANSITIONS=46
                     -DACTUAL_FILE=${CMAKE_BINARY_DIR}/test-artifacts/dsp-types-abi-actual.csv
                     -P ${CMAKE_SOURCE_DIR}/test/abi/verify_dsp_types_abi.cmake
@@ -356,7 +357,7 @@ add_test(
 set_tests_properties(test_apg_v2_cli_m7_export_rejects_unsupported_atom PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         LABELS v2
-        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*atom 'src_downsample' does not support m7_static"
+        PASS_REGULAR_EXPRESSION "\"target\":\"m7_static\".*atom 'src_downsample' requires the variable-rate stream API"
 )
 
 add_test(

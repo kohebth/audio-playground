@@ -1,28 +1,37 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_PROCESS_H
 #define AUDIO_PLAYGROUND_APGCORE_PROCESS_H
 
+#include <float.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #define APG_DEFAULT_FRAMES 512u
 
 typedef struct {
-    float    sample_rate;
     uint32_t frames;
-    uint32_t output_frames;
-    uint32_t channels;
-} apg_process_info_t;
+    float    sample_rate;
+    uint64_t sample_position;
+} apg_process_context_t;
 
-static inline apg_process_info_t apg_process_info_default(void) {
-    apg_process_info_t info = {48000.0f, APG_DEFAULT_FRAMES, APG_DEFAULT_FRAMES, 1u};
-    return info;
+static inline apg_process_context_t apg_process_context_default(void) {
+    const apg_process_context_t context = {
+        .frames          = APG_DEFAULT_FRAMES,
+        .sample_rate     = 48000.0f,
+        .sample_position = 0u,
+    };
+    return context;
 }
 
-static inline uint32_t apg_process_frames_or_default(const apg_process_info_t *info) {
-    return info ? info->frames : APG_DEFAULT_FRAMES;
+static inline bool apg_process_context_valid(const apg_process_context_t *context) {
+    return context && context->frames > 0u && context->sample_rate > 1.0f && context->sample_rate <= FLT_MAX;
 }
 
-static inline uint32_t apg_process_output_frames_or_default(const apg_process_info_t *info) {
-    return info && info->output_frames > 0u ? info->output_frames : apg_process_frames_or_default(info);
+static inline uint32_t apg_process_context_frames(const apg_process_context_t *context) {
+    return apg_process_context_valid(context) ? context->frames : 0u;
+}
+
+static inline float apg_process_context_sample_rate(const apg_process_context_t *context) {
+    return apg_process_context_valid(context) ? context->sample_rate : 0.0f;
 }
 
 #endif // AUDIO_PLAYGROUND_APGCORE_PROCESS_H

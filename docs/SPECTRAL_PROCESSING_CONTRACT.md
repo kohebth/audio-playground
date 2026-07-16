@@ -51,8 +51,8 @@ The contract terms have these exact meanings:
 
 ## Frame and latency semantics
 
-Generic `apg_process_info_t.frames` remains the valid time-domain input count for the host block. It does not represent a
-bin count. Spectral array bounds always come from `apg_spectral_info_t`.
+Generic `apg_process_context_t.frames` remains the valid time-domain input count for a fixed-rate host block. It does
+not represent a bin count. Spectral array bounds always come from `apg_spectral_info_t`.
 
 | Atom | Input | Output | Algorithmic latency |
 | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ bin count. Spectral array bounds always come from `apg_spectral_info_t`.
 emits the oldest `hop_size` samples, shifts the remaining tail, and zeroes the vacated region.
 
 `freq_shift` is currently a time-domain dual-delay pitch shifter despite its name. It continues to use
-`apg_process_info_t`, remains experimental, and is not part of this FFT context migration.
+`apg_process_context_t`, remains experimental, and is not part of this FFT context migration.
 
 ## Failure behavior
 

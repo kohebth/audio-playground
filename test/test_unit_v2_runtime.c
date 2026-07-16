@@ -134,9 +134,8 @@ static int test_runtime_init_simple_gain(void) {
         return fail("failed to initialize v2 runtime");
     }
 
-    if (runtime.frame_capacity != 16u || runtime.process_info.frames != 16u ||
-        runtime.process_info.output_frames != 16u || runtime.process_info.sample_rate != 44100.0f ||
-        runtime.process_info.channels != 1u)
+    if (runtime.frame_capacity != 16u || runtime.process_context.frames != 16u ||
+        runtime.process_context.sample_rate != 44100.0f || runtime.process_context.sample_position != 0u)
         return fail("unexpected runtime process metadata");
     if (runtime.signals_len != unit.signals_len || runtime.signals_len != 3u || !runtime.signal_pool ||
         !runtime.signals)
@@ -163,8 +162,8 @@ static int test_runtime_init_simple_gain(void) {
         if (node->call.out != node->out_storage || node->call.in != node->in_storage ||
             node->call.config != node->config_storage || node->call.state != node->state_storage)
             return fail("runtime atom call does not reference owned storage");
-        if (node->call.info != &runtime.process_info)
-            return fail("runtime atom call does not reference process info");
+        if (node->call.context != &runtime.process_context)
+            return fail("runtime atom call does not reference process context");
         if (node->call.spectral_info != NULL)
             return fail("non-spectral runtime atom call has spectral context");
     }
@@ -272,10 +271,12 @@ static int test_simple_gain_process_mono(void) {
         if (output[i] != expected[i])
             return fail("unexpected simple_gain output sample");
     }
-    if (runtime.process_info.frames != 4u || runtime.process_info.output_frames != 4u)
+    if (runtime.process_context.frames != 4u || runtime.process_context.sample_position != 4u)
         return fail("runtime process metadata did not track requested frames");
     if (apg_v2_runtime_process_mono(&runtime, input, output, 9u))
         return fail("simple_gain accepted over-capacity frame count");
+    if (runtime.process_context.sample_position != 4u)
+        return fail("failed runtime process advanced sample position");
     const char *last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "capacity"))
         return fail("simple_gain over-capacity failure did not expose a useful error");
@@ -324,6 +325,8 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
 
     if (!apg_v2_runtime_reset(&runtime))
         return fail("smoothing runtime reset failed");
+    if (runtime.process_context.sample_position != 0u)
+        return fail("runtime reset did not clear sample position");
     if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
         return fail("default smoothing process failed");
     for (size_t i = 0; i < 4u; i++) {

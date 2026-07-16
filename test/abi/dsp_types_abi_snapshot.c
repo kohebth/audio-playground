@@ -1016,7 +1016,7 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, src_downsample_params_t, factor);
 
     SNAPSHOT_TYPE(output, src_downsample_state_t);
-    SNAPSHOT_FIELD(output, src_downsample_state_t, _reserved);
+    SNAPSHOT_FIELD(output, src_downsample_state_t, phase);
 
     SNAPSHOT_TYPE(output, src_upsample_out_t);
     SNAPSHOT_FIELD(output, src_upsample_out_t, signal);
@@ -1028,7 +1028,7 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, src_upsample_params_t, factor);
 
     SNAPSHOT_TYPE(output, src_upsample_state_t);
-    SNAPSHOT_FIELD(output, src_upsample_state_t, _reserved);
+    SNAPSHOT_FIELD(output, src_upsample_state_t, phase);
 
     if (output != stdout && fclose(output) != 0)
         return 1;

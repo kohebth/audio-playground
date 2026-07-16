@@ -36,8 +36,10 @@ void freq_overlap_save_process(
     const freq_overlap_save_in_t     *in,
     const freq_overlap_save_params_t *params,
     freq_overlap_save_state_t        *state,
-    const apg_process_info_t         *info
+    const apg_process_context_t      *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
@@ -45,7 +47,7 @@ void freq_overlap_save_process(
     if (out->frame == NULL || in->signal == NULL || state->buffer == NULL)
         return;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
 
     int block_size = params->block_size;
     if (block_size < 0)

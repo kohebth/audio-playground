@@ -61,7 +61,8 @@ die "atoms must not be empty\n" unless @$atoms;
 my %allowed_c_type = map { $_ => 1 } ('float', 'int', 'uint32_t', 'float *', 'float **');
 my %allowed_metadata = map { $_ => 1 } ('float', 'int', 'buffer', 'signal', 'signal_array', 'float_matrix');
 my %allowed_ownership = map { $_ => 1 } ('value', 'borrowed', 'runtime_owned', 'external');
-my %allowed_dispatch = map { $_ => 1 } ('PROCESS', 'FFT', 'IFFT', 'MULTIPLY', 'WINDOW', 'OVERLAP_ADD', 'OVERLAP_SAVE');
+my %allowed_dispatch =
+    map { $_ => 1 } ('PROCESS', 'FFT', 'IFFT', 'MULTIPLY', 'WINDOW', 'OVERLAP_ADD', 'OVERLAP_SAVE', 'STREAM');
 my %allowed_capability = map { $_ => 1 } ('PORTABLE', 'WASM', 'WASM_ANTIALIASED', 'EXPERIMENTAL');
 my %allowed_maturity = map { $_ => 1 } ('SAFE_SCALAR', 'MUSICAL', 'EXPERIMENTAL');
 

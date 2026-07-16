@@ -1,12 +1,12 @@
 kind: apg.unit
 schema: apg.unit.v2
-name: m7_unsupported_src
+name: stream_in_fixed_schedule
 version: 2.0.0
 
 meta:
-  title: M7 Unsupported SRC
+  title: Stream Atom In Fixed Schedule
   category: test
-  description: Exercises target-profile rejection for compiled SRC atoms.
+  description: Exercises fixed-rate compiler rejection for variable-rate stream atoms.
 
 params: {}
 

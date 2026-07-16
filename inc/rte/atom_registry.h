@@ -7,17 +7,31 @@
 
 #include <apgcore/runtime/process.h>
 #include <apgcore/runtime/spectral.h>
+#include <apgcore/runtime/stream.h>
 
 typedef struct {
-    void                      *out;
-    const void                *in;
-    const void                *config;
-    void                      *state;
-    const apg_process_info_t  *info;
-    const apg_spectral_info_t *spectral_info;
+    void                        *out;
+    const void                  *in;
+    const void                  *config;
+    void                        *state;
+    const apg_process_context_t *context;
+    const apg_spectral_info_t   *spectral_info;
+    const apg_stream_context_t  *stream_context;
+    apg_stream_result_t          stream_result;
 } atom_call_t;
 
 typedef void (*atom_thunk_fn)(atom_call_t *call);
+
+typedef enum {
+    APG_ATOM_DISPATCH_PROCESS,
+    APG_ATOM_DISPATCH_FFT,
+    APG_ATOM_DISPATCH_IFFT,
+    APG_ATOM_DISPATCH_MULTIPLY,
+    APG_ATOM_DISPATCH_WINDOW,
+    APG_ATOM_DISPATCH_OVERLAP_ADD,
+    APG_ATOM_DISPATCH_OVERLAP_SAVE,
+    APG_ATOM_DISPATCH_STREAM,
+} apg_atom_dispatch_t;
 
 // ─────────────────────────────────────────────
 // Field descriptor — describes one struct member
@@ -47,6 +61,7 @@ typedef struct {
     const char              *name;         // atom name, e.g. "detect_envelope"
     const char              *category;     // atom category, e.g. "detect"
     atom_thunk_fn            thunk;        // generic wrapper function
+    apg_atom_dispatch_t      dispatch;     // process/spectral/stream execution contract
     size_t                   out_size;     // sizeof(out struct)
     size_t                   in_size;      // sizeof(in struct), 0 if void*
     size_t                   config_size;  // sizeof(params struct), 0 if void*

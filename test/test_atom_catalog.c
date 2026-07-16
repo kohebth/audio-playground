@@ -114,6 +114,8 @@ int main(void) {
         return fail("generation_dc atom is missing");
     if (!strstr(json, "\"category\":\"generation\""))
         return fail("generation category is missing");
+    if (!strstr(json, "\"name\":\"src_downsample\",\"category\":\"src\",\"dispatch\":\"stream\""))
+        return fail("stream dispatch contract is missing");
     if (!strstr(json, "\"outputs\":[{\"name\":\"signal\",\"type\":\"signal\"}]"))
         return fail("generation_dc output contract is missing");
     if (!strstr(json, "\"config\":[{\"name\":\"value\",\"type\":\"scalar\"}]"))

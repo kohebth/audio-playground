@@ -7,14 +7,16 @@ void filter_biquad_coefficients_process(
     const filter_biquad_coefficients_in_t     *in,
     const filter_biquad_coefficients_params_t *params,
     filter_biquad_coefficients_state_t        *state,
-    const apg_process_info_t                  *info
+    const apg_process_context_t               *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL)
         return;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     const int      coefficients_valid =
         apg_biquad_coefficients_are_finite(params->b0, params->b1, params->b2, params->a1, params->a2) &&
         apg_biquad_denominator_is_stable(params->a1, params->a2);

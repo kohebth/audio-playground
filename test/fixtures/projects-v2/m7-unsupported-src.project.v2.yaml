@@ -5,7 +5,7 @@ version: 2.0.0
 
 units:
   - id: src_unit
-    file: ../units-v2/m7_unsupported_src.unit.v2.yaml
+    file: ../invalid-units-v2/stream_in_fixed_schedule.unit.v2.yaml
 
 chain:
   nodes:

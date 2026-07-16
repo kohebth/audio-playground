@@ -9,8 +9,10 @@ void detect_autocorrelate_process(
     const detect_autocorrelate_in_t     *in,
     const detect_autocorrelate_params_t *params,
     detect_autocorrelate_state_t        *state,
-    const apg_process_info_t            *info
+    const apg_process_context_t         *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->correlation == NULL ||
@@ -18,7 +20,7 @@ void detect_autocorrelate_process(
         return;
 
     const uint32_t capacity        = state->buffer_len > 0u ? state->buffer_len : APG_DETECT_AUTOCORRELATION_CAPACITY;
-    const uint32_t frames          = apg_process_frames_or_default(info);
+    const uint32_t frames          = apg_process_context_frames(info);
     const uint32_t analysis_frames = frames < capacity ? frames : capacity;
     int            max_lag         = params->max_lag;
     if (max_lag > (int)capacity)

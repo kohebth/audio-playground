@@ -8,15 +8,17 @@ void modulation_scrub_process(
     const modulation_scrub_in_t     *in,
     const modulation_scrub_params_t *params,
     modulation_scrub_state_t        *state,
-    const apg_process_info_t        *info
+    const apg_process_context_t     *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->buffer == NULL || in->position == NULL)
         return;
 
     const int      buffer_size = params->buffer_size;
-    const uint32_t frames      = apg_process_frames_or_default(info);
+    const uint32_t frames      = apg_process_context_frames(info);
     if (buffer_size < 2) {
         for (uint32_t i = 0; i < frames; ++i)
             out->signal[i] = 0.0f;

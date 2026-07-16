@@ -12,7 +12,7 @@ static int test_feedback_filter_safety(void) {
     for (size_t i = 0; i < 512u; ++i)
         delay[i] = i == 0u ? NAN : (i == 1u ? INFINITY : -100.0f);
 
-    apg_process_info_t info = {.sample_rate = 48000.0f, .frames = 512u, .output_frames = 512u, .channels = 1u};
+    apg_process_context_t info = {.sample_rate = 48000.0f, .frames = 512u};
 
     memset(buffer, 0, sizeof(buffer));
     buffer[64]                        = -77.0f;
@@ -62,7 +62,8 @@ static int test_feedback_filter_safety(void) {
     allpass_state.write_pos      = -1;
     allpass_state.buffer[63]     = NAN;
     filter_allpass_process(&allpass_out, &allpass_in, &allpass_params, &allpass_state, &info);
-    if (output[0] != -99.0f || allpass_state.write_pos != 63 || buffer[64] != -77.0f)
+    if (output[0] != -99.0f || allpass_state.write_pos != -1 || !isnan(allpass_state.buffer[63]) ||
+        buffer[64] != -77.0f)
         return fail("filter_allpass_process mishandled zero frames");
 
     return 0;
@@ -88,7 +89,7 @@ int test_process_info_remaining_filter_frame_limits(void) {
         memset(long_buffer, 0, sizeof(long_buffer));
         memset(fir_buffer, 0, sizeof(fir_buffer));
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         filter_differentiate_out_t    diff_out = {.signal = y};
         filter_differentiate_in_t     diff_in  = {.signal = x};

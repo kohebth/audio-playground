@@ -9,7 +9,7 @@ static int test_src_filter_safety(void) {
         output_b[i] = -99.0f;
     }
 
-    apg_process_info_t     info     = {.sample_rate = 96000.0f, .frames = 8u, .output_frames = 8u, .channels = 1u};
+    apg_process_context_t  info     = {.sample_rate = 96000.0f, .frames = 8u};
     src_antialias_out_t    out_a    = {.signal = output_a};
     src_antialias_out_t    out_b    = {.signal = output_b};
     src_antialias_in_t     in       = {.signal = input};
@@ -41,9 +41,8 @@ static int test_src_filter_safety(void) {
     if (!isfinite(image_state.z1) || !isfinite(image_state.z2) || output_a[8] != -99.0f)
         return fail("src_antiimage_process did not sanitize state or preserve sentinel");
 
-    output_a[0]        = -99.0f;
-    info.frames        = 0u;
-    info.output_frames = 0u;
+    output_a[0] = -99.0f;
+    info.frames = 0u;
     src_antiimage_process(&image_out, &image_in, &image_params, &image_state, &info);
     if (output_a[0] != -99.0f)
         return fail("src_antiimage_process wrote for zero frames");
@@ -78,7 +77,7 @@ int test_process_info_remaining_interpolation_src_frame_limits(void) {
         for (int i = 1024; i < 2048; i++)
             samples[i] = 2.0f;
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         interpolation_linear_out_t    lin_out = {.signal = y};
         interpolation_linear_in_t     lin_in  = {.signal_a = a, .signal_b = b, .t = t};
@@ -214,7 +213,7 @@ int test_process_info_remaining_interpolation_src_frame_limits(void) {
             t[i]         = i == 0u ? NAN : (i == 1u ? -4.0f : 4.0f);
             y[i]         = -99.0f;
         }
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = frames, .output_frames = frames, .channels = 1u};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = frames};
 
         interpolation_linear_out_t    linear_out = {.signal = y};
         interpolation_linear_in_t     linear_in  = {.signal_a = a, .signal_b = b, .t = t};

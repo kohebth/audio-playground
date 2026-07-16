@@ -1,6 +1,41 @@
 #include "test_atom_basic_common.h"
 
+static int test_invalid_process_contexts_are_noops(void) {
+    float input[4]  = {1.0f, 2.0f, 3.0f, 4.0f};
+    float output[4] = {-99.0f, -99.0f, -99.0f, -99.0f};
+
+    amplitude_accumulate_out_t    out                = {.signal = output};
+    amplitude_accumulate_in_t     in                 = {.signal = input};
+    amplitude_accumulate_params_t params             = {0};
+    apg_process_context_t         invalid_contexts[] = {
+        {.frames = 0u, .sample_rate = 48000.0f},
+        {.frames = 4u,     .sample_rate = 0.0f},
+        {.frames = 4u,      .sample_rate = NAN},
+    };
+    const apg_process_context_t *cases[] = {
+        NULL,
+        &invalid_contexts[0],
+        &invalid_contexts[1],
+        &invalid_contexts[2],
+    };
+
+    for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c) {
+        amplitude_accumulate_state_t state = {.accumulator = 7.0f};
+        amplitude_accumulate_process(&out, &in, &params, &state, cases[c]);
+        if (state.accumulator != 7.0f)
+            return fail("invalid process context mutated atom state");
+        for (size_t i = 0; i < sizeof(output) / sizeof(output[0]); ++i) {
+            if (output[i] != -99.0f)
+                return fail("invalid process context wrote output");
+        }
+    }
+    return 0;
+}
+
 int test_process_info_frame_limits(void) {
+    if (test_invalid_process_contexts_are_noops())
+        return 1;
+
     const int frame_sizes[] = {64, 128, 256, 512, 1024};
 
     for (size_t c = 0; c < sizeof(frame_sizes) / sizeof(frame_sizes[0]); c++) {
@@ -19,7 +54,7 @@ int test_process_info_frame_limits(void) {
             y[i] = -99.0f;
         }
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         amplitude_multiply_out_t    mult_out = {.signal = y};
         amplitude_multiply_in_t     mult_in  = {.signal_a = a, .signal_b = b};

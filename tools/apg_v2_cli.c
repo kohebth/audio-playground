@@ -704,7 +704,7 @@ static bool write_m7_header(
     fputs("extern const char *const apg_m7_project_nodes[APG_M7_PROJECT_NODE_COUNT];\n", out);
     fputs("extern const char *const apg_m7_project_atom_process_symbols[APG_M7_PROJECT_NODE_COUNT];\n", out);
     fputs("extern const atom_thunk_fn apg_m7_project_atom_thunks[APG_M7_PROJECT_NODE_COUNT];\n", out);
-    fputs("extern const apg_process_info_t apg_m7_project_process_info;\n", out);
+    fputs("extern apg_process_context_t apg_m7_project_process_context;\n", out);
     fputs("extern atom_call_t apg_m7_project_atom_calls[APG_M7_PROJECT_NODE_COUNT];\n", out);
     fputs("void apg_m7_project_init(void);\n", out);
     fputs("void apg_m7_project_refresh_params(void);\n", out);
@@ -764,10 +764,10 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         write_c_string(out, registry->node_layouts[i].node_id);
     }
     fputs("};\n\n", out);
-    fputs("const apg_process_info_t apg_m7_project_process_info = {", out);
+    fputs("apg_process_context_t apg_m7_project_process_context = {", out);
     fprintf(
-        out, ".sample_rate = %.1ff, .frames = %uu, .output_frames = %uu, .channels = 1u", (double)registry->sample_rate,
-        registry->frame_capacity, registry->frame_capacity
+        out, ".frames = %uu, .sample_rate = %.1ff, .sample_position = 0u", registry->frame_capacity,
+        (double)registry->sample_rate
     );
     fputs("};\n\n", out);
     for (size_t i = 0; i < registry->nodes_len; i++) {
@@ -876,7 +876,7 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
             out,
             "{.out = (void *)&apg_m7_project_atom_storage[%zuu], .in = (void *)&apg_m7_project_atom_storage[%zuu], "
             ".config = (void *)&apg_m7_project_atom_storage[%zuu], "
-            ".state = (void *)&apg_m7_project_atom_storage[%zuu], .info = &apg_m7_project_process_info, "
+            ".state = (void *)&apg_m7_project_atom_storage[%zuu], .context = &apg_m7_project_process_context, "
             ".spectral_info = ",
             layout->out_offset, layout->in_offset, layout->config_offset, layout->state_offset
         );
@@ -924,6 +924,7 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
         }
     }
     fputs("}\n\nvoid apg_m7_project_init(void) {\n", out);
+    fputs("    apg_m7_project_process_context.sample_position = 0u;\n", out);
     fputs("#if APG_M7_PROJECT_ATOM_STORAGE_BYTES > 0u\n", out);
     fputs("    memset(apg_m7_project_atom_storage, 0, APG_M7_PROJECT_ATOM_STORAGE_BYTES);\n", out);
     fputs("#endif\n", out);
@@ -1013,7 +1014,11 @@ write_m7_source(const char *path, const apg_project_v2_resolved_t *project, cons
     fputs("    for (size_t i = 0u; i < APG_M7_PROJECT_SCHEDULE_COUNT; i++) {\n", out);
     fputs("        uint32_t node = apg_m7_project_schedule[i];\n", out);
     fputs("        apg_m7_project_atom_thunks[node](&apg_m7_project_atom_calls[node]);\n", out);
-    fputs("    }\n}\n", out);
+    fputs("    }\n", out);
+    fputs("    if (apg_m7_project_process_context.sample_position <= ", out);
+    fputs("UINT64_MAX - APG_M7_PROJECT_BLOCK_FRAMES)\n", out);
+    fputs("        apg_m7_project_process_context.sample_position += APG_M7_PROJECT_BLOCK_FRAMES;\n", out);
+    fputs("    else\n        apg_m7_project_process_context.sample_position = UINT64_MAX;\n}\n", out);
     return fclose(out) == 0;
 }
 
@@ -1038,7 +1043,7 @@ static bool write_wasm_header(const char *path, const apg_v2_registry_t *registr
     );
     fputs("extern const char apg_wasm_project_name[];\n", out);
     fputs("extern const uint32_t apg_wasm_project_schedule[APG_WASM_PROJECT_SCHEDULE_COUNT];\n", out);
-    fputs("extern const apg_process_info_t apg_wasm_project_process_info;\n", out);
+    fputs("extern apg_process_context_t apg_wasm_project_process_context;\n", out);
     fputs("extern atom_call_t apg_wasm_project_atom_calls[APG_WASM_PROJECT_NODE_COUNT];\n", out);
     fputs("uint32_t apg_wasm_project_block_frames(void);\n", out);
     fputs("uint32_t apg_wasm_project_input_ptr(uint32_t port_index, uint32_t channel_index);\n", out);
@@ -1090,10 +1095,10 @@ write_wasm_source(const char *path, const apg_project_v2_resolved_t *project, co
         fprintf(out, "%uu", (unsigned)registry->schedule[i]);
     }
     fputs("};\n\n", out);
-    fputs("const apg_process_info_t apg_wasm_project_process_info = {", out);
+    fputs("apg_process_context_t apg_wasm_project_process_context = {", out);
     fprintf(
-        out, ".sample_rate = %.1ff, .frames = %uu, .output_frames = %uu, .channels = 1u", (double)registry->sample_rate,
-        registry->frame_capacity, registry->frame_capacity
+        out, ".frames = %uu, .sample_rate = %.1ff, .sample_position = 0u", registry->frame_capacity,
+        (double)registry->sample_rate
     );
     fputs("};\n\n", out);
     for (size_t i = 0; i < registry->nodes_len; i++) {
@@ -1159,7 +1164,7 @@ write_wasm_source(const char *path, const apg_project_v2_resolved_t *project, co
             "{.out = (void *)&apg_wasm_project_atom_storage[%zuu], .in = (void "
             "*)&apg_wasm_project_atom_storage[%zuu], .config = (void "
             "*)&apg_wasm_project_atom_storage[%zuu], .state = (void "
-            "*)&apg_wasm_project_atom_storage[%zuu], .info = &apg_wasm_project_process_info, .spectral_info = ",
+            "*)&apg_wasm_project_atom_storage[%zuu], .context = &apg_wasm_project_process_context, .spectral_info = ",
             layout->out_offset, layout->in_offset, layout->config_offset, layout->state_offset
         );
         if (layout->has_spectral_info)
@@ -1236,6 +1241,7 @@ write_wasm_source(const char *path, const apg_project_v2_resolved_t *project, co
         }
     }
     fputs("}\n\nAPG_WASM_EXPORT void apg_wasm_project_init(void) {\n", out);
+    fputs("    apg_wasm_project_process_context.sample_position = 0u;\n", out);
     fputs("    memset(apg_wasm_project_atom_storage, 0, APG_WASM_PROJECT_ATOM_STORAGE_BYTES);\n", out);
     fputs("    memset(apg_wasm_project_signal_buffers, 0, APG_WASM_PROJECT_SIGNAL_BUFFER_BYTES);\n", out);
     fputs("    memset(apg_wasm_project_params, 0, APG_WASM_PROJECT_PARAM_BYTES);\n", out);
@@ -1317,7 +1323,11 @@ write_wasm_source(const char *path, const apg_project_v2_resolved_t *project, co
     fputs("    for (size_t i = 0u; i < APG_WASM_PROJECT_SCHEDULE_COUNT; i++) {\n", out);
     fputs("        uint32_t node = apg_wasm_project_schedule[i];\n", out);
     fputs("        apg_wasm_project_atom_thunks[node](&apg_wasm_project_atom_calls[node]);\n", out);
-    fputs("    }\n}\n", out);
+    fputs("    }\n", out);
+    fputs("    if (apg_wasm_project_process_context.sample_position <= ", out);
+    fputs("UINT64_MAX - APG_WASM_PROJECT_BLOCK_FRAMES)\n", out);
+    fputs("        apg_wasm_project_process_context.sample_position += APG_WASM_PROJECT_BLOCK_FRAMES;\n", out);
+    fputs("    else\n        apg_wasm_project_process_context.sample_position = UINT64_MAX;\n}\n", out);
     return fclose(out) == 0;
 }
 

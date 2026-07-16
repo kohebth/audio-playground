@@ -1,5 +1,9 @@
 # DSP Atomic Functions
 
+> Legacy inventory: most signatures below predate the universal context API. The authoritative declarations are in
+> `inc/atom/dsp_atoms.h`; new fixed-rate calls use `apg_process_context_t`, while variable-rate up/down sampling uses
+> `apg_stream_context_t` and returns `apg_stream_result_t`.
+
 ## 🔷 Signal Generation
 
 ```c++
@@ -359,19 +363,21 @@ void interpolation_lagrange(
 
 ## 🔷 Sample Rate Conversion
 
-```c++
-void src_upsample(
-    src_upsample_out_t               out,      // { float *signal; }
-    src_upsample_in_t                in,      // { float *signal; }
-    src_upsample_params_t            params,      // { int factor; }
-    void *                           state       // { /* no members */ }
+```c
+apg_stream_result_t src_upsample_process(
+    src_upsample_out_t *out,
+    const src_upsample_in_t *in,
+    const src_upsample_params_t *params,
+    src_upsample_state_t *state,
+    const apg_stream_context_t *context
 );
 
-void src_downsample(
-    src_downsample_out_t             out,      // { float *signal; }
-    src_downsample_in_t              in,      // { float *signal; }
-    src_downsample_params_t          params,      // { int factor; }
-    void *                           state       // { /* no members */ }
+apg_stream_result_t src_downsample_process(
+    src_downsample_out_t *out,
+    const src_downsample_in_t *in,
+    const src_downsample_params_t *params,
+    src_downsample_state_t *state,
+    const apg_stream_context_t *context
 );
 
 void src_antialias(

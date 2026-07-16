@@ -22,7 +22,7 @@ int test_process_info_remaining_mix_nonlinear_frame_limits(void) {
             y[i]     = -99.0f;
         }
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 2};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         float  matrix_a[1024];
         float  matrix_b[1024];

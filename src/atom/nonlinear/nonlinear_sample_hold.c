@@ -7,14 +7,16 @@ void nonlinear_sample_hold_process(
     const nonlinear_sample_hold_in_t     *in,
     const nonlinear_sample_hold_params_t *params,
     nonlinear_sample_hold_state_t        *state,
-    const apg_process_info_t             *info
+    const apg_process_context_t          *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->signal == NULL || state == NULL)
         return;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     float          factor = params->factor;
     if (factor < 1.0f)
         factor = 1.0f;

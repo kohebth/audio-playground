@@ -260,9 +260,10 @@ static int test_registry_layout(void) {
         return fail("failed to initialize runtime from registry");
     }
 
-    if (runtime.frame_capacity != registry.frame_capacity || runtime.process_info.sample_rate != registry.sample_rate ||
-        runtime.signals_len != registry.signals_len || runtime.params_len != registry.params_len ||
-        runtime.params[0] != registry.param_defaults[0] || runtime.input_meters_len != registry.input_meters_len ||
+    if (runtime.frame_capacity != registry.frame_capacity ||
+        runtime.process_context.sample_rate != registry.sample_rate || runtime.signals_len != registry.signals_len ||
+        runtime.params_len != registry.params_len || runtime.params[0] != registry.param_defaults[0] ||
+        runtime.input_meters_len != registry.input_meters_len ||
         runtime.output_meters_len != registry.output_meters_len || runtime.nodes_len != registry.nodes_len ||
         runtime.schedule != registry.schedule || runtime.schedule_len != registry.schedule_len)
         return fail("runtime did not adopt registry layout");
@@ -861,7 +862,7 @@ static int test_runtime_create_owned_lifecycle(void) {
         uc_arena_free(&arena);
         return fail("failed to create owned runtime");
     }
-    if (runtime->frame_capacity != 16u || runtime->process_info.frames != 16u || runtime->output_meters_len != 1u) {
+    if (runtime->frame_capacity != 16u || runtime->process_context.frames != 16u || runtime->output_meters_len != 1u) {
         apg_v2_runtime_destroy_owned(&runtime);
         uc_arena_free(&registry_arena);
         uc_arena_free(&arena);

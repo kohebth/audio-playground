@@ -8,8 +8,10 @@ void modulation_frequency_process(
     const modulation_frequency_in_t     *in,
     const modulation_frequency_params_t *params,
     modulation_frequency_state_t        *state,
-    const apg_process_info_t            *info
+    const apg_process_context_t         *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
@@ -19,7 +21,7 @@ void modulation_frequency_process(
     const uint32_t capacity = state->buffer_len > 0u ? state->buffer_len : APG_MODULATION_DELAY_CAPACITY;
     if (capacity < 2u)
         return;
-    const uint32_t frames        = apg_process_frames_or_default(info);
+    const uint32_t frames        = apg_process_context_frames(info);
     uint32_t       write_pos     = apg_wrap_index_i64(state->write_pos, capacity);
     float          current_delay = apg_clamp_float(state->current_delay, 0.0f, (float)capacity - 2.0f);
     const float    max_depth     = (float)capacity - 2.0f;

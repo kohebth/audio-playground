@@ -6,14 +6,16 @@ void mix_pan_stereo_process(
     const mix_pan_stereo_in_t     *in,
     const mix_pan_stereo_params_t *params,
     mix_pan_stereo_state_t        *state,
-    const apg_process_info_t      *info
+    const apg_process_context_t   *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->left == NULL || out->right == NULL || in->signal == NULL)
         return;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     float          p      = params->position;
     if (p < 0.0f)
         p = 0.0f;

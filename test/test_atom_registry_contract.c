@@ -44,17 +44,18 @@ static int test_registry_entries_are_complete(void) {
 }
 
 typedef struct {
-    const char *name;
-    const char *category;
-    int         input_count;
-    int         config_count;
-    int         state_count;
-    uint32_t    flags;
-    uint32_t    maturity;
-    size_t      out_size;
-    size_t      in_size;
-    size_t      config_size;
-    size_t      state_size;
+    const char         *name;
+    const char         *category;
+    int                 input_count;
+    int                 config_count;
+    int                 state_count;
+    uint32_t            flags;
+    uint32_t            maturity;
+    apg_atom_dispatch_t dispatch;
+    size_t              out_size;
+    size_t              in_size;
+    size_t              config_size;
+    size_t              state_size;
 } canonical_atom_t;
 
 #define CANONICAL_ATOM(name, category, input_count, config_count, state_count, flags, maturity, dispatch) \
@@ -66,6 +67,7 @@ typedef struct {
         state_count,                                                                                      \
         flags,                                                                                            \
         maturity,                                                                                         \
+        APG_ATOM_DISPATCH_##dispatch,                                                                     \
         sizeof(name##_out_t),                                                                             \
         sizeof(name##_in_t),                                                                              \
         sizeof(name##_params_t),                                                                          \
@@ -84,9 +86,9 @@ static int test_registry_matches_canonical_definitions(void) {
         if (!actual || strcmp(actual->name, expected->name) != 0 || strcmp(actual->category, expected->category) != 0 ||
             actual->n_input_fields != expected->input_count || actual->n_config_fields != expected->config_count ||
             actual->n_state_fields != expected->state_count || actual->flags != expected->flags ||
-            actual->maturity != expected->maturity || actual->out_size != expected->out_size ||
-            actual->in_size != expected->in_size || actual->config_size != expected->config_size ||
-            actual->state_size != expected->state_size)
+            actual->maturity != expected->maturity || actual->dispatch != expected->dispatch ||
+            actual->out_size != expected->out_size || actual->in_size != expected->in_size ||
+            actual->config_size != expected->config_size || actual->state_size != expected->state_size)
             return fail_entry("registry row differs from canonical definition", actual);
     }
     return 0;
@@ -186,10 +188,8 @@ static void initialize_described_fields(
     }
 }
 
-static int atom_uses_spectral_context(const char *name) {
-    return name && (strcmp(name, "freq_fft") == 0 || strcmp(name, "freq_ifft") == 0 ||
-                    strcmp(name, "freq_multiply") == 0 || strcmp(name, "freq_window") == 0 ||
-                    strcmp(name, "freq_overlap_add") == 0 || strcmp(name, "freq_overlap_save") == 0);
+static int atom_uses_spectral_context(const atom_registry_entry_t *entry) {
+    return entry && entry->dispatch != APG_ATOM_DISPATCH_PROCESS && entry->dispatch != APG_ATOM_DISPATCH_STREAM;
 }
 
 static int test_all_atoms_accept_required_frame_sizes(void) {
@@ -246,22 +246,24 @@ static int test_all_atoms_accept_required_frame_sizes(void) {
             const uint32_t frames = frame_sizes[frame_index];
             for (size_t sample_index = 0u; sample_index < 8192u; sample_index++)
                 samples[sample_index] = frames == 0u ? -99.0f : 0.0f;
-            const apg_process_info_t info = {
-                .sample_rate   = 48000.0f,
-                .frames        = frames,
-                .output_frames = frames,
-                .channels      = 1u,
+            const apg_process_context_t info = {
+                .frames      = frames,
+                .sample_rate = 48000.0f,
+            };
+            const apg_stream_context_t stream_context = {
+                .input_frames = frames, .output_capacity = frames, .sample_rate = 48000.0f, .sample_position = 0u
             };
             atom_call_t call = {
-                .out           = out,
-                .in            = in,
-                .config        = config,
-                .state         = state,
-                .info          = &info,
-                .spectral_info = &spectral,
+                .out            = out,
+                .in             = in,
+                .config         = config,
+                .state          = state,
+                .context        = &info,
+                .spectral_info  = &spectral,
+                .stream_context = &stream_context,
             };
             entry->thunk(&call);
-            if (frames == 0u && !atom_uses_spectral_context(entry->name)) {
+            if (frames == 0u && !atom_uses_spectral_context(entry)) {
                 for (size_t sample_index = 0u; sample_index < 1024u; sample_index++) {
                     if (samples[sample_index] != -99.0f) {
                         free(out);

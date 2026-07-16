@@ -18,8 +18,10 @@ void freq_quantize_process(
     const freq_quantize_in_t     *in,
     const freq_quantize_params_t *params,
     freq_quantize_state_t        *state,
-    const apg_process_info_t     *info
+    const apg_process_context_t  *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->signal == NULL)
@@ -29,7 +31,7 @@ void freq_quantize_process(
         init_midi_table();
     }
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     for (uint32_t i = 0; i < frames; ++i) {
         float freq = in->signal[i];
 

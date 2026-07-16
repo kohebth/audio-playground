@@ -38,12 +38,14 @@ void freq_window_spectral_process(
 }
 
 void freq_window_process(
-    freq_window_out_t          *out,
-    const freq_window_in_t     *in,
-    const freq_window_params_t *params,
-    freq_window_state_t        *state,
-    const apg_process_info_t   *info
+    freq_window_out_t           *out,
+    const freq_window_in_t      *in,
+    const freq_window_params_t  *params,
+    freq_window_state_t         *state,
+    const apg_process_context_t *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->signal == NULL)
@@ -51,9 +53,9 @@ void freq_window_process(
 
     int N = params->block_size;
     if (N < 1)
-        N = (int)apg_process_frames_or_default(info);
+        N = (int)apg_process_context_frames(info);
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     if (N > (int)frames)
         N = (int)frames;
 

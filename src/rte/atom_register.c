@@ -25,22 +25,23 @@
 #define APG_EXPAND_FIELD(kind, count, name)       APG_EXPAND_FIELD_INNER(kind, count, name)
 #define APG_EXPAND_FIELD_INNER(kind, count, name) APG_REGISTRY_##kind##_##count(name)
 
-#define APG_REGISTRY_ATOM(                                                                                   \
-    atom_name, category_name, input_count, config_count, state_count, capabilities, maturity_level, dispatch \
-)                                                                                                            \
-    {                                                                                                        \
-        .name        = #atom_name,                                                                           \
-        .category    = #category_name,                                                                       \
-        .thunk       = atom_name##_thunk,                                                                    \
-        .out_size    = sizeof(atom_name##_out_t),                                                            \
-        .in_size     = sizeof(atom_name##_in_t),                                                             \
-        .config_size = sizeof(atom_name##_params_t),                                                         \
-        .state_size  = sizeof(atom_name##_state_t),                                                          \
-        APG_EXPAND_FIELD(INPUT, input_count, atom_name),                                                     \
-        APG_EXPAND_FIELD(CONFIG, config_count, atom_name),                                                   \
-        APG_EXPAND_FIELD(STATE, state_count, atom_name),                                                     \
-        .flags    = capabilities,                                                                            \
-        .maturity = maturity_level,                                                                          \
+#define APG_REGISTRY_ATOM(                                                                                        \
+    atom_name, category_name, input_count, config_count, state_count, capabilities, maturity_level, dispatch_kind \
+)                                                                                                                 \
+    {                                                                                                             \
+        .name        = #atom_name,                                                                                \
+        .category    = #category_name,                                                                            \
+        .thunk       = atom_name##_thunk,                                                                         \
+        .dispatch    = APG_ATOM_DISPATCH_##dispatch_kind,                                                         \
+        .out_size    = sizeof(atom_name##_out_t),                                                                 \
+        .in_size     = sizeof(atom_name##_in_t),                                                                  \
+        .config_size = sizeof(atom_name##_params_t),                                                              \
+        .state_size  = sizeof(atom_name##_state_t),                                                               \
+        APG_EXPAND_FIELD(INPUT, input_count, atom_name),                                                          \
+        APG_EXPAND_FIELD(CONFIG, config_count, atom_name),                                                        \
+        APG_EXPAND_FIELD(STATE, state_count, atom_name),                                                          \
+        .flags    = capabilities,                                                                                 \
+        .maturity = maturity_level,                                                                               \
     },
 
 static atom_registry_entry_t g_registry[]     = {APG_ATOM_DEFINITIONS(APG_REGISTRY_ATOM)};

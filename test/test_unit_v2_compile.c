@@ -1808,6 +1808,34 @@ static int test_compile_all_unit_v2_fixtures(void) {
     return 0;
 }
 
+static int test_stream_atom_rejected_in_fixed_rate_schedule(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_unit_v2_t unit;
+    uc_error      err    = {0};
+    uc_status     status = apg_unit_v2_load_file(
+        "test/fixtures/invalid-units-v2/stream_in_fixed_schedule.unit.v2.yaml", &arena, &unit, &err
+    );
+    if (status != UC_OK) {
+        fprintf(stderr, "stream fixture load error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to load stream-in-fixed-schedule fixture");
+    }
+
+    apg_v2_compiled_unit_t plan;
+    status = apg_v2_compile_unit(&unit, &arena, &plan, &err);
+    if (status != UC_E_TYPE || !strstr(err.msg, "requires the variable-rate stream API")) {
+        fprintf(stderr, "unexpected stream compile result: status=%d error=%s\n", status, err.msg);
+        uc_arena_free(&arena);
+        return fail("fixed-rate compiler accepted a variable-rate stream atom");
+    }
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_signal_dependencies_rejected(void) {
     const char *unproduced_internal = "kind: apg.unit\n"
                                       "schema: apg.unit.v2\n"
@@ -2021,6 +2049,8 @@ int main(void) {
     if (test_scalar_literals_must_be_numeric())
         return 1;
     if (test_spectral_context_validation())
+        return 1;
+    if (test_stream_atom_rejected_in_fixed_rate_schedule())
         return 1;
     if (test_compile_all_unit_v2_fixtures())
         return 1;

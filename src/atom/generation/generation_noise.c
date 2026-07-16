@@ -6,14 +6,16 @@ void generation_noise_process(
     const generation_noise_in_t     *in,
     const generation_noise_params_t *params,
     generation_noise_state_t        *state,
-    const apg_process_info_t        *info
+    const apg_process_context_t     *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || state == NULL)
         return;
 
-    const uint32_t frames     = apg_process_frames_or_default(info);
+    const uint32_t frames     = apg_process_context_frames(info);
     uint32_t       seed       = state->seed;
     float          prev_value = state->prev_value;
 

@@ -8,7 +8,7 @@
             const atom_name##_in_t *,               \
             const atom_name##_params_t *,           \
             atom_name##_state_t *,                  \
-            const apg_process_info_t *              \
+            const apg_process_context_t *              \
         ) = atom_name##_process;                    \
         (void)symbol;                               \
     } while (0)
@@ -37,10 +37,23 @@
         (void)symbol;                                     \
     } while (0)
 
+#define APG_REFERENCE_STREAM_ATOM(atom_name)            \
+    do {                                                \
+        apg_stream_result_t (*volatile symbol)(         \
+            atom_name##_out_t *,                        \
+            const atom_name##_in_t *,                   \
+            const atom_name##_params_t *,               \
+            atom_name##_state_t *,                      \
+            const apg_stream_context_t *                \
+        ) = atom_name##_process;                        \
+        (void)symbol;                                   \
+    } while (0)
+
 #define APG_REFERENCE_DISPATCH_PROCESS(atom_name)  APG_REFERENCE_PROCESS_ATOM(atom_name)
 #define APG_REFERENCE_DISPATCH_FFT(atom_name)      APG_REFERENCE_SPECTRAL_PROCESS_ATOM(atom_name)
 #define APG_REFERENCE_DISPATCH_IFFT(atom_name)     APG_REFERENCE_SPECTRAL_PROCESS_ATOM(atom_name)
 #define APG_REFERENCE_DISPATCH_MULTIPLY(atom_name) APG_REFERENCE_SPECTRAL_PROCESS_ATOM(atom_name)
+#define APG_REFERENCE_DISPATCH_STREAM(atom_name)   APG_REFERENCE_STREAM_ATOM(atom_name)
 #define APG_REFERENCE_DISPATCH_WINDOW(atom_name) \
     APG_REFERENCE_PROCESS_ATOM(atom_name);       \
     APG_REFERENCE_SPECTRAL_VARIANT_ATOM(atom_name)

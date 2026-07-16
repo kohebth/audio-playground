@@ -9,16 +9,18 @@ void generation_impulse_process(
     const generation_impulse_in_t     *in,
     const generation_impulse_params_t *params,
     generation_impulse_state_t        *state,
-    const apg_process_info_t          *info
+    const apg_process_context_t       *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     (void)in;
     if (out == NULL || out->signal == NULL || params == NULL || state == NULL)
         return;
 
-    const uint32_t frames           = apg_process_frames_or_default(info);
-    const float    sample_rate      = apg_sample_rate_or_default(info);
+    const uint32_t frames           = apg_process_context_frames(info);
+    const float    sample_rate      = apg_process_context_sample_rate(info);
     const float    interval         = apg_clamp_float(params->interval, 0.0f, (float)INT_MAX / sample_rate);
     int            interval_samples = (int)(interval * sample_rate);
     if (interval_samples < 1)

@@ -9,8 +9,10 @@ void filter_comb_ff_process(
     const filter_comb_ff_in_t     *in,
     const filter_comb_ff_params_t *params,
     filter_comb_ff_state_t        *state,
-    const apg_process_info_t      *info
+    const apg_process_context_t   *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
@@ -18,7 +20,7 @@ void filter_comb_ff_process(
         return;
 
     const uint32_t capacity  = state->buffer_len > 0u ? state->buffer_len : MAX_COMB_DELAY;
-    const uint32_t frames    = apg_process_frames_or_default(info);
+    const uint32_t frames    = apg_process_context_frames(info);
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     int64_t        delay     = params->delay_samples;
     if (delay < 1)

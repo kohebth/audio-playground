@@ -17,7 +17,7 @@ struct apg_v2_runtime_bypass_entry_t {
 };
 
 struct apg_v2_runtime_t {
-    apg_process_info_t                  process_info;
+    apg_process_context_t               process_context;
     uint32_t                            frame_capacity;
     const char                        **signal_names;
     float                              *signal_pool;

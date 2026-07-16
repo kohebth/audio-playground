@@ -1,7 +1,8 @@
 # DSP Type Refactor Final Audit
 
 > This audit records the first type-header refactor as completed at `2f84b17`. The subsequent execution-API
-> convergence intentionally removes the 69 legacy function symbols and makes process input/config pointers const.
+> convergence intentionally removes the 69 legacy function symbols, makes process input/config pointers const, and
+> evolves the current ABI snapshot. The phase-1 evidence remains frozen separately.
 
 ## Inventory Comparison
 
@@ -16,9 +17,10 @@
 | Shared enum values | 17 | 17 | Names and numeric values unchanged |
 | Public atom function symbols | 141 | 141 | Typed link test covers every symbol |
 
-The immutable GNU-layout reference is `test/abi/dsp_types_abi_baseline_lp64.csv`; the current C11 reference is
-`test/abi/dsp_types_abi_c11_lp64.csv`. CTest rejects any difference except exactly 46 size-0/alignment-1 to
-size-1/alignment-1 transitions and their offset-zero `_reserved` fields.
+The immutable GNU-layout reference is `test/abi/dsp_types_abi_baseline_lp64.csv`; the first C11 result is
+`test/abi/dsp_types_abi_phase1_lp64.csv`; and `test/abi/dsp_types_abi_c11_lp64.csv` tracks the current ABI. CTest
+checks the current snapshot exactly and separately proves that the historical GNU-to-phase-1 delta contains only the
+46 documented empty-layout transitions.
 
 No file under `src/atom/` changed during the refactor. The only production C behavior adjustment keeps atom-catalog
 `stateful` semantics independent of one-byte reserved storage. The frozen catalog now reports actual C sizes and the

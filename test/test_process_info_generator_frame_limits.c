@@ -15,7 +15,7 @@ int test_process_info_generator_frame_limits(void) {
             y[i]    = -99.0f;
         }
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         generation_impulse_out_t    impulse_out = {.signal = y};
         generation_impulse_in_t     impulse_in;

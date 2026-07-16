@@ -13,7 +13,7 @@ int test_process_info_control_frame_limits(void) {
             y[i] = -99.0f;
         }
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         detect_threshold_out_t    thresh_out    = {.gate = y};
         detect_threshold_in_t     thresh_in     = {.signal = x};

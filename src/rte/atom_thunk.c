@@ -3,14 +3,14 @@
 #include <atom_registry.h>
 #include <atom_thunk.h>
 
-#define APG_DEFINE_THUNK_PROCESS(atom_name)                                                            \
-    void atom_name##_thunk(atom_call_t *call) {                                                        \
-        if (!call || !call->out || !call->in || !call->config || !call->state)                         \
-            return;                                                                                    \
-        atom_name##_process(                                                                           \
-            (atom_name##_out_t *)call->out, (const atom_name##_in_t *)call->in,                        \
-            (const atom_name##_params_t *)call->config, (atom_name##_state_t *)call->state, call->info \
-        );                                                                                             \
+#define APG_DEFINE_THUNK_PROCESS(atom_name)                                                               \
+    void atom_name##_thunk(atom_call_t *call) {                                                           \
+        if (!call || !call->out || !call->in || !call->config || !call->state)                            \
+            return;                                                                                       \
+        atom_name##_process(                                                                              \
+            (atom_name##_out_t *)call->out, (const atom_name##_in_t *)call->in,                           \
+            (const atom_name##_params_t *)call->config, (atom_name##_state_t *)call->state, call->context \
+        );                                                                                                \
     }
 
 #define APG_DEFINE_THUNK_FFT(atom_name)                                                                         \
@@ -24,6 +24,19 @@
     }
 #define APG_DEFINE_THUNK_IFFT(atom_name)     APG_DEFINE_THUNK_FFT(atom_name)
 #define APG_DEFINE_THUNK_MULTIPLY(atom_name) APG_DEFINE_THUNK_FFT(atom_name)
+
+#define APG_DEFINE_THUNK_STREAM(atom_name)                                                                       \
+    void atom_name##_thunk(atom_call_t *call) {                                                                  \
+        if (!call)                                                                                               \
+            return;                                                                                              \
+        call->stream_result = apg_stream_result_empty();                                                         \
+        if (!call->out || !call->in || !call->config || !call->state)                                            \
+            return;                                                                                              \
+        call->stream_result = atom_name##_process(                                                               \
+            (atom_name##_out_t *)call->out, (const atom_name##_in_t *)call->in,                                  \
+            (const atom_name##_params_t *)call->config, (atom_name##_state_t *)call->state, call->stream_context \
+        );                                                                                                       \
+    }
 
 #define APG_DEFINE_THUNK_WINDOW(atom_name)                                                                      \
     void atom_name##_thunk(atom_call_t *call) {                                                                 \

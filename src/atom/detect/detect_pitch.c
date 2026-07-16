@@ -10,8 +10,10 @@ void detect_pitch_process(
     const detect_pitch_in_t     *in,
     const detect_pitch_params_t *params,
     detect_pitch_state_t        *state,
-    const apg_process_info_t    *info
+    const apg_process_context_t *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->pitch == NULL || in->signal == NULL ||
@@ -19,7 +21,7 @@ void detect_pitch_process(
         return;
 
     const uint32_t capacity        = state->buffer_len > 0u ? state->buffer_len : APG_DETECT_AUTOCORRELATION_CAPACITY;
-    const uint32_t frames          = apg_process_frames_or_default(info);
+    const uint32_t frames          = apg_process_context_frames(info);
     const uint32_t analysis_frames = frames < capacity ? frames : capacity;
     int            max_lag         = params->max_lag;
     if (max_lag > (int)capacity)
@@ -29,7 +31,7 @@ void detect_pitch_process(
     if ((uint32_t)max_lag > analysis_frames)
         max_lag = (int)analysis_frames;
 
-    const float sample_rate = apg_sample_rate_or_default(info);
+    const float sample_rate = apg_process_context_sample_rate(info);
 
     uint32_t write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     for (uint32_t i = 0; i < frames; ++i) {

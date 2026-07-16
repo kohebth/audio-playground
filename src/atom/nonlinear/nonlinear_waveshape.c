@@ -10,14 +10,16 @@ void nonlinear_waveshape_process(
     const nonlinear_waveshape_in_t     *in,
     const nonlinear_waveshape_params_t *params,
     nonlinear_waveshape_state_t        *state,
-    const apg_process_info_t           *info
+    const apg_process_context_t        *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->signal == NULL || params->transfer_table == NULL)
         return;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     int            size   = params->table_size;
     if (size < 2) {
         for (uint32_t i = 0; i < frames; ++i)

@@ -20,9 +20,7 @@ static int test_modulation_delay_safety(void) {
     }
     frequency_buffer[128] = phase_buffer[128] = -77.0f;
 
-    apg_process_info_t info = {
-        .sample_rate = 48000.0f, .frames = BLOCK_FRAMES, .output_frames = BLOCK_FRAMES, .channels = 1u
-    };
+    apg_process_context_t         info             = {.sample_rate = 48000.0f, .frames = BLOCK_FRAMES};
     modulation_frequency_out_t    frequency_out    = {.signal = output};
     modulation_frequency_in_t     frequency_in     = {.signal = input, .modulator = modulator};
     modulation_frequency_params_t frequency_params = {.depth = FLT_MAX};
@@ -71,7 +69,7 @@ static int test_modulation_delay_safety(void) {
     info.frames           = 0u;
     phase_state.write_pos = -1;
     modulation_phase_process(&phase_out, &phase_in, &phase_params, &phase_state, &info);
-    if (output[0] != -99.0f || phase_state.write_pos != 127)
+    if (output[0] != -99.0f || phase_state.write_pos != -1)
         return fail("modulation_phase_process mishandled zero frames");
 
     return 0;
@@ -101,7 +99,7 @@ int test_process_info_modulation_remaining_frame_limits(void) {
         memset(fm_buffer, 0, sizeof(fm_buffer));
         memset(phase_buffer, 0, sizeof(phase_buffer));
 
-        apg_process_info_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames, .channels = 1};
+        apg_process_context_t info = {.sample_rate = 48000.0f, .frames = (uint32_t)frames};
 
         modulation_ring_out_t    ring_out = {.signal = y};
         modulation_ring_in_t     ring_in  = {.signal = x, .modulator = mod};
@@ -190,7 +188,7 @@ int test_process_info_modulation_remaining_frame_limits(void) {
     modulation_scrub_in_t     invalid_in          = {.buffer = invalid_buffer, .position = invalid_position};
     modulation_scrub_params_t invalid_params      = {.buffer_size = 0};
     modulation_scrub_state_t  invalid_state;
-    apg_process_info_t invalid_info = {.sample_rate = 48000.0f, .frames = 3u, .output_frames = 3u, .channels = 1u};
+    apg_process_context_t     invalid_info = {.sample_rate = 48000.0f, .frames = 3u};
     modulation_scrub_process(&invalid_out, &invalid_in, &invalid_params, &invalid_state, &invalid_info);
     if (invalid_output[0] != 0.0f || invalid_output[1] != 0.0f || invalid_output[2] != 0.0f ||
         invalid_output[3] != -99.0f)

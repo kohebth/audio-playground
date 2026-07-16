@@ -7,12 +7,14 @@
 #define MAX_FIR_SIZE 1024
 
 void filter_fir_process(
-    filter_fir_out_t          *out,
-    const filter_fir_in_t     *in,
-    const filter_fir_params_t *params,
-    filter_fir_state_t        *state,
-    const apg_process_info_t  *info
+    filter_fir_out_t            *out,
+    const filter_fir_in_t       *in,
+    const filter_fir_params_t   *params,
+    filter_fir_state_t          *state,
+    const apg_process_context_t *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->signal == NULL || state->buffer == NULL)
@@ -29,7 +31,7 @@ void filter_fir_process(
     if (k_size > 0 && params->kernel == NULL)
         k_size = 0;
 
-    const uint32_t frames    = apg_process_frames_or_default(info);
+    const uint32_t frames    = apg_process_context_frames(info);
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
 
     for (uint32_t i = 0; i < frames; ++i) {

@@ -64,27 +64,31 @@
       "name": "src_downsample",
       "output_profile": "SIGNAL",
       "input_profile": "SIGNAL",
-      "dispatch": "PROCESS",
+      "dispatch": "STREAM",
       "capability_profile": "WASM",
       "maturity": "SAFE_SCALAR",
-      "registry": { "input_fields": 0, "config_fields": 1, "state_fields": 0 },
+      "registry": { "input_fields": 0, "config_fields": 1, "state_fields": 1 },
       "params": [
         { "name": "factor", "c_type": "int", "metadata_type": "int", "ownership": "value" }
       ],
-      "state": []
+      "state": [
+        { "name": "phase", "c_type": "uint32_t", "metadata_type": "int", "ownership": "value" }
+      ]
     },
     {
       "name": "src_upsample",
       "output_profile": "SIGNAL",
       "input_profile": "SIGNAL",
-      "dispatch": "PROCESS",
+      "dispatch": "STREAM",
       "capability_profile": "WASM",
       "maturity": "SAFE_SCALAR",
-      "registry": { "input_fields": 0, "config_fields": 1, "state_fields": 0 },
+      "registry": { "input_fields": 0, "config_fields": 1, "state_fields": 1 },
       "params": [
         { "name": "factor", "c_type": "int", "metadata_type": "int", "ownership": "value" }
       ],
-      "state": []
+      "state": [
+        { "name": "phase", "c_type": "uint32_t", "metadata_type": "int", "ownership": "value" }
+      ]
     }
   ]
 }

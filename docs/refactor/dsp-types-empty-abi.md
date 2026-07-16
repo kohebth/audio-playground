@@ -2,6 +2,10 @@
 
 ## Decision
 
+This document describes the historical GNU-to-phase-1 transition. Later execution-API work replaced the reserved
+`src_downsample_state_t` and `src_upsample_state_t` layouts with explicit `uint32_t phase` state; all other entries in
+the table remain the phase-1 evidence set.
+
 The 46 zero-member atom structures from the GCC baseline are now distinct standard C11 structures containing one
 `uint8_t _reserved` member. Distinct public typedefs are retained so atom-specific input, parameter, and state types do
 not become C-compatible aliases of one shared empty type.
@@ -46,9 +50,10 @@ members. Their pre-existing mismatch with zero canonical config/state fields is 
 ## Enforcement
 
 `test/abi/dsp_types_abi_baseline_lp64.csv` is the immutable GNU-layout baseline.
+`test/abi/dsp_types_abi_phase1_lp64.csv` freezes this transition and
 `test/abi/dsp_types_abi_c11_lp64.csv` is the current C11 reference. The `test_dsp_types_abi` CTest requires an exact
-match to the current reference, then compares it with the baseline and rejects every difference except exactly 46
-size-0-to-size-1 transitions plus their `_reserved` offset-zero fields.
+match to the current reference, then independently compares phase 1 with the GNU baseline and rejects every difference
+except exactly 46 size-0-to-size-1 transitions plus their `_reserved` offset-zero fields.
 
 The transition passes:
 

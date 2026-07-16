@@ -982,6 +982,16 @@ uc_status apg_v2_compile_unit(const apg_unit_v2_t *unit, uc_arena *arena, apg_v2
             );
             return set_error(err, UC_E_MISSING, msg);
         }
+        if (atom->dispatch == APG_ATOM_DISPATCH_STREAM) {
+            char msg[192];
+            snprintf(
+                msg, sizeof(msg),
+                "node '%s' atom '%s' requires the variable-rate stream API and cannot run in a "
+                "fixed-rate unit schedule",
+                src->id ? src->id : "", src->atom ? src->atom : ""
+            );
+            return set_error(err, UC_E_TYPE, msg);
+        }
 
         nodes[i].id = src->id;
         populate_atom_layout(&nodes[i], atom);

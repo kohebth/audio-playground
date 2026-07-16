@@ -5,12 +5,14 @@
 #define MAX_DELAY_SAMPLES 192000u
 
 void delay_line_process(
-    delay_line_out_t          *out,
-    const delay_line_in_t     *in,
-    const delay_line_params_t *params,
-    delay_line_state_t        *state,
-    const apg_process_info_t  *info
+    delay_line_out_t            *out,
+    const delay_line_in_t       *in,
+    const delay_line_params_t   *params,
+    delay_line_state_t          *state,
+    const apg_process_context_t *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL ||
@@ -26,7 +28,7 @@ void delay_line_process(
         requested = (int64_t)capacity - 1;
     const uint32_t delay_samples = (uint32_t)requested;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     for (uint32_t i = 0; i < frames; ++i) {
         const uint32_t read_pos  = apg_wrap_index_i64((int64_t)write_pos - (int64_t)delay_samples, capacity);
         out->signal[i]           = state->buffer[read_pos];

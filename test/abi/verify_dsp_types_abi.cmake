@@ -24,8 +24,11 @@ if(NOT compare_result EQUAL 0)
 endif()
 
 if(DEFINED BASELINE_FILE)
+    if(NOT DEFINED EMPTY_EXPECTED_FILE)
+        set(EMPTY_EXPECTED_FILE "${EXPECTED_FILE}")
+    endif()
     file(STRINGS "${BASELINE_FILE}" baseline_lines)
-    file(STRINGS "${EXPECTED_FILE}" current_lines)
+    file(STRINGS "${EMPTY_EXPECTED_FILE}" current_lines)
     set(transition_count 0)
 
     foreach(line IN LISTS baseline_lines)

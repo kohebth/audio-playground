@@ -5,12 +5,14 @@
 #define MAX_DELAY 8192
 
 void freq_shift_process(
-    freq_shift_out_t          *out,
-    const freq_shift_in_t     *in,
-    const freq_shift_params_t *params,
-    freq_shift_state_t        *state,
-    const apg_process_info_t  *info
+    freq_shift_out_t            *out,
+    const freq_shift_in_t       *in,
+    const freq_shift_params_t   *params,
+    freq_shift_state_t          *state,
+    const apg_process_context_t *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     (void)params;
@@ -28,7 +30,7 @@ void freq_shift_process(
     const float window_size = 512.0f;
     const float min_delay   = 128.0f;
 
-    const uint32_t frames = apg_process_frames_or_default(info);
+    const uint32_t frames = apg_process_context_frames(info);
     for (uint32_t i = 0; i < frames; ++i) {
         float ratio = (in->pitch_shift != NULL) ? in->pitch_shift[i] : 1.0f;
         if (!isfinite(ratio))

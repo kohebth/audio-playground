@@ -6,14 +6,16 @@ void amplitude_latch_process(
     const amplitude_latch_in_t     *in,
     const amplitude_latch_params_t *params,
     amplitude_latch_state_t        *state,
-    const apg_process_info_t       *info
+    const apg_process_context_t    *info
 ) {
+    if (!apg_process_context_valid(info))
+        return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out->signal == NULL || in->signal == NULL || in->gate == NULL || state == NULL)
         return;
 
-    const uint32_t frames        = apg_process_frames_or_default(info);
+    const uint32_t frames        = apg_process_context_frames(info);
     float          latched_value = state->latched_value;
     int            prev_gate     = state->prev_gate;
     float          threshold     = params->threshold;

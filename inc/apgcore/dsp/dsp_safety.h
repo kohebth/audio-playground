@@ -4,12 +4,6 @@
 #include <math.h>
 #include <stdint.h>
 
-#include <apgcore/runtime/process.h>
-
-static inline float apg_sample_rate_or_default(const apg_process_info_t *info) {
-    return info && isfinite(info->sample_rate) && info->sample_rate > 1.0f ? info->sample_rate : 48000.0f;
-}
-
 static inline float apg_clamp_float(float value, float min_value, float max_value) {
     if (!isfinite(value))
         return min_value;
@@ -20,9 +14,7 @@ static inline float apg_clamp_float(float value, float min_value, float max_valu
     return value;
 }
 
-static inline float apg_denormal_kill(float value) {
-    return fabsf(value) < 1.0e-20f ? 0.0f : value;
-}
+static inline float apg_denormal_kill(float value) { return fabsf(value) < 1.0e-20f ? 0.0f : value; }
 
 static inline int apg_biquad_coefficients_are_finite(float b0, float b1, float b2, float a1, float a2) {
     return isfinite(b0) && isfinite(b1) && isfinite(b2) && isfinite(a1) && isfinite(a2);

@@ -20,7 +20,7 @@ Each atom estimate reports:
 bool apg_atom_estimate_cost(
     const atom_registry_entry_t *entry,
     const void *config,
-    const apg_process_info_t *process_info,
+    const apg_process_context_t *process_context,
     const apg_spectral_info_t *spectral_info,
     apg_atom_cost_result_t *out
 );
@@ -30,13 +30,13 @@ bool apg_graph_estimate_cost(
     const void *const *configs,
     const apg_spectral_info_t *const *spectral_infos,
     size_t count,
-    const apg_process_info_t *process_info,
+    const apg_process_context_t *process_context,
     apg_graph_cost_result_t *out
 );
 
 bool apg_compiled_unit_estimate_cost(
     const apg_v2_compiled_unit_t *compiled,
-    const apg_process_info_t *process_info,
+    const apg_process_context_t *process_context,
     apg_graph_cost_result_t *out
 );
 ```
