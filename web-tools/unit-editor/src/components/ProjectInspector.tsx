@@ -153,8 +153,9 @@ export function ProjectInspector({
   onWorkspaceFileChange,
 }: Props) {
   const { controller: liveAudio } = useLiveBypass();
-  const [atomToAdd, setAtomToAdd] = useState(atomCatalog.atoms[0]?.name ?? '');
-  const [replacementAtom, setReplacementAtom] = useState(atomCatalog.atoms[0]?.name ?? '');
+  const initialPublicAtom = atomCatalog.atoms.find(atom => atom.visibility === 'public') ?? atomCatalog.atoms[0];
+  const [atomToAdd, setAtomToAdd] = useState(initialPublicAtom?.name ?? '');
+  const [replacementAtom, setReplacementAtom] = useState(initialPublicAtom?.name ?? '');
   const [preserveReplacementId, setPreserveReplacementId] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState('');
@@ -168,6 +169,10 @@ export function ProjectInspector({
   const isAtomView = inspectorView === 'atom';
   const isContractView = inspectorView === 'contract';
   const atomByName = useMemo(() => new Map(atomCatalog.atoms.map(atom => [atom.name, atom])), [atomCatalog.atoms]);
+  const publicAtoms = useMemo(
+    () => atomCatalog.atoms.filter(atom => atom.visibility === 'public'),
+    [atomCatalog.atoms],
+  );
   const selectedAtomContract = selectedAtom ? atomByName.get(selectedAtom.atom) ?? null : null;
   const unitRoutes =
     selectedNode?.kind === 'unit'
@@ -189,11 +194,11 @@ export function ProjectInspector({
 
   useEffect(() => {
     if (!selectedAtom) return;
-    const candidate = atomCatalog.atoms.find(atom => atom.name !== selectedAtom.atom)?.name ?? selectedAtom.atom;
+    const candidate = publicAtoms.find(atom => atom.name !== selectedAtom.atom)?.name ?? selectedAtom.atom;
     setReplacementAtom(candidate);
     setPreserveReplacementId(false);
     setReplaceOpen(false);
-  }, [atomCatalog.atoms, selectedAtom]);
+  }, [publicAtoms, selectedAtom]);
 
   let replacementPreview: AtomReplacementPreview | null = null;
   if (selectedUnitFile.role === 'unit' && selectedAtom && replacementAtom && replacementAtom !== selectedAtom.atom) {
@@ -542,7 +547,7 @@ export function ProjectInspector({
                 onChange={event => setAtomToAdd(event.target.value)}
                 value={atomToAdd}
               >
-                {atomCatalog.atoms.map(atom => (
+                {publicAtoms.map(atom => (
                   <option key={atom.name} value={atom.name}>{atom.name}</option>
                 ))}
               </select>
@@ -619,7 +624,7 @@ export function ProjectInspector({
                       onChange={event => setReplacementAtom(event.target.value)}
                       value={replacementAtom}
                     >
-                      {atomCatalog.atoms
+                      {publicAtoms
                         .filter(atom => atom.name !== selectedAtom.atom)
                         .map(atom => <option key={atom.name} value={atom.name}>{atom.name}</option>)}
                     </select>

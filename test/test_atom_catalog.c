@@ -69,6 +69,8 @@ static int test_runtime_registry_contract(void) {
             return fail("runtime atom registry capability metadata is invalid");
         if (atom_registry_find(entry->name) != entry)
             return fail("runtime atom registry lookup is not canonical");
+        if (apg_atom_visibility(entry->name) == APG_ATOM_VISIBILITY_UNKNOWN)
+            return fail("runtime atom registry entry has no catalog visibility");
         if (apg_atom_profile_supported(entry->name, "wasm_realtime") != ((entry->flags & APG_ATOM_WASM_SAFE) != 0u) ||
             apg_atom_profile_supported(entry->name, "m7_static") != ((entry->flags & APG_ATOM_M7_SAFE) != 0u))
             return fail("target profile compatibility is not derived from registry flags");
@@ -82,6 +84,19 @@ static int test_runtime_registry_contract(void) {
         if (!apg_atom_profile_supported(entry->name, "desktop_full") ||
             !apg_atom_profile_supported(entry->name, "offline_render"))
             return fail("desktop/offline profile support is unexpectedly disabled");
+
+        const size_t config_len = apg_atom_contract_field_count(entry->name, APG_ATOM_CONTRACT_CONFIG);
+        for (size_t config_index = 0u; config_index < config_len; config_index++) {
+            apg_atom_contract_field_t field;
+            if (!apg_atom_contract_field(entry->name, APG_ATOM_CONTRACT_CONFIG, config_index, &field) ||
+                !field.parameter_type || !field.default_json)
+                return fail("catalog config field has incomplete parameter metadata");
+            if (field.structural && field.realtime)
+                return fail("structural catalog config field is marked realtime");
+            if (strcmp(field.parameter_type, "enum") == 0 &&
+                (field.options_len == 0u || !field.options || !field.option_values))
+                return fail("catalog enum config field has incomplete options");
+        }
 
         for (int j = i + 1; j < count; ++j) {
             const atom_registry_entry_t *other = atom_registry_get(j);
@@ -114,12 +129,26 @@ int main(void) {
         return fail("generation_dc atom is missing");
     if (!strstr(json, "\"category\":\"generation\""))
         return fail("generation category is missing");
-    if (!strstr(json, "\"name\":\"src_downsample\",\"category\":\"src\",\"dispatch\":\"stream\""))
+    if (!strstr(
+            json, "\"name\":\"src_downsample\",\"category\":\"src\",\"visibility\":\"internal\",\"dispatch\":\"stream\""
+        ))
         return fail("stream dispatch contract is missing");
     if (!strstr(json, "\"outputs\":[{\"name\":\"signal\",\"type\":\"signal\"}]"))
         return fail("generation_dc output contract is missing");
-    if (!strstr(json, "\"config\":[{\"name\":\"value\",\"type\":\"scalar\"}]"))
+    if (!strstr(json, "\"config\":[{\"name\":\"value\",\"type\":\"float\",\"required\":true,\"default\":0"))
         return fail("generation_dc config contract is missing");
+    if (!strstr(json, "\"visibility\":\"public\""))
+        return fail("public visibility metadata is missing");
+    if (!strstr(json, "\"visibility\":\"advanced\""))
+        return fail("advanced visibility metadata is missing");
+    if (!strstr(json, "\"visibility\":\"internal\""))
+        return fail("internal visibility metadata is missing");
+    if (!strstr(json, "\"scale\":\"logarithmic\""))
+        return fail("parameter scale metadata is missing");
+    if (!strstr(json, "\"structural\":true"))
+        return fail("structural parameter metadata is missing");
+    if (!strstr(json, "\"options\":[\"lowpass\",\"highpass\",\"bandpass\",\"notch\"]"))
+        return fail("enum parameter metadata is missing");
     if (!strstr(json, "\"name\":\"generation_lfo\""))
         return fail("generation_lfo atom is missing");
     if (!strstr(json, "\"name\":\"frequency\",\"type\":\"float\""))
@@ -159,6 +188,12 @@ int main(void) {
         return fail("known atom lookup failed");
     if (apg_atom_known("not_a_real_atom"))
         return fail("unknown atom lookup succeeded");
+    if (apg_atom_visibility("generation_dc") != APG_ATOM_VISIBILITY_PUBLIC ||
+        apg_atom_visibility("filter_biquad_coefficients") != APG_ATOM_VISIBILITY_ADVANCED ||
+        apg_atom_visibility("src_antialias") != APG_ATOM_VISIBILITY_INTERNAL ||
+        apg_atom_visibility("not_a_real_atom") != APG_ATOM_VISIBILITY_UNKNOWN ||
+        apg_atom_visibility(NULL) != APG_ATOM_VISIBILITY_UNKNOWN)
+        return fail("atom visibility query is wrong");
 
     if (apg_atom_contract_field_count("generation_dc", APG_ATOM_CONTRACT_CONFIG) != 1u)
         return fail("generation_dc metadata field count failed");
@@ -188,6 +223,19 @@ int main(void) {
         return 1;
     if (apg_atom_contract_find_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "b0", NULL))
         return fail("designed biquad exposes a raw coefficient");
+    apg_atom_contract_field_t cutoff_field;
+    if (!apg_atom_contract_find_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "cutoff", &cutoff_field) ||
+        !cutoff_field.default_json || strcmp(cutoff_field.default_json, "1000") != 0 || !cutoff_field.has_min ||
+        cutoff_field.min_value != 20.0 || !cutoff_field.has_max || cutoff_field.max_value != 20000.0 ||
+        !cutoff_field.unit || strcmp(cutoff_field.unit, "hz") != 0 || !cutoff_field.scale ||
+        strcmp(cutoff_field.scale, "logarithmic") != 0 || !cutoff_field.realtime || cutoff_field.structural ||
+        !cutoff_field.has_smoothing_ms || cutoff_field.smoothing_ms != 10.0)
+        return fail("filter_biquad cutoff parameter metadata is wrong");
+    apg_atom_contract_field_t mode_field;
+    if (!apg_atom_contract_find_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "mode", &mode_field) ||
+        !mode_field.parameter_type || strcmp(mode_field.parameter_type, "enum") != 0 || mode_field.options_len != 4u ||
+        strcmp(mode_field.options[0], "lowpass") != 0 || mode_field.option_values[3] != 3)
+        return fail("filter_biquad mode enum metadata is wrong");
     if (apg_atom_contract_field_count("filter_biquad_coefficients", APG_ATOM_CONTRACT_CONFIG) != 5u ||
         expect_field("filter_biquad_coefficients", APG_ATOM_CONTRACT_CONFIG, "b0", APG_ATOM_FIELD_FLOAT, true) ||
         expect_field("filter_biquad_coefficients", APG_ATOM_CONTRACT_CONFIG, "a2", APG_ATOM_FIELD_FLOAT, true))

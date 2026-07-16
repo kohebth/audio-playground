@@ -6,6 +6,9 @@
 - ordered atom-specific params and state fields with explicit ownership;
 - input/config/state descriptors and state-buffer capacities;
 - category, capability, maturity, and dispatch kind;
+- an exact `public`/`advanced`/`internal` visibility partition;
+- complete defaults, bounds, units, scales, enum options, smoothing hints, and real-time/structural policy for every
+  catalog-exposed parameter;
 - backend, TypeScript, and JSON binding contracts.
 
 Field order is C ABI order. Atom order is canonical registry order. Empty roles use the standard one-byte
@@ -31,8 +34,10 @@ To change or add an atom:
 1. Edit `schema/atoms/atoms.json`; do not edit a generated output.
 2. Reuse an I/O profile only when C member names and semantics match exactly.
 3. Record pointer ownership and a bounded capacity for every runtime-owned state buffer.
-4. Add or update the handwritten DSP implementation and focused behavior tests.
-5. Regenerate and verify:
+4. Put the atom in exactly one visibility group and add metadata for every exposed parameter. Structural parameters
+   must not be marked real-time.
+5. Add or update the handwritten DSP implementation and focused behavior tests.
+6. Regenerate and verify:
 
 ```sh
 cmake --build build --target generate_atom_artifacts
@@ -44,5 +49,6 @@ Update `test/golden/v2-inspect-atoms.json` and its manifest when the public cata
 `npm run lint` in `web-tools/unit-editor/` when generated TypeScript changes.
 
 `test_atom_artifact_generation` renders every output twice, compares each file byte for byte, checks the checked-in
-tree, then deliberately modifies one output and proves the stale check rejects it. The ABI snapshot and public symbol
-tests independently catch unintended C layout or declaration changes.
+tree, then deliberately modifies one output and proves the stale check rejects it. Generation also rejects incomplete
+visibility partitions, missing parameter metadata, invalid enum ordinals, and structural parameters marked real-time.
+The ABI snapshot and public symbol tests independently catch unintended C layout or declaration changes.

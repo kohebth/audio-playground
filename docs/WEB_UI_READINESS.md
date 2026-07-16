@@ -164,7 +164,9 @@ The UI needs a structured view of one unit:
 The generated TypeScript catalog and backend inspect contract provide a structured atom palette:
 
 - atom name and category
+- `public`, `advanced`, or `internal` visibility; only public atoms appear by default
 - input, output, config, and state fields
+- config defaults, bounds, units, scale, enum options, smoothing hints, and real-time/structural policy
 - supported target profiles
 - constraints such as fixed-size or stateful behavior
 

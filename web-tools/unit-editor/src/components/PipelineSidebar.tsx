@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { UnitConfig, Stage } from '../types';
-import { ATOM_CATALOG, CATEGORY_COLORS } from '../atoms/atomCatalog';
+import { ATOM_CATALOG, CATEGORY_COLORS, PUBLIC_ATOM_CATALOG } from '../atoms/atomCatalog';
 
 type Props = {
   unit: UnitConfig;
@@ -26,7 +26,7 @@ export function PipelineSidebar({ unit, selectedId, onSelectId, onChange }: Prop
   const addStep = () => {
     const newStep: Stage = {
       id: `step_${unit.pipeline.length + 1}`,
-      fn: 'amplitude_add',
+      fn: PUBLIC_ATOM_CATALOG[0]?.name ?? 'amplitude_clip_hard',
       in: [],
       out: [],
       config: [],

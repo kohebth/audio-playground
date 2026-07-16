@@ -26,11 +26,12 @@ and all numeric values, while the ABI snapshot records all 17 values.
 
 ## Metadata And Persistence
 
-Atom parameter structures continue to store waveform, normalization, interpolation, and window selections as `int`.
-Field descriptors and the atom catalog continue to expose them as integer fields. V2 YAML therefore carries numeric
-scalar values, such as `waveform: 0`; the parser/runtime path converts those values to `int` and does not serialize a C
-enum object or depend on compiler enum width.
+Atom parameter structures and low-level C contract descriptors continue to store waveform, normalization,
+interpolation, and window selections as `int`. Generated UI metadata presents those fields as `enum` controls with
+string labels and explicit numeric `option_values`. V2 YAML still carries numeric scalar values, such as
+`waveform: 0`; the parser/runtime path converts those values to `int` and does not serialize a C enum object or depend
+on compiler enum width.
 
-Changing enum tags and typedefs does not change any parameter size, field offset, catalog shape, or YAML mapping.
+Changing enum tags and typedefs does not change any parameter size, field offset, low-level contract type, or YAML mapping.
 Renaming or namespacing the legacy enumerators themselves would be a separate public source-compatibility change and is
 not part of this refactor.

@@ -94,6 +94,14 @@ function stringMap(value: unknown): Record<string, string> {
   return Object.fromEntries(Object.entries(value).map(([key, raw]) => [key, String(raw)]));
 }
 
+function configStringMap(value: unknown): Record<string, string> {
+  if (!isObject(value)) return {};
+  return Object.fromEntries(Object.entries(value).map(([key, raw]) => [
+    key,
+    Array.isArray(raw) || isObject(raw) ? JSON.stringify(raw) : String(raw),
+  ]));
+}
+
 function scalarString(value: unknown): string | undefined {
   if (value === undefined || value === null || isObject(value) || Array.isArray(value)) return undefined;
   return String(value);
@@ -127,7 +135,7 @@ function parseNode(value: unknown, index: number): UnitGraphNode {
     atom: String(raw.atom ?? 'unknown'),
     in: stringMap(raw.in),
     out: stringMap(raw.out),
-    config: stringMap(raw.config),
+    config: configStringMap(raw.config),
     ui: Number.isFinite(x) && Number.isFinite(y) ? { position: { x, y } } : undefined,
   };
 }
@@ -165,11 +173,31 @@ function mapToYaml(value: Record<string, string>): Record<string, unknown> | und
   }));
 }
 
+function configMapToYaml(value: Record<string, string>): Record<string, unknown> | undefined {
+  if (Object.keys(value).length === 0) return undefined;
+  return Object.fromEntries(Object.entries(value).map(([key, raw]) => {
+    const trimmed = raw.trim();
+    const numeric = Number(raw);
+    if (trimmed !== '' && Number.isFinite(numeric)) return [key, numeric];
+    if (trimmed === 'true') return [key, true];
+    if (trimmed === 'false') return [key, false];
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return [key, parsed];
+      } catch {
+        // Preserve an unfinished editor value as text until it becomes valid JSON.
+      }
+    }
+    return [key, raw];
+  }));
+}
+
 function nodeToYaml(node: UnitGraphNode): Record<string, unknown> {
   const raw: Record<string, unknown> = { id: node.id, atom: node.atom };
   const inputs = mapToYaml(node.in);
   const outputs = mapToYaml(node.out);
-  const config = mapToYaml(node.config);
+  const config = configMapToYaml(node.config);
   if (inputs) raw.in = inputs;
   if (outputs) raw.out = outputs;
   if (config) raw.config = config;
@@ -188,8 +216,11 @@ function uniqueName(existing: Set<string>, base: string): string {
   return candidate;
 }
 
-function atomDefaultValue(type: string): string {
-  return type === 'int' || type === 'uint' || type === 'bool' ? '0' : '0.0';
+function atomDefaultValue(field: AtomCatalogAtom['config'][number]): string {
+  if (field.default !== undefined) {
+    return Array.isArray(field.default) ? JSON.stringify(field.default) : String(field.default);
+  }
+  return field.type === 'int' || field.type === 'uint' || field.type === 'bool' || field.type === 'enum' ? '0' : '0.0';
 }
 
 function catalogNode(catalog: AtomCatalog, node: UnitGraphNode): AtomCatalogAtom {
@@ -475,7 +506,7 @@ export function addAtomNodeToUnit(
     atom: atom.name,
     in: Object.fromEntries(atom.inputs.map(field => [field.name, ''])),
     out: outputs,
-    config: Object.fromEntries(atom.config.map(field => [field.name, atomDefaultValue(field.type)])),
+    config: Object.fromEntries(atom.config.map(field => [field.name, atomDefaultValue(field)])),
     ui: position ? { position } : undefined,
   };
 
@@ -577,7 +608,7 @@ export function replaceAtomNodeInUnit(
     ])),
     config: Object.fromEntries(nextAtom.config.map(field => [
       field.name,
-      preview.preservedConfig.includes(field.name) ? node.config[field.name] : atomDefaultValue(field.type),
+      preview.preservedConfig.includes(field.name) ? node.config[field.name] : atomDefaultValue(field),
     ])),
     ui: node.ui,
   };

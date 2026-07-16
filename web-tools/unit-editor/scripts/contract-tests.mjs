@@ -61,7 +61,7 @@ assert(
     atom =>
       atom.name === 'generation_dc' &&
       atom.outputs.some(field => field.name === 'signal' && field.type === 'signal') &&
-      atom.config.some(field => field.name === 'value' && field.type === 'scalar'),
+      atom.config.some(field => field.name === 'value' && field.type === 'float' && field.default === 0),
   ),
   'atom catalog lacks generation_dc binding metadata',
 );
@@ -77,6 +77,9 @@ includes(
 assert(!backendSamples.includes('../atoms/atomCatalog'), 'project workbench backend samples must not use the local atom catalog fallback');
 includes('web-tools/unit-editor/src/components/ProjectInspector.tsx', '<strong>{atomCatalog.schema}</strong>', 'contract view must expose atom catalog schema');
 includesContent(atomPalette, 'filteredAtoms.map(', 'atom palette must render its filtered backend atoms');
+includesContent(atomPalette, "atom.visibility === 'public'", 'atom palette must show public atoms by default');
+includesContent(atomPalette, "atom.visibility === 'advanced'", 'atom palette must make advanced atoms opt-in');
+includesContent(atomPalette, 'atom-palette-show-advanced', 'atom palette must expose its advanced visibility control');
 includesContent(atomPalette, 'atom.name.toLowerCase().includes(query)', 'atom palette filtering must match atom names');
 includesContent(atomPalette, 'atom.category.toLowerCase().includes(query)', 'atom palette filtering must match atom categories');
 includesContent(atomPalette, 'aria-label="Atom palette"', 'atom palette should expose contract-backed rendering');

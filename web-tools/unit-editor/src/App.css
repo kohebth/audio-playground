@@ -2803,6 +2803,22 @@ body {
   font-size: 11px;
 }
 
+.atom-palette__options {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.atom-palette__options input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent-blue);
+}
+
 .draft-export__summary {
   display: flex;
   flex-direction: column;

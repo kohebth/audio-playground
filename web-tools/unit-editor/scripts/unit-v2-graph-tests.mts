@@ -60,6 +60,7 @@ assert(addedNode);
 assert.deepEqual(Object.keys(addedNode.in), ['signal']);
 assert.deepEqual(Object.keys(addedNode.out), ['signal']);
 assert.deepEqual(Object.keys(addedNode.config), ['threshold']);
+assert.equal(addedNode.config.threshold, '1');
 assert.deepEqual(addedNode.ui?.position, { x: 120, y: 240 });
 const malformedLegacyFn = added.content.replace(
   'atom: amplitude_clip_hard',
@@ -88,6 +89,7 @@ assert(replacementNode);
 assert.notEqual(replacementNode.id, added.id);
 assert.equal(replacementNode.atom, 'amplitude_clip_soft');
 assert.equal(replacementNode.config.threshold, addedNode.config.threshold);
+assert.equal(replacementNode.config.curve, '0');
 assert.deepEqual(replacementNode.ui?.position, { x: 120, y: 240 });
 
 const incompatibleReplacement = replaceAtomNodeInUnit(added.content, catalog, added.id, 'generation_dc', true);
@@ -100,6 +102,12 @@ assert.equal(incompatibleNode.atom, 'generation_dc');
 assert.deepEqual(Object.keys(incompatibleNode.in), []);
 assert.deepEqual(Object.keys(incompatibleNode.out), ['signal']);
 assert.deepEqual(Object.keys(incompatibleNode.config), ['value']);
+assert.equal(incompatibleNode.config.value, '0');
+
+const matrix = addAtomNodeToUnit(created, catalog, 'mix_matrix');
+const matrixNode = parseUnitGraphDraft(matrix.content).nodes.find(node => node.id === matrix.id);
+assert(matrixNode);
+assert.equal(matrixNode.config.coefficients, '[[1]]');
 
 const overdrive = readFileSync(resolve(repo, 'test/fixtures/units-v2/overdrive.unit.v2.yaml'), 'utf8');
 assert.throws(() => removeAtomNodeFromUnit(overdrive, 'tone_filter'), /apply_level consumes/);

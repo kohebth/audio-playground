@@ -85,3 +85,45 @@ string(FIND "${stale_check_error}" "inc/atom/generated/atom_definitions.generate
 if(stale_path_position EQUAL -1)
     message(FATAL_ERROR "Atom artifact stale check did not identify the modified output: ${stale_check_error}")
 endif()
+
+file(READ "${SCHEMA}" schema_text)
+
+string(REPLACE
+        "\"generation_dc.value\""
+        "\"generation_dc.unknown\""
+        missing_metadata_schema
+        "${schema_text}"
+)
+if(missing_metadata_schema STREQUAL schema_text)
+    message(FATAL_ERROR "Failed to construct missing-metadata atom schema fixture")
+endif()
+set(missing_metadata_path "${OUTPUT_DIR}/missing-metadata.json")
+file(WRITE "${missing_metadata_path}" "${missing_metadata_schema}")
+execute_process(
+        COMMAND "${PERL_EXECUTABLE}" "${GENERATOR}" "${missing_metadata_path}" "${OUTPUT_DIR}/invalid-metadata"
+        RESULT_VARIABLE missing_metadata_result
+        ERROR_VARIABLE missing_metadata_error
+)
+if(missing_metadata_result EQUAL 0 OR NOT missing_metadata_error MATCHES "generation_dc.value has no parameter metadata")
+    message(FATAL_ERROR "Generator accepted missing parameter metadata: ${missing_metadata_error}")
+endif()
+
+string(REPLACE
+        "         \"generation_dc\",\n         \"generation_envelope\","
+        "         \"generation_envelope\","
+        missing_visibility_schema
+        "${schema_text}"
+)
+if(missing_visibility_schema STREQUAL schema_text)
+    message(FATAL_ERROR "Failed to construct missing-visibility atom schema fixture")
+endif()
+set(missing_visibility_path "${OUTPUT_DIR}/missing-visibility.json")
+file(WRITE "${missing_visibility_path}" "${missing_visibility_schema}")
+execute_process(
+        COMMAND "${PERL_EXECUTABLE}" "${GENERATOR}" "${missing_visibility_path}" "${OUTPUT_DIR}/invalid-visibility"
+        RESULT_VARIABLE missing_visibility_result
+        ERROR_VARIABLE missing_visibility_error
+)
+if(missing_visibility_result EQUAL 0 OR NOT missing_visibility_error MATCHES "generation_dc has no visibility")
+    message(FATAL_ERROR "Generator accepted an incomplete visibility partition: ${missing_visibility_error}")
+endif()

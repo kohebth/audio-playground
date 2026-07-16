@@ -43,30 +43,46 @@ function profileLabel(atom: AtomCatalogAtom): string {
 
 export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) {
   const unitAtomNames = unit.graph.nodes.map(node => node.atom);
-  const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? catalog.atoms[0]?.name ?? '');
+  const initialPaletteAtom = catalog.atoms.find(atom => atom.visibility === 'public') ?? catalog.atoms[0];
+  const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? initialPaletteAtom?.name ?? '');
   const [filter, setFilter] = useState('');
-  const selectedAtom = catalog.atoms.find(atom => atom.name === selectedAtomName) ?? catalog.atoms[0];
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const paletteAtoms = useMemo(
+    () => catalog.atoms.filter(atom => atom.visibility === 'public' || (showAdvanced && atom.visibility === 'advanced')),
+    [catalog.atoms, showAdvanced],
+  );
+  const selectedAtom = catalog.atoms.find(atom => atom.name === selectedAtomName) ?? initialPaletteAtom;
   const filteredAtoms = useMemo(() => {
     const query = filter.trim().toLowerCase();
-    if (!query) return catalog.atoms;
-    return catalog.atoms.filter(atom => atom.name.toLowerCase().includes(query) || atom.category.toLowerCase().includes(query));
-  }, [catalog.atoms, filter]);
+    if (!query) return paletteAtoms;
+    return paletteAtoms.filter(atom => atom.name.toLowerCase().includes(query) || atom.category.toLowerCase().includes(query));
+  }, [filter, paletteAtoms]);
   const categoryCounts = useMemo(
     () =>
-      catalog.atoms.reduce<Record<string, number>>((counts, atom) => {
+      paletteAtoms.reduce<Record<string, number>>((counts, atom) => {
         counts[atom.category] = (counts[atom.category] ?? 0) + 1;
         return counts;
       }, {}),
-    [catalog.atoms],
+    [paletteAtoms],
   );
 
   return (
     <details className="inspector-block" open>
       <summary className="inspector-block__label">Atom Palette</summary>
       <div className="atom-palette__summary">
-        <strong>{catalog.atoms.length} backend atoms</strong>
+        <strong>{paletteAtoms.length} available / {catalog.atoms.length} backend</strong>
         <span>{manifest.schema} / {manifest.bytes} bytes</span>
       </div>
+
+      <label className="atom-palette__options">
+        <input
+          checked={showAdvanced}
+          data-testid="atom-palette-show-advanced"
+          onChange={event => setShowAdvanced(event.target.checked)}
+          type="checkbox"
+        />
+        <span>Advanced</span>
+      </label>
 
       <div className="atom-palette__categories">
         {Object.entries(categoryCounts).map(([category, count]) => (
@@ -138,7 +154,7 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) 
               <strong>{profileLabel(selectedAtom)}</strong>
             </div>
           </div>
-          {onAddAtom ? (
+          {onAddAtom && paletteAtoms.some(atom => atom.name === selectedAtom.name) ? (
             <button className="atom-detail__add" onClick={() => onAddAtom(selectedAtom.name)} type="button">
               Add atom
             </button>

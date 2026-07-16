@@ -44,6 +44,11 @@ Each atom owns four distinct public types:
 Process input and parameter structures are read-only. State remains mutable. New schema entries must record `value`,
 `borrowed`, `runtime_owned`, or `external` ownership explicitly.
 
+Every catalog-exposed parameter also has generated control metadata. `realtime: true` means a prepared instance may
+accept the value without rebuilding its storage or topology. `structural: true` means compilation/preflight owns the
+change and `realtime` must be false. Defaults, bounds, units, logarithmic scale hints, smoothing hints, and enum
+ordinals are generated unchanged into the C catalog, TypeScript catalog, and atom JSON Schema.
+
 ## Real-Time Rules
 
 - Fixed-rate process functions receive a valid immutable `apg_process_context_t` containing `frames`, `sample_rate`,
@@ -109,11 +114,13 @@ separate runtime ABI version.
 3. Put process-call bindings in input/output, configuration/control values in params, and persistent mutable data in
    state. Record ownership for every field and capacity metadata for every runtime-owned state buffer.
 4. Select the capability, maturity, dispatch, descriptor, and catalog metadata in the same atom object.
-5. Regenerate through `cmake --build build --target generate_atom_artifacts`; never edit generated family headers or
+5. Assign exactly one visibility and provide metadata for every exposed config field. Public atoms appear in the
+   default editor; advanced atoms are opt-in; internal atoms remain loadable but cannot be created from the palette.
+6. Regenerate through `cmake --build build --target generate_atom_artifacts`; never edit generated family headers or
    descriptor sources directly.
-6. Implement the required handwritten process entry point without process-time allocation.
-7. Update focused behavior tests, regenerate ABI evidence only for intentional changes, and run `./build-and-test.sh`.
-8. Update the frozen atom catalog when public metadata changes, then build and lint `web-tools/unit-editor`.
+7. Implement the required handwritten process entry point without process-time allocation.
+8. Update focused behavior tests, regenerate ABI evidence only for intentional changes, and run `./build-and-test.sh`.
+9. Update the frozen atom catalog when public metadata changes, then build and lint `web-tools/unit-editor`.
 
 Contributor checklist:
 
@@ -123,6 +130,7 @@ Contributor checklist:
 [ ] Params contain configuration/control values only
 [ ] State contains persistent runtime state only
 [ ] Pointer ownership and lifetime are explicit
+[ ] Visibility and complete parameter metadata are present
 [ ] Runtime-owned state buffers have explicit capacity and buffer_len metadata
 [ ] No process-time allocation introduced
 [ ] Generated artifacts are current and family headers compile standalone

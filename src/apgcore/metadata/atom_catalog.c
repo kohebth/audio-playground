@@ -10,6 +10,7 @@
 
 typedef struct {
     const char                      *atom;
+    apg_atom_visibility_t            visibility;
     const apg_atom_contract_field_t *inputs;
     size_t                           inputs_len;
     const apg_atom_contract_field_t *outputs;
@@ -19,10 +20,6 @@ typedef struct {
 } apg_catalog_contract_t;
 
 #define FIELD_COUNT(fields) (sizeof(fields) / sizeof((fields)[0]))
-#define FIELD(name, type) \
-    { name, type, true }
-#define FIELD_OPT(name, type) \
-    { name, type, false }
 
 #include "atom_catalog_contracts.generated.inc"
 
@@ -79,6 +76,20 @@ static const char *contract_field_type_name(apg_atom_contract_field_type_t type)
     case APG_ATOM_FIELD_FLOAT_MATRIX:
         return "float_matrix";
     case APG_ATOM_FIELD_UNKNOWN:
+        break;
+    }
+    return "unknown";
+}
+
+static const char *visibility_name(apg_atom_visibility_t visibility) {
+    switch (visibility) {
+    case APG_ATOM_VISIBILITY_PUBLIC:
+        return "public";
+    case APG_ATOM_VISIBILITY_ADVANCED:
+        return "advanced";
+    case APG_ATOM_VISIBILITY_INTERNAL:
+        return "internal";
+    case APG_ATOM_VISIBILITY_UNKNOWN:
         break;
     }
     return "unknown";
@@ -152,6 +163,11 @@ bool apg_atom_known(const char *name) {
         return false;
     atom_registry_init();
     return atom_registry_find(name) != NULL;
+}
+
+apg_atom_visibility_t apg_atom_visibility(const char *name) {
+    const apg_catalog_contract_t *contract = name ? find_contract(name) : NULL;
+    return contract ? contract->visibility : APG_ATOM_VISIBILITY_UNKNOWN;
 }
 
 bool apg_atom_profile_supported(const char *name, const char *profile) {
@@ -271,7 +287,48 @@ static void write_catalog_fields(FILE *out, const apg_atom_contract_field_t *fie
         fputs("{\"name\":", out);
         write_json_string(out, fields[i].name);
         fputs(",\"type\":", out);
-        write_json_string(out, contract_field_type_name(fields[i].type));
+        write_json_string(
+            out, fields[i].parameter_type ? fields[i].parameter_type : contract_field_type_name(fields[i].type)
+        );
+        if (fields[i].default_json) {
+            fputs(",\"required\":", out);
+            fputs(fields[i].required ? "true" : "false", out);
+            fputs(",\"default\":", out);
+            fputs(fields[i].default_json, out);
+            if (fields[i].has_min)
+                fprintf(out, ",\"min\":%.17g", fields[i].min_value);
+            if (fields[i].has_max)
+                fprintf(out, ",\"max\":%.17g", fields[i].max_value);
+            if (fields[i].unit) {
+                fputs(",\"unit\":", out);
+                write_json_string(out, fields[i].unit);
+            }
+            if (fields[i].scale) {
+                fputs(",\"scale\":", out);
+                write_json_string(out, fields[i].scale);
+            }
+            fputs(",\"realtime\":", out);
+            fputs(fields[i].realtime ? "true" : "false", out);
+            if (fields[i].has_smoothing_ms)
+                fprintf(out, ",\"smoothing_ms\":%.17g", fields[i].smoothing_ms);
+            fputs(",\"structural\":", out);
+            fputs(fields[i].structural ? "true" : "false", out);
+            if (fields[i].options_len > 0u) {
+                fputs(",\"options\":[", out);
+                for (size_t option = 0u; option < fields[i].options_len; option++) {
+                    if (option > 0u)
+                        fputc(',', out);
+                    write_json_string(out, fields[i].options[option]);
+                }
+                fputs("],\"option_values\":[", out);
+                for (size_t option = 0u; option < fields[i].options_len; option++) {
+                    if (option > 0u)
+                        fputc(',', out);
+                    fprintf(out, "%d", fields[i].option_values[option]);
+                }
+                fputc(']', out);
+            }
+        }
         fputc('}', out);
     }
     fputc(']', out);
@@ -311,6 +368,8 @@ void apg_atom_catalog_write_json(FILE *out) {
         write_json_string(out, entry->name);
         fputs(",\"category\":", out);
         write_category(out, entry->name);
+        fputs(",\"visibility\":", out);
+        write_json_string(out, visibility_name(contract ? contract->visibility : APG_ATOM_VISIBILITY_UNKNOWN));
         fputs(",\"dispatch\":", out);
         write_json_string(out, dispatch_name(entry->dispatch));
         fprintf(
@@ -334,7 +393,7 @@ void apg_atom_catalog_write_json(FILE *out) {
         fputs(",\"outputs\":", out);
         write_catalog_fields(out, contract ? contract->outputs : NULL, contract ? contract->outputs_len : 0u);
         fputs(",\"config\":", out);
-        if (contract && contract->config_len > 0u)
+        if (contract)
             write_catalog_fields(out, contract->config, contract->config_len);
         else
             write_registry_fields(out, entry->config_fields, entry->n_config_fields);

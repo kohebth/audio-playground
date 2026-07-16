@@ -45,7 +45,8 @@
          "title" : "amplitude_accumulate",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -57,7 +58,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "threshold" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 1,
+                     "minimum" : -1,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -100,7 +108,8 @@
          "title" : "amplitude_latch",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -148,7 +157,8 @@
          "title" : "amplitude_add",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -160,7 +170,15 @@
                "additionalProperties" : false,
                "properties" : {
                   "threshold" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 4,
+                     "minimum" : 0.001,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -199,7 +217,8 @@
          "title" : "amplitude_clip_hard",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -211,10 +230,30 @@
                "additionalProperties" : false,
                "properties" : {
                   "curve" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0,
+                        1
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "cubic",
+                        "tanh"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "threshold" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 4,
+                     "minimum" : 0.001,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -254,7 +293,8 @@
          "title" : "amplitude_clip_soft",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -266,7 +306,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "epsilon" : {
-                     "type" : "number"
+                     "default" : 1e-06,
+                     "maximum" : 0.1,
+                     "minimum" : 1e-12,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -309,7 +356,8 @@
          "title" : "amplitude_divide",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -357,7 +405,8 @@
          "title" : "amplitude_multiply",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -369,10 +418,30 @@
                "additionalProperties" : false,
                "properties" : {
                   "mode" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0,
+                        1
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "peak",
+                        "rms"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "target_level" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 1,
+                     "minimum" : 0.001,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -412,7 +481,8 @@
          "title" : "amplitude_normalize",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -424,10 +494,22 @@
                "additionalProperties" : false,
                "properties" : {
                   "attack" : {
-                     "type" : "number"
+                     "default" : 0.01,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "release" : {
-                     "type" : "number"
+                     "default" : 0.1,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -467,7 +549,8 @@
          "title" : "amplitude_smooth",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -515,7 +598,8 @@
          "title" : "amplitude_subtract",
          "type" : "object",
          "x-apg-category" : "amplitude",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -527,10 +611,33 @@
                "additionalProperties" : false,
                "properties" : {
                   "delay_samples" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 191999,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "samples"
                   },
                   "interpolation" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0,
+                        1,
+                        2,
+                        3
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "linear",
+                        "cubic",
+                        "sinc",
+                        "lagrange"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -570,7 +677,8 @@
          "title" : "delay_fractional",
          "type" : "object",
          "x-apg-category" : "delay",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -582,7 +690,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "length" : {
-                     "type" : "integer"
+                     "default" : 1,
+                     "maximum" : 192000,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -621,7 +736,8 @@
          "title" : "delay_line",
          "type" : "object",
          "x-apg-category" : "delay",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -633,7 +749,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "coefficient" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 1,
+                     "minimum" : -1,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -676,7 +799,8 @@
          "title" : "delay_tap_feedback",
          "type" : "object",
          "x-apg-category" : "delay",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -688,7 +812,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "coefficient" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 1,
+                     "minimum" : -1,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -731,7 +862,8 @@
          "title" : "delay_tap_feedforward",
          "type" : "object",
          "x-apg-category" : "delay",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -775,7 +907,8 @@
          "title" : "delay_unit",
          "type" : "object",
          "x-apg-category" : "delay",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -787,7 +920,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "max_lag" : {
-                     "type" : "integer"
+                     "default" : 512,
+                     "maximum" : 1024,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -826,7 +966,8 @@
          "title" : "detect_autocorrelate",
          "type" : "object",
          "x-apg-category" : "detect",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -838,7 +979,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "max_lag" : {
-                     "type" : "integer"
+                     "default" : 512,
+                     "maximum" : 1024,
+                     "minimum" : 33,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -877,7 +1025,8 @@
          "title" : "detect_pitch",
          "type" : "object",
          "x-apg-category" : "detect",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -889,10 +1038,22 @@
                "additionalProperties" : false,
                "properties" : {
                   "attack" : {
-                     "type" : "number"
+                     "default" : 0.01,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "release" : {
-                     "type" : "number"
+                     "default" : 0.1,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -932,7 +1093,8 @@
          "title" : "detect_envelope",
          "type" : "object",
          "x-apg-category" : "detect",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -944,10 +1106,22 @@
                "additionalProperties" : false,
                "properties" : {
                   "attack" : {
-                     "type" : "number"
+                     "default" : 0.01,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "release" : {
-                     "type" : "number"
+                     "default" : 0.1,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -987,7 +1161,8 @@
          "title" : "detect_peak",
          "type" : "object",
          "x-apg-category" : "detect",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -999,7 +1174,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "window_size" : {
-                     "type" : "integer"
+                     "default" : 256,
+                     "maximum" : 4096,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1038,7 +1220,8 @@
          "title" : "detect_rms",
          "type" : "object",
          "x-apg-category" : "detect",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -1082,7 +1265,8 @@
          "title" : "detect_slope",
          "type" : "object",
          "x-apg-category" : "detect",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -1094,7 +1278,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "threshold" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 1,
+                     "minimum" : -1,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -1133,7 +1324,8 @@
          "title" : "detect_threshold",
          "type" : "object",
          "x-apg-category" : "detect",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -1177,7 +1369,8 @@
          "title" : "detect_zero_crossing",
          "type" : "object",
          "x-apg-category" : "detect",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1189,10 +1382,24 @@
                "additionalProperties" : false,
                "properties" : {
                   "coefficient" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 0.999,
+                     "minimum" : -0.999,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "delay_samples" : {
-                     "type" : "integer"
+                     "default" : 1,
+                     "maximum" : 47999,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1232,7 +1439,8 @@
          "title" : "filter_allpass",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1244,19 +1452,54 @@
                "additionalProperties" : false,
                "properties" : {
                   "a1" : {
-                     "type" : "number"
+                     "default" : 0,
+                     "maximum" : 2,
+                     "minimum" : -2,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "a2" : {
-                     "type" : "number"
+                     "default" : 0,
+                     "maximum" : 2,
+                     "minimum" : -2,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "b0" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 4,
+                     "minimum" : -4,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "b1" : {
-                     "type" : "number"
+                     "default" : 0,
+                     "maximum" : 4,
+                     "minimum" : -4,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "b2" : {
-                     "type" : "number"
+                     "default" : 0,
+                     "maximum" : 4,
+                     "minimum" : -4,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -1299,7 +1542,8 @@
          "title" : "filter_biquad_coefficients",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1311,16 +1555,57 @@
                "additionalProperties" : false,
                "properties" : {
                   "cutoff" : {
-                     "type" : "number"
+                     "default" : 1000,
+                     "maximum" : 20000,
+                     "minimum" : 20,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-smoothing-ms" : 10,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "hz"
                   },
                   "mode" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0,
+                        1,
+                        2,
+                        3
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "lowpass",
+                        "highpass",
+                        "bandpass",
+                        "notch"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "q" : {
-                     "type" : "number"
+                     "default" : 0.707,
+                     "maximum" : 20,
+                     "minimum" : 0.05,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-smoothing-ms" : 10,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "smoothing_ms" : {
-                     "type" : "number"
+                     "default" : 10,
+                     "maximum" : 1000,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ms"
                   }
                },
                "required" : [
@@ -1365,7 +1650,8 @@
          "title" : "filter_biquad",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -1377,10 +1663,24 @@
                "additionalProperties" : false,
                "properties" : {
                   "coefficient" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 0.999,
+                     "minimum" : -0.999,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "delay_samples" : {
-                     "type" : "integer"
+                     "default" : 1,
+                     "maximum" : 47999,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1423,7 +1723,8 @@
          "title" : "filter_comb_fb",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1435,10 +1736,24 @@
                "additionalProperties" : false,
                "properties" : {
                   "coefficient" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 4,
+                     "minimum" : -4,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "delay_samples" : {
-                     "type" : "integer"
+                     "default" : 1,
+                     "maximum" : 47999,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1478,7 +1793,8 @@
          "title" : "filter_comb_ff",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1490,7 +1806,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "coefficient" : {
-                     "type" : "number"
+                     "default" : 0.995,
+                     "maximum" : 0.99999,
+                     "minimum" : 0.9,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -1529,7 +1852,8 @@
          "title" : "filter_dc_block",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -1573,7 +1897,8 @@
          "title" : "filter_differentiate",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -1585,10 +1910,21 @@
                "additionalProperties" : false,
                "properties" : {
                   "kernel" : {
-                     "type" : "string"
+                     "default" : "",
+                     "type" : "string",
+                     "x-apg-field-type" : "buffer",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true
                   },
                   "kernel_size" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "maximum" : 1024,
+                     "minimum" : 0,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1628,7 +1964,8 @@
          "title" : "filter_fir",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1672,7 +2009,8 @@
          "title" : "filter_integrate",
          "type" : "object",
          "x-apg-category" : "filter",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -1684,7 +2022,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "block_size" : {
-                     "type" : "integer"
+                     "default" : 512,
+                     "maximum" : 16384,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1727,7 +2072,8 @@
          "title" : "freq_fft",
          "type" : "object",
          "x-apg-category" : "freq",
-         "x-apg-dispatch" : "fft"
+         "x-apg-dispatch" : "fft",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1739,7 +2085,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "block_size" : {
-                     "type" : "integer"
+                     "default" : 512,
+                     "maximum" : 16384,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1782,7 +2135,8 @@
          "title" : "freq_ifft",
          "type" : "object",
          "x-apg-category" : "freq",
-         "x-apg-dispatch" : "ifft"
+         "x-apg-dispatch" : "ifft",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1794,7 +2148,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "block_size" : {
-                     "type" : "integer"
+                     "default" : 512,
+                     "maximum" : 16384,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1849,7 +2210,8 @@
          "title" : "freq_multiply",
          "type" : "object",
          "x-apg-category" : "freq",
-         "x-apg-dispatch" : "multiply"
+         "x-apg-dispatch" : "multiply",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -1861,10 +2223,24 @@
                "additionalProperties" : false,
                "properties" : {
                   "block_size" : {
-                     "type" : "integer"
+                     "default" : 512,
+                     "maximum" : 16384,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   },
                   "hop_size" : {
-                     "type" : "integer"
+                     "default" : 256,
+                     "maximum" : 16384,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1904,7 +2280,8 @@
          "title" : "freq_overlap_add",
          "type" : "object",
          "x-apg-category" : "freq",
-         "x-apg-dispatch" : "overlap_add"
+         "x-apg-dispatch" : "overlap_add",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -1916,10 +2293,24 @@
                "additionalProperties" : false,
                "properties" : {
                   "block_size" : {
-                     "type" : "integer"
+                     "default" : 512,
+                     "maximum" : 16384,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   },
                   "hop_size" : {
-                     "type" : "integer"
+                     "default" : 256,
+                     "maximum" : 16384,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -1959,7 +2350,8 @@
          "title" : "freq_overlap_save",
          "type" : "object",
          "x-apg-category" : "freq",
-         "x-apg-dispatch" : "overlap_save"
+         "x-apg-dispatch" : "overlap_save",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -1971,10 +2363,33 @@
                "additionalProperties" : false,
                "properties" : {
                   "block_size" : {
-                     "type" : "integer"
+                     "default" : 512,
+                     "maximum" : 16384,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   },
                   "window_type" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0,
+                        1,
+                        2,
+                        3
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "hann",
+                        "hamming",
+                        "blackman",
+                        "rectangular"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -2014,7 +2429,8 @@
          "title" : "freq_window",
          "type" : "object",
          "x-apg-category" : "freq",
-         "x-apg-dispatch" : "window"
+         "x-apg-dispatch" : "window",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -2026,7 +2442,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "block_size" : {
-                     "type" : "integer"
+                     "default" : 1024,
+                     "maximum" : 16384,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -2068,7 +2491,8 @@
          "title" : "freq_shift",
          "type" : "object",
          "x-apg-category" : "freq",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -2080,7 +2504,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "value" : {
-                     "type" : "number"
+                     "default" : 0,
+                     "maximum" : 4,
+                     "minimum" : -4,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -2112,7 +2543,8 @@
          "title" : "generation_dc",
          "type" : "object",
          "x-apg-category" : "generation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -2124,16 +2556,41 @@
                "additionalProperties" : false,
                "properties" : {
                   "attack" : {
-                     "type" : "number"
+                     "default" : 0.01,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "decay" : {
-                     "type" : "number"
+                     "default" : 0.1,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "release" : {
-                     "type" : "number"
+                     "default" : 0.2,
+                     "maximum" : 60,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   },
                   "sustain" : {
-                     "type" : "number"
+                     "default" : 0.7,
+                     "maximum" : 1,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -2175,7 +2632,8 @@
          "title" : "generation_envelope",
          "type" : "object",
          "x-apg-category" : "generation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -2187,7 +2645,13 @@
                "additionalProperties" : false,
                "properties" : {
                   "interval" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 3600,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -2219,7 +2683,8 @@
          "title" : "generation_impulse",
          "type" : "object",
          "x-apg-category" : "generation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -2231,13 +2696,44 @@
                "additionalProperties" : false,
                "properties" : {
                   "frequency" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 20,
+                     "minimum" : 0.001,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "hz"
                   },
                   "phase_offset" : {
-                     "type" : "number"
+                     "default" : 0,
+                     "maximum" : 1,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "waveform" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0,
+                        1,
+                        2,
+                        3
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "sine",
+                        "saw",
+                        "square",
+                        "triangle"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -2271,7 +2767,8 @@
          "title" : "generation_lfo",
          "type" : "object",
          "x-apg-category" : "generation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -2283,10 +2780,31 @@
                "additionalProperties" : false,
                "properties" : {
                   "amplitude" : {
-                     "type" : "number"
+                     "default" : 0.2,
+                     "maximum" : 1,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "color" : {
-                     "type" : "integer"
+                     "default" : 4,
+                     "enum" : [
+                        4,
+                        5,
+                        6
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "white",
+                        "pink",
+                        "brown"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -2319,7 +2837,8 @@
          "title" : "generation_noise",
          "type" : "object",
          "x-apg-category" : "generation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -2331,13 +2850,44 @@
                "additionalProperties" : false,
                "properties" : {
                   "frequency" : {
-                     "type" : "number"
+                     "default" : 440,
+                     "maximum" : 20000,
+                     "minimum" : 0.01,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "hz"
                   },
                   "phase_offset" : {
-                     "type" : "number"
+                     "default" : 0,
+                     "maximum" : 1,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   },
                   "waveform" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0,
+                        1,
+                        2,
+                        3
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "sine",
+                        "saw",
+                        "square",
+                        "triangle"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -2375,7 +2925,8 @@
          "title" : "generation_oscillator",
          "type" : "object",
          "x-apg-category" : "generation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -2435,7 +2986,8 @@
          "title" : "interpolation_cubic",
          "type" : "object",
          "x-apg-category" : "interpolation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -2447,7 +2999,13 @@
                "additionalProperties" : false,
                "properties" : {
                   "order" : {
-                     "type" : "integer"
+                     "default" : 3,
+                     "maximum" : 16,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true
                   }
                },
                "required" : [
@@ -2490,7 +3048,8 @@
          "title" : "interpolation_lagrange",
          "type" : "object",
          "x-apg-category" : "interpolation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -2542,7 +3101,8 @@
          "title" : "interpolation_linear",
          "type" : "object",
          "x-apg-category" : "interpolation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -2554,7 +3114,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "num_taps" : {
-                     "type" : "integer"
+                     "default" : 32,
+                     "maximum" : 128,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -2597,7 +3164,8 @@
          "title" : "interpolation_sinc",
          "type" : "object",
          "x-apg-category" : "interpolation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -2609,7 +3177,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "t" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 1,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -2652,7 +3227,8 @@
          "title" : "mix_crossfade",
          "type" : "object",
          "x-apg-category" : "mix",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -2704,7 +3280,8 @@
          "title" : "mix_decode_ms",
          "type" : "object",
          "x-apg-category" : "mix",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -2756,7 +3333,8 @@
          "title" : "mix_encode_ms",
          "type" : "object",
          "x-apg-category" : "mix",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -2768,6 +3346,11 @@
                "additionalProperties" : false,
                "properties" : {
                   "coefficients" : {
+                     "default" : [
+                        [
+                           1
+                        ]
+                     ],
                      "items" : {
                         "items" : {
                            "type" : "number"
@@ -2776,7 +3359,10 @@
                         "type" : "array"
                      },
                      "minItems" : 1,
-                     "type" : "array"
+                     "type" : "array",
+                     "x-apg-field-type" : "float_matrix",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true
                   }
                },
                "required" : [
@@ -2823,7 +3409,8 @@
          "title" : "mix_matrix",
          "type" : "object",
          "x-apg-category" : "mix",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -2835,7 +3422,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "position" : {
-                     "type" : "number"
+                     "default" : 0,
+                     "maximum" : 1,
+                     "minimum" : -1,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -2878,7 +3472,8 @@
          "title" : "mix_pan_stereo",
          "type" : "object",
          "x-apg-category" : "mix",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -2890,7 +3485,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "mix" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 1,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -2933,7 +3535,8 @@
          "title" : "mix_wet_dry",
          "type" : "object",
          "x-apg-category" : "mix",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -2945,7 +3548,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "depth" : {
-                     "type" : "number"
+                     "default" : 0.5,
+                     "maximum" : 2,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -2988,7 +3598,8 @@
          "title" : "modulation_amplitude",
          "type" : "object",
          "x-apg-category" : "modulation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -3000,7 +3611,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "depth" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 4094,
+                     "minimum" : -4094,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -3043,7 +3661,8 @@
          "title" : "modulation_frequency",
          "type" : "object",
          "x-apg-category" : "modulation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -3055,7 +3674,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "depth" : {
-                     "type" : "number"
+                     "default" : 1,
+                     "maximum" : 4094,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -3098,7 +3724,8 @@
          "title" : "modulation_phase",
          "type" : "object",
          "x-apg-category" : "modulation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -3146,7 +3773,8 @@
          "title" : "modulation_ring",
          "type" : "object",
          "x-apg-category" : "modulation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -3158,7 +3786,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "buffer_size" : {
-                     "type" : "integer"
+                     "default" : 1024,
+                     "maximum" : 192000,
+                     "minimum" : 1,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -3201,7 +3836,8 @@
          "title" : "modulation_scrub",
          "type" : "object",
          "x-apg-category" : "modulation",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -3213,7 +3849,13 @@
                "additionalProperties" : false,
                "properties" : {
                   "bit_depth" : {
-                     "type" : "number"
+                     "default" : 8,
+                     "maximum" : 24,
+                     "minimum" : 1,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
                   }
                },
                "required" : [
@@ -3252,7 +3894,8 @@
          "title" : "nonlinear_bitcrush",
          "type" : "object",
          "x-apg-category" : "nonlinear",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -3264,7 +3907,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "factor" : {
-                     "type" : "number"
+                     "default" : 4,
+                     "maximum" : 1024,
+                     "minimum" : 1,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "samples"
                   }
                },
                "required" : [
@@ -3303,7 +3953,8 @@
          "title" : "nonlinear_sample_hold",
          "type" : "object",
          "x-apg-category" : "nonlinear",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -3315,10 +3966,21 @@
                "additionalProperties" : false,
                "properties" : {
                   "table_size" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "maximum" : 65536,
+                     "minimum" : 0,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "samples"
                   },
                   "transfer_table" : {
-                     "type" : "string"
+                     "default" : "",
+                     "type" : "string",
+                     "x-apg-field-type" : "buffer",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true
                   }
                },
                "required" : [
@@ -3358,7 +4020,8 @@
          "title" : "nonlinear_waveshape",
          "type" : "object",
          "x-apg-category" : "nonlinear",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "public"
       },
       {
          "additionalProperties" : false,
@@ -3370,7 +4033,15 @@
                "additionalProperties" : false,
                "properties" : {
                   "cutoff" : {
-                     "type" : "number"
+                     "default" : 20000,
+                     "maximum" : 20000,
+                     "minimum" : 20,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "hz"
                   }
                },
                "required" : [
@@ -3409,7 +4080,8 @@
          "title" : "src_antialias",
          "type" : "object",
          "x-apg-category" : "src",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -3421,7 +4093,15 @@
                "additionalProperties" : false,
                "properties" : {
                   "cutoff" : {
-                     "type" : "number"
+                     "default" : 20000,
+                     "maximum" : 20000,
+                     "minimum" : 20,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "hz"
                   }
                },
                "required" : [
@@ -3460,7 +4140,8 @@
          "title" : "src_antiimage",
          "type" : "object",
          "x-apg-category" : "src",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -3472,10 +4153,30 @@
                "additionalProperties" : false,
                "properties" : {
                   "from_format" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "float32"
+                     ],
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true
                   },
                   "to_format" : {
-                     "type" : "integer"
+                     "default" : 0,
+                     "enum" : [
+                        0
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "float32"
+                     ],
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true
                   }
                },
                "required" : [
@@ -3515,7 +4216,8 @@
          "title" : "src_convert_format",
          "type" : "object",
          "x-apg-category" : "src",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       },
       {
          "additionalProperties" : false,
@@ -3527,7 +4229,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "factor" : {
-                     "type" : "integer"
+                     "default" : 2,
+                     "maximum" : 64,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -3566,7 +4275,8 @@
          "title" : "src_downsample",
          "type" : "object",
          "x-apg-category" : "src",
-         "x-apg-dispatch" : "stream"
+         "x-apg-dispatch" : "stream",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -3578,7 +4288,14 @@
                "additionalProperties" : false,
                "properties" : {
                   "factor" : {
-                     "type" : "integer"
+                     "default" : 2,
+                     "maximum" : 64,
+                     "minimum" : 2,
+                     "type" : "integer",
+                     "x-apg-field-type" : "int",
+                     "x-apg-realtime" : false,
+                     "x-apg-structural" : true,
+                     "x-apg-unit" : "ratio"
                   }
                },
                "required" : [
@@ -3617,7 +4334,8 @@
          "title" : "src_upsample",
          "type" : "object",
          "x-apg-category" : "src",
-         "x-apg-dispatch" : "stream"
+         "x-apg-dispatch" : "stream",
+         "x-apg-visibility" : "internal"
       },
       {
          "additionalProperties" : false,
@@ -3661,7 +4379,8 @@
          "title" : "freq_quantize",
          "type" : "object",
          "x-apg-category" : "freq",
-         "x-apg-dispatch" : "process"
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
       }
    ],
    "title" : "Audio Playground Atom Binding"

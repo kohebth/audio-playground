@@ -1,5 +1,5 @@
 import type { UnitConfig, Stage, KV } from '../types';
-import { ATOM_CATALOG, ATOM_MAP } from '../atoms/atomCatalog';
+import { ATOM_MAP, PUBLIC_ATOM_CATALOG } from '../atoms/atomCatalog';
 
 type Props = {
   unit: UnitConfig;
@@ -23,6 +23,9 @@ export function Inspector({ unit, selectedId, onChange }: Props) {
   }
 
   const atomDef = ATOM_MAP.get(stage.fn);
+  const functionOptions = atomDef && atomDef.visibility !== 'public'
+    ? [atomDef, ...PUBLIC_ATOM_CATALOG]
+    : PUBLIC_ATOM_CATALOG;
 
   const setField = (field: keyof Stage, kvs: KV[]) =>
     onChange(updateStage(unit, stage.id, { [field]: kvs }));
@@ -60,7 +63,8 @@ export function Inspector({ unit, selectedId, onChange }: Props) {
           value={stage.fn}
           onChange={e => onChange(updateStage(unit, stage.id, { fn: e.target.value }))}
         >
-          {ATOM_CATALOG.map(a => (
+          {!atomDef ? <option value={stage.fn}>{stage.fn}</option> : null}
+          {functionOptions.map(a => (
             <option key={a.name} value={a.name}>{a.name}</option>
           ))}
         </select>

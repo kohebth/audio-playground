@@ -100,11 +100,24 @@ export type AtomCatalogField = {
   name: string;
   type: string;
   buffer_samples?: number;
+  required?: boolean;
+  default?: number | boolean | string | number[] | number[][];
+  min?: number;
+  max?: number;
+  unit?: 'hz' | 'ms' | 'db' | 'ratio' | 'samples';
+  scale?: 'linear' | 'logarithmic';
+  realtime?: boolean;
+  smoothing_ms?: number;
+  structural?: boolean;
+  options?: string[];
+  option_values?: number[];
 };
 
 export type AtomCatalogAtom = {
   name: string;
   category: string;
+  visibility: 'public' | 'advanced' | 'internal';
+  dispatch: string;
   stateful: boolean;
   profiles: Compatibility;
   inputs: AtomCatalogField[];

@@ -7,6 +7,7 @@ use File::Basename qw(dirname);
 use File::Path qw(make_path);
 use File::Spec;
 use JSON::PP qw(decode_json);
+use Scalar::Util qw(looks_like_number);
 
 sub usage {
     die "usage: $0 [--check] <atom-schema.json> <output-root>\n";
@@ -97,6 +98,10 @@ my %allowed_dispatch = map { $_ => 1 }
     ('PROCESS', 'FFT', 'IFFT', 'MULTIPLY', 'WINDOW', 'OVERLAP_ADD', 'OVERLAP_SAVE', 'STREAM');
 my %allowed_capability = map { $_ => 1 } ('PORTABLE', 'WASM', 'WASM_ANTIALIASED', 'EXPERIMENTAL');
 my %allowed_maturity = map { $_ => 1 } ('SAFE_SCALAR', 'MUSICAL', 'EXPERIMENTAL');
+my %allowed_visibility = map { $_ => 1 } ('public', 'advanced', 'internal');
+my %allowed_parameter_type = map { $_ => 1 } ('float', 'int', 'bool', 'enum', 'buffer', 'float_matrix');
+my %allowed_parameter_unit = map { $_ => 1 } ('hz', 'ms', 'db', 'ratio', 'samples');
+my %allowed_parameter_scale = map { $_ => 1 } ('linear', 'logarithmic');
 
 sub validate_c_fields {
     my ($fields, $label, $role) = @_;
@@ -270,6 +275,26 @@ for my $family (@$families) {
     die "family $family->{name} has no atoms\n" unless $atoms_by_family{$family->{name}};
 }
 
+my $visibility_groups = require_hash($document->{visibility_groups}, 'visibility_groups');
+my %atom_visibility;
+for my $visibility (sort keys %$visibility_groups) {
+    die "unsupported visibility group $visibility\n" unless $allowed_visibility{$visibility};
+    my $names = require_array($visibility_groups->{$visibility}, "$visibility visibility group");
+    for my $name (@$names) {
+        require_name($name, "$visibility atom", qr/\A[a-z][a-z0-9_]*\z/);
+        die "$visibility visibility references unknown atom $name\n" unless $atom_by_name{$name};
+        die "atom $name has duplicate visibility\n" if exists $atom_visibility{$name};
+        $atom_visibility{$name} = $visibility;
+    }
+}
+for my $atom (@$atoms) {
+    my $visibility = $atom_visibility{$atom->{name}};
+    die "$atom->{name} has no visibility\n" unless defined $visibility;
+    $atom->{visibility} = $visibility;
+}
+
+my $parameter_metadata = require_hash($document->{parameter_metadata}, 'parameter_metadata');
+
 my %capability_expression = (
     PORTABLE => 'APG_ATOM_FLAGS_PORTABLE',
     WASM => 'APG_ATOM_FLAGS_WASM',
@@ -314,15 +339,162 @@ sub catalog_config_fields {
                 name => $field->{name},
                 type => $field->{catalog}{type},
                 required => $field->{catalog}{required} ? 1 : 0,
+                metadata => $field->{parameter_metadata},
             };
             next;
         }
         next unless exists $field->{descriptor};
         my $type = $descriptor_contract_type{$field->{descriptor}{field_type}}
             or die "$atom->{name} config field $field->{name} cannot map to a catalog type\n";
-        push @result, {name => $field->{name}, type => $type, required => 1};
+        push @result, {
+            name => $field->{name},
+            type => $type,
+            required => 1,
+            metadata => $field->{parameter_metadata},
+        };
     }
     return \@result;
+}
+
+sub inferred_parameter_type {
+    my ($contract_type) = @_;
+    return 'float' if $contract_type eq 'float' || $contract_type eq 'scalar';
+    return $contract_type if $contract_type eq 'int' || $contract_type eq 'buffer' || $contract_type eq 'float_matrix';
+    die "cannot infer parameter type from contract type $contract_type\n";
+}
+
+sub validate_float_matrix {
+    my ($value, $label) = @_;
+    my $rows = require_array($value, $label);
+    die "$label must not be empty\n" unless @$rows;
+    for my $row (@$rows) {
+        my $values = require_array($row, "$label row");
+        die "$label rows must not be empty\n" unless @$values;
+        for my $item (@$values) {
+            die "$label values must be numbers\n" if ref($item) || !looks_like_number($item);
+        }
+    }
+}
+
+sub validate_parameter_metadata {
+    my ($key, $metadata, $contract_type) = @_;
+    require_hash($metadata, "$key parameter metadata");
+    my %allowed_key = map { $_ => 1 }
+        qw(default type min max unit scale realtime smoothing_ms structural options option_values);
+    for my $name (keys %$metadata) {
+        die "$key parameter metadata has unsupported key $name\n" unless $allowed_key{$name};
+    }
+
+    die "$key parameter metadata requires default\n" unless exists $metadata->{default};
+    for my $name (qw(realtime structural)) {
+        die "$key parameter metadata requires boolean $name\n"
+            unless exists $metadata->{$name} && JSON::PP::is_bool($metadata->{$name});
+    }
+    die "$key structural parameter cannot be realtime\n"
+        if $metadata->{structural} && $metadata->{realtime};
+
+    my $base_type = inferred_parameter_type($contract_type);
+    my $type = $metadata->{type} // $base_type;
+    die "$key parameter metadata has unsupported type $type\n" unless $allowed_parameter_type{$type};
+    my $compatible =
+        ($type eq $base_type) ||
+        (($type eq 'enum' || $type eq 'bool') && $base_type eq 'int');
+    die "$key parameter type $type is incompatible with contract type $contract_type\n" unless $compatible;
+
+    my $default = $metadata->{default};
+    if ($type eq 'float') {
+        die "$key default must be a number\n" if ref($default) || !looks_like_number($default);
+    } elsif ($type eq 'int' || $type eq 'enum') {
+        die "$key default must be an integer\n"
+            if ref($default) || !looks_like_number($default) || int($default) != $default;
+    } elsif ($type eq 'bool') {
+        die "$key default must be a boolean\n" unless JSON::PP::is_bool($default);
+    } elsif ($type eq 'buffer') {
+        die "$key buffer default must be a string binding\n" if !defined($default) || ref($default);
+    } elsif ($type eq 'float_matrix') {
+        validate_float_matrix($default, "$key default");
+    }
+
+    for my $name (qw(min max smoothing_ms)) {
+        next unless exists $metadata->{$name};
+        die "$key $name must be a number\n"
+            if ref($metadata->{$name}) || !looks_like_number($metadata->{$name});
+    }
+    die "$key min/max are only valid for numeric parameters\n"
+        if (exists($metadata->{min}) || exists($metadata->{max})) &&
+            $type ne 'float' && $type ne 'int' && $type ne 'enum';
+    die "$key min exceeds max\n"
+        if exists($metadata->{min}) && exists($metadata->{max}) && $metadata->{min} > $metadata->{max};
+    die "$key default is below min\n"
+        if !ref($default) && looks_like_number($default) && exists($metadata->{min}) && $default < $metadata->{min};
+    die "$key default is above max\n"
+        if !ref($default) && looks_like_number($default) && exists($metadata->{max}) && $default > $metadata->{max};
+    die "$key smoothing_ms must be non-negative\n"
+        if exists($metadata->{smoothing_ms}) && $metadata->{smoothing_ms} < 0;
+    die "$key smoothing_ms is only valid for realtime parameters\n"
+        if exists($metadata->{smoothing_ms}) && !$metadata->{realtime};
+
+    if (exists $metadata->{unit}) {
+        die "$key has unsupported unit $metadata->{unit}\n" unless $allowed_parameter_unit{$metadata->{unit}};
+    }
+    if (exists $metadata->{scale}) {
+        die "$key has unsupported scale $metadata->{scale}\n" unless $allowed_parameter_scale{$metadata->{scale}};
+        die "$key logarithmic scale requires a positive min\n"
+            if $metadata->{scale} eq 'logarithmic' &&
+                (!exists($metadata->{min}) || $metadata->{min} <= 0);
+    }
+
+    if ($type eq 'enum') {
+        my $options = require_array($metadata->{options}, "$key options");
+        die "$key enum options must not be empty\n" unless @$options;
+        my %seen_option;
+        for my $option (@$options) {
+            die "$key enum option must be a non-empty string\n"
+                if !defined($option) || ref($option) || $option eq '';
+            die "$key has duplicate enum option $option\n" if $seen_option{$option}++;
+        }
+        my $values = $metadata->{option_values};
+        if (defined $values) {
+            require_array($values, "$key option_values");
+            die "$key option_values length differs from options\n" unless @$values == @$options;
+        } else {
+            $values = [0 .. $#$options];
+        }
+        my %seen_value;
+        for my $value (@$values) {
+            die "$key enum option value must be an integer\n"
+                if ref($value) || !looks_like_number($value) || int($value) != $value;
+            die "$key has duplicate enum option value $value\n" if $seen_value{$value}++;
+        }
+        die "$key enum default is not an option value\n" unless $seen_value{$default};
+        $metadata->{option_values} = $values;
+    } elsif (exists($metadata->{options}) || exists($metadata->{option_values})) {
+        die "$key options are only valid for enum parameters\n";
+    }
+
+    $metadata->{type} = $type;
+    return $metadata;
+}
+
+my %expected_parameter_metadata;
+for my $atom (@$atoms) {
+    for my $field (@{catalog_config_fields($atom)}) {
+        my $key = "$atom->{name}.$field->{name}";
+        die "duplicate exposed parameter $key\n" if $expected_parameter_metadata{$key};
+        my $metadata = $parameter_metadata->{$key};
+        die "$key has no parameter metadata\n" unless defined $metadata;
+        $expected_parameter_metadata{$key} = 1;
+        my $validated = validate_parameter_metadata($key, $metadata, $field->{type});
+        for my $source_field (@{$atom->{params}}) {
+            if ($source_field->{name} eq $field->{name}) {
+                $source_field->{parameter_metadata} = $validated;
+                last;
+            }
+        }
+    }
+}
+for my $key (sort keys %$parameter_metadata) {
+    die "parameter metadata references unexposed field $key\n" unless $expected_parameter_metadata{$key};
 }
 
 sub profile_catalog_fields {
@@ -525,13 +697,88 @@ sub render_field_descriptors {
     return join("\n", @lines) . "\n";
 }
 
+my $canonical_json = JSON::PP->new->canonical(1)->allow_nonref(1);
+
+sub json_literal {
+    my ($value) = @_;
+    return $canonical_json->encode($value);
+}
+
+sub c_quote {
+    my ($value) = @_;
+    $value =~ s/\\/\\\\/g;
+    $value =~ s/"/\\"/g;
+    $value =~ s/\n/\\n/g;
+    $value =~ s/\r/\\r/g;
+    $value =~ s/\t/\\t/g;
+    return qq{"$value"};
+}
+
+sub c_bool {
+    my ($value) = @_;
+    return $value ? 'true' : 'false';
+}
+
+sub c_optional_string {
+    my ($value) = @_;
+    return defined($value) ? c_quote($value) : 'NULL';
+}
+
 sub render_catalog_array {
     my ($name, $fields) = @_;
     return () unless @$fields;
-    my @lines = ("static const apg_atom_contract_field_t $name\[\] = {");
+    my @lines;
+    my %option_arrays;
     for my $field (@$fields) {
-        my $macro = $field->{required} ? 'FIELD' : 'FIELD_OPT';
-        push @lines, qq{    $macro("$field->{name}", $contract_enum{$field->{type}}),};
+        my $metadata = $field->{metadata};
+        next unless $metadata && $metadata->{type} eq 'enum';
+        my $prefix = "${name}_$field->{name}";
+        my $labels = join(', ', map { c_quote($_) } @{$metadata->{options}});
+        my $values = join(', ', @{$metadata->{option_values}});
+        push @lines,
+            "static const char *const ${prefix}_options\[\] = {$labels};",
+            "static const int ${prefix}_option_values\[\] = {$values};";
+        $option_arrays{$field->{name}} = $prefix;
+    }
+    push @lines, '' if @lines;
+    push @lines, "static const apg_atom_contract_field_t $name\[\] = {";
+    for my $field (@$fields) {
+        my $required = c_bool($field->{required});
+        my $metadata = $field->{metadata};
+        if (!$metadata) {
+            push @lines, sprintf(
+                '    {%s, %s, %s},', c_quote($field->{name}), $contract_enum{$field->{type}}, $required
+            );
+            next;
+        }
+        my $has_min = exists $metadata->{min};
+        my $has_max = exists $metadata->{max};
+        my $has_smoothing = exists $metadata->{smoothing_ms};
+        my $prefix = $option_arrays{$field->{name}};
+        my $options = $prefix ? "${prefix}_options" : 'NULL';
+        my $option_values = $prefix ? "${prefix}_option_values" : 'NULL';
+        my $options_len = $prefix ? 'FIELD_COUNT(' . $options . ')' : '0u';
+        push @lines, sprintf(
+            '    {%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s},',
+            c_quote($field->{name}),
+            $contract_enum{$field->{type}},
+            $required,
+            c_quote($metadata->{type}),
+            c_quote(json_literal($metadata->{default})),
+            c_bool($has_min),
+            $has_min ? $metadata->{min} : '0.0',
+            c_bool($has_max),
+            $has_max ? $metadata->{max} : '0.0',
+            c_optional_string($metadata->{unit}),
+            c_optional_string($metadata->{scale}),
+            c_bool($metadata->{realtime}),
+            c_bool($has_smoothing),
+            $has_smoothing ? $metadata->{smoothing_ms} : '0.0',
+            c_bool($metadata->{structural}),
+            $options,
+            $option_values,
+            $options_len,
+        );
     }
     push @lines, '};', '';
     return @lines;
@@ -554,7 +801,8 @@ sub render_catalog_contracts {
             $arrays{$kind} = @$fields ? "$array_name, FIELD_COUNT($array_name)" : 'NULL, 0u';
         }
         push @rows, sprintf(
-            '    {"%s", %s, %s, %s},', $atom->{name}, $arrays{inputs}, $arrays{outputs}, $arrays{config}
+            '    {"%s", APG_ATOM_VISIBILITY_%s, %s, %s, %s},',
+            $atom->{name}, uc($atom->{visibility}), $arrays{inputs}, $arrays{outputs}, $arrays{config}
         );
     }
     push @lines, 'static const apg_catalog_contract_t catalog_contracts[] = {', @rows, '};';
@@ -563,13 +811,7 @@ sub render_catalog_contracts {
 
 sub ts_quote_list {
     my ($values) = @_;
-    return '[' . join(', ', map { "'$_'" } @$values) . ']';
-}
-
-sub ts_config_type {
-    my ($contract_type) = @_;
-    return 'float' if $contract_type eq 'float' || $contract_type eq 'scalar';
-    return $contract_type;
+    return '[' . join(', ', map { json_literal($_) } @$values) . ']';
 }
 
 sub render_typescript_catalog {
@@ -580,11 +822,29 @@ sub render_typescript_catalog {
     my @lines = (
         generated_ts_banner($source),
         '',
-        "export type FieldDef = { name: string; type: 'float' | 'int' | 'enum' | 'buffer' | 'float_matrix'; required: boolean; options?: string[] };",
+        "export type AtomVisibility = 'public' | 'advanced' | 'internal';",
+        "export type ParameterValue = number | boolean | string | number[] | number[][];",
+        '',
+        'export type FieldDef = {',
+        '  name: string;',
+        "  type: 'float' | 'int' | 'bool' | 'enum' | 'buffer' | 'float_matrix';",
+        '  required: boolean;',
+        '  default: ParameterValue;',
+        '  min?: number;',
+        '  max?: number;',
+        "  unit?: 'hz' | 'ms' | 'db' | 'ratio' | 'samples';",
+        "  scale?: 'linear' | 'logarithmic';",
+        '  realtime: boolean;',
+        '  smoothingMs?: number;',
+        '  structural: boolean;',
+        '  options?: string[];',
+        '  optionValues?: number[];',
+        '};',
         '',
         'export type AtomDef = {',
         '  name: string;',
         "  category: $category_union;",
+        '  visibility: AtomVisibility;',
         "  dispatch: 'process' | 'fft' | 'ifft' | 'multiply' | 'window' | 'overlap_add' | 'overlap_save' | 'stream';",
         '  ins: string[];',
         '  outs: string[];',
@@ -598,15 +858,30 @@ sub render_typescript_catalog {
         my $output = profile_catalog_fields($profile_by_name{$atom->{output_profile}});
         my $config = catalog_config_fields($atom);
         my @config_items = map {
-            sprintf(
-                "{ name: '%s', type: '%s', required: %s }",
-                $_->{name}, ts_config_type($_->{type}), $_->{required} ? 'true' : 'false'
-            )
+            my $metadata = $_->{metadata};
+            my @parts = (
+                'name: ' . json_literal($_->{name}),
+                'type: ' . json_literal($metadata->{type}),
+                'required: ' . ($_->{required} ? 'true' : 'false'),
+                'default: ' . json_literal($metadata->{default}),
+            );
+            push @parts, 'min: ' . $metadata->{min} if exists $metadata->{min};
+            push @parts, 'max: ' . $metadata->{max} if exists $metadata->{max};
+            push @parts, 'unit: ' . json_literal($metadata->{unit}) if exists $metadata->{unit};
+            push @parts, 'scale: ' . json_literal($metadata->{scale}) if exists $metadata->{scale};
+            push @parts, 'realtime: ' . ($metadata->{realtime} ? 'true' : 'false');
+            push @parts, 'smoothingMs: ' . $metadata->{smoothing_ms} if exists $metadata->{smoothing_ms};
+            push @parts, 'structural: ' . ($metadata->{structural} ? 'true' : 'false');
+            push @parts, 'options: ' . json_literal($metadata->{options}) if exists $metadata->{options};
+            push @parts, 'optionValues: ' . json_literal($metadata->{option_values})
+                if exists $metadata->{option_values};
+            '{ ' . join(', ', @parts) . ' }'
         } @$config;
         my $dispatch = lc($atom->{dispatch});
         push @lines, '  {',
             "    name: '$atom->{name}',",
             "    category: '$atom->{category}',",
+            "    visibility: '$atom->{visibility}',",
             "    dispatch: '$dispatch',",
             '    ins: ' . ts_quote_list([map { $_->{name} } @$input]) . ',',
             '    outs: ' . ts_quote_list([map { $_->{name} } @$output]) . ',',
@@ -616,27 +891,47 @@ sub render_typescript_catalog {
     push @lines, (
         '];',
         '',
+        "export const PUBLIC_ATOM_CATALOG = ATOM_CATALOG.filter(atom => atom.visibility === 'public');",
+        "export const ADVANCED_ATOM_CATALOG = ATOM_CATALOG.filter(atom => atom.visibility === 'advanced');",
+        '',
         'export const ATOM_MAP = new Map<string, AtomDef>(ATOM_CATALOG.map(atom => [atom.name, atom]));',
     );
     return join("\n", @lines) . "\n";
 }
 
 sub json_value_schema {
-    my ($type) = @_;
-    return {type => 'string'} if $type eq 'signal' || $type eq 'signal_optional' || $type eq 'buffer';
-    return {type => 'number'} if $type eq 'float' || $type eq 'scalar';
-    return {type => 'integer'} if $type eq 'int';
-    return {type => 'array', minItems => 1, items => {type => 'string'}} if $type eq 'signal_array';
-    return {
+    my ($field) = @_;
+    my $type = $field->{type};
+    my $schema;
+    $schema = {type => 'string'} if $type eq 'signal' || $type eq 'signal_optional' || $type eq 'buffer';
+    $schema = {type => 'number'} if $type eq 'float' || $type eq 'scalar';
+    $schema = {type => 'integer'} if $type eq 'int';
+    $schema = {type => 'array', minItems => 1, items => {type => 'string'}} if $type eq 'signal_array';
+    $schema = {
         type => 'array', minItems => 1,
         items => {type => 'array', minItems => 1, items => {type => 'number'}},
     } if $type eq 'float_matrix';
-    die "cannot map contract type $type to JSON Schema\n";
+    die "cannot map contract type $type to JSON Schema\n" unless $schema;
+
+    my $metadata = $field->{metadata};
+    return $schema unless $metadata;
+    $schema->{default} = $metadata->{default};
+    $schema->{minimum} = $metadata->{min} if exists $metadata->{min};
+    $schema->{maximum} = $metadata->{max} if exists $metadata->{max};
+    $schema->{enum} = $metadata->{option_values} if exists $metadata->{option_values};
+    $schema->{'x-apg-field-type'} = $metadata->{type};
+    $schema->{'x-apg-unit'} = $metadata->{unit} if exists $metadata->{unit};
+    $schema->{'x-apg-scale'} = $metadata->{scale} if exists $metadata->{scale};
+    $schema->{'x-apg-realtime'} = $metadata->{realtime};
+    $schema->{'x-apg-smoothing-ms'} = $metadata->{smoothing_ms} if exists $metadata->{smoothing_ms};
+    $schema->{'x-apg-structural'} = $metadata->{structural};
+    $schema->{'x-apg-options'} = $metadata->{options} if exists $metadata->{options};
+    return $schema;
 }
 
 sub json_section_schema {
     my ($fields) = @_;
-    my %properties = map { $_->{name} => json_value_schema($_->{type}) } @$fields;
+    my %properties = map { $_->{name} => json_value_schema($_) } @$fields;
     my @required = map { $_->{name} } grep { $_->{required} } @$fields;
     my $schema = {
         type => 'object',
@@ -666,6 +961,7 @@ sub render_json_schema {
             required => ['atom'],
             'x-apg-category' => $atom->{category},
             'x-apg-dispatch' => lc($atom->{dispatch}),
+            'x-apg-visibility' => $atom->{visibility},
         };
     }
     my $schema = {
