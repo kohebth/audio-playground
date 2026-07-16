@@ -2,12 +2,29 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #define TEST_FRAMES 3u
+
+static const apg_prepare_context_t TEST_PREPARE_CONTEXT = {
+    .maximum_frames = TEST_FRAMES,
+    .sample_rate    = 48000.0f,
+};
 
 static int fail(const char *msg) {
     fprintf(stderr, "FAIL: %s\n", msg);
     return 1;
+}
+
+static uc_status load_project_host(const char *path, apg_v2_host_project_t **host, uc_error *err) {
+    return apg_v2_host_project_load_file(path, &TEST_PREPARE_CONTEXT, host, err);
+}
+
+static bool process_project_host(apg_v2_host_project_t *host, const float *input, float *output) {
+    return apg_v2_host_project_process_mono_ports(
+        host, "input", apg_const_buffer_make(input, TEST_FRAMES), "output", apg_buffer_make(output, TEST_FRAMES),
+        TEST_FRAMES
+    );
 }
 
 static int expect_samples_near(const float *actual, const float *expected, const char *label) {
@@ -38,9 +55,7 @@ static int test_project_host_live_controls(void) {
     apg_v2_host_project_t *host = NULL;
     uc_error               err  = {0};
 
-    uc_status status = apg_v2_host_project_load_file(
-        "test/fixtures/projects-v2/two-gain-chain.project.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err
-    );
+    uc_status status = load_project_host("test/fixtures/projects-v2/two-gain-chain.project.v2.yaml", &host, &err);
     if (status != UC_OK) {
         fprintf(stderr, "failed to load project: %s\n", err.msg);
         return fail("project host load failed");
@@ -52,7 +67,7 @@ static int test_project_host_live_controls(void) {
     float       expected_bypassed[TEST_FRAMES] = {0.75f, -1.5f, 3.0f};
     float       expected_muted[TEST_FRAMES]    = {0.0f, 0.0f, 0.0f};
 
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output)) {
         apg_v2_host_project_destroy(host);
         return fail("project host process failed");
     }
@@ -65,7 +80,7 @@ static int test_project_host_live_controls(void) {
         apg_v2_host_project_destroy(host);
         return fail("project host refused bypass");
     }
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output)) {
         apg_v2_host_project_destroy(host);
         return fail("project host process with bypass failed");
     }
@@ -78,7 +93,7 @@ static int test_project_host_live_controls(void) {
         apg_v2_host_project_destroy(host);
         return fail("project host refused mute");
     }
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output)) {
         apg_v2_host_project_destroy(host);
         return fail("project host process with mute failed");
     }
@@ -95,9 +110,7 @@ static int test_project_host_prepare_failure_keeps_active(void) {
     apg_v2_host_project_t *host = NULL;
     uc_error               err  = {0};
 
-    uc_status status = apg_v2_host_project_load_file(
-        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err
-    );
+    uc_status status = load_project_host("test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &host, &err);
     if (status != UC_OK)
         return fail("project host load failed");
 
@@ -113,7 +126,7 @@ static int test_project_host_prepare_failure_keeps_active(void) {
     const float input[TEST_FRAMES]    = {0.25f, -0.5f, 1.0f};
     float       output[TEST_FRAMES]   = {0.0f, 0.0f, 0.0f};
     float       expected[TEST_FRAMES] = {0.5f, -1.0f, 2.0f};
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output)) {
         apg_v2_host_project_destroy(host);
         return fail("project host process after failed prepare failed");
     }
@@ -130,9 +143,7 @@ static int test_project_host_commit_swap_crossfades(void) {
     apg_v2_host_project_t *host = NULL;
     uc_error               err  = {0};
 
-    uc_status status = apg_v2_host_project_load_file(
-        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err
-    );
+    uc_status status = load_project_host("test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &host, &err);
     if (status != UC_OK)
         return fail("project host load failed");
 
@@ -161,7 +172,7 @@ static int test_project_host_commit_swap_crossfades(void) {
     float       expected_fade[TEST_FRAMES] = {10.0f / 3.0f, 14.0f / 3.0f, 6.0f};
     float       expected_new[TEST_FRAMES]  = {6.0f, 6.0f, 6.0f};
 
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output)) {
         apg_v2_host_project_destroy(host);
         return fail("project host crossfade process failed");
     }
@@ -170,7 +181,7 @@ static int test_project_host_commit_swap_crossfades(void) {
         return 1;
     }
 
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output)) {
         apg_v2_host_project_destroy(host);
         return fail("project host post-crossfade process failed");
     }
@@ -187,9 +198,7 @@ static int test_project_host_swap_preserves_bypass(void) {
     apg_v2_host_project_t *host = NULL;
     uc_error               err  = {0};
 
-    uc_status status = apg_v2_host_project_load_file(
-        "test/fixtures/projects-v2/two-gain-chain.project.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err
-    );
+    uc_status status = load_project_host("test/fixtures/projects-v2/two-gain-chain.project.v2.yaml", &host, &err);
     if (status != UC_OK)
         return fail("project host load failed");
     if (!apg_v2_host_project_set_bypass(host, "gain1", true)) {
@@ -220,8 +229,7 @@ static int test_project_host_swap_preserves_bypass(void) {
     const float input[TEST_FRAMES]    = {1.0f, 1.0f, 1.0f};
     float       output[TEST_FRAMES]   = {0.0f, 0.0f, 0.0f};
     float       expected[TEST_FRAMES] = {3.0f, 3.0f, 3.0f};
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES) ||
-        !apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output) || !process_project_host(host, input, output)) {
         apg_v2_host_project_destroy(host);
         return fail("project host process after bypass-preserving swap failed");
     }
@@ -238,9 +246,7 @@ static int test_project_host_swap_preserves_param(void) {
     apg_v2_host_project_t *host = NULL;
     uc_error               err  = {0};
 
-    uc_status status = apg_v2_host_project_load_file(
-        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err
-    );
+    uc_status status = load_project_host("test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &host, &err);
     if (status != UC_OK)
         return fail("project host load failed");
     if (!apg_v2_host_project_set_param(host, "gain1.gain", 3.0f)) {
@@ -272,7 +278,7 @@ static int test_project_host_swap_preserves_param(void) {
     float       output[TEST_FRAMES]   = {0.0f, 0.0f, 0.0f};
     float       expected[TEST_FRAMES] = {3.0f, 3.0f, 3.0f};
     for (size_t i = 0; i < 170u; i++) {
-        if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+        if (!process_project_host(host, input, output)) {
             apg_v2_host_project_destroy(host);
             return fail("project host process after param-preserving swap failed");
         }
@@ -290,9 +296,18 @@ int main(void) {
     apg_v2_host_project_t *host = NULL;
     uc_error               err  = {0};
 
+    const apg_prepare_context_t invalid_prepare_context = {
+        .maximum_frames = 0u,
+        .sample_rate    = 48000.0f,
+    };
     uc_status status = apg_v2_host_project_load_file(
-        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err
+        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &invalid_prepare_context, &host, &err
     );
+    if (status != UC_E_RANGE || host != NULL || strstr(err.msg, "prepare context") == NULL)
+        return fail("project host accepted an invalid prepare context");
+
+    err    = (uc_error){0};
+    status = load_project_host("test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", &host, &err);
     if (status != UC_OK) {
         fprintf(stderr, "failed to load project: %s\n", err.msg);
         return fail("project host load failed");
@@ -303,7 +318,7 @@ int main(void) {
     float       gain_default[TEST_FRAMES] = {0.5f, -1.0f, 2.0f};
     float       gain_updated[TEST_FRAMES] = {0.5015625f, -1.003125f, 2.00625f};
 
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output)) {
         fprintf(stderr, "project host process failed: %s\n", apg_v2_host_project_last_error(host));
         apg_v2_host_project_destroy(host);
         return fail("project host process failed");
@@ -311,6 +326,25 @@ int main(void) {
     if (expect_samples_near(output, gain_default, "default gain")) {
         apg_v2_host_project_destroy(host);
         return 1;
+    }
+
+    const float sentinel[TEST_FRAMES] = {17.0f, 18.0f, 19.0f};
+    memcpy(output, sentinel, sizeof(output));
+    if (apg_v2_host_project_process_mono_ports(
+            host, "input", apg_const_buffer_make(input, TEST_FRAMES - 1u), "output",
+            apg_buffer_make(output, TEST_FRAMES), TEST_FRAMES
+        ) ||
+        memcmp(output, sentinel, sizeof(output)) != 0) {
+        apg_v2_host_project_destroy(host);
+        return fail("project host accepted a short input view");
+    }
+    if (apg_v2_host_project_process_mono_ports(
+            host, "input", apg_const_buffer_make(input, TEST_FRAMES), "output",
+            apg_buffer_make(output, TEST_FRAMES - 1u), TEST_FRAMES
+        ) ||
+        memcmp(output, sentinel, sizeof(output)) != 0) {
+        apg_v2_host_project_destroy(host);
+        return fail("project host accepted a short output view");
     }
 
     if (!apg_v2_host_project_set_param(host, "gain1.gain", 3.0f)) {
@@ -321,7 +355,7 @@ int main(void) {
         apg_v2_host_project_destroy(host);
         return fail("project host accepted ambiguous param name");
     }
-    if (!apg_v2_host_project_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+    if (!process_project_host(host, input, output)) {
         fprintf(stderr, "project host process failed after param update: %s\n", apg_v2_host_project_last_error(host));
         apg_v2_host_project_destroy(host);
         return fail("project host process after update failed");

@@ -83,13 +83,13 @@ bool apg_v2_measure_get_input_meter(
         ) ||
         meter_index >= runtime->input_meters_len)
         return false;
-    const float *signal = apg_v2_runtime_signal_buffer_at(runtime, signal_index);
-    if (!runtime->has_processed || !signal) {
+    const apg_const_buffer_t signal = apg_v2_runtime_signal_buffer_at(runtime, signal_index);
+    if (!runtime->has_processed || !signal.data) {
         *out = (apg_v2_meter_snapshot_t){0};
         return true;
     }
     uint32_t frames = runtime->process_context.frames;
-    *out            = meter_snapshot_from_signal(signal, frames);
+    *out            = meter_snapshot_from_signal(signal.data, frames);
     return true;
 }
 
@@ -106,13 +106,13 @@ bool apg_v2_measure_get_output_meter(
         ) ||
         meter_index >= runtime->output_meters_len)
         return false;
-    const float *signal = apg_v2_runtime_signal_buffer_at(runtime, signal_index);
-    if (!runtime->has_processed || !signal) {
+    const apg_const_buffer_t signal = apg_v2_runtime_signal_buffer_at(runtime, signal_index);
+    if (!runtime->has_processed || !signal.data) {
         *out = (apg_v2_meter_snapshot_t){0};
         return true;
     }
     uint32_t frames = runtime->process_context.frames;
-    *out            = meter_snapshot_from_signal(signal, frames);
+    *out            = meter_snapshot_from_signal(signal.data, frames);
     return true;
 }
 

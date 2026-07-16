@@ -211,7 +211,10 @@ uint64_t apg_wasm_processor_active_revision(const apg_wasm_processor_t *processo
 }
 
 static bool process_slot(apg_wasm_processor_slot_t *slot, const float *input, float *output, uint32_t frames) {
-    return slot && slot->ready && slot->runtime && apg_v2_runtime_process_mono(slot->runtime, input, output, frames);
+    return slot && slot->ready && slot->runtime &&
+           apg_v2_runtime_process_mono(
+               slot->runtime, apg_const_buffer_make(input, frames), apg_buffer_make(output, frames), frames
+           );
 }
 
 apg_wasm_status_t apg_wasm_processor_process(apg_wasm_processor_t *processor, uint32_t frames) {

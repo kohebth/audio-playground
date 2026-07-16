@@ -76,9 +76,13 @@ static int test_unit_file(const char *path, int *processed) {
     const char *input_port  = single_mono_audio_port_name(unit.input_ports, unit.input_ports_len);
     const char *output_port = single_mono_audio_port_name(unit.output_ports, unit.output_ports_len);
 
-    apg_v2_host_unit_t *host = NULL;
-    err                      = (uc_error){0};
-    status                   = apg_v2_host_load_file(path, TEST_CHUNK, 48000.0f, &host, &err);
+    apg_v2_host_unit_t *host                    = NULL;
+    err                                         = (uc_error){0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = TEST_CHUNK,
+        .sample_rate    = 48000.0f,
+    };
+    status = apg_v2_host_load_file(path, &prepare_context, &host, &err);
     if (status != UC_OK) {
         fprintf(stderr, "failed to load %s: %s\n", path, err.msg);
         uc_arena_free(&metadata_arena);
@@ -96,7 +100,10 @@ static int test_unit_file(const char *path, int *processed) {
     for (int mode = 0; mode < 3; mode++) {
         fill_input(input, mode);
         memset(output, 0, sizeof(output));
-        if (!apg_v2_host_process_mono_ports(host, input_port, input, output_port, output, TEST_CHUNK)) {
+        if (!apg_v2_host_process_mono_ports(
+                host, input_port, apg_const_buffer_make(input, TEST_CHUNK), output_port,
+                apg_buffer_make(output, TEST_CHUNK), TEST_CHUNK
+            )) {
             fprintf(stderr, "%s mode %d failed runtime process: %s\n", path, mode, apg_v2_host_last_error(host));
             apg_v2_host_destroy(host);
             uc_arena_free(&metadata_arena);

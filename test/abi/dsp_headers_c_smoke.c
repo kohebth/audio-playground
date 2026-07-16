@@ -4,6 +4,7 @@
 void apg_header_smoke_amplitude_types(void);
 void apg_header_smoke_delay_types(void);
 void apg_header_smoke_detect_types(void);
+void apg_header_smoke_dsp_common_types(void);
 void apg_header_smoke_dsp_enums(void);
 void apg_header_smoke_dsp_ports(void);
 void apg_header_smoke_dsp_primitives(void);
@@ -24,6 +25,7 @@ int main(void) {
     apg_header_smoke_amplitude_types();
     apg_header_smoke_delay_types();
     apg_header_smoke_detect_types();
+    apg_header_smoke_dsp_common_types();
     apg_header_smoke_dsp_enums();
     apg_header_smoke_dsp_ports();
     apg_header_smoke_dsp_primitives();

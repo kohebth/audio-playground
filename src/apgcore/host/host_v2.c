@@ -56,8 +56,7 @@ struct apg_v2_host_project {
     apg_v2_host_project_bundle_t *fade_out;
     float                        *crossfade_old;
     float                        *crossfade_new;
-    uint32_t                      frame_capacity;
-    float                         sample_rate;
+    apg_prepare_context_t         prepare_context;
     uint32_t                      crossfade_total_frames;
     uint32_t                      crossfade_remaining_frames;
     uint32_t                      crossfade_offset_frames;
@@ -76,8 +75,7 @@ static uc_status set_error(uc_error *err, uc_status status, const char *msg) {
 
 static uc_status build_runtime_from_plan(
     const apg_v2_compiled_unit_t *plan,
-    uint32_t                      frame_capacity,
-    float                         sample_rate,
+    const apg_prepare_context_t  *prepare_context,
     uc_arena                     *registry_arena,
     apg_v2_registry_t            *registry,
     apg_v2_runtime_t            **runtime,
@@ -87,8 +85,7 @@ static uc_status build_runtime_from_plan(
         return UC_E_TYPE;
     *runtime = NULL;
 
-    uc_status status =
-        apg_v2_registry_build_with_growth(plan, frame_capacity, sample_rate, registry_arena, registry, err);
+    uc_status status = apg_v2_registry_build_with_growth(plan, prepare_context, registry_arena, registry, err);
     if (status != UC_OK)
         return status;
 
@@ -171,9 +168,9 @@ static bool host_runtime_process_mono_ports(
     const apg_v2_registry_t *registry,
     apg_v2_runtime_t        *runtime,
     const char              *input_port_name,
-    const float             *input,
+    apg_const_buffer_t       input,
     const char              *output_port_name,
-    float                   *output,
+    apg_buffer_t             output,
     uint32_t                 frames
 ) {
     size_t input_index  = 0u;
@@ -203,8 +200,7 @@ static void host_project_bundle_destroy(apg_v2_host_project_bundle_t **bundle) {
 
 static uc_status host_project_bundle_create(
     const apg_project_v2_resolved_t *project,
-    uint32_t                         frame_capacity,
-    float                            sample_rate,
+    const apg_prepare_context_t     *prepare_context,
     apg_v2_host_project_bundle_t   **out,
     uc_error                        *err
 ) {
@@ -235,8 +231,7 @@ static uc_status host_project_bundle_create(
     bundle->registry_ready = true;
 
     status = build_runtime_from_plan(
-        &bundle->compiled.plan, frame_capacity, sample_rate, &bundle->registry_arena, &bundle->registry,
-        &bundle->runtime, err
+        &bundle->compiled.plan, prepare_context, &bundle->registry_arena, &bundle->registry, &bundle->runtime, err
     );
     if (status != UC_OK) {
         host_project_bundle_destroy(&bundle);
@@ -333,20 +328,22 @@ static void host_project_apply_shadows(apg_v2_host_project_t *host, apg_v2_host_
 }
 
 static bool host_project_alloc_crossfade_buffers(apg_v2_host_project_t *host) {
-    if (!host || host->frame_capacity == 0u)
+    if (!host || host->prepare_context.maximum_frames == 0u)
         return true;
-    host->crossfade_old = calloc(host->frame_capacity, sizeof(*host->crossfade_old));
-    host->crossfade_new = calloc(host->frame_capacity, sizeof(*host->crossfade_new));
+    host->crossfade_old = calloc(host->prepare_context.maximum_frames, sizeof(*host->crossfade_old));
+    host->crossfade_new = calloc(host->prepare_context.maximum_frames, sizeof(*host->crossfade_new));
     return host->crossfade_old && host->crossfade_new;
 }
 
 uc_status apg_v2_host_load_file(
-    const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_unit_t **out, uc_error *err
+    const char *path, const apg_prepare_context_t *prepare_context, apg_v2_host_unit_t **out, uc_error *err
 ) {
     if (!path || !out || !err)
         return UC_E_TYPE;
     *out        = NULL;
     err->status = UC_OK;
+    if (!apg_prepare_context_valid(prepare_context))
+        return set_error(err, UC_E_RANGE, "v2 host prepare context is invalid");
 
     apg_v2_host_unit_t *host = calloc(1u, sizeof(*host));
     if (!host)
@@ -372,7 +369,7 @@ uc_status apg_v2_host_load_file(
         goto fail;
 
     status = build_runtime_from_plan(
-        &host->plan, frame_capacity, sample_rate, &host->registry_arena, &host->registry, &host->runtime, err
+        &host->plan, prepare_context, &host->registry_arena, &host->registry, &host->runtime, err
     );
     if (status != UC_OK)
         goto fail;
@@ -399,9 +396,9 @@ const char *apg_v2_host_last_error(const apg_v2_host_unit_t *host) {
 bool apg_v2_host_process_mono_ports(
     apg_v2_host_unit_t *host,
     const char         *input_port_name,
-    const float        *input,
+    apg_const_buffer_t  input,
     const char         *output_port_name,
-    float              *output,
+    apg_buffer_t        output,
     uint32_t            frames
 ) {
     if (!host || !host->runtime_ready)
@@ -425,18 +422,19 @@ void apg_v2_host_destroy(apg_v2_host_unit_t *host) {
 }
 
 uc_status apg_v2_host_project_load_file(
-    const char *path, uint32_t frame_capacity, float sample_rate, apg_v2_host_project_t **out, uc_error *err
+    const char *path, const apg_prepare_context_t *prepare_context, apg_v2_host_project_t **out, uc_error *err
 ) {
     if (!path || !out || !err)
         return UC_E_TYPE;
     *out        = NULL;
     err->status = UC_OK;
+    if (!apg_prepare_context_valid(prepare_context))
+        return set_error(err, UC_E_RANGE, "v2 host prepare context is invalid");
 
     apg_v2_host_project_t *host = calloc(1u, sizeof(*host));
     if (!host)
         return set_error(err, UC_E_OOM, "v2 host allocation failed");
-    host->frame_capacity = frame_capacity;
-    host->sample_rate    = sample_rate;
+    host->prepare_context = *prepare_context;
 
     if (!host_project_alloc_crossfade_buffers(host)) {
         apg_v2_host_project_destroy(host);
@@ -452,7 +450,7 @@ uc_status apg_v2_host_project_load_file(
     apg_project_v2_resolved_t resolved_project = {0};
     uc_status                 status = apg_project_v2_load_resolved_file(path, &resolved_arena, &resolved_project, err);
     if (status == UC_OK)
-        status = host_project_bundle_create(&resolved_project, frame_capacity, sample_rate, &host->active, err);
+        status = host_project_bundle_create(&resolved_project, prepare_context, &host->active, err);
     uc_arena_free(&resolved_arena);
     if (status != UC_OK) {
         apg_v2_host_project_destroy(host);
@@ -507,7 +505,7 @@ uc_status apg_v2_host_project_prepare_swap(
     if (!swap)
         return set_error(err, UC_E_OOM, "v2 host project swap allocation failed");
 
-    uc_status status = host_project_bundle_create(project, host->frame_capacity, host->sample_rate, &swap->bundle, err);
+    uc_status status = host_project_bundle_create(project, &host->prepare_context, &swap->bundle, err);
     if (status != UC_OK) {
         apg_v2_host_project_swap_destroy(&swap);
         return status;
@@ -529,8 +527,8 @@ bool apg_v2_host_project_commit_swap(apg_v2_host_project_t *host, apg_v2_host_pr
     (*swap)->bundle = NULL;
     apg_v2_host_project_swap_destroy(swap);
 
-    host->crossfade_total_frames     = host->frame_capacity < APG_V2_HOST_SWAP_CROSSFADE_FRAMES
-                                           ? host->frame_capacity
+    host->crossfade_total_frames     = host->prepare_context.maximum_frames < APG_V2_HOST_SWAP_CROSSFADE_FRAMES
+                                           ? host->prepare_context.maximum_frames
                                            : APG_V2_HOST_SWAP_CROSSFADE_FRAMES;
     host->crossfade_remaining_frames = host->crossfade_total_frames;
     host->crossfade_offset_frames    = 0u;
@@ -550,12 +548,13 @@ void apg_v2_host_project_swap_destroy(apg_v2_host_project_swap_t **swap) {
 bool apg_v2_host_project_process_mono_ports(
     apg_v2_host_project_t *host,
     const char            *input_port_name,
-    const float           *input,
+    apg_const_buffer_t     input,
     const char            *output_port_name,
-    float                 *output,
+    apg_buffer_t           output,
     uint32_t               frames
 ) {
-    if (!host || !host->active || !host->active->runtime_ready || frames > host->frame_capacity)
+    if (!host || !host->active || !host->active->runtime_ready || frames > host->prepare_context.maximum_frames ||
+        !apg_const_buffer_has_length(input, frames) || !apg_buffer_has_capacity(output, frames))
         return false;
     if (!host->fade_out || host->crossfade_remaining_frames == 0u)
         return host_runtime_process_mono_ports(
@@ -566,11 +565,11 @@ bool apg_v2_host_project_process_mono_ports(
         return false;
     if (!host_runtime_process_mono_ports(
             &host->fade_out->registry, host->fade_out->runtime, input_port_name, input, output_port_name,
-            host->crossfade_old, frames
+            apg_buffer_make(host->crossfade_old, host->prepare_context.maximum_frames), frames
         ) ||
         !host_runtime_process_mono_ports(
             &host->active->registry, host->active->runtime, input_port_name, input, output_port_name,
-            host->crossfade_new, frames
+            apg_buffer_make(host->crossfade_new, host->prepare_context.maximum_frames), frames
         )) {
         return false;
     }
@@ -581,9 +580,9 @@ bool apg_v2_host_project_process_mono_ports(
             float position = (float)(host->crossfade_offset_frames + i + 1u) / (float)host->crossfade_total_frames;
             if (position > 1.0f)
                 position = 1.0f;
-            output[i] = (host->crossfade_old[i] * (1.0f - position)) + (host->crossfade_new[i] * position);
+            output.data[i] = (host->crossfade_old[i] * (1.0f - position)) + (host->crossfade_new[i] * position);
         } else {
-            output[i] = host->crossfade_new[i];
+            output.data[i] = host->crossfade_new[i];
         }
     }
 

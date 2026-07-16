@@ -1507,11 +1507,13 @@ static int export_wasm_realtime(const char *project_path, const char *out_dir, c
         return rc;
     }
 
-    uc_arena          registry_arena = {0};
-    apg_v2_registry_t registry       = {0};
-    status                           = apg_v2_registry_build_with_growth(
-        &compiled.plan, options->block_frames, (float)options->sample_rate, &registry_arena, &registry, &err
-    );
+    uc_arena                    registry_arena  = {0};
+    apg_v2_registry_t           registry        = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = options->block_frames,
+        .sample_rate    = (float)options->sample_rate,
+    };
+    status = apg_v2_registry_build_with_growth(&compiled.plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "wasm_realtime", &err);
         uc_arena_free(&arena);
@@ -1633,11 +1635,13 @@ static int export_m7_static(const char *project_path, const char *out_dir, const
         return rc;
     }
 
-    uc_arena          registry_arena = {0};
-    apg_v2_registry_t registry       = {0};
-    status                           = apg_v2_registry_build_with_growth(
-        &compiled.plan, options->block_frames, (float)options->sample_rate, &registry_arena, &registry, &err
-    );
+    uc_arena                    registry_arena  = {0};
+    apg_v2_registry_t           registry        = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = options->block_frames,
+        .sample_rate    = (float)options->sample_rate,
+    };
+    status = apg_v2_registry_build_with_growth(&compiled.plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         int rc = write_cli_error(stdout, "apg.project.export.v2", project_path, "m7_static", &err);
         uc_arena_free(&arena);

@@ -10,9 +10,9 @@
 |---|---:|---:|---|
 | Canonical atoms | 69 | 71 | All 69 names retained; `math_difference` and `math_integrate` added |
 | Atom ABI typedefs | 276 | 284 | Four names per canonical atom |
-| Total public ABI type records | 286 | 294 | Original names retained plus eight math-family types |
-| Non-empty public type records | 240 | 294 | GNU empty layouts replaced by one-byte C11 layouts |
-| Field records | 370 | 414 | Reserved fields added, sample-rate duplication removed, canonical math and crossfade fields added |
+| Total public ABI type records | 286 | 296 | Original names retained plus eight math-family and two buffer-view types |
+| Non-empty public type records | 240 | 296 | GNU empty layouts replaced by one-byte C11 layouts |
+| Field records | 370 | 424 | Reserved, capacity, canonical math, and crossfade fields recorded; sample-rate duplication removed |
 | Zero-size GNU structures | 46 | 0 | Replaced by standard one-byte C11 layouts |
 | Shared enum values | 17 | 17 | Names and numeric values unchanged |
 | Public atom function symbols | 141 | 74 | Legacy non-context symbols removed; 71 primary and 3 spectral variants remain |
@@ -30,6 +30,25 @@ remain handwritten. The frozen catalog reports all 71 atoms with current ports, 
 Oscillator/LFO, difference/slope, integrate/accumulate, and crossfade/wet-dry now execute shared internal kernels.
 `generation_oscillator`, `math_difference`, `math_integrate`, and `mix_crossfade` are the preferred names; the six old
 names remain internal compatibility entries for existing metadata.
+
+## Objective Coverage
+
+| # | Requirement | Final evidence |
+|---:|---|---|
+| 1 | Universal context-only atom API | Only generated `*_process` declarations remain; the link test resolves 71 primary and 3 spectral symbols |
+| 2 | Family ABI headers | Twelve generated family headers own atom I/O, params, and state; `dsp_types.h` is an umbrella |
+| 3 | Sample rate only in process/prepare context | Atom params contain no sample rate; registry/host construction requires `apg_prepare_context_t` |
+| 4 | Fixed-rate versus variable-rate processing | Fixed atoms use `apg_process_context_t`; SRC uses `apg_stream_context_t` and returns consumed/produced counts |
+| 5 | Immutable inputs and params | Every generated atom declaration uses `const *_in_t *` and `const *_params_t *` |
+| 6 | Capacity-bearing public buffers | Runtime/host boundaries and signal accessors use buffer views; the internal dispatcher retains raw pointers |
+| 7 | One generated definition source | `schema/atoms/atoms.json` generates C ABI/declarations/descriptors/catalog, TypeScript, and JSON Schema with stale checks |
+| 8 | Raw biquad visibility | Designed biquad is public; coefficient biquad is advanced |
+| 9 | Duplicate primitive consolidation | Oscillator/LFO, difference/slope, integrate/accumulate, and crossfade/wet-dry share canonical kernels |
+| 10 | Public/advanced/internal visibility | Generated catalog visibility drives default and advanced editor filtering |
+| 11 | Rich parameter metadata | Defaults, ranges, units, scale, realtime, smoothing, and structural flags are generated for 86 config fields |
+| 12 | Exact fixed process context | The public context is exactly `{frames, sample_rate, sample_position}` |
+| 13 | No silent frame default | No default-frame constant/helper remains; zero or missing frame context never infers 512 samples |
+| 14 | Explicit state ownership/capacity | Runtime-owned buffers carry `buffer_len`; registry preflight sizes one contiguous pool before processing |
 
 ## Verification Matrix
 
@@ -65,6 +84,9 @@ names remain internal compatibility entries for existing metadata.
 - [x] Production generation is deterministic and stale checked across C, TypeScript, and JSON Schema outputs.
 - [x] C catalog golden data and the TypeScript consumer build remain synchronized.
 - [x] Canonical primitives share one implementation kernel while internal compatibility names remain loadable.
+- [x] Public runtime/host buffers and signal accessors carry explicit length/capacity views.
+- [x] Registry and host construction require one validated prepare context with no implicit sample-rate fallback.
+- [x] The fixed process API has no default-frame constant or helper and never infers a 512-frame block.
 
 ## Commits
 
@@ -83,6 +105,7 @@ names remain internal compatibility entries for existing metadata.
 | `9aeaff0` | Context-only sample rate and explicit runtime state capacities |
 | `ccff439` | Production atom ABI, catalog, TypeScript, and schema generation |
 | `fce3eb8` | Generated visibility and complete parameter metadata |
+| `88e3c2f` | Canonical primitive kernels and internal compatibility entries |
 
 ## Follow-Ups
 

@@ -102,9 +102,25 @@ int main(int argc, char **argv) {
     SNAPSHOT_ENUM(output, WINDOW_BLACKMAN);
     SNAPSHOT_ENUM(output, WINDOW_RECTANGULAR);
 
+    SNAPSHOT_TYPE(output, apg_buffer_t);
+    SNAPSHOT_FIELD(output, apg_buffer_t, data);
+    SNAPSHOT_FIELD(output, apg_buffer_t, capacity);
+
+    SNAPSHOT_TYPE(output, apg_const_buffer_t);
+    SNAPSHOT_FIELD(output, apg_const_buffer_t, data);
+    SNAPSHOT_FIELD(output, apg_const_buffer_t, length);
+
     SNAPSHOT_TYPE(output, Signal);
+    SNAPSHOT_FIELD(output, Signal, data);
+    SNAPSHOT_FIELD(output, Signal, capacity);
+
     SNAPSHOT_TYPE(output, Spectrum);
+    SNAPSHOT_FIELD(output, Spectrum, data);
+    SNAPSHOT_FIELD(output, Spectrum, capacity);
+
     SNAPSHOT_TYPE(output, Buffer);
+    SNAPSHOT_FIELD(output, Buffer, data);
+    SNAPSHOT_FIELD(output, Buffer, capacity);
 
     SNAPSHOT_TYPE(output, atom_mono_t);
     SNAPSHOT_FIELD(output, atom_mono_t, signal);

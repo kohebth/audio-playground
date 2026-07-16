@@ -130,6 +130,7 @@ set(DSP_HEADER_SMOKE_SOURCES
         test/abi/headers/amplitude_types.c
         test/abi/headers/delay_types.c
         test/abi/headers/detect_types.c
+        test/abi/headers/dsp_common_types.c
         test/abi/headers/dsp_enums.c
         test/abi/headers/dsp_ports.c
         test/abi/headers/dsp_primitives.c

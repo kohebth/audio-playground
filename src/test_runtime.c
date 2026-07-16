@@ -19,10 +19,14 @@ static void fill_input(float *input, int chunk) {
 }
 
 int main(void) {
-    apg_v2_host_unit_t *host = NULL;
-    uc_error            err  = {0};
-    uc_status           status =
-        apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", TEST_FRAMES, 48000.0f, &host, &err);
+    apg_v2_host_unit_t         *host            = NULL;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = TEST_FRAMES,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status =
+        apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &prepare_context, &host, &err);
     if (status != UC_OK) {
         fprintf(stderr, "load error: %s\n", err.msg);
         return fail("failed to load v2 runtime smoke unit");
@@ -39,7 +43,10 @@ int main(void) {
     float  peak   = 0.0f;
     for (int chunk = 0; chunk < 8; chunk++) {
         fill_input(input, chunk);
-        if (!apg_v2_host_process_mono_ports(host, "input", input, "output", output, TEST_FRAMES)) {
+        if (!apg_v2_host_process_mono_ports(
+                host, "input", apg_const_buffer_make(input, TEST_FRAMES), "output",
+                apg_buffer_make(output, TEST_FRAMES), TEST_FRAMES
+            )) {
             fprintf(stderr, "runtime error: %s\n", apg_v2_host_last_error(host));
             apg_v2_host_destroy(host);
             return fail("v2 runtime smoke processing failed");

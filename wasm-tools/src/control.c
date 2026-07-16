@@ -490,10 +490,13 @@ apg_wasm_control_prepare_workspace(apg_wasm_control_t *control, const apg_wasm_a
     if (status != APG_WASM_STATUS_OK)
         return status;
 
-    uc_error        error = {0};
-    const uc_status uc    = apg_v2_registry_build_with_growth(
-        &control->compiled.plan, config->block_frames, (float)config->sample_rate, &control->registry_arena,
-        &control->registry, &error
+    uc_error                    error           = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = config->block_frames,
+        .sample_rate    = (float)config->sample_rate,
+    };
+    const uc_status uc = apg_v2_registry_build_with_growth(
+        &control->compiled.plan, &prepare_context, &control->registry_arena, &control->registry, &error
     );
     if (uc != UC_OK)
         return report_compile_error(control, control->entry_project, "$.registry", &error);

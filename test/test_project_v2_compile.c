@@ -339,10 +339,14 @@ static int test_guitar_project_state_buffer_table_layout(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err = {0};
-    uc_status         status =
-        apg_v2_registry_build_with_growth(&compiled.plan, 8u, 48000.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 8u,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status =
+        apg_v2_registry_build_with_growth(&compiled.plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry build error: %s\n", err.msg);
         uc_arena_free(&registry_arena);

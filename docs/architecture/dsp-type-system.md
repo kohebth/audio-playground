@@ -12,9 +12,12 @@ need one family may include that family's header directly.
 
 | Header | Responsibility |
 |---|---|
-| `dsp_primitives.h` | Public `Signal`, `Spectrum`, and `Buffer` pointer aliases |
+| `runtime/buffer.h` | Capacity-bearing mutable and immutable views used at public buffer boundaries |
+| `runtime/prepare.h` | Required preparation context containing maximum block size and sample rate |
+| `dsp_primitives.h` | Public `Signal`, `Spectrum`, and `Buffer` compatibility names backed by `apg_buffer_t` |
 | `dsp_enums.h` | Shared enum tags, preferred namespaced typedefs, and legacy typedef aliases |
 | `dsp_ports.h` | Generic public port-shape compatibility types |
+| `dsp_common_types.h` | Shared enums, port layouts, and buffer primitives for every family |
 | `dsp_type_macros.h` | Generated shared I/O member profiles and atom type declaration machinery |
 | `*_types.h` | Generated family-owned output, input, params, and state layouts |
 | `dsp_type_checks.h` | Canonical-list coverage, duplicate-count protection, and macro cleanup for the umbrella |
@@ -49,11 +52,18 @@ accept the value without rebuilding its storage or topology. `structural: true` 
 change and `realtime` must be false. Defaults, bounds, units, logarithmic scale hints, smoothing hints, and enum
 ordinals are generated unchanged into the C catalog, TypeScript catalog, and atom JSON Schema.
 
+Public runtime and host buffer boundaries use `apg_const_buffer_t {data, length}` for inputs and
+`apg_buffer_t {data, capacity}` for outputs. Signal-buffer accessors also return views. Capacity is validated before
+audio import, schedule execution, or output mutation. Generated atom I/O layouts and the compiled dispatcher retain
+raw pointers internally after registry preflight so no per-sample capacity branch is added to the real-time plan.
+
 ## Real-Time Rules
 
 - Fixed-rate process functions receive a valid immutable `apg_process_context_t` containing `frames`, `sample_rate`,
   and `sample_position`. Null, zero-frame, or invalid-rate contexts are no-ops; processing never falls back to 512
   frames implicitly.
+- Registry and host preparation require a valid immutable `apg_prepare_context_t` containing `maximum_frames` and
+  `sample_rate`. Invalid or missing preparation fails before allocation; there is no implicit 48 kHz rate.
 - Variable-rate SRC functions receive `apg_stream_context_t`, report `apg_stream_result_t`, and retain phase in atom
   state. They cannot be placed in a fixed-rate unit schedule.
 - No type declaration authorizes allocation, file/network I/O, locking, or unbounded setup in the process path.
@@ -61,7 +71,8 @@ ordinals are generated unchanged into the C catalog, TypeScript catalog, and ato
   replace or free runtime-owned buffers. The registry derives bounded capacities from compiled delay, FIR, detector,
   and spectral configuration where possible, binds those capacities into state, and includes the pool in export memory
   manifests. Processing with a null buffer or zero capacity is a no-op; atoms never infer a historical fixed maximum.
-- Input/output pointers are valid for the declared frame range of the current call only.
+- Input/output view data is valid for the declared sample range of the current call only. Resolved internal atom
+  pointers are valid for the prepared block capacity.
 - Parameter updates and pointer-lifetime changes must be coordinated outside active processing.
 
 ## Canonical Primitives
@@ -83,7 +94,7 @@ math primitives; internal compatibility entries can be loaded but cannot be newl
 ## ABI Policy
 
 Public typedef names, field names, field order, field C types, function names, and function parameter types are
-versioned API surfaces. The LP64 ABI snapshot records 294 public types, 414 fields, and 17 enum values. A permanent
+versioned API surfaces. The LP64 ABI snapshot records 296 public types, 424 fields, and 17 enum values. A permanent
 link test resolves 71 primary process functions and three additional spectral variants. Process inputs and params are
 read-only; output and state remain mutable.
 
@@ -92,8 +103,9 @@ C11 structures containing `uint8_t _reserved`, changing size 0 to size 1 while p
 transition is checked against `dsp_types_abi_phase1_lp64.csv`. The current exact snapshot additionally records the
 intentional `uint32_t phase` state for streaming up/down sampling, context-only sample rate, explicit overlap-buffer
 capacities, removal of unused interpolation storage, the single-buffer frequency-shift state, the two canonical math
-atoms, and the crossfade curve selector. The frozen baseline and phase-1 snapshots remain historical evidence; only
-the versioned current snapshot advances for intentional ABI changes.
+atoms, the crossfade curve selector, and the replacement of raw `Signal`/`Spectrum`/`Buffer` aliases with
+capacity-bearing views. The frozen baseline and phase-1 snapshots remain historical evidence; only the versioned
+current snapshot advances for intentional ABI changes.
 
 Pointer-containing sizes are platform-dependent. Do not copy LP64 size assertions to 32-bit targets. Atom structures
 are not raw persistence formats; YAML, registry plans, WASM images, and M7 bundles use explicit metadata and planned

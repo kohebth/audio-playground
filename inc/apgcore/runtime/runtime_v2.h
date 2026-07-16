@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include <apgcore/registry/registry_v2.h>
+#include <apgcore/runtime/buffer.h>
 #include <yaml/error.h>
 
 typedef struct apg_v2_runtime_t apg_v2_runtime_t;
@@ -18,8 +19,8 @@ uc_status apg_v2_runtime_init_from_registry(const apg_v2_registry_t *registry, a
 /* Allocate and initialize a runtime from a prebuilt registry descriptor. */
 uc_status apg_v2_runtime_create_from_registry(const apg_v2_registry_t *registry, apg_v2_runtime_t **out, uc_error *err);
 
-const float *apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, size_t signal_index);
-float       *apg_v2_runtime_signal_buffer_at_mut(apg_v2_runtime_t *runtime, size_t signal_index);
+apg_const_buffer_t apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, size_t signal_index);
+apg_buffer_t       apg_v2_runtime_signal_buffer_at_mut(apg_v2_runtime_t *runtime, size_t signal_index);
 
 bool apg_v2_runtime_input_port_channel_signal_index(
     const apg_v2_runtime_t *runtime,
@@ -55,27 +56,29 @@ bool apg_v2_runtime_reset(apg_v2_runtime_t *runtime);
 /* Execute the compiled schedule using internal graph signal buffers for frames <= frame_capacity. */
 bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames);
 
-/* Process interleaved external buffers through pre-resolved public audio port indices. */
+/* Process interleaved external buffers. View lengths/capacities count samples across all channels. */
 bool apg_v2_runtime_process_interleaved_port_indices(
-    apg_v2_runtime_t *runtime,
-    size_t            input_port_index,
-    const float      *input,
-    size_t            output_port_index,
-    float            *output,
-    uint32_t          frames
+    apg_v2_runtime_t  *runtime,
+    size_t             input_port_index,
+    apg_const_buffer_t input,
+    size_t             output_port_index,
+    apg_buffer_t       output,
+    uint32_t           frames
 );
 
 /* Process the first public mono input and output ports. */
-bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames);
+bool apg_v2_runtime_process_mono(
+    apg_v2_runtime_t *runtime, apg_const_buffer_t input, apg_buffer_t output, uint32_t frames
+);
 
 /* Process pre-resolved public mono audio port indices; rejects multi-channel ports. */
 bool apg_v2_runtime_process_mono_port_indices(
-    apg_v2_runtime_t *runtime,
-    size_t            input_port_index,
-    const float      *input,
-    size_t            output_port_index,
-    float            *output,
-    uint32_t          frames
+    apg_v2_runtime_t  *runtime,
+    size_t             input_port_index,
+    apg_const_buffer_t input,
+    size_t             output_port_index,
+    apg_buffer_t       output,
+    uint32_t           frames
 );
 
 /* Free all runtime-owned allocations and zero the runtime structure. */

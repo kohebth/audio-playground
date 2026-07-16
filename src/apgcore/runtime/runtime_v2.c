@@ -571,16 +571,16 @@ apg_v2_runtime_create_from_registry(const apg_v2_registry_t *registry, apg_v2_ru
     return UC_OK;
 }
 
-const float *apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, size_t signal_index) {
+apg_const_buffer_t apg_v2_runtime_signal_buffer_at(const apg_v2_runtime_t *runtime, size_t signal_index) {
     if (!runtime || signal_index >= runtime->signals_len || !runtime->signals)
-        return NULL;
-    return runtime->signals[signal_index];
+        return (apg_const_buffer_t){0};
+    return apg_const_buffer_make(runtime->signals[signal_index], runtime->frame_capacity);
 }
 
-float *apg_v2_runtime_signal_buffer_at_mut(apg_v2_runtime_t *runtime, size_t signal_index) {
+apg_buffer_t apg_v2_runtime_signal_buffer_at_mut(apg_v2_runtime_t *runtime, size_t signal_index) {
     if (!runtime || signal_index >= runtime->signals_len || !runtime->signals)
-        return NULL;
-    return runtime->signals[signal_index];
+        return (apg_buffer_t){0};
+    return apg_buffer_make(runtime->signals[signal_index], runtime->frame_capacity);
 }
 
 bool apg_v2_runtime_input_port_channel_signal_index(
@@ -828,12 +828,12 @@ bool apg_v2_runtime_process(apg_v2_runtime_t *runtime, uint32_t frames) {
 }
 
 bool apg_v2_runtime_process_interleaved_port_indices(
-    apg_v2_runtime_t *runtime,
-    size_t            input_port_index,
-    const float      *input,
-    size_t            output_port_index,
-    float            *output,
-    uint32_t          frames
+    apg_v2_runtime_t  *runtime,
+    size_t             input_port_index,
+    apg_const_buffer_t input,
+    size_t             output_port_index,
+    apg_buffer_t       output,
+    uint32_t           frames
 ) {
     const apg_v2_registry_audio_port_t *input_port  = runtime && input_port_index < runtime->input_audio_ports_len
                                                           ? &runtime->input_audio_ports[input_port_index]
@@ -841,27 +841,68 @@ bool apg_v2_runtime_process_interleaved_port_indices(
     const apg_v2_registry_audio_port_t *output_port = runtime && output_port_index < runtime->output_audio_ports_len
                                                           ? &runtime->output_audio_ports[output_port_index]
                                                           : NULL;
-    return apg_v2_runtime_dispatch_process_interleaved_ports(runtime, input_port, input, output_port, output, frames);
+    if (!runtime || frames == 0u || frames > runtime->frame_capacity || !input_port || !output_port ||
+        input_port->channel_count == 0u || output_port->channel_count == 0u || !input_port->signal_indices ||
+        !output_port->signal_indices) {
+        return apg_v2_runtime_dispatch_process_interleaved_ports(
+            runtime, input_port, input.data, output_port, output.data, frames
+        );
+    }
+
+    if (input_port->channel_count > UINT32_MAX / frames || output_port->channel_count > UINT32_MAX / frames) {
+        apg_v2_runtime_set_error(runtime, "v2 runtime interleaved buffer sample count exceeds capacity range");
+        return false;
+    }
+    const uint32_t input_samples  = (uint32_t)(input_port->channel_count * frames);
+    const uint32_t output_samples = (uint32_t)(output_port->channel_count * frames);
+    if (!apg_const_buffer_has_length(input, input_samples)) {
+        apg_v2_runtime_set_error(runtime, "v2 runtime input buffer is shorter than the required sample count");
+        return false;
+    }
+    if (!apg_buffer_has_capacity(output, output_samples)) {
+        apg_v2_runtime_set_error(runtime, "v2 runtime output buffer is smaller than the required sample count");
+        return false;
+    }
+    return apg_v2_runtime_dispatch_process_interleaved_ports(
+        runtime, input_port, input.data, output_port, output.data, frames
+    );
 }
 
 static bool runtime_process_mono_audio_ports(
     apg_v2_runtime_t                   *runtime,
     const apg_v2_registry_audio_port_t *input_port,
-    const float                        *input,
+    apg_const_buffer_t                  input,
     const apg_v2_registry_audio_port_t *output_port,
-    float                              *output,
+    apg_buffer_t                        output,
     uint32_t                            frames
 ) {
-    return apg_v2_runtime_dispatch_process_mono_audio_ports(runtime, input_port, input, output_port, output, frames);
+    if (!runtime || frames == 0u || frames > runtime->frame_capacity || !input_port || !output_port ||
+        input_port->channel_count != 1u || output_port->channel_count != 1u || !input_port->signal_indices ||
+        !output_port->signal_indices) {
+        return apg_v2_runtime_dispatch_process_mono_audio_ports(
+            runtime, input_port, input.data, output_port, output.data, frames
+        );
+    }
+    if (!apg_const_buffer_has_length(input, frames)) {
+        apg_v2_runtime_set_error(runtime, "v2 runtime input buffer is shorter than the required frame count");
+        return false;
+    }
+    if (!apg_buffer_has_capacity(output, frames)) {
+        apg_v2_runtime_set_error(runtime, "v2 runtime output buffer is smaller than the required frame count");
+        return false;
+    }
+    return apg_v2_runtime_dispatch_process_mono_audio_ports(
+        runtime, input_port, input.data, output_port, output.data, frames
+    );
 }
 
 bool apg_v2_runtime_process_mono_port_indices(
-    apg_v2_runtime_t *runtime,
-    size_t            input_port_index,
-    const float      *input,
-    size_t            output_port_index,
-    float            *output,
-    uint32_t          frames
+    apg_v2_runtime_t  *runtime,
+    size_t             input_port_index,
+    apg_const_buffer_t input,
+    size_t             output_port_index,
+    apg_buffer_t       output,
+    uint32_t           frames
 ) {
     const apg_v2_registry_audio_port_t *input_port  = runtime && input_port_index < runtime->input_audio_ports_len
                                                           ? &runtime->input_audio_ports[input_port_index]
@@ -872,7 +913,9 @@ bool apg_v2_runtime_process_mono_port_indices(
     return runtime_process_mono_audio_ports(runtime, input_port, input, output_port, output, frames);
 }
 
-bool apg_v2_runtime_process_mono(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
+bool apg_v2_runtime_process_mono(
+    apg_v2_runtime_t *runtime, apg_const_buffer_t input, apg_buffer_t output, uint32_t frames
+) {
     if (!runtime)
         return false;
 

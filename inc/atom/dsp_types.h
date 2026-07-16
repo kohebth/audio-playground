@@ -2,9 +2,7 @@
 #define AUDIO_PLAYGROUND_DSP_TYPES_H
 
 // clang-format off
-#include <atom/types/dsp_primitives.h>
-#include <atom/types/dsp_enums.h>
-#include <atom/types/dsp_ports.h>
+#include <atom/dsp_common_types.h>
 
 #include <atom/types/generation_types.h>
 #include <atom/types/amplitude_types.h>

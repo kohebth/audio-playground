@@ -1,10 +1,9 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_REGISTRY_BUILDER_V2_H
 #define AUDIO_PLAYGROUND_APGCORE_REGISTRY_BUILDER_V2_H
 
-#include <stdint.h>
-
 #include <apgcore/compiler/compiler_v2.h>
 #include <apgcore/registry/registry_v2.h>
+#include <apgcore/runtime/prepare.h>
 #include <yaml/arena.h>
 #include <yaml/error.h>
 
@@ -14,8 +13,7 @@
  */
 uc_status apg_v2_registry_build(
     const apg_v2_compiled_unit_t *plan,
-    uint32_t                      frame_capacity,
-    float                         sample_rate,
+    const apg_prepare_context_t  *prepare_context,
     uc_arena                     *arena,
     apg_v2_registry_t            *out,
     uc_error                     *err
@@ -29,8 +27,7 @@ uc_status apg_v2_registry_build(
  */
 uc_status apg_v2_registry_build_with_growth(
     const apg_v2_compiled_unit_t *plan,
-    uint32_t                      frame_capacity,
-    float                         sample_rate,
+    const apg_prepare_context_t  *prepare_context,
     uc_arena                     *out_arena,
     apg_v2_registry_t            *out_registry,
     uc_error                     *err

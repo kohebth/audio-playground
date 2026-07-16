@@ -70,9 +70,9 @@ static bool process_resolve_ports(apg_runtime_process_context_t *ctx) {
 
     if (!ctx->input || !ctx->output)
         return process_context_fail(ctx, "v2 runtime interleaved input/output buffers are required");
-    if (!ctx->input_port)
+    if (!ctx->input_port || ctx->input_port->channel_count == 0u || !ctx->input_port->signal_indices)
         return process_context_fail(ctx, "v2 runtime input audio port signal lookup failed");
-    if (!ctx->output_port)
+    if (!ctx->output_port || ctx->output_port->channel_count == 0u || !ctx->output_port->signal_indices)
         return process_context_fail(ctx, "v2 runtime output audio port signal lookup failed");
 
     ctx->input_channels  = ctx->input_port->channel_count;

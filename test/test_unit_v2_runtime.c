@@ -81,12 +81,18 @@ static int expect_finite_samples(const float *actual, size_t frames, const char 
     return 0;
 }
 
+static bool runtime_process_mono_exact(apg_v2_runtime_t *runtime, const float *input, float *output, uint32_t frames) {
+    return apg_v2_runtime_process_mono(
+        runtime, apg_const_buffer_make(input, frames), apg_buffer_make(output, frames), frames
+    );
+}
+
 static float *runtime_signal_by_name_for_test(apg_v2_runtime_t *runtime, const char *name) {
     if (!runtime || !name)
         return NULL;
     for (size_t i = 0; i < runtime->signals_len; i++) {
         if (runtime->signal_names[i] && strcmp(runtime->signal_names[i], name) == 0)
-            return apg_v2_runtime_signal_buffer_at_mut(runtime, i);
+            return apg_v2_runtime_signal_buffer_at_mut(runtime, i).data;
     }
     return NULL;
 }
@@ -102,7 +108,7 @@ runtime_port_channel_for_test(apg_v2_runtime_t *runtime, const char *port_name, 
     ok = output
              ? apg_v2_runtime_output_port_channel_signal_index(runtime, port_index, channel_index, &signal_index, NULL)
              : apg_v2_runtime_input_port_channel_signal_index(runtime, port_index, channel_index, &signal_index, NULL);
-    return ok ? apg_v2_runtime_signal_buffer_at_mut(runtime, signal_index) : NULL;
+    return ok ? apg_v2_runtime_signal_buffer_at_mut(runtime, signal_index).data : NULL;
 }
 
 static float *runtime_input_port_signal_for_test(apg_v2_runtime_t *runtime, const char *port_name) {
@@ -148,6 +154,13 @@ static int test_runtime_init_simple_gain(void) {
                 return fail("runtime signal pool was not zero-initialized");
         }
     }
+    const apg_const_buffer_t first_signal   = apg_v2_runtime_signal_buffer_at(&runtime, 0u);
+    const apg_buffer_t       mutable_signal = apg_v2_runtime_signal_buffer_at_mut(&runtime, 0u);
+    if (first_signal.data != runtime.signals[0] || first_signal.length != 16u ||
+        mutable_signal.data != runtime.signals[0] || mutable_signal.capacity != 16u ||
+        apg_v2_runtime_signal_buffer_at(&runtime, runtime.signals_len).data != NULL ||
+        apg_v2_runtime_signal_buffer_at_mut(&runtime, runtime.signals_len).data != NULL)
+        return fail("runtime signal views do not expose exact capacities");
 
     if (runtime.params_len != 1u || !runtime.params || !runtime.param_targets ||
         !runtime.param_smoothing_remaining_frames || runtime.params[0] != 1.0f || runtime.param_targets[0] != 1.0f ||
@@ -179,10 +192,14 @@ static int test_runtime_init_simple_gain(void) {
 }
 
 static int test_v2_host_file_bridge_processes_simple_gain(void) {
-    apg_v2_host_unit_t *host = NULL;
-    uc_error            err  = {0};
-    uc_status           status =
-        apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", 8u, 48000.0f, &host, &err);
+    apg_v2_host_unit_t         *host            = NULL;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 8u,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status =
+        apg_v2_host_load_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml", &prepare_context, &host, &err);
     if (status != UC_OK) {
         fprintf(stderr, "host load error: %s\n", err.msg);
         return fail("failed to load v2 host fixture");
@@ -195,7 +212,9 @@ static int test_v2_host_file_bridge_processes_simple_gain(void) {
 
     const float input[3]  = {0.25f, -0.5f, 1.0f};
     float       output[3] = {0.0f, 0.0f, 0.0f};
-    if (!apg_v2_host_process_mono_ports(host, "input", input, "output", output, 3u)) {
+    if (!apg_v2_host_process_mono_ports(
+            host, "input", apg_const_buffer_make(input, 3u), "output", apg_buffer_make(output, 3u), 3u
+        )) {
         apg_v2_host_destroy(host);
         return fail("v2 host mono processing failed");
     }
@@ -263,7 +282,7 @@ static int test_simple_gain_process_mono(void) {
         return fail("failed to set simple_gain param");
     const float input[4]  = {0.25f, -0.5f, 1.5f, -2.0f};
     float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
+    if (!runtime_process_mono_exact(&runtime, input, output, 4u))
         return fail("simple_gain processing failed");
 
     const float expected[4] = {0.5f, -1.0f, 3.0f, -4.0f};
@@ -273,11 +292,31 @@ static int test_simple_gain_process_mono(void) {
     }
     if (runtime.process_context.frames != 4u || runtime.process_context.sample_position != 4u)
         return fail("runtime process metadata did not track requested frames");
-    if (apg_v2_runtime_process_mono(&runtime, input, output, 9u))
+
+    const char *last_error  = NULL;
+    const float sentinel[4] = {17.0f, 18.0f, 19.0f, 20.0f};
+    memcpy(output, sentinel, sizeof(output));
+    if (apg_v2_runtime_process_mono(&runtime, apg_const_buffer_make(input, 3u), apg_buffer_make(output, 4u), 4u))
+        return fail("simple_gain accepted a short input view");
+    if (memcmp(output, sentinel, sizeof(output)) != 0 || runtime.process_context.sample_position != 4u)
+        return fail("short input view changed output or runtime position");
+    last_error = apg_v2_measure_last_error(&runtime);
+    if (!last_error || !strstr(last_error, "input buffer"))
+        return fail("short input view failure did not expose a useful error");
+
+    if (apg_v2_runtime_process_mono(&runtime, apg_const_buffer_make(input, 4u), apg_buffer_make(output, 3u), 4u))
+        return fail("simple_gain accepted a short output view");
+    if (memcmp(output, sentinel, sizeof(output)) != 0 || runtime.process_context.sample_position != 4u)
+        return fail("short output view changed output or runtime position");
+    last_error = apg_v2_measure_last_error(&runtime);
+    if (!last_error || !strstr(last_error, "output buffer"))
+        return fail("short output view failure did not expose a useful error");
+
+    if (runtime_process_mono_exact(&runtime, input, output, 9u))
         return fail("simple_gain accepted over-capacity frame count");
     if (runtime.process_context.sample_position != 4u)
         return fail("failed runtime process advanced sample position");
-    const char *last_error = apg_v2_measure_last_error(&runtime);
+    last_error = apg_v2_measure_last_error(&runtime);
     if (!last_error || !strstr(last_error, "capacity"))
         return fail("simple_gain over-capacity failure did not expose a useful error");
 
@@ -316,7 +355,7 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
 
     if (!test_runtime_set_param_by_name(&runtime, "gain", 2.0f))
         return fail("failed to set initial smoothed param");
-    if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
+    if (!runtime_process_mono_exact(&runtime, input, output, 4u))
         return fail("initial immediate smoothing process failed");
     for (size_t i = 0; i < 4u; i++) {
         if (expect_near(output[i], 2.0f, 0.0001f, "initial immediate smoothing sample"))
@@ -327,7 +366,7 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
         return fail("smoothing runtime reset failed");
     if (runtime.process_context.sample_position != 0u)
         return fail("runtime reset did not clear sample position");
-    if (!apg_v2_runtime_process_mono(&runtime, input, output, 4u))
+    if (!runtime_process_mono_exact(&runtime, input, output, 4u))
         return fail("default smoothing process failed");
     for (size_t i = 0; i < 4u; i++) {
         if (expect_near(output[i], 1.0f, 0.0001f, "default smoothing sample"))
@@ -338,7 +377,7 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
         return fail("failed to set live smoothed param");
     if (runtime.param_targets[0] != 2.0f || runtime.param_smoothing_remaining_frames[0] != 480u)
         return fail("live smoothed param did not capture target and duration");
-    if (!apg_v2_runtime_process_mono(&runtime, input, output, 48u))
+    if (!runtime_process_mono_exact(&runtime, input, output, 48u))
         return fail("first live smoothing block failed");
     for (size_t i = 0; i < 48u; i++) {
         if (expect_near(output[i], 1.1f, 0.0001f, "first live smoothing sample"))
@@ -348,7 +387,7 @@ static int test_runtime_param_smoothing_advances_at_block_boundaries(void) {
         runtime.param_smoothing_remaining_frames[0] != 432u)
         return 1;
 
-    if (!apg_v2_runtime_process_mono(&runtime, input, output, 432u))
+    if (!runtime_process_mono_exact(&runtime, input, output, 432u))
         return fail("final live smoothing block failed");
     for (size_t i = 0; i < 432u; i++) {
         if (expect_near(output[i], 2.0f, 0.0001f, "final live smoothing sample"))
@@ -515,7 +554,7 @@ static int test_named_mono_port_rejects_bad_buffer_layouts(void) {
     if (test_runtime_process_mono_ports(&runtime, "input", NULL, "output", output, 2u))
         return fail("named mono processing accepted null input buffer");
     const char *last_error = apg_v2_measure_last_error(&runtime);
-    if (!last_error || !strstr(last_error, "buffers"))
+    if (!last_error || !strstr(last_error, "input buffer"))
         return fail("null buffer rejection did not expose a useful error");
 
     if (test_runtime_process_mono_ports(&runtime, "input", input, "input", output, 2u))
@@ -624,16 +663,17 @@ static int test_interleaved_stereo_public_port_process(void) {
     if (!apg_v2_runtime_input_port_channel_signal_index(&runtime, input_port_index, 1u, &input_r_index, NULL) ||
         !apg_v2_runtime_output_port_channel_signal_index(&runtime, output_port_index, 1u, &output_r_index, NULL))
         return fail("stereo channel signal index resolution failed");
-    if (apg_v2_runtime_signal_buffer_at(&runtime, input_r_index) !=
+    if (apg_v2_runtime_signal_buffer_at(&runtime, input_r_index).data !=
             runtime_signal_by_name_for_test(&runtime, "input_r") ||
-        apg_v2_runtime_signal_buffer_at(&runtime, output_r_index) !=
+        apg_v2_runtime_signal_buffer_at(&runtime, output_r_index).data !=
             runtime_signal_by_name_for_test(&runtime, "output_r"))
         return fail("stereo channel indices mapped unexpected signal buffers");
 
     const float input[4]  = {1.0f, 10.0f, -2.0f, -20.0f};
     float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     if (!apg_v2_runtime_process_interleaved_port_indices(
-            &runtime, input_port_index, input, output_port_index, output, 2u
+            &runtime, input_port_index, apg_const_buffer_make(input, 4u), output_port_index,
+            apg_buffer_make(output, 4u), 2u
         ))
         return fail("stereo interleaved index processing failed");
     const float expected[4] = {2.0f, 20.0f, -4.0f, -40.0f};
@@ -641,6 +681,22 @@ static int test_interleaved_stereo_public_port_process(void) {
         if (output[i] != expected[i])
             return fail("unexpected stereo interleaved output sample");
     }
+    const float interleaved_sentinel[4] = {11.0f, 12.0f, 13.0f, 14.0f};
+    memcpy(output, interleaved_sentinel, sizeof(output));
+    if (apg_v2_runtime_process_interleaved_port_indices(
+            &runtime, input_port_index, apg_const_buffer_make(input, 3u), output_port_index,
+            apg_buffer_make(output, 4u), 2u
+        ))
+        return fail("stereo processing accepted a short interleaved input view");
+    if (memcmp(output, interleaved_sentinel, sizeof(output)) != 0 || runtime.process_context.sample_position != 2u)
+        return fail("short interleaved input changed output or runtime position");
+    if (apg_v2_runtime_process_interleaved_port_indices(
+            &runtime, input_port_index, apg_const_buffer_make(input, 4u), output_port_index,
+            apg_buffer_make(output, 3u), 2u
+        ))
+        return fail("stereo processing accepted a short interleaved output view");
+    if (memcmp(output, interleaved_sentinel, sizeof(output)) != 0 || runtime.process_context.sample_position != 2u)
+        return fail("short interleaved output changed output or runtime position");
 
     apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);
@@ -677,7 +733,10 @@ static int test_named_mono_port_process(void) {
     if (!test_runtime_input_audio_port_index_by_name(&runtime, "input", &input_port_index) ||
         !test_runtime_output_audio_port_index_by_name(&runtime, "output", &output_port_index))
         return fail("simple_gain port index resolution failed");
-    if (!apg_v2_runtime_process_mono_port_indices(&runtime, input_port_index, input, output_port_index, output, 3u))
+    if (!apg_v2_runtime_process_mono_port_indices(
+            &runtime, input_port_index, apg_const_buffer_make(input, 3u), output_port_index,
+            apg_buffer_make(output, 3u), 3u
+        ))
         return fail("indexed simple_gain processing failed");
     if (output[0] != 0.75f || output[1] != -1.5f || output[2] != 3.0f)
         return fail("unexpected named simple_gain output sample");

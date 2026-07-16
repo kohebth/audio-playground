@@ -944,8 +944,7 @@ fill_node_layouts(uc_arena *arena, const apg_v2_compiled_unit_t *plan, apg_v2_re
 
 uc_status apg_v2_registry_build(
     const apg_v2_compiled_unit_t *plan,
-    uint32_t                      frame_capacity,
-    float                         sample_rate,
+    const apg_prepare_context_t  *prepare_context,
     uc_arena                     *arena,
     apg_v2_registry_t            *out,
     uc_error                     *err
@@ -954,15 +953,16 @@ uc_status apg_v2_registry_build(
         return UC_E_TYPE;
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
-    if (frame_capacity == 0u)
-        return set_error(err, UC_E_RANGE, "v2 registry frame capacity must be greater than zero");
+    if (!apg_prepare_context_valid(prepare_context))
+        return set_error(err, UC_E_RANGE, "v2 registry prepare context is invalid");
+    const uint32_t frame_capacity = prepare_context->maximum_frames;
     if (plan->unit->signals_len > 0u && plan->unit->signals_len > SIZE_MAX / (size_t)frame_capacity)
         return set_error(err, UC_E_RANGE, "v2 registry signal layout is too large");
     if (plan->schedule_len > 0u && !plan->schedule)
         return set_error(err, UC_E_MISSING, "v2 registry schedule is missing");
 
     out->frame_capacity    = frame_capacity;
-    out->sample_rate       = sample_rate > 0.0f ? sample_rate : 48000.0f;
+    out->sample_rate       = prepare_context->sample_rate;
     out->signals_len       = plan->unit->signals_len;
     out->signal_samples    = plan->unit->signals_len * (size_t)frame_capacity;
     out->params_len        = plan->unit->params_len;
@@ -1029,8 +1029,7 @@ uc_status apg_v2_registry_build(
 
 uc_status apg_v2_registry_build_with_growth(
     const apg_v2_compiled_unit_t *plan,
-    uint32_t                      frame_capacity,
-    float                         sample_rate,
+    const apg_prepare_context_t  *prepare_context,
     uc_arena                     *out_arena,
     apg_v2_registry_t            *out_registry,
     uc_error                     *err
@@ -1047,7 +1046,7 @@ uc_status apg_v2_registry_build_with_growth(
             return set_error(err, UC_E_OOM, "v2 registry arena allocation failed");
         }
 
-        uc_status status = apg_v2_registry_build(plan, frame_capacity, sample_rate, &registry_arena, out_registry, err);
+        uc_status status = apg_v2_registry_build(plan, prepare_context, &registry_arena, out_registry, err);
         if (status == UC_OK) {
             uc_arena_free(out_arena);
             *out_arena = registry_arena;

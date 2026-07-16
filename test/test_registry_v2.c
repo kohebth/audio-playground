@@ -21,7 +21,7 @@ static float *runtime_signal_by_name_for_test(apg_v2_runtime_t *runtime, const c
         return NULL;
     for (size_t i = 0; i < runtime->signals_len; i++) {
         if (runtime->signal_names[i] && strcmp(runtime->signal_names[i], name) == 0)
-            return apg_v2_runtime_signal_buffer_at_mut(runtime, i);
+            return apg_v2_runtime_signal_buffer_at_mut(runtime, i).data;
     }
     return NULL;
 }
@@ -80,11 +80,55 @@ static int test_registry_spectral_context(void) {
         uc_arena_free(&arena);
         return fail("registry replacement arena init failed");
     }
-    void             *original_registry_base = registry_arena.base;
-    size_t            original_registry_used = registry_arena.used;
-    apg_v2_registry_t registry;
-    uc_error          err = {0};
-    uc_status status      = apg_v2_registry_build_with_growth(&plan, 64u, 48000.0f, &registry_arena, &registry, &err);
+    void                       *original_registry_base = registry_arena.base;
+    size_t                      original_registry_used = registry_arena.used;
+    apg_v2_registry_t           registry;
+    uc_error                    err                = {0};
+    const apg_prepare_context_t zero_frame_context = {
+        .maximum_frames = 0u,
+        .sample_rate    = 48000.0f,
+    };
+    const apg_prepare_context_t zero_rate_context = {
+        .maximum_frames = 64u,
+        .sample_rate    = 0.0f,
+    };
+    const apg_prepare_context_t small_prepare_context = {
+        .maximum_frames = 64u,
+        .sample_rate    = 48000.0f,
+    };
+    const apg_prepare_context_t spectral_prepare_context = {
+        .maximum_frames = 256u,
+        .sample_rate    = 48000.0f,
+    };
+
+    uc_status status = apg_v2_registry_build(&plan, NULL, &registry_arena, &registry, &err);
+    if (status != UC_E_RANGE || strstr(err.msg, "prepare context") == NULL) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("registry accepted a missing prepare context");
+    }
+    err    = (uc_error){0};
+    status = apg_v2_registry_build(&plan, &zero_frame_context, &registry_arena, &registry, &err);
+    if (status != UC_E_RANGE || strstr(err.msg, "prepare context") == NULL) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("registry accepted a zero-frame prepare context");
+    }
+    err    = (uc_error){0};
+    status = apg_v2_registry_build(&plan, &zero_rate_context, &registry_arena, &registry, &err);
+    if (status != UC_E_RANGE || strstr(err.msg, "prepare context") == NULL) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("registry accepted a zero-rate prepare context");
+    }
+    if (registry_arena.base != original_registry_base || registry_arena.used != original_registry_used) {
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("invalid prepare context modified the caller arena");
+    }
+
+    err    = (uc_error){0};
+    status = apg_v2_registry_build_with_growth(&plan, &small_prepare_context, &registry_arena, &registry, &err);
     if (status != UC_E_RANGE || strstr(err.msg, "frame capacity") == NULL) {
         if (status == UC_OK)
             uc_arena_free(&registry_arena);
@@ -98,7 +142,7 @@ static int test_registry_spectral_context(void) {
     }
 
     err    = (uc_error){0};
-    status = apg_v2_registry_build_with_growth(&plan, 256u, 48000.0f, &registry_arena, &registry, &err);
+    status = apg_v2_registry_build_with_growth(&plan, &spectral_prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -160,10 +204,14 @@ static int test_registry_spectral_overlap_buffers(void) {
         uc_arena_free(&arena);
         return 1;
     }
-    uc_arena          registry_arena = {0};
-    apg_v2_registry_t registry;
-    uc_error          err = {0};
-    uc_status status      = apg_v2_registry_build_with_growth(&plan, 256u, 48000.0f, &registry_arena, &registry, &err);
+    uc_arena                    registry_arena = {0};
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 256u,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status = apg_v2_registry_build_with_growth(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&arena);
@@ -222,9 +270,13 @@ static int test_registry_layout(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 16u, 44100.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 16u,
+        .sample_rate    = 44100.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&registry_arena);
@@ -347,9 +399,13 @@ static int test_registry_state_buffer_samples(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 64u, 48000.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 64u,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&registry_arena);
@@ -424,9 +480,13 @@ static int test_registry_control_targets(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 8u, 48000.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 8u,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&registry_arena);
@@ -523,9 +583,13 @@ static int test_registry_signal_array_pool(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 8u, 48000.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 8u,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&registry_arena);
@@ -634,9 +698,13 @@ static int test_registry_scalar_input_refresh(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 8u, 48000.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 8u,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&registry_arena);
@@ -684,9 +752,13 @@ static int test_registry_uses_compiler_instance_metadata(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 16u, 44100.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 16u,
+        .sample_rate    = 44100.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&registry_arena);
@@ -730,9 +802,13 @@ static int test_runtime_init_from_registry_ignores_plan_mutation(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 16u, 44100.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 16u,
+        .sample_rate    = 44100.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&registry_arena);
@@ -821,9 +897,13 @@ static int test_registry_builds_from_compiled_atom_layout_without_raw_atom(void)
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 16u, 44100.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 16u,
+        .sample_rate    = 44100.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error without raw atom pointer: %s\n", err.msg);
         uc_arena_free(&registry_arena);
@@ -860,9 +940,13 @@ static int test_runtime_create_owned_lifecycle(void) {
         return fail("registry arena init failed");
     }
 
-    apg_v2_registry_t registry;
-    uc_error          err    = {0};
-    uc_status         status = apg_v2_registry_build(&plan, 16u, 48000.0f, &registry_arena, &registry, &err);
+    apg_v2_registry_t           registry;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = 16u,
+        .sample_rate    = 48000.0f,
+    };
+    uc_status status = apg_v2_registry_build(&plan, &prepare_context, &registry_arena, &registry, &err);
     if (status != UC_OK) {
         fprintf(stderr, "registry error: %s\n", err.msg);
         uc_arena_free(&registry_arena);

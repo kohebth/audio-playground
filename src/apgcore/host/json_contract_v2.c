@@ -460,18 +460,20 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
         return;
     }
 
-    apg_project_v2_resolved_t project;
-    apg_project_v2_compiled_t compiled;
-    apg_v2_runtime_t         *runtime       = NULL;
-    bool                      runtime_ready = false;
-    uc_error                  err           = {0};
-    uc_status                 status        = apg_project_v2_load_resolved_file(path, &arena, &project, &err);
+    apg_project_v2_resolved_t   project;
+    apg_project_v2_compiled_t   compiled;
+    apg_v2_runtime_t           *runtime         = NULL;
+    bool                        runtime_ready   = false;
+    uc_error                    err             = {0};
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = APG_RENDER_FRAMES,
+        .sample_rate    = APG_RENDER_SAMPLE_RATE,
+    };
+    uc_status status = apg_project_v2_load_resolved_file(path, &arena, &project, &err);
     if (status == UC_OK)
         status = apg_project_v2_compile(&project, &arena, &compiled, &err);
     if (status == UC_OK) {
-        status = apg_v2_registry_build_with_growth(
-            &compiled.plan, APG_RENDER_FRAMES, APG_RENDER_SAMPLE_RATE, &registry_arena, &registry, &err
-        );
+        status = apg_v2_registry_build_with_growth(&compiled.plan, &prepare_context, &registry_arena, &registry, &err);
         if (status == UC_OK)
             status = apg_v2_runtime_create_from_registry(&registry, &runtime, &err);
         runtime_ready = status == UC_OK;
@@ -490,7 +492,8 @@ void apg_v2_json_write_render_project(FILE *out, const char *path) {
                 registry.output_audio_ports, registry.output_audio_ports_len, "output", &output_port_index
             ) ||
             !apg_v2_runtime_process_mono_port_indices(
-                runtime, input_port_index, input, output_port_index, output, APG_RENDER_FRAMES
+                runtime, input_port_index, apg_const_buffer_make(input, APG_RENDER_FRAMES), output_port_index,
+                apg_buffer_make(output, APG_RENDER_FRAMES), APG_RENDER_FRAMES
             )) {
             const char *msg = apg_v2_measure_last_error(runtime);
             uc_error_set(&err, UC_E_TYPE, (uc_loc){0, 0}, "%s", msg ? msg : "project render failed");

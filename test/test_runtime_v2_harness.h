@@ -110,7 +110,10 @@ static bool test_runtime_process_mono_ports(
         apg_v2_runtime_set_error(runtime, "v2 runtime output audio port signal lookup failed");
         return false;
     }
-    return apg_v2_runtime_process_mono_port_indices(runtime, input_index, input, output_index, output, frames);
+    return apg_v2_runtime_process_mono_port_indices(
+        runtime, input_index, apg_const_buffer_make(input, frames), output_index, apg_buffer_make(output, frames),
+        frames
+    );
 }
 
 static bool test_runtime_process_interleaved_ports(
@@ -131,7 +134,14 @@ static bool test_runtime_process_interleaved_ports(
         apg_v2_runtime_set_error(runtime, "v2 runtime output audio port signal lookup failed");
         return false;
     }
-    return apg_v2_runtime_process_interleaved_port_indices(runtime, input_index, input, output_index, output, frames);
+    const size_t input_channels  = runtime->input_audio_ports[input_index].channel_count;
+    const size_t output_channels = runtime->output_audio_ports[output_index].channel_count;
+    if (frames > 0u && (input_channels > UINT32_MAX / frames || output_channels > UINT32_MAX / frames))
+        return false;
+    return apg_v2_runtime_process_interleaved_port_indices(
+        runtime, input_index, apg_const_buffer_make(input, (uint32_t)(input_channels * frames)), output_index,
+        apg_buffer_make(output, (uint32_t)(output_channels * frames)), frames
+    );
 }
 
 // Keep runtime tests on the production registry-init boundary.
@@ -143,9 +153,12 @@ static uc_status test_apg_v2_runtime_init_registry(
     apg_v2_runtime_t             *runtime,
     uc_error                     *err
 ) {
+    const apg_prepare_context_t prepare_context = {
+        .maximum_frames = frame_capacity,
+        .sample_rate    = sample_rate,
+    };
     apg_v2_registry_t registry = {0};
-    uc_status         status =
-        apg_v2_registry_build_with_growth(plan, frame_capacity, sample_rate, registry_arena, &registry, err);
+    uc_status status = apg_v2_registry_build_with_growth(plan, &prepare_context, registry_arena, &registry, err);
     return status == UC_OK ? apg_v2_runtime_init_from_registry(&registry, runtime, err) : status;
 }
 
