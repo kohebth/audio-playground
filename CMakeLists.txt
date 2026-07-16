@@ -124,9 +124,65 @@ foreach(TEST_TARGET ${TEST_TARGETS})
     endif()
 endforeach()
 
+set(DSP_HEADER_SMOKE_SOURCES
+        test/abi/headers/amplitude_types.c
+        test/abi/headers/delay_types.c
+        test/abi/headers/detect_types.c
+        test/abi/headers/dsp_enums.c
+        test/abi/headers/dsp_ports.c
+        test/abi/headers/dsp_primitives.c
+        test/abi/headers/dsp_type_checks.c
+        test/abi/headers/dsp_type_macros.c
+        test/abi/headers/dsp_types.c
+        test/abi/headers/filter_types.c
+        test/abi/headers/frequency_types.c
+        test/abi/headers/generation_types.c
+        test/abi/headers/interpolation_types.c
+        test/abi/headers/mix_types.c
+        test/abi/headers/modulation_types.c
+        test/abi/headers/nonlinear_types.c
+        test/abi/headers/src_types.c
+)
+
+add_executable(test_dsp_headers_c
+        test/abi/dsp_headers_c_smoke.c
+        ${DSP_HEADER_SMOKE_SOURCES}
+)
+target_include_directories(test_dsp_headers_c PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_dsp_headers_c PRIVATE -Wall -Wextra -Werror)
+endif()
+add_test(NAME test_dsp_headers_c COMMAND test_dsp_headers_c)
+
+add_executable(test_dsp_headers_cpp test/abi/dsp_headers_cpp_smoke.cpp)
+target_include_directories(test_dsp_headers_cpp PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+target_compile_features(test_dsp_headers_cpp PRIVATE cxx_std_11)
+target_link_libraries(test_dsp_headers_cpp PRIVATE apgcore)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_dsp_headers_cpp PRIVATE -Wall -Wextra -Werror)
+endif()
+add_test(NAME test_dsp_headers_cpp COMMAND test_dsp_headers_cpp)
+
+add_executable(test_dsp_types_abi_snapshot test/abi/dsp_types_abi_snapshot.c)
+target_include_directories(test_dsp_types_abi_snapshot PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    add_test(
+            NAME test_dsp_types_abi
+            COMMAND ${CMAKE_COMMAND}
+                    -DSNAPSHOT_EXE=$<TARGET_FILE:test_dsp_types_abi_snapshot>
+                    -DEXPECTED_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_baseline_lp64.csv
+                    -DACTUAL_FILE=${CMAKE_BINARY_DIR}/test-artifacts/dsp-types-abi-actual.csv
+                    -P ${CMAKE_SOURCE_DIR}/test/abi/verify_dsp_types_abi.cmake
+    )
+else()
+    add_test(NAME test_dsp_types_abi COMMAND test_dsp_types_abi_snapshot)
+endif()
+
+set_tests_properties(test_dsp_headers_c test_dsp_headers_cpp test_dsp_types_abi PROPERTIES LABELS "types;v2")
+
 add_custom_target(check_v2
         COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} -L v2 --output-on-failure
-        DEPENDS test_atom_catalog test_atom_registry_contract test_contract_parser_v2 test_contract_validator_v2 test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime test_registry_v2 test_measure_v2 test_public_headers test_host_v2_project test_chain_guitar_sample test_hall_reverb
+        DEPENDS test_atom_catalog test_atom_registry_contract test_contract_parser_v2 test_contract_validator_v2 test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime test_registry_v2 test_measure_v2 test_public_headers test_host_v2_project test_chain_guitar_sample test_hall_reverb test_dsp_headers_c test_dsp_headers_cpp test_dsp_types_abi_snapshot
 )
 
 add_test(
