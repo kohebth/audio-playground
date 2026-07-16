@@ -163,6 +163,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 add_test(NAME test_dsp_headers_cpp COMMAND test_dsp_headers_cpp)
 
+add_executable(test_dsp_atom_symbols test/abi/dsp_atom_symbols.c)
+target_include_directories(test_dsp_atom_symbols PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+target_link_libraries(test_dsp_atom_symbols PRIVATE apgcore)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_dsp_atom_symbols PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME test_dsp_atom_symbols COMMAND test_dsp_atom_symbols)
+
 add_executable(test_dsp_types_abi_snapshot test/abi/dsp_types_abi_snapshot.c)
 target_include_directories(test_dsp_types_abi_snapshot PRIVATE ${CMAKE_SOURCE_DIR}/inc)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
@@ -183,11 +191,17 @@ else()
     add_test(NAME test_dsp_types_abi COMMAND test_dsp_types_abi_snapshot)
 endif()
 
-set_tests_properties(test_dsp_headers_c test_dsp_headers_cpp test_dsp_types_abi PROPERTIES LABELS "types;v2")
+set_tests_properties(
+        test_dsp_headers_c
+        test_dsp_headers_cpp
+        test_dsp_atom_symbols
+        test_dsp_types_abi
+        PROPERTIES LABELS "types;v2"
+)
 
 add_custom_target(check_v2
         COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} -L v2 --output-on-failure
-        DEPENDS test_atom_catalog test_atom_registry_contract test_contract_parser_v2 test_contract_validator_v2 test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime test_registry_v2 test_measure_v2 test_public_headers test_host_v2_project test_chain_guitar_sample test_hall_reverb test_dsp_headers_c test_dsp_headers_cpp test_dsp_types_abi_snapshot
+        DEPENDS test_atom_catalog test_atom_registry_contract test_contract_parser_v2 test_contract_validator_v2 test_project_v2_validate test_project_v2_compile test_v2_json_contract test_unit_v2_validate test_unit_v2_compile test_unit_v2_runtime test_registry_v2 test_measure_v2 test_public_headers test_host_v2_project test_chain_guitar_sample test_hall_reverb test_dsp_headers_c test_dsp_headers_cpp test_dsp_atom_symbols test_dsp_types_abi_snapshot
 )
 
 add_test(
