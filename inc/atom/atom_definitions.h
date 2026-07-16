@@ -18,7 +18,7 @@
     X(amplitude_divide, amplitude, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)         \
     X(amplitude_multiply, amplitude, 0, 0, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)       \
     X(amplitude_normalize, amplitude, 0, 2, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)              \
-    X(amplitude_smooth, amplitude, 0, 3, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)             \
+    X(amplitude_smooth, amplitude, 0, 2, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)             \
     X(amplitude_subtract, amplitude, 0, 0, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)       \
     X(delay_fractional, delay, 0, 2, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)                     \
     X(delay_line, delay, 0, 1, 3, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                       \
@@ -26,16 +26,16 @@
     X(delay_tap_feedforward, delay, 2, 1, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)                \
     X(delay_unit, delay, 0, 0, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)                   \
     X(detect_autocorrelate, detect, 0, 1, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)           \
-    X(detect_pitch, detect, 0, 2, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)                   \
-    X(detect_envelope, detect, 0, 3, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                 \
-    X(detect_peak, detect, 0, 3, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                     \
+    X(detect_pitch, detect, 0, 1, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)                   \
+    X(detect_envelope, detect, 0, 2, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                 \
+    X(detect_peak, detect, 0, 2, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                     \
     X(detect_rms, detect, 0, 1, 4, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                      \
     X(detect_slope, detect, 0, 0, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)                \
     X(detect_threshold, detect, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)            \
     X(detect_zero_crossing, detect, 0, 0, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)        \
     X(filter_allpass, filter, 0, 2, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)                      \
     X(filter_biquad_coefficients, filter, 0, 5, 2, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)      \
-    X(filter_biquad, filter, 2, 5, 4, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                   \
+    X(filter_biquad, filter, 2, 4, 4, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                   \
     X(filter_comb_fb, filter, 0, 2, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)                      \
     X(filter_comb_ff, filter, 0, 2, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)                      \
     X(filter_dc_block, filter, 0, 1, 2, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)                 \
@@ -45,20 +45,20 @@
     X(freq_fft, freq, 0, 1, 2, APG_ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL, FFT)                     \
     X(freq_ifft, freq, 0, 1, 2, APG_ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL, IFFT)                   \
     X(freq_multiply, freq, 0, 1, 0, APG_ATOM_FLAGS_EXPERIMENTAL, APG_ATOM_MATURITY_EXPERIMENTAL, MULTIPLY)           \
-    X(freq_overlap_add, freq, 0, 2, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, OVERLAP_ADD)             \
-    X(freq_overlap_save, freq, 0, 2, 2, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, OVERLAP_SAVE)           \
+    X(freq_overlap_add, freq, 0, 2, 2, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, OVERLAP_ADD)             \
+    X(freq_overlap_save, freq, 0, 2, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, OVERLAP_SAVE)           \
     X(freq_window, freq, 0, 2, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR, WINDOW)                        \
-    X(freq_shift, freq, 0, 1, 5, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)                       \
+    X(freq_shift, freq, 0, 1, 4, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)                       \
     X(generation_dc, generation, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)           \
-    X(generation_envelope, generation, 0, 5, 2, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)         \
-    X(generation_impulse, generation, 0, 2, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)      \
-    X(generation_lfo, generation, 0, 4, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)              \
+    X(generation_envelope, generation, 0, 4, 2, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)         \
+    X(generation_impulse, generation, 0, 1, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)      \
+    X(generation_lfo, generation, 0, 3, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)              \
     X(generation_noise, generation, 0, 2, 2, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)        \
-    X(generation_oscillator, generation, 0, 4, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)           \
+    X(generation_oscillator, generation, 0, 3, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)           \
     X(interpolation_cubic, interpolation, 0, 0, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)          \
-    X(interpolation_lagrange, interpolation, 0, 1, 2, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)  \
+    X(interpolation_lagrange, interpolation, 0, 1, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)  \
     X(interpolation_linear, interpolation, 0, 0, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS) \
-    X(interpolation_sinc, interpolation, 0, 1, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)      \
+    X(interpolation_sinc, interpolation, 0, 1, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS)      \
     X(mix_crossfade, mix, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)                  \
     X(mix_decode_ms, mix, 0, 0, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)                  \
     X(mix_encode_ms, mix, 0, 0, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)                  \
@@ -73,8 +73,8 @@
     X(nonlinear_bitcrush, nonlinear, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)           \
     X(nonlinear_sample_hold, nonlinear, 0, 1, 2, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS)        \
     X(nonlinear_waveshape, nonlinear, 0, 2, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS)              \
-    X(src_antialias, src, 0, 2, 2, APG_ATOM_FLAGS_WASM | APG_ATOM_ANTIALIASED, APG_ATOM_MATURITY_MUSICAL, PROCESS)   \
-    X(src_antiimage, src, 0, 2, 2, APG_ATOM_FLAGS_WASM | APG_ATOM_ANTIALIASED, APG_ATOM_MATURITY_MUSICAL, PROCESS)   \
+    X(src_antialias, src, 0, 1, 2, APG_ATOM_FLAGS_WASM | APG_ATOM_ANTIALIASED, APG_ATOM_MATURITY_MUSICAL, PROCESS)   \
+    X(src_antiimage, src, 0, 1, 2, APG_ATOM_FLAGS_WASM | APG_ATOM_ANTIALIASED, APG_ATOM_MATURITY_MUSICAL, PROCESS)   \
     X(src_convert_format, src, 0, 2, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS)             \
     X(src_downsample, src, 0, 1, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR, STREAM)                      \
     X(src_upsample, src, 0, 1, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_SAFE_SCALAR, STREAM)                        \

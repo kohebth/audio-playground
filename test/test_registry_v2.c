@@ -182,6 +182,23 @@ static int test_registry_spectral_overlap_buffers(void) {
             return fail("spectral overlap buffer was not sized from fft_size");
         }
     }
+    apg_v2_runtime_t runtime;
+    status = apg_v2_runtime_init_from_registry(&registry, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "runtime error: %s\n", err.msg);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("failed to initialize spectral overlap runtime");
+    }
+    const freq_overlap_save_state_t *save_state = runtime.nodes[0].state_storage;
+    const freq_overlap_add_state_t  *add_state  = runtime.nodes[1].state_storage;
+    if (!save_state || !add_state || save_state->buffer_len != 256u || add_state->buffer_len != 256u) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&registry_arena);
+        uc_arena_free(&arena);
+        return fail("spectral overlap capacities were not bound into atom state");
+    }
+    apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&registry_arena);
     uc_arena_free(&arena);
     return 0;

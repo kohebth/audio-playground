@@ -66,7 +66,7 @@ int test_delay_line_impulse_position(void) {
     delay_line_out_t            out    = {.signal = y};
     delay_line_in_t             in     = {.signal = x};
     delay_line_params_t         params = {.length = 12};
-    delay_line_state_t          state  = {.buffer = buffer, .write_pos = 0};
+    delay_line_state_t          state  = {.buffer = buffer, .buffer_len = 192000u, .write_pos = 0};
     const apg_process_context_t info   = {.sample_rate = 48000.0f, .frames = TEST_CHUNK};
     delay_line_process(&out, &in, &params, &state, &info);
 
@@ -87,7 +87,7 @@ int test_delay_extreme_bounds(void) {
     delay_line_out_t      out    = {.signal = y};
     delay_line_in_t       in     = {.signal = x};
     delay_line_params_t   params = {.length = 192000};
-    delay_line_state_t    state  = {.buffer = buffer, .write_pos = -1};
+    delay_line_state_t    state  = {.buffer = buffer, .buffer_len = 192000u, .write_pos = -1};
     apg_process_context_t info   = {.sample_rate = 48000.0f, .frames = 8u};
 
     delay_line_process(&out, &in, &params, &state, &info);
@@ -101,7 +101,7 @@ int test_delay_extreme_bounds(void) {
     delay_fractional_out_t    frac_out    = {.signal = y};
     delay_fractional_in_t     frac_in     = {.signal = x};
     delay_fractional_params_t frac_params = {.delay_samples = NAN, .interpolation = 0};
-    delay_fractional_state_t  frac_state  = {.buffer = buffer, .write_pos = -3};
+    delay_fractional_state_t  frac_state  = {.buffer = buffer, .buffer_len = 192000u, .write_pos = -3};
     delay_fractional_process(&frac_out, &frac_in, &frac_params, &frac_state, &info);
     if (assert_finite_buffer(y, 8, "delay_fractional extreme bounds"))
         return 1;
@@ -182,7 +182,6 @@ int test_biquad_cutoff_smoothing(void) {
         .cutoff       = 400.0f,
         .q            = 0.70710678f,
         .mode         = 0,
-        .sample_rate  = 8000.0f,
         .smoothing_ms = 5.0f,
     };
     filter_biquad_state_t state = {0};
@@ -214,7 +213,6 @@ int test_biquad_modes_are_finite(void) {
             .cutoff       = 1200.0f,
             .q            = 0.70710678f,
             .mode         = mode,
-            .sample_rate  = 48000.0f,
             .smoothing_ms = 0.0f,
         };
         filter_biquad_state_t       state = {0};
@@ -230,15 +228,13 @@ int test_biquad_modes_are_finite(void) {
     return 0;
 }
 
-int test_runtime_sample_rate_overrides_legacy_params(void) {
+int test_runtime_sample_rate_drives_rate_dependent_atoms(void) {
     float                   y[4] = {0};
     generation_lfo_out_t    out  = {.signal = y};
     generation_lfo_in_t     in;
-    generation_lfo_params_t params = {
-        .frequency = 100.0f, .waveform = WAVEFORM_SINE, .phase_offset = 0.0f, .sample_rate = 1000.0f
-    };
-    generation_lfo_state_t state = {0};
-    apg_process_context_t  info  = {.sample_rate = 10000.0f, .frames = 4u};
+    generation_lfo_params_t params = {.frequency = 100.0f, .waveform = WAVEFORM_SINE, .phase_offset = 0.0f};
+    generation_lfo_state_t  state  = {0};
+    apg_process_context_t   info   = {.sample_rate = 10000.0f, .frames = 4u};
 
     generation_lfo_process(&out, &in, &params, &state, &info);
     if (fabsf(state.phase - 0.04f) > 1e-6f)
@@ -246,7 +242,7 @@ int test_runtime_sample_rate_overrides_legacy_params(void) {
 
     generation_impulse_out_t    impulse_out = {.signal = y};
     generation_impulse_in_t     impulse_in;
-    generation_impulse_params_t impulse_params = {.interval = 0.001f, .sample_rate = 1000.0f};
+    generation_impulse_params_t impulse_params = {.interval = 0.001f};
     generation_impulse_state_t  impulse_state  = {0};
     generation_impulse_process(&impulse_out, &impulse_in, &impulse_params, &impulse_state, &info);
     if (impulse_state.counter != 6)

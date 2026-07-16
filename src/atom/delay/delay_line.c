@@ -2,8 +2,6 @@
 #include <atom/dsp_atoms.h>
 #include <stddef.h>
 
-#define MAX_DELAY_SAMPLES 192000u
-
 void delay_line_process(
     delay_line_out_t            *out,
     const delay_line_in_t       *in,
@@ -16,10 +14,10 @@ void delay_line_process(
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL ||
-        state->buffer == NULL)
+        state->buffer == NULL || state->buffer_len == 0u)
         return;
 
-    const uint32_t capacity  = state->buffer_len > 0u ? state->buffer_len : MAX_DELAY_SAMPLES;
+    const uint32_t capacity  = state->buffer_len;
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     int64_t        requested = params->length;
     if (requested < 0)

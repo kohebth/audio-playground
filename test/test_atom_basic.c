@@ -8,7 +8,7 @@ int test_biquad_impulse_stability(void);
 int test_biquad_invalid_coefficients_bypass(void);
 int test_biquad_cutoff_smoothing(void);
 int test_biquad_modes_are_finite(void);
-int test_runtime_sample_rate_overrides_legacy_params(void);
+int test_runtime_sample_rate_drives_rate_dependent_atoms(void);
 int test_process_info_frame_limits(void);
 int test_process_info_modulation_frame_limits(void);
 int test_process_info_control_frame_limits(void);
@@ -43,7 +43,7 @@ int main(void) {
         return 1;
     if (test_biquad_modes_are_finite())
         return 1;
-    if (test_runtime_sample_rate_overrides_legacy_params())
+    if (test_runtime_sample_rate_drives_rate_dependent_atoms())
         return 1;
     if (test_process_info_frame_limits())
         return 1;

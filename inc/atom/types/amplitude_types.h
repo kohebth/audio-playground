@@ -13,7 +13,7 @@
     X(amplitude_divide, SIGNAL, DIVISION, { float epsilon; }, { uint8_t _reserved; }) \
     X(amplitude_multiply, SIGNAL, SIGNAL_PAIR, { uint8_t _reserved; }, { uint8_t _reserved; }) \
     X(amplitude_normalize, SIGNAL, SIGNAL, { float target_level; int mode; }, { float running_peak; }) \
-    X(amplitude_smooth, SIGNAL, SIGNAL, { float attack; float release; float sample_rate; }, { float prev_value; }) \
+    X(amplitude_smooth, SIGNAL, SIGNAL, { float attack; float release; }, { float prev_value; }) \
     X(amplitude_subtract, SIGNAL, SIGNAL_PAIR, { uint8_t _reserved; }, { uint8_t _reserved; })
 // clang-format on
 

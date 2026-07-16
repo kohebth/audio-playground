@@ -9,9 +9,9 @@
 // clang-format off
 #define APG_DETECT_DSP_TYPE_TABLE(X) \
     X(detect_autocorrelate, CORRELATION, SIGNAL, { int max_lag; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
-    X(detect_pitch, PITCH, SIGNAL, { int max_lag; float sample_rate; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
-    X(detect_envelope, ENVELOPE, SIGNAL, { float attack; float release; float sample_rate; }, { float prev_envelope; }) \
-    X(detect_peak, LEVEL, SIGNAL, { float attack; float release; float sample_rate; }, { float prev_peak; }) \
+    X(detect_pitch, PITCH, SIGNAL, { int max_lag; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(detect_envelope, ENVELOPE, SIGNAL, { float attack; float release; }, { float prev_envelope; }) \
+    X(detect_peak, LEVEL, SIGNAL, { float attack; float release; }, { float prev_peak; }) \
     X(detect_rms, LEVEL, SIGNAL, { int window_size; }, { float *buffer; uint32_t buffer_len; int write_pos; float sum; }) \
     X(detect_slope, SLOPE, SIGNAL, { uint8_t _reserved; }, { float prev_sample; }) \
     X(detect_threshold, GATE, SIGNAL, { float threshold; }, { uint8_t _reserved; }) \

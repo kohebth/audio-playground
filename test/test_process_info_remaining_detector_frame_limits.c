@@ -77,7 +77,7 @@ static int test_detector_safety_and_pitch_accuracy(void) {
     output[1024]                       = -99.0f;
     detect_pitch_out_t    pitch_out    = {.pitch = output};
     detect_pitch_in_t     pitch_in     = {.signal = input};
-    detect_pitch_params_t pitch_params = {.max_lag = 256, .sample_rate = 8000.0f};
+    detect_pitch_params_t pitch_params = {.max_lag = 256};
     detect_pitch_state_t  pitch_state  = {.buffer = pitch_buffer, .buffer_len = 1024u, .write_pos = -1};
     info.frames                        = 1024u;
     detect_pitch_process(&pitch_out, &pitch_in, &pitch_params, &pitch_state, &info);
@@ -178,7 +178,9 @@ int test_process_info_remaining_detector_frame_limits(void) {
         detect_rms_out_t    rms_out    = {.level = y};
         detect_rms_in_t     rms_in     = {.signal = x};
         detect_rms_params_t rms_params = {.window_size = 4};
-        detect_rms_state_t  rms_state  = {.buffer = buffer, .write_pos = 0, .sum = 0.0f};
+        detect_rms_state_t  rms_state  = {
+              .buffer = buffer, .buffer_len = APG_DETECT_RMS_CAPACITY, .write_pos = 0, .sum = 0.0f
+        };
         detect_rms_process(&rms_out, &rms_in, &rms_params, &rms_state, &info);
         for (int i = 0; i < frames; i++) {
             float expected = sqrtf((float)((i < 4) ? (i + 1) : 4) / 4.0f);
@@ -198,7 +200,9 @@ int test_process_info_remaining_detector_frame_limits(void) {
         detect_autocorrelate_out_t    autocorr_out    = {.correlation = y};
         detect_autocorrelate_in_t     autocorr_in     = {.signal = x};
         detect_autocorrelate_params_t autocorr_params = {.max_lag = 8};
-        detect_autocorrelate_state_t  autocorr_state  = {.buffer = autocorr_buffer, .write_pos = 0};
+        detect_autocorrelate_state_t  autocorr_state  = {
+              .buffer = autocorr_buffer, .buffer_len = APG_DETECT_AUTOCORRELATION_CAPACITY, .write_pos = 0
+        };
         detect_autocorrelate_process(&autocorr_out, &autocorr_in, &autocorr_params, &autocorr_state, &info);
         for (int k = 0; k < 8; k++) {
             float expected = (frames == 1024) ? (float)frames : (float)(frames - k);
@@ -219,8 +223,10 @@ int test_process_info_remaining_detector_frame_limits(void) {
         memset(pitch_buffer, 0, sizeof(pitch_buffer));
         detect_pitch_out_t    pitch_out    = {.pitch = y};
         detect_pitch_in_t     pitch_in     = {.signal = x};
-        detect_pitch_params_t pitch_params = {.max_lag = 128, .sample_rate = 48000.0f};
-        detect_pitch_state_t  pitch_state  = {.buffer = pitch_buffer, .write_pos = 0};
+        detect_pitch_params_t pitch_params = {.max_lag = 128};
+        detect_pitch_state_t  pitch_state  = {
+              .buffer = pitch_buffer, .buffer_len = APG_DETECT_AUTOCORRELATION_CAPACITY, .write_pos = 0
+        };
         detect_pitch_process(&pitch_out, &pitch_in, &pitch_params, &pitch_state, &info);
         for (int i = 0; i < frames; i++) {
             if (fabsf(y[i]) > 1e-7f)

@@ -19,10 +19,9 @@
       "dispatch": "PROCESS",
       "capability_profile": "WASM_ANTIALIASED",
       "maturity": "MUSICAL",
-      "registry": { "input_fields": 0, "config_fields": 2, "state_fields": 2 },
+      "registry": { "input_fields": 0, "config_fields": 1, "state_fields": 2 },
       "params": [
-        { "name": "cutoff", "c_type": "float", "metadata_type": "float", "ownership": "value" },
-        { "name": "sample_rate", "c_type": "float", "metadata_type": "float", "ownership": "value" }
+        { "name": "cutoff", "c_type": "float", "metadata_type": "float", "ownership": "value" }
       ],
       "state": [
         { "name": "z1", "c_type": "float", "metadata_type": "float", "ownership": "value" },
@@ -36,10 +35,9 @@
       "dispatch": "PROCESS",
       "capability_profile": "WASM_ANTIALIASED",
       "maturity": "MUSICAL",
-      "registry": { "input_fields": 0, "config_fields": 2, "state_fields": 2 },
+      "registry": { "input_fields": 0, "config_fields": 1, "state_fields": 2 },
       "params": [
-        { "name": "cutoff", "c_type": "float", "metadata_type": "float", "ownership": "value" },
-        { "name": "sample_rate", "c_type": "float", "metadata_type": "float", "ownership": "value" }
+        { "name": "cutoff", "c_type": "float", "metadata_type": "float", "ownership": "value" }
       ],
       "state": [
         { "name": "z1", "c_type": "float", "metadata_type": "float", "ownership": "value" },

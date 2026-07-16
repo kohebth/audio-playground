@@ -40,6 +40,7 @@ FIELD_COUNT(freq_overlap_add_config_fields);
 
 const atom_field_desc_t freq_overlap_add_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(freq_overlap_add_state_t, buffer), 8192u},
+    {"buffer_len", FIELD_INT, offsetof(freq_overlap_add_state_t, buffer_len)},
 };
 FIELD_COUNT(freq_overlap_add_state_fields);
 
@@ -51,6 +52,7 @@ FIELD_COUNT(freq_overlap_save_config_fields);
 
 const atom_field_desc_t freq_overlap_save_state_fields[] = {
     {"buffer", FIELD_BUFFER, offsetof(freq_overlap_save_state_t, buffer), 1024u},
+    {"buffer_len", FIELD_INT, offsetof(freq_overlap_save_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(freq_overlap_save_state_t, write_pos)},
 };
 FIELD_COUNT(freq_overlap_save_state_fields);
@@ -67,9 +69,8 @@ const atom_field_desc_t freq_shift_config_fields[] = {
 FIELD_COUNT(freq_shift_config_fields);
 
 const atom_field_desc_t freq_shift_state_fields[] = {
-    {"window", FIELD_BUFFER, offsetof(freq_shift_state_t, window), 8192u},
-    {"real", FIELD_BUFFER, offsetof(freq_shift_state_t, real), 8192u},
-    {"imag", FIELD_BUFFER, offsetof(freq_shift_state_t, imag), 8192u},
+    {"buffer", FIELD_BUFFER, offsetof(freq_shift_state_t, buffer), 8192u},
+    {"buffer_len", FIELD_INT, offsetof(freq_shift_state_t, buffer_len)},
     {"write_pos", FIELD_INT, offsetof(freq_shift_state_t, write_pos)},
     {"read_ptr", FIELD_FLOAT, offsetof(freq_shift_state_t, read_ptr)},
 };

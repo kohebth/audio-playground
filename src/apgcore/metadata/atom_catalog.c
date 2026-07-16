@@ -38,7 +38,6 @@ static const apg_atom_contract_field_t field_generation_lfo_config[] = {
     FIELD("frequency", APG_ATOM_FIELD_FLOAT),
     FIELD("waveform", APG_ATOM_FIELD_INT),
     FIELD("phase_offset", APG_ATOM_FIELD_FLOAT),
-    FIELD_OPT("sample_rate", APG_ATOM_FIELD_FLOAT),
 };
 static const apg_atom_contract_field_t field_gate[] = {
     FIELD("gate", APG_ATOM_FIELD_SIGNAL),
@@ -76,8 +75,9 @@ static const apg_atom_contract_field_t field_filter_biquad_input[] = {
     FIELD_OPT("cutoff", APG_ATOM_FIELD_SIGNAL_OPTIONAL),
 };
 static const apg_atom_contract_field_t field_filter_biquad_config[] = {
-    FIELD("cutoff", APG_ATOM_FIELD_FLOAT),       FIELD("q", APG_ATOM_FIELD_FLOAT),
-    FIELD("mode", APG_ATOM_FIELD_INT),           FIELD_OPT("sample_rate", APG_ATOM_FIELD_FLOAT),
+    FIELD("cutoff", APG_ATOM_FIELD_FLOAT),
+    FIELD("q", APG_ATOM_FIELD_FLOAT),
+    FIELD("mode", APG_ATOM_FIELD_INT),
     FIELD("smoothing_ms", APG_ATOM_FIELD_FLOAT),
 };
 static const apg_atom_contract_field_t field_filter_delay_config[] = {

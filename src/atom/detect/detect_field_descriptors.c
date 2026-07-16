@@ -18,8 +18,7 @@ const atom_field_desc_t detect_autocorrelate_state_fields[] = {
 FIELD_COUNT(detect_autocorrelate_state_fields);
 
 const atom_field_desc_t detect_pitch_config_fields[] = {
-    {    "max_lag",   FIELD_INT, offsetof(detect_pitch_params_t,     max_lag)},
-    {"sample_rate", FIELD_FLOAT, offsetof(detect_pitch_params_t, sample_rate)},
+    {"max_lag", FIELD_INT, offsetof(detect_pitch_params_t, max_lag)},
 };
 FIELD_COUNT(detect_pitch_config_fields);
 
@@ -31,9 +30,8 @@ const atom_field_desc_t detect_pitch_state_fields[] = {
 FIELD_COUNT(detect_pitch_state_fields);
 
 const atom_field_desc_t detect_envelope_config_fields[] = {
-    {     "attack", FIELD_FLOAT, offsetof(detect_envelope_params_t,      attack)},
-    {    "release", FIELD_FLOAT, offsetof(detect_envelope_params_t,     release)},
-    {"sample_rate", FIELD_FLOAT, offsetof(detect_envelope_params_t, sample_rate)},
+    { "attack", FIELD_FLOAT, offsetof(detect_envelope_params_t,  attack)},
+    {"release", FIELD_FLOAT, offsetof(detect_envelope_params_t, release)},
 };
 FIELD_COUNT(detect_envelope_config_fields);
 
@@ -43,9 +41,8 @@ const atom_field_desc_t detect_envelope_state_fields[] = {
 FIELD_COUNT(detect_envelope_state_fields);
 
 const atom_field_desc_t detect_peak_config_fields[] = {
-    {     "attack", FIELD_FLOAT, offsetof(detect_peak_params_t,      attack)},
-    {    "release", FIELD_FLOAT, offsetof(detect_peak_params_t,     release)},
-    {"sample_rate", FIELD_FLOAT, offsetof(detect_peak_params_t, sample_rate)},
+    { "attack", FIELD_FLOAT, offsetof(detect_peak_params_t,  attack)},
+    {"release", FIELD_FLOAT, offsetof(detect_peak_params_t, release)},
 };
 FIELD_COUNT(detect_peak_config_fields);
 

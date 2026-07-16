@@ -8,10 +8,10 @@
     X(freq_fft, COMPLEX, SIGNAL, { int block_size; }, { float *workspace; uint32_t buffer_len; }) \
     X(freq_ifft, SIGNAL, COMPLEX, { int block_size; }, { float *workspace; uint32_t buffer_len; }) \
     X(freq_multiply, COMPLEX, COMPLEX_PAIR, { int block_size; }, { uint8_t _reserved; }) \
-    X(freq_overlap_add, SIGNAL, FRAME, { int block_size; int hop_size; }, { float *buffer; }) \
-    X(freq_overlap_save, FRAME, SIGNAL, { int block_size; int hop_size; }, { float *buffer; int write_pos; }) \
+    X(freq_overlap_add, SIGNAL, FRAME, { int block_size; int hop_size; }, { float *buffer; uint32_t buffer_len; }) \
+    X(freq_overlap_save, FRAME, SIGNAL, { int block_size; int hop_size; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
     X(freq_window, SIGNAL, SIGNAL, { int window_type; int block_size; }, { uint8_t _reserved; }) \
-    X(freq_shift, SIGNAL, SIGNAL_PITCH_SHIFT, { int block_size; }, { float *window; float *real; float *imag; int write_pos; float read_ptr; }) \
+    X(freq_shift, SIGNAL, SIGNAL_PITCH_SHIFT, { int block_size; }, { float *buffer; uint32_t buffer_len; int write_pos; float read_ptr; }) \
     X(freq_quantize, SIGNAL, SIGNAL, { float unused; }, { float unused; })
 // clang-format on
 

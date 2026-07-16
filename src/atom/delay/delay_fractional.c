@@ -3,8 +3,6 @@
 #include <math.h>
 #include <stddef.h>
 
-#define MAX_DELAY_SAMPLES 192000u
-
 void delay_fractional_process(
     delay_fractional_out_t          *out,
     const delay_fractional_in_t     *in,
@@ -17,10 +15,10 @@ void delay_fractional_process(
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || out->signal == NULL || in->signal == NULL || params == NULL || state == NULL ||
-        state->buffer == NULL)
+        state->buffer == NULL || state->buffer_len == 0u)
         return;
 
-    const uint32_t capacity  = state->buffer_len > 0u ? state->buffer_len : MAX_DELAY_SAMPLES;
+    const uint32_t capacity  = state->buffer_len;
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     float delay = capacity > 1u ? apg_clamp_float(params->delay_samples, 0.0f, (float)capacity - 1.001f) : 0.0f;
 

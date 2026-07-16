@@ -6,8 +6,7 @@
 #define FIELD_COUNT(name) const int name##_count = (int)(sizeof(name) / sizeof((name)[0]))
 
 const atom_field_desc_t src_antialias_config_fields[] = {
-    {     "cutoff", FIELD_FLOAT, offsetof(src_antialias_params_t,      cutoff)},
-    {"sample_rate", FIELD_FLOAT, offsetof(src_antialias_params_t, sample_rate)},
+    {"cutoff", FIELD_FLOAT, offsetof(src_antialias_params_t, cutoff)},
 };
 FIELD_COUNT(src_antialias_config_fields);
 
@@ -18,8 +17,7 @@ const atom_field_desc_t src_antialias_state_fields[] = {
 FIELD_COUNT(src_antialias_state_fields);
 
 const atom_field_desc_t src_antiimage_config_fields[] = {
-    {     "cutoff", FIELD_FLOAT, offsetof(src_antiimage_params_t,      cutoff)},
-    {"sample_rate", FIELD_FLOAT, offsetof(src_antiimage_params_t, sample_rate)},
+    {"cutoff", FIELD_FLOAT, offsetof(src_antiimage_params_t, cutoff)},
 };
 FIELD_COUNT(src_antiimage_config_fields);
 

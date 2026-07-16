@@ -49,9 +49,8 @@ const atom_field_desc_t amplitude_normalize_state_fields[] = {
 FIELD_COUNT(amplitude_normalize_state_fields);
 
 const atom_field_desc_t amplitude_smooth_config_fields[] = {
-    {     "attack", FIELD_FLOAT, offsetof(amplitude_smooth_params_t,      attack)},
-    {    "release", FIELD_FLOAT, offsetof(amplitude_smooth_params_t,     release)},
-    {"sample_rate", FIELD_FLOAT, offsetof(amplitude_smooth_params_t, sample_rate)},
+    { "attack", FIELD_FLOAT, offsetof(amplitude_smooth_params_t,  attack)},
+    {"release", FIELD_FLOAT, offsetof(amplitude_smooth_params_t, release)},
 };
 FIELD_COUNT(amplitude_smooth_config_fields);
 

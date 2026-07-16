@@ -87,7 +87,7 @@ int test_process_info_frame_limits(void) {
         delay_line_out_t    delay_out    = {.signal = y};
         delay_line_in_t     delay_in     = {.signal = x};
         delay_line_params_t delay_params = {.length = 12};
-        delay_line_state_t  delay_state  = {.buffer = delay_buffer, .write_pos = 0};
+        delay_line_state_t  delay_state  = {.buffer = delay_buffer, .buffer_len = 192000u, .write_pos = 0};
         delay_line_process(&delay_out, &delay_in, &delay_params, &delay_state, &info);
         if (frames > 12 && fabsf(y[12] - 1.0f) > 1e-6f)
             return fail("delay_line_process impulse mismatch");

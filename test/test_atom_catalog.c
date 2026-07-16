@@ -164,10 +164,15 @@ int main(void) {
         return fail("generation_dc metadata field count failed");
     if (expect_field("generation_dc", APG_ATOM_CONTRACT_CONFIG, "value", APG_ATOM_FIELD_SCALAR, true))
         return 1;
-    if (expect_field("generation_lfo", APG_ATOM_CONTRACT_CONFIG, "sample_rate", APG_ATOM_FIELD_FLOAT, false))
-        return 1;
-    if (expect_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "sample_rate", APG_ATOM_FIELD_FLOAT, false))
-        return 1;
+    const char *context_rate_atoms[] = {
+        "amplitude_smooth",      "detect_envelope",     "detect_peak",        "detect_pitch",
+        "filter_biquad",         "generation_envelope", "generation_impulse", "generation_lfo",
+        "generation_oscillator", "src_antialias",       "src_antiimage",
+    };
+    for (size_t i = 0; i < sizeof(context_rate_atoms) / sizeof(context_rate_atoms[0]); ++i) {
+        if (apg_atom_contract_find_field(context_rate_atoms[i], APG_ATOM_CONTRACT_CONFIG, "sample_rate", NULL))
+            return fail("atom config still exposes sample_rate");
+    }
     if (expect_field("mix_matrix", APG_ATOM_CONTRACT_IN, "signals", APG_ATOM_FIELD_SIGNAL_ARRAY, true))
         return 1;
     if (expect_field("mix_matrix", APG_ATOM_CONTRACT_CONFIG, "coefficients", APG_ATOM_FIELD_FLOAT_MATRIX, true))

@@ -17,10 +17,10 @@ void filter_fir_process(
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
-    if (out->signal == NULL || in->signal == NULL || state->buffer == NULL)
+    if (out->signal == NULL || in->signal == NULL || state->buffer == NULL || state->buffer_len == 0u)
         return;
 
-    const uint32_t capacity = state->buffer_len > 0u ? state->buffer_len : MAX_FIR_SIZE;
+    const uint32_t capacity = state->buffer_len;
     int            k_size   = params->kernel_size;
     if (k_size > (int)capacity)
         k_size = (int)capacity;

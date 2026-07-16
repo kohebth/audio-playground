@@ -2,8 +2,6 @@
 #include <atom/dsp_atoms.h>
 #include <stddef.h>
 
-#define MAX_COMB_DELAY 48000u
-
 void filter_comb_ff_process(
     filter_comb_ff_out_t          *out,
     const filter_comb_ff_in_t     *in,
@@ -16,10 +14,10 @@ void filter_comb_ff_process(
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
-        state->buffer == NULL)
+        state->buffer == NULL || state->buffer_len == 0u)
         return;
 
-    const uint32_t capacity  = state->buffer_len > 0u ? state->buffer_len : MAX_COMB_DELAY;
+    const uint32_t capacity  = state->buffer_len;
     const uint32_t frames    = apg_process_context_frames(info);
     uint32_t       write_pos = apg_wrap_index_i64(state->write_pos, capacity);
     int64_t        delay     = params->delay_samples;

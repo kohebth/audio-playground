@@ -53,7 +53,6 @@ int test_process_info_modulation_frame_limits(void) {
             .frequency    = 1.0f,
             .waveform     = WAVEFORM_SINE,
             .phase_offset = 0.0f,
-            .sample_rate  = 48000.0f,
         };
         generation_lfo_state_t lfo_state = {.phase = 0.0f};
         generation_lfo_process(&lfo_out, &lfo_in, &lfo_params, &lfo_state, &info);

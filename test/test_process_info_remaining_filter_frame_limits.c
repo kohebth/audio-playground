@@ -165,7 +165,7 @@ int test_process_info_remaining_filter_frame_limits(void) {
         filter_comb_ff_out_t    comb_ff_out    = {.signal = y};
         filter_comb_ff_in_t     comb_ff_in     = {.signal = x};
         filter_comb_ff_params_t comb_ff_params = {.delay_samples = 2048, .coefficient = 0.5f};
-        filter_comb_ff_state_t  comb_ff_state  = {.buffer = long_buffer, .write_pos = 0};
+        filter_comb_ff_state_t  comb_ff_state  = {.buffer = long_buffer, .buffer_len = 48000u, .write_pos = 0};
         filter_comb_ff_process(&comb_ff_out, &comb_ff_in, &comb_ff_params, &comb_ff_state, &info);
         for (int i = 0; i < frames; i++) {
             if (fabsf(y[i] - 1.0f) > 1e-7f || fabsf(long_buffer[i] - 1.0f) > 1e-7f)
@@ -182,7 +182,7 @@ int test_process_info_remaining_filter_frame_limits(void) {
         filter_comb_fb_out_t    comb_fb_out    = {.signal = y};
         filter_comb_fb_in_t     comb_fb_in     = {.signal = x, .delay = NULL};
         filter_comb_fb_params_t comb_fb_params = {.delay_samples = 2048, .coefficient = 0.5f};
-        filter_comb_fb_state_t  comb_fb_state  = {.buffer = long_buffer, .write_pos = 0};
+        filter_comb_fb_state_t  comb_fb_state  = {.buffer = long_buffer, .buffer_len = 48000u, .write_pos = 0};
         filter_comb_fb_process(&comb_fb_out, &comb_fb_in, &comb_fb_params, &comb_fb_state, &info);
         for (int i = 0; i < frames; i++) {
             if (fabsf(y[i] - 1.0f) > 1e-7f || fabsf(long_buffer[i] - 1.0f) > 1e-7f)
@@ -199,7 +199,7 @@ int test_process_info_remaining_filter_frame_limits(void) {
         filter_allpass_out_t    allpass_out    = {.signal = y};
         filter_allpass_in_t     allpass_in     = {.signal = x};
         filter_allpass_params_t allpass_params = {.delay_samples = 2048, .coefficient = 0.5f};
-        filter_allpass_state_t  allpass_state  = {.buffer = long_buffer, .write_pos = 0};
+        filter_allpass_state_t  allpass_state  = {.buffer = long_buffer, .buffer_len = 48000u, .write_pos = 0};
         filter_allpass_process(&allpass_out, &allpass_in, &allpass_params, &allpass_state, &info);
         for (int i = 0; i < frames; i++) {
             if (fabsf(y[i] + 0.5f) > 1e-7f || fabsf(long_buffer[i] - 0.75f) > 1e-7f)

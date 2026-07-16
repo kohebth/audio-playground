@@ -32,7 +32,7 @@ int test_process_info_control_frame_limits(void) {
             y[i] = -99.0f;
         detect_envelope_out_t    env_out    = {.envelope = y};
         detect_envelope_in_t     env_in     = {.signal = x};
-        detect_envelope_params_t env_params = {.attack = 0.005f, .release = 0.050f, .sample_rate = 48000.0f};
+        detect_envelope_params_t env_params = {.attack = 0.005f, .release = 0.050f};
         detect_envelope_state_t  env_state  = {.prev_envelope = 0.0f};
         detect_envelope_process(&env_out, &env_in, &env_params, &env_state, &info);
         if (assert_finite_buffer(y, frames, "detect_envelope_process"))
@@ -46,7 +46,7 @@ int test_process_info_control_frame_limits(void) {
             y[i] = -99.0f;
         detect_peak_out_t    peak_out    = {.level = y};
         detect_peak_in_t     peak_in     = {.signal = x};
-        detect_peak_params_t peak_params = {.attack = 0.005f, .release = 0.050f, .sample_rate = 48000.0f};
+        detect_peak_params_t peak_params = {.attack = 0.005f, .release = 0.050f};
         detect_peak_state_t  peak_state  = {.prev_peak = 0.0f};
         detect_peak_process(&peak_out, &peak_in, &peak_params, &peak_state, &info);
         if (assert_finite_buffer(y, frames, "detect_peak_process"))
@@ -60,7 +60,7 @@ int test_process_info_control_frame_limits(void) {
             y[i] = -99.0f;
         amplitude_smooth_out_t    smooth_out    = {.signal = y};
         amplitude_smooth_in_t     smooth_in     = {.signal = x};
-        amplitude_smooth_params_t smooth_params = {.attack = 0.005f, .release = 0.050f, .sample_rate = 48000.0f};
+        amplitude_smooth_params_t smooth_params = {.attack = 0.005f, .release = 0.050f};
         amplitude_smooth_state_t  smooth_state  = {.prev_value = 0.0f};
         amplitude_smooth_process(&smooth_out, &smooth_in, &smooth_params, &smooth_state, &info);
         if (assert_finite_buffer(y, frames, "amplitude_smooth_process"))

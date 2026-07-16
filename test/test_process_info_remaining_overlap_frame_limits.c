@@ -22,7 +22,7 @@ int test_process_info_remaining_overlap_frame_limits(void) {
         freq_overlap_add_out_t    add_out    = {.signal = output};
         freq_overlap_add_in_t     add_in     = {.frame = frame};
         freq_overlap_add_params_t add_params = {.block_size = frames, .hop_size = frames};
-        freq_overlap_add_state_t  add_state  = {.buffer = buffer};
+        freq_overlap_add_state_t  add_state  = {.buffer = buffer, .buffer_len = 8192u};
         freq_overlap_add_process(&add_out, &add_in, &add_params, &add_state, &info);
 
         for (int i = 0; i < frames; i++) {
@@ -43,7 +43,7 @@ int test_process_info_remaining_overlap_frame_limits(void) {
         freq_overlap_save_out_t    save_out    = {.frame = output};
         freq_overlap_save_in_t     save_in     = {.signal = signal};
         freq_overlap_save_params_t save_params = {.block_size = frames, .hop_size = frames};
-        freq_overlap_save_state_t  save_state  = {.buffer = buffer, .write_pos = 0};
+        freq_overlap_save_state_t  save_state  = {.buffer = buffer, .buffer_len = 8192u, .write_pos = 0};
         freq_overlap_save_process(&save_out, &save_in, &save_params, &save_state, &info);
 
         for (int i = 0; i < frames; i++) {
@@ -52,7 +52,7 @@ int test_process_info_remaining_overlap_frame_limits(void) {
         }
         if (frames < 1024 && output[frames] != -99.0f)
             return fail("freq_overlap_save_process wrote past info.frames");
-        if (save_state.write_pos != frames % 1024)
+        if (save_state.write_pos != frames % 8192)
             return fail("freq_overlap_save_process write_pos mismatch");
     }
 
@@ -70,7 +70,7 @@ int test_process_info_remaining_overlap_frame_limits(void) {
     freq_overlap_save_out_t    save_out    = {.frame = frame};
     freq_overlap_save_in_t     save_in     = {.signal = hop};
     freq_overlap_save_params_t save_params = {.block_size = 512, .hop_size = 512};
-    freq_overlap_save_state_t  save_state  = {.buffer = buffer, .write_pos = 37};
+    freq_overlap_save_state_t  save_state  = {.buffer = buffer, .buffer_len = FFT_SIZE, .write_pos = 37};
     freq_overlap_save_spectral_process(&save_out, &save_in, &save_params, &save_state, &spectral);
     for (int i = 0; i < FFT_SIZE - HOP_SIZE; i++) {
         if (frame[i] != 0.0f)
@@ -90,7 +90,7 @@ int test_process_info_remaining_overlap_frame_limits(void) {
     freq_overlap_add_out_t    add_out    = {.signal = output};
     freq_overlap_add_in_t     add_in     = {.frame = frame};
     freq_overlap_add_params_t add_params = {.block_size = 512, .hop_size = 512};
-    freq_overlap_add_state_t  add_state  = {.buffer = buffer};
+    freq_overlap_add_state_t  add_state  = {.buffer = buffer, .buffer_len = FFT_SIZE};
     freq_overlap_add_spectral_process(&add_out, &add_in, &add_params, &add_state, &spectral);
     for (int i = 0; i < HOP_SIZE; i++) {
         if (output[i] != 1.0f)

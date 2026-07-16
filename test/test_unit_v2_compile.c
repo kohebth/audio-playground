@@ -177,7 +177,6 @@ static int test_route_style_biquad_cutoff_input_compile(void) {
                        "        cutoff: 5800.0\n"
                        "        q: 0.707\n"
                        "        mode: 0\n"
-                       "        sample_rate: 48000.0\n"
                        "        smoothing_ms: 12.0\n"
                        "    output:\n"
                        "      atom: output_signal\n"
@@ -214,7 +213,7 @@ static int test_route_style_biquad_cutoff_input_compile(void) {
     if (plan.nodes[1].in_len != 2u || strcmp(plan.nodes[1].in[0].key, "signal") != 0 ||
         strcmp(plan.nodes[1].in[1].key, "cutoff") != 0)
         return fail("route-style biquad cutoff input did not compile");
-    if (plan.nodes[1].config_len != 5u)
+    if (plan.nodes[1].config_len != 4u)
         return fail("route-style biquad config did not compile");
 
     uc_arena_free(&arena);
@@ -624,7 +623,6 @@ static int test_extended_atom_binding_metadata_compile(void) {
                       "        frequency: ${params.rate}\n"
                       "        waveform: 0\n"
                       "        phase_offset: 0.0\n"
-                      "        sample_rate: 0.0\n"
                       "compatibility:\n"
                       "  desktop_full: true\n";
     if (expect_compile_valid(lfo, "generation_lfo metadata"))

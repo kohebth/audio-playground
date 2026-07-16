@@ -1518,11 +1518,13 @@ static int test_runtime_capable_fixture_library(void) {
         return 1;
     modulation_frequency_state_t *mod_state  = (modulation_frequency_state_t *)runtime.nodes[0].state_storage;
     float                        *mod_buffer = mod_state->buffer;
-    if (!mod_buffer || mod_state->write_pos != 4 || mod_state->current_delay != 4.0f)
+    if (!mod_buffer || mod_state->buffer_len != APG_MODULATION_DELAY_CAPACITY || mod_state->write_pos != 4 ||
+        mod_state->current_delay != 4.0f)
         return fail("modulation fixture state did not advance deterministically");
     if (!apg_v2_runtime_reset(&runtime))
         return fail("modulation fixture reset failed");
-    if (mod_state->buffer != mod_buffer || mod_state->write_pos != 0 || mod_state->current_delay != 0.0f)
+    if (mod_state->buffer != mod_buffer || mod_state->buffer_len != APG_MODULATION_DELAY_CAPACITY ||
+        mod_state->write_pos != 0 || mod_state->current_delay != 0.0f)
         return fail("modulation fixture reset did not restore state storage");
     apg_v2_runtime_destroy(&runtime);
     uc_arena_free(&arena);

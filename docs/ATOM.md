@@ -2,7 +2,8 @@
 
 > Legacy inventory: most signatures below predate the universal context API. The authoritative declarations are in
 > `inc/atom/dsp_atoms.h`; new fixed-rate calls use `apg_process_context_t`, while variable-rate up/down sampling uses
-> `apg_stream_context_t` and returns `apg_stream_result_t`.
+> `apg_stream_context_t` and returns `apg_stream_result_t`. Inline parameter/state field comments are historical too;
+> current layouts are owned by `inc/atom/types/*_types.h`.
 
 ## 🔷 Signal Generation
 

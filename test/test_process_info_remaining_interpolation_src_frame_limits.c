@@ -13,8 +13,8 @@ static int test_src_filter_safety(void) {
     src_antialias_out_t    out_a    = {.signal = output_a};
     src_antialias_out_t    out_b    = {.signal = output_b};
     src_antialias_in_t     in       = {.signal = input};
-    src_antialias_params_t params_a = {.cutoff = 12000.0f, .sample_rate = 8000.0f};
-    src_antialias_params_t params_b = {.cutoff = 12000.0f, .sample_rate = 192000.0f};
+    src_antialias_params_t params_a = {.cutoff = 12000.0f};
+    src_antialias_params_t params_b = {.cutoff = 12000.0f};
     src_antialias_state_t  state_a  = {.z1 = NAN, .z2 = INFINITY};
     src_antialias_state_t  state_b  = {.z1 = NAN, .z2 = INFINITY};
 
@@ -33,7 +33,7 @@ static int test_src_filter_safety(void) {
         output_a[i] = -99.0f;
     src_antiimage_out_t    image_out    = {.signal = output_a};
     src_antiimage_in_t     image_in     = {.signal = input};
-    src_antiimage_params_t image_params = {.cutoff = NAN, .sample_rate = 1.0f};
+    src_antiimage_params_t image_params = {.cutoff = NAN};
     src_antiimage_state_t  image_state  = {.z1 = -INFINITY, .z2 = NAN};
     src_antiimage_process(&image_out, &image_in, &image_params, &image_state, &info);
     if (assert_finite_buffer(output_a, 8, "src_antiimage_process invalid config"))
@@ -168,7 +168,7 @@ int test_process_info_remaining_interpolation_src_frame_limits(void) {
             src_in[i] = 0.0f;
         src_antialias_out_t    aa_out    = {.signal = y};
         src_antialias_in_t     aa_in     = {.signal = src_in};
-        src_antialias_params_t aa_params = {.cutoff = 12000.0f, .sample_rate = 48000.0f};
+        src_antialias_params_t aa_params = {.cutoff = 12000.0f};
         src_antialias_state_t  aa_state  = {.z1 = 0.0f, .z2 = 0.0f};
         src_antialias_process(&aa_out, &aa_in, &aa_params, &aa_state, &info);
         for (int i = 0; i < frames; i++) {
@@ -184,7 +184,7 @@ int test_process_info_remaining_interpolation_src_frame_limits(void) {
             y[i] = -99.0f;
         src_antiimage_out_t    ai_out    = {.signal = y};
         src_antiimage_in_t     ai_in     = {.signal = src_in};
-        src_antiimage_params_t ai_params = {.cutoff = 12000.0f, .sample_rate = 48000.0f};
+        src_antiimage_params_t ai_params = {.cutoff = 12000.0f};
         src_antiimage_state_t  ai_state  = {.z1 = 0.0f, .z2 = 0.0f};
         src_antiimage_process(&ai_out, &ai_in, &ai_params, &ai_state, &info);
         for (int i = 0; i < frames; i++) {

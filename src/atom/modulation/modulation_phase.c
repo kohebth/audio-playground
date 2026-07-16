@@ -15,10 +15,10 @@ void modulation_phase_process(
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL ||
-        in->modulator == NULL || state->buffer == NULL)
+        in->modulator == NULL || state->buffer == NULL || state->buffer_len == 0u)
         return;
 
-    const uint32_t capacity = state->buffer_len > 0u ? state->buffer_len : APG_MODULATION_DELAY_CAPACITY;
+    const uint32_t capacity = state->buffer_len;
     if (capacity < 4u)
         return;
     const uint32_t frames    = apg_process_context_frames(info);

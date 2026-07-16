@@ -1,8 +1,7 @@
+#include <apgcore/dsp/dsp_safety.h>
 #include <atom/dsp_atoms.h>
 #include <math.h>
 #include <string.h>
-
-#define MAX_FRAME_SIZE 1024
 
 void freq_overlap_save_spectral_process(
     freq_overlap_save_out_t          *out,
@@ -11,8 +10,6 @@ void freq_overlap_save_spectral_process(
     freq_overlap_save_state_t        *state,
     const apg_spectral_info_t        *spectral_info
 ) {
-    if (out == NULL || in == NULL || params == NULL || state == NULL)
-        return;
     (void)params;
     if (!out || !in || !state || !out->frame || !in->signal || !state->buffer ||
         !apg_spectral_info_valid(spectral_info))
@@ -20,6 +17,8 @@ void freq_overlap_save_spectral_process(
 
     const uint32_t n = spectral_info->fft_size;
     const uint32_t h = spectral_info->hop_size;
+    if (state->buffer_len < n)
+        return;
     memmove(state->buffer, state->buffer + h, (size_t)(n - h) * sizeof(float));
     for (uint32_t i = 0; i < h; i++)
         state->buffer[n - h + i] = isfinite(in->signal[i]) ? in->signal[i] : 0.0f;
@@ -40,42 +39,35 @@ void freq_overlap_save_process(
 ) {
     if (!apg_process_context_valid(info))
         return;
-    if (out == NULL || in == NULL || params == NULL || state == NULL)
-        return;
-    if (out == NULL || in == NULL || params == NULL || state == NULL)
-        return;
-    if (out->frame == NULL || in->signal == NULL || state->buffer == NULL)
+    if (out == NULL || in == NULL || params == NULL || state == NULL || out->frame == NULL || in->signal == NULL ||
+        state->buffer == NULL || state->buffer_len == 0u)
         return;
 
-    const uint32_t frames = apg_process_context_frames(info);
+    const uint32_t frames   = apg_process_context_frames(info);
+    const uint32_t capacity = state->buffer_len;
 
-    int block_size = params->block_size;
-    if (block_size < 0)
-        block_size = 0;
-    if (block_size > MAX_FRAME_SIZE)
-        block_size = MAX_FRAME_SIZE;
+    uint32_t block_size = params->block_size > 0 ? (uint32_t)params->block_size : 0u;
+    if (block_size > capacity)
+        block_size = capacity;
+    if (block_size > frames)
+        block_size = frames;
 
-    int hop_size = params->hop_size;
-    if (hop_size < 0)
-        hop_size = 0;
-    if (hop_size > MAX_FRAME_SIZE)
-        hop_size = MAX_FRAME_SIZE;
-    if ((uint32_t)hop_size > frames)
-        hop_size = (int)frames;
+    uint32_t hop_size = params->hop_size > 0 ? (uint32_t)params->hop_size : 0u;
+    if (hop_size > capacity)
+        hop_size = capacity;
+    if (hop_size > frames)
+        hop_size = frames;
 
-    if ((uint32_t)block_size > frames)
-        block_size = (int)frames;
-
-    int write_pos = state->write_pos;
-    for (int i = 0; i < hop_size; ++i) {
+    uint32_t write_pos = apg_wrap_index_i64(state->write_pos, capacity);
+    for (uint32_t i = 0; i < hop_size; ++i) {
         state->buffer[write_pos] = in->signal[i];
-        write_pos                = (write_pos + 1) % MAX_FRAME_SIZE;
+        write_pos                = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
 
-    for (int i = 0; i < block_size; ++i) {
-        int read_pos  = (write_pos - block_size + i + MAX_FRAME_SIZE) % MAX_FRAME_SIZE;
-        out->frame[i] = state->buffer[read_pos];
+    for (uint32_t i = 0; i < block_size; ++i) {
+        const uint32_t read_pos = apg_wrap_index_i64((int64_t)write_pos - (int64_t)block_size + (int64_t)i, capacity);
+        out->frame[i]           = state->buffer[read_pos];
     }
 
-    state->write_pos = write_pos;
+    state->write_pos = (int)write_pos;
 }

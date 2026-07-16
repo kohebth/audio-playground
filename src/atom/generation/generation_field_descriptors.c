@@ -11,11 +11,10 @@ const atom_field_desc_t generation_dc_config_fields[] = {
 FIELD_COUNT(generation_dc_config_fields);
 
 const atom_field_desc_t generation_envelope_config_fields[] = {
-    {     "attack", FIELD_FLOAT, offsetof(generation_envelope_params_t,      attack)},
-    {      "decay", FIELD_FLOAT, offsetof(generation_envelope_params_t,       decay)},
-    {    "sustain", FIELD_FLOAT, offsetof(generation_envelope_params_t,     sustain)},
-    {    "release", FIELD_FLOAT, offsetof(generation_envelope_params_t,     release)},
-    {"sample_rate", FIELD_FLOAT, offsetof(generation_envelope_params_t, sample_rate)},
+    { "attack", FIELD_FLOAT, offsetof(generation_envelope_params_t,  attack)},
+    {  "decay", FIELD_FLOAT, offsetof(generation_envelope_params_t,   decay)},
+    {"sustain", FIELD_FLOAT, offsetof(generation_envelope_params_t, sustain)},
+    {"release", FIELD_FLOAT, offsetof(generation_envelope_params_t, release)},
 };
 FIELD_COUNT(generation_envelope_config_fields);
 
@@ -26,8 +25,7 @@ const atom_field_desc_t generation_envelope_state_fields[] = {
 FIELD_COUNT(generation_envelope_state_fields);
 
 const atom_field_desc_t generation_impulse_config_fields[] = {
-    {   "interval", FIELD_FLOAT, offsetof(generation_impulse_params_t,    interval)},
-    {"sample_rate", FIELD_FLOAT, offsetof(generation_impulse_params_t, sample_rate)},
+    {"interval", FIELD_FLOAT, offsetof(generation_impulse_params_t, interval)},
 };
 FIELD_COUNT(generation_impulse_config_fields);
 
@@ -40,7 +38,6 @@ const atom_field_desc_t generation_lfo_config_fields[] = {
     {   "frequency", FIELD_FLOAT, offsetof(generation_lfo_params_t,    frequency)},
     {    "waveform",   FIELD_INT, offsetof(generation_lfo_params_t,     waveform)},
     {"phase_offset", FIELD_FLOAT, offsetof(generation_lfo_params_t, phase_offset)},
-    { "sample_rate", FIELD_FLOAT, offsetof(generation_lfo_params_t,  sample_rate)},
 };
 FIELD_COUNT(generation_lfo_config_fields);
 
@@ -65,7 +62,6 @@ const atom_field_desc_t generation_oscillator_config_fields[] = {
     {   "frequency", FIELD_FLOAT, offsetof(generation_oscillator_params_t,    frequency)},
     {    "waveform",   FIELD_INT, offsetof(generation_oscillator_params_t,     waveform)},
     {"phase_offset", FIELD_FLOAT, offsetof(generation_oscillator_params_t, phase_offset)},
-    { "sample_rate", FIELD_FLOAT, offsetof(generation_oscillator_params_t,  sample_rate)},
 };
 FIELD_COUNT(generation_oscillator_config_fields);
 

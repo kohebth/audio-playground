@@ -101,7 +101,7 @@ In route-driven form, keyed `nodes` map keys are node IDs. Node `params` is a sh
 The compiler currently validates required keys for these MVP atoms:
 
 - `generation_dc`: `out.signal`, `config.value`
-- `generation_lfo`: `out.signal`, `config.frequency`, `config.waveform`, `config.phase_offset`, `config.sample_rate`
+- `generation_lfo`: `out.signal`, `config.frequency`, `config.waveform`, `config.phase_offset`
 - `amplitude_multiply`, `amplitude_add`, `amplitude_subtract`: `in.signal_a`, `in.signal_b`, `out.signal`
 - `amplitude_clip_hard`: `in.signal`, `out.signal`, `config.threshold`
 - `amplitude_clip_soft`: `in.signal`, `out.signal`, `config.threshold`, `config.curve`
@@ -109,7 +109,7 @@ The compiler currently validates required keys for these MVP atoms:
 - `delay_line`: `in.signal`, `out.signal`, `config.length`
 - `delay_fractional`: `in.signal`, `out.signal`, `config.delay_samples`, `config.interpolation`
 - `delay_tap_feedback`, `delay_tap_feedforward`: `in.buffer`, scalar `in.tap_position`, `out.signal`, `config.coefficient`
-- `filter_biquad`: `in.signal`, optional `in.cutoff`, `out.signal`, `config.cutoff`, `config.q`, `config.mode`, `config.sample_rate`, `config.smoothing_ms`
+- `filter_biquad`: `in.signal`, optional `in.cutoff`, `out.signal`, `config.cutoff`, `config.q`, `config.mode`, `config.smoothing_ms`
 - `filter_biquad_coefficients`: `in.signal`, `out.signal`, `config.b0`, `config.b1`, `config.b2`, `config.a1`, `config.a2`
 - `filter_allpass`, `filter_comb_ff`: `in.signal`, `out.signal`, `config.delay_samples`, `config.coefficient`
 - `filter_comb_fb`: `in.signal`, optional `in.delay`, `out.signal`, `config.delay_samples`, `config.coefficient`
@@ -143,7 +143,6 @@ filter:
     cutoff: 5800.0
     q: 0.707
     mode: 0
-    sample_rate: 48000.0
     smoothing_ms: 12.0
 routes:
   - drive.out -> filter.in

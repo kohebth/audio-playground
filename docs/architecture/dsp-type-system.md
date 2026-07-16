@@ -34,9 +34,11 @@ Each atom owns four distinct public types:
   freed, resized, or retained as persistent state.
 - `*_params_t`: configuration and control values. The v2 runtime owns the structure storage and refreshes scalar
   fields outside the atom algorithm. Pointer members are borrowed references; the pointee must outlive every process
-  call that can read it. Atoms never free parameter pointees.
+  call that can read it. Atoms never free parameter pointees. Sample rate is not an atom parameter; rate-dependent
+  atoms read it exclusively from the process or stream context.
 - `*_state_t`: persistent mutable state across calls. The v2 runtime owns the structure and any descriptor-backed
-  state-buffer pool. Direct callers must keep both valid until processing ends.
+  state-buffer pool. Every state buffer pointer has an explicit `uint32_t buffer_len`. Direct callers must keep both
+  valid until processing ends and must provide the real nonzero capacity.
 
 Process input and parameter structures are read-only. State remains mutable. New schema entries must record `value`,
 `borrowed`, `runtime_owned`, or `external` ownership explicitly.
@@ -50,21 +52,26 @@ Process input and parameter structures are read-only. State remains mutable. New
   state. They cannot be placed in a fixed-rate unit schedule.
 - No type declaration authorizes allocation, file/network I/O, locking, or unbounded setup in the process path.
 - State-buffer sizing and allocation happen in registry/runtime preparation. Atoms may mutate their state but may not
-  replace or free runtime-owned buffers.
+  replace or free runtime-owned buffers. The registry derives bounded capacities from compiled delay, FIR, detector,
+  and spectral configuration where possible, binds those capacities into state, and includes the pool in export memory
+  manifests. Processing with a null buffer or zero capacity is a no-op; atoms never infer a historical fixed maximum.
 - Input/output pointers are valid for the declared frame range of the current call only.
 - Parameter updates and pointer-lifetime changes must be coordinated outside active processing.
 
 ## ABI Policy
 
 Public typedef names, field names, field order, field C types, function names, and function parameter types are
-versioned API surfaces. The LP64 ABI snapshot records 286 public types, 416 fields, and 17 enum values. A permanent
+versioned API surfaces. The LP64 ABI snapshot records 286 public types, 405 fields, and 17 enum values. A permanent
 link test resolves 69 primary process functions and three additional spectral variants. Process inputs and params are
 read-only; output and state remain mutable.
 
 The historical phase-1 layout exception is the 46 former GNU zero-member structures. They became distinct standard
 C11 structures containing `uint8_t _reserved`, changing size 0 to size 1 while preserving alignment 1. That exact
 transition is checked against `dsp_types_abi_phase1_lp64.csv`. The current exact snapshot additionally records the
-intentional `uint32_t phase` state for streaming up/down sampling.
+intentional `uint32_t phase` state for streaming up/down sampling, context-only sample rate, explicit overlap-buffer
+capacities, removal of unused interpolation storage, and the single-buffer frequency-shift state. The frozen baseline
+and phase-1 snapshots remain historical evidence; only the versioned current snapshot advances for intentional ABI
+changes.
 
 Pointer-containing sizes are platform-dependent. Do not copy LP64 size assertions to 32-bit targets. Atom structures
 are not raw persistence formats; YAML, registry plans, WASM images, and M7 bundles use explicit metadata and planned

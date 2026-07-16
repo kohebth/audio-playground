@@ -20,7 +20,7 @@ int test_process_info_freq_shift_frame_limits(void) {
         freq_shift_out_t    out    = {.signal = output};
         freq_shift_in_t     in     = {.signal = signal, .pitch_shift = NULL};
         freq_shift_params_t params = {.block_size = frames};
-        freq_shift_state_t  state  = {.window = NULL, .real = buffer, .imag = NULL, .write_pos = 0, .read_ptr = 128.0f};
+        freq_shift_state_t  state  = {.buffer = buffer, .buffer_len = 8192u, .write_pos = 0, .read_ptr = 128.0f};
         freq_shift_process(&out, &in, &params, &state, &info);
 
         for (int i = 0; i < frames; i++) {
@@ -44,9 +44,9 @@ int test_process_info_freq_shift_frame_limits(void) {
     freq_shift_out_t      out    = {.signal = output};
     freq_shift_in_t       in     = {.signal = signal, .pitch_shift = pitch};
     freq_shift_params_t   params = {.block_size = 999};
-    freq_shift_state_t    state  = {.real = buffer, .write_pos = -7, .read_ptr = NAN};
+    freq_shift_state_t    state  = {.buffer = buffer, .buffer_len = 8192u, .write_pos = -7, .read_ptr = NAN};
     freq_shift_process(&out, &in, &params, &state, &info);
-    if (!isfinite(output[0]) || !isfinite(output[1]) || output[2] != -99.0f || state.write_pos != 2 ||
+    if (!isfinite(output[0]) || !isfinite(output[1]) || output[2] != -99.0f || state.write_pos != 8187 ||
         !isfinite(state.read_ptr))
         return fail("freq_shift_process did not normalize invalid input/state");
 

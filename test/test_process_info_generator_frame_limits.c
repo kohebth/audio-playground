@@ -19,7 +19,7 @@ int test_process_info_generator_frame_limits(void) {
 
         generation_impulse_out_t    impulse_out = {.signal = y};
         generation_impulse_in_t     impulse_in;
-        generation_impulse_params_t impulse_params = {.interval = 0.001f, .sample_rate = 48000.0f};
+        generation_impulse_params_t impulse_params = {.interval = 0.001f};
         generation_impulse_state_t  impulse_state  = {.counter = 0};
         generation_impulse_process(&impulse_out, &impulse_in, &impulse_params, &impulse_state, &info);
         for (int i = 0; i < frames; i++) {
@@ -55,11 +55,10 @@ int test_process_info_generator_frame_limits(void) {
         generation_envelope_out_t    env_out    = {.signal = y};
         generation_envelope_in_t     env_in     = {.gate = gate};
         generation_envelope_params_t env_params = {
-            .attack      = 0.001f,
-            .decay       = 0.001f,
-            .sustain     = 0.5f,
-            .release     = 0.001f,
-            .sample_rate = 48000.0f,
+            .attack  = 0.001f,
+            .decay   = 0.001f,
+            .sustain = 0.5f,
+            .release = 0.001f,
         };
         generation_envelope_state_t env_state = {.current_level = 0.0f, .stage = 0};
         generation_envelope_process(&env_out, &env_in, &env_params, &env_state, &info);
@@ -80,7 +79,6 @@ int test_process_info_generator_frame_limits(void) {
             .frequency    = 12000.0f,
             .waveform     = WAVEFORM_SQUARE,
             .phase_offset = 0.0f,
-            .sample_rate  = 48000.0f,
         };
         generation_oscillator_state_t osc_state = {.phase = 0.0f};
         generation_oscillator_process(&osc_out, &osc_in, &osc_params, &osc_state, &info);

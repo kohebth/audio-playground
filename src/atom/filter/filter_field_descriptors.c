@@ -43,7 +43,6 @@ const atom_field_desc_t filter_biquad_config_fields[] = {
     {      "cutoff", FIELD_FLOAT, offsetof(filter_biquad_params_t,       cutoff)},
     {           "q", FIELD_FLOAT, offsetof(filter_biquad_params_t,            q)},
     {        "mode",   FIELD_INT, offsetof(filter_biquad_params_t,         mode)},
-    { "sample_rate", FIELD_FLOAT, offsetof(filter_biquad_params_t,  sample_rate)},
     {"smoothing_ms", FIELD_FLOAT, offsetof(filter_biquad_params_t, smoothing_ms)},
 };
 FIELD_COUNT(filter_biquad_config_fields);

@@ -80,7 +80,7 @@ int test_process_info_delay_frame_limits(void) {
         delay_fractional_out_t    frac_out    = {.signal = y};
         delay_fractional_in_t     frac_in     = {.signal = x};
         delay_fractional_params_t frac_params = {.delay_samples = 1.5f, .interpolation = INTERPOLATION_LINEAR};
-        delay_fractional_state_t  frac_state  = {.buffer = buffer, .write_pos = 0};
+        delay_fractional_state_t  frac_state  = {.buffer = buffer, .buffer_len = 192000u, .write_pos = 0};
         delay_fractional_process(&frac_out, &frac_in, &frac_params, &frac_state, &info);
         if (assert_finite_buffer(y, frames, "delay_fractional_process"))
             return 1;
@@ -111,6 +111,18 @@ int test_process_info_delay_frame_limits(void) {
     delay_fractional_process(&fractional_out, &fractional_in, &fractional_params, &fractional_state, &small_info);
     if (small_buffer[4] != -77.0f || fractional_state.write_pos < 0 || fractional_state.write_pos >= 4)
         return fail("delay_fractional_process ignored runtime buffer length");
+
+    float                 no_capacity_output[2] = {-99.0f, -99.0f};
+    float                 no_capacity_buffer[1] = {42.0f};
+    apg_process_context_t no_capacity_info      = {.sample_rate = 48000.0f, .frames = 2u};
+    delay_line_out_t      no_capacity_out       = {.signal = no_capacity_output};
+    delay_line_in_t       no_capacity_in        = {.signal = small_input};
+    delay_line_params_t   no_capacity_params    = {.length = 1};
+    delay_line_state_t    no_capacity_state     = {.buffer = no_capacity_buffer, .buffer_len = 0u, .write_pos = 7};
+    delay_line_process(&no_capacity_out, &no_capacity_in, &no_capacity_params, &no_capacity_state, &no_capacity_info);
+    if (no_capacity_output[0] != -99.0f || no_capacity_output[1] != -99.0f || no_capacity_buffer[0] != 42.0f ||
+        no_capacity_state.write_pos != 7)
+        return fail("delay_line_process accepted a zero-capacity state buffer");
 
     return 0;
 }

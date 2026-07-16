@@ -17,10 +17,10 @@ void detect_pitch_process(
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
     if (out == NULL || in == NULL || params == NULL || state == NULL || out->pitch == NULL || in->signal == NULL ||
-        state->buffer == NULL)
+        state->buffer == NULL || state->buffer_len == 0u)
         return;
 
-    const uint32_t capacity        = state->buffer_len > 0u ? state->buffer_len : APG_DETECT_AUTOCORRELATION_CAPACITY;
+    const uint32_t capacity        = state->buffer_len;
     const uint32_t frames          = apg_process_context_frames(info);
     const uint32_t analysis_frames = frames < capacity ? frames : capacity;
     int            max_lag         = params->max_lag;

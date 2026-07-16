@@ -119,7 +119,12 @@ int test_process_info_modulation_remaining_frame_limits(void) {
         modulation_frequency_out_t    fm_out    = {.signal = y};
         modulation_frequency_in_t     fm_in     = {.signal = x, .modulator = mod};
         modulation_frequency_params_t fm_params = {.depth = 0.0f};
-        modulation_frequency_state_t  fm_state  = {.buffer = fm_buffer, .write_pos = 0, .current_delay = 0.0f};
+        modulation_frequency_state_t  fm_state  = {
+              .buffer        = fm_buffer,
+              .buffer_len    = APG_MODULATION_DELAY_CAPACITY,
+              .write_pos     = 0,
+              .current_delay = 0.0f,
+        };
         modulation_frequency_process(&fm_out, &fm_in, &fm_params, &fm_state, &info);
         for (int i = 0; i < frames; i++) {
             if (fabsf(y[i]) > 1e-7f)
@@ -137,7 +142,9 @@ int test_process_info_modulation_remaining_frame_limits(void) {
         modulation_phase_out_t    phase_out    = {.signal = y};
         modulation_phase_in_t     phase_in     = {.signal = x, .modulator = mod};
         modulation_phase_params_t phase_params = {.depth = 0.0f};
-        modulation_phase_state_t  phase_state  = {.buffer = phase_buffer, .write_pos = 0};
+        modulation_phase_state_t  phase_state  = {
+              .buffer = phase_buffer, .buffer_len = APG_MODULATION_DELAY_CAPACITY, .write_pos = 0
+        };
         modulation_phase_process(&phase_out, &phase_in, &phase_params, &phase_state, &info);
         for (int i = 0; i < frames; i++) {
             if (fabsf(y[i]) > 1e-7f)

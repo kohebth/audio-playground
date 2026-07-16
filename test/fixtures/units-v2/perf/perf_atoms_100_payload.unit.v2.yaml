@@ -134,7 +134,6 @@ graph:
         cutoff: 200
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -150,7 +149,6 @@ graph:
         cutoff: 300
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -166,7 +164,6 @@ graph:
         cutoff: 400
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -182,7 +179,6 @@ graph:
         cutoff: 500
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -198,7 +194,6 @@ graph:
         cutoff: 600
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -214,7 +209,6 @@ graph:
         cutoff: 700
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -230,7 +224,6 @@ graph:
         cutoff: 800
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -246,7 +239,6 @@ graph:
         cutoff: 900
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -262,7 +254,6 @@ graph:
         cutoff: 1000
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -278,7 +269,6 @@ graph:
         cutoff: 1100
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -294,7 +284,6 @@ graph:
         cutoff: 1200
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -310,7 +299,6 @@ graph:
         cutoff: 1300
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -326,7 +314,6 @@ graph:
         cutoff: 1400
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -342,7 +329,6 @@ graph:
         cutoff: 1500
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -358,7 +344,6 @@ graph:
         cutoff: 1600
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -374,7 +359,6 @@ graph:
         cutoff: 1700
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -390,7 +374,6 @@ graph:
         cutoff: 1800
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -406,7 +389,6 @@ graph:
         cutoff: 1900
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -422,7 +404,6 @@ graph:
         cutoff: 2000
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -438,7 +419,6 @@ graph:
         cutoff: 2100
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -454,7 +434,6 @@ graph:
         cutoff: 2200
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -470,7 +449,6 @@ graph:
         cutoff: 2300
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -486,7 +464,6 @@ graph:
         cutoff: 2400
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -502,7 +479,6 @@ graph:
         cutoff: 2500
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -518,7 +494,6 @@ graph:
         cutoff: 2600
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -534,7 +509,6 @@ graph:
         cutoff: 2700
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -550,7 +524,6 @@ graph:
         cutoff: 2800
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -566,7 +539,6 @@ graph:
         cutoff: 2900
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -582,7 +554,6 @@ graph:
         cutoff: 3000
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -598,7 +569,6 @@ graph:
         cutoff: 3100
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -614,7 +584,6 @@ graph:
         cutoff: 3200
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -630,7 +599,6 @@ graph:
         cutoff: 3300
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -646,7 +614,6 @@ graph:
         cutoff: 200
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -662,7 +629,6 @@ graph:
         cutoff: 300
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -678,7 +644,6 @@ graph:
         cutoff: 400
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -694,7 +659,6 @@ graph:
         cutoff: 500
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -710,7 +674,6 @@ graph:
         cutoff: 600
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -726,7 +689,6 @@ graph:
         cutoff: 700
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -742,7 +704,6 @@ graph:
         cutoff: 800
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -758,7 +719,6 @@ graph:
         cutoff: 900
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -774,7 +734,6 @@ graph:
         cutoff: 1000
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -790,7 +749,6 @@ graph:
         cutoff: 1100
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -806,7 +764,6 @@ graph:
         cutoff: 1200
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -822,7 +779,6 @@ graph:
         cutoff: 1300
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -838,7 +794,6 @@ graph:
         cutoff: 1400
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -854,7 +809,6 @@ graph:
         cutoff: 1500
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -870,7 +824,6 @@ graph:
         cutoff: 1600
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -886,7 +839,6 @@ graph:
         cutoff: 1700
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -902,7 +854,6 @@ graph:
         cutoff: 1800
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -918,7 +869,6 @@ graph:
         cutoff: 1900
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -934,7 +884,6 @@ graph:
         cutoff: 2000
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -950,7 +899,6 @@ graph:
         cutoff: 2100
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -966,7 +914,6 @@ graph:
         cutoff: 2200
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -982,7 +929,6 @@ graph:
         cutoff: 2300
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -998,7 +944,6 @@ graph:
         cutoff: 2400
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1014,7 +959,6 @@ graph:
         cutoff: 2500
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1030,7 +974,6 @@ graph:
         cutoff: 2600
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1046,7 +989,6 @@ graph:
         cutoff: 2700
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1062,7 +1004,6 @@ graph:
         cutoff: 2800
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1078,7 +1019,6 @@ graph:
         cutoff: 2900
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1094,7 +1034,6 @@ graph:
         cutoff: 3000
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1110,7 +1049,6 @@ graph:
         cutoff: 3100
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1126,7 +1064,6 @@ graph:
         cutoff: 3200
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1142,7 +1079,6 @@ graph:
         cutoff: 3300
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1158,7 +1094,6 @@ graph:
         cutoff: 200
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1174,7 +1109,6 @@ graph:
         cutoff: 300
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1190,7 +1124,6 @@ graph:
         cutoff: 400
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1206,7 +1139,6 @@ graph:
         cutoff: 500
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1222,7 +1154,6 @@ graph:
         cutoff: 600
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1238,7 +1169,6 @@ graph:
         cutoff: 700
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1254,7 +1184,6 @@ graph:
         cutoff: 800
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1270,7 +1199,6 @@ graph:
         cutoff: 900
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1286,7 +1214,6 @@ graph:
         cutoff: 1000
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1302,7 +1229,6 @@ graph:
         cutoff: 1100
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1318,7 +1244,6 @@ graph:
         cutoff: 1200
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1334,7 +1259,6 @@ graph:
         cutoff: 1300
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1350,7 +1274,6 @@ graph:
         cutoff: 1400
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1366,7 +1289,6 @@ graph:
         cutoff: 1500
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1382,7 +1304,6 @@ graph:
         cutoff: 1600
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1398,7 +1319,6 @@ graph:
         cutoff: 1700
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1414,7 +1334,6 @@ graph:
         cutoff: 1800
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1430,7 +1349,6 @@ graph:
         cutoff: 1900
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1446,7 +1364,6 @@ graph:
         cutoff: 2000
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1462,7 +1379,6 @@ graph:
         cutoff: 2100
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1478,7 +1394,6 @@ graph:
         cutoff: 2200
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1494,7 +1409,6 @@ graph:
         cutoff: 2300
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1510,7 +1424,6 @@ graph:
         cutoff: 2400
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1526,7 +1439,6 @@ graph:
         cutoff: 2500
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1542,7 +1454,6 @@ graph:
         cutoff: 2600
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1558,7 +1469,6 @@ graph:
         cutoff: 2700
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1574,7 +1484,6 @@ graph:
         cutoff: 2800
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1590,7 +1499,6 @@ graph:
         cutoff: 2900
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1606,7 +1514,6 @@ graph:
         cutoff: 3000
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1622,7 +1529,6 @@ graph:
         cutoff: 3100
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1638,7 +1544,6 @@ graph:
         cutoff: 3200
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1654,7 +1559,6 @@ graph:
         cutoff: 3300
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1670,7 +1574,6 @@ graph:
         cutoff: 200
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1686,7 +1589,6 @@ graph:
         cutoff: 300
         q: 0.707
         mode: 1
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1702,7 +1604,6 @@ graph:
         cutoff: 400
         q: 0.707
         mode: 2
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
@@ -1718,7 +1619,6 @@ graph:
         cutoff: 500
         q: 0.707
         mode: 0
-        sample_rate: 48000
         smoothing_ms: 5
       ui:
         position:
