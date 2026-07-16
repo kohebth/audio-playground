@@ -1,12 +1,15 @@
 #ifndef AUDIO_PLAYGROUND_DSP_TYPES_H
 #define AUDIO_PLAYGROUND_DSP_TYPES_H
+
+#include <atom/atom_definitions.h>
+
 #include <stdint.h>
 
 typedef float *Signal;
 typedef float *Spectrum;
 typedef float *Buffer;
 
-// Standard IO Structs for Atom API
+// Standard IO structs for the Atom API.
 // clang-format off
 typedef struct { float *signal; }                        atom_mono_t;
 typedef struct { float *signal_a; float *signal_b; }     atom_pair_t;
@@ -46,1009 +49,117 @@ typedef enum {
     WINDOW_RECTANGULAR,
 } WindowType;
 
-/* 🔷 Signal Generation */
-
-typedef struct {
-    float *signal;
-} generation_oscillator_out_t;
-typedef struct {
-    float *frequency;
-} generation_oscillator_in_t;
-typedef struct {
-    float frequency;
-    int   waveform;
-    float phase_offset;
-    float sample_rate;
-} generation_oscillator_params_t;
-typedef struct {
-    float phase;
-} generation_oscillator_state_t;
-
-typedef struct {
-    float *signal;
-} generation_noise_out_t;
-typedef struct { /* no members */
-} generation_noise_in_t;
-typedef struct {
-    float amplitude;
-    int   color;
-} generation_noise_params_t;
-typedef struct {
-    uint32_t seed;
-    float    prev_value;
-} generation_noise_state_t;
-
-typedef struct {
-    float *signal;
-} generation_envelope_out_t;
-typedef struct {
-    float *gate;
-} generation_envelope_in_t;
-typedef struct {
-    float attack;
-    float decay;
-    float sustain;
-    float release;
-    float sample_rate;
-} generation_envelope_params_t;
-typedef struct {
-    float current_level;
-    int   stage;
-} generation_envelope_state_t;
-
-typedef struct {
-    float *signal;
-} generation_lfo_out_t;
-typedef struct { /* no members */
-} generation_lfo_in_t;
-typedef struct {
-    float frequency;
-    int   waveform;
-    float phase_offset;
-    float sample_rate;
-} generation_lfo_params_t;
-typedef struct {
-    float phase;
-} generation_lfo_state_t;
-
-typedef struct {
-    float *signal;
-} generation_impulse_out_t;
-typedef struct { /* no members */
-} generation_impulse_in_t;
-typedef struct {
-    float interval;
-    float sample_rate;
-} generation_impulse_params_t;
-typedef struct {
-    int counter;
-} generation_impulse_state_t;
-
-typedef struct {
-    float *signal;
-} generation_dc_out_t;
-typedef struct { /* no members */
-} generation_dc_in_t;
-typedef struct {
-    float value;
-} generation_dc_params_t;
-typedef struct { /* no members */
-} generation_dc_state_t;
-
-/* 🔷 Gain & Amplitude */
-
-typedef struct {
-    float *signal;
-} amplitude_multiply_out_t;
-typedef struct {
-    float *signal_a;
-    float *signal_b;
-} amplitude_multiply_in_t;
-typedef struct { /* no members */
-} amplitude_multiply_params_t;
-typedef struct { /* no members */
-} amplitude_multiply_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_divide_out_t;
-typedef struct {
-    float *numerator;
-    float *denominator;
-} amplitude_divide_in_t;
-typedef struct {
-    float epsilon;
-} amplitude_divide_params_t;
-typedef struct { /* no members */
-} amplitude_divide_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_smooth_out_t;
-typedef struct {
-    float *signal;
-} amplitude_smooth_in_t;
-typedef struct {
-    float attack;
-    float release;
-    float sample_rate;
-} amplitude_smooth_params_t;
-typedef struct {
-    float prev_value;
-} amplitude_smooth_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_clip_hard_out_t;
-typedef struct {
-    float *signal;
-} amplitude_clip_hard_in_t;
-typedef struct {
-    float threshold;
-} amplitude_clip_hard_params_t;
-typedef struct { /* no members */
-} amplitude_clip_hard_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_clip_soft_out_t;
-typedef struct {
-    float *signal;
-} amplitude_clip_soft_in_t;
-typedef struct {
-    float threshold;
-    int   curve;
-} amplitude_clip_soft_params_t;
-typedef struct { /* no members */
-} amplitude_clip_soft_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_normalize_out_t;
-typedef struct {
-    float *signal;
-} amplitude_normalize_in_t;
-typedef struct {
-    float target_level;
-    int   mode;
-} amplitude_normalize_params_t;
-typedef struct {
-    float running_peak;
-} amplitude_normalize_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_add_out_t;
-typedef struct {
-    float *signal_a;
-    float *signal_b;
-} amplitude_add_in_t;
-typedef struct { /* no members */
-} amplitude_add_params_t;
-typedef struct { /* no members */
-} amplitude_add_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_subtract_out_t;
-typedef struct {
-    float *signal_a;
-    float *signal_b;
-} amplitude_subtract_in_t;
-typedef struct { /* no members */
-} amplitude_subtract_params_t;
-typedef struct { /* no members */
-} amplitude_subtract_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_accumulate_out_t;
-typedef struct {
-    float *signal;
-} amplitude_accumulate_in_t;
-typedef struct { /* no members */
-} amplitude_accumulate_params_t;
-typedef struct {
-    float accumulator;
-} amplitude_accumulate_state_t;
-
-/* 🔷 Delay & Memory */
-
-typedef struct {
-    float *signal;
-} delay_unit_out_t;
-typedef struct {
-    float *signal;
-} delay_unit_in_t;
-typedef struct { /* no members */
-} delay_unit_params_t;
-typedef struct {
-    float prev_sample;
-} delay_unit_state_t;
-
-typedef struct {
-    float *signal;
-} delay_line_out_t;
-typedef struct {
-    float *signal;
-} delay_line_in_t;
-typedef struct {
-    int length;
-} delay_line_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} delay_line_state_t;
-
-typedef struct {
-    float *signal;
-} delay_fractional_out_t;
-typedef struct {
-    float *signal;
-} delay_fractional_in_t;
-typedef struct {
-    float delay_samples;
-    int   interpolation;
-} delay_fractional_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} delay_fractional_state_t;
-
-typedef struct {
-    float *signal;
-} delay_tap_feedback_out_t;
-typedef struct {
-    float *buffer;
-    int    tap_position;
-} delay_tap_feedback_in_t;
-typedef struct {
-    float coefficient;
-} delay_tap_feedback_params_t;
-typedef struct { /* no members */
-} delay_tap_feedback_state_t;
-
-typedef struct {
-    float *signal;
-} delay_tap_feedforward_out_t;
-typedef struct {
-    float *buffer;
-    int    tap_position;
-} delay_tap_feedforward_in_t;
-typedef struct {
-    float coefficient;
-} delay_tap_feedforward_params_t;
-typedef struct { /* no members */
-} delay_tap_feedforward_state_t;
-
-/* 🔷 Filtering */
-
-typedef struct {
-    float *signal;
-} filter_fir_out_t;
-typedef struct {
-    float *signal;
-} filter_fir_in_t;
-typedef struct {
-    float *kernel;
-    int    kernel_size;
-} filter_fir_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} filter_fir_state_t;
-
-typedef struct {
-    float *signal;
-} filter_biquad_coefficients_out_t;
-typedef struct {
-    float *signal;
-} filter_biquad_coefficients_in_t;
-typedef struct {
-    float b0;
-    float b1;
-    float b2;
-    float a1;
-    float a2;
-} filter_biquad_coefficients_params_t;
-typedef struct {
-    float z1;
-    float z2;
-} filter_biquad_coefficients_state_t;
-
-typedef struct {
-    float *signal;
-} filter_biquad_out_t;
-typedef struct {
-    float *signal;
-    float *cutoff;
-} filter_biquad_in_t;
-typedef struct {
-    float cutoff;
-    float q;
-    int   mode;
-    float sample_rate;
-    float smoothing_ms;
-} filter_biquad_params_t;
-typedef struct {
-    float z1;
-    float z2;
-    float current_cutoff;
-    float current_q;
-    float current_b0;
-    float current_b1;
-    float current_b2;
-    float current_a1;
-    float current_a2;
-} filter_biquad_state_t;
-
-typedef struct {
-    float *signal;
-} filter_dc_block_out_t;
-typedef struct {
-    float *signal;
-} filter_dc_block_in_t;
-typedef struct {
-    float coefficient;
-} filter_dc_block_params_t;
-typedef struct {
-    float prev_input;
-    float prev_output;
-} filter_dc_block_state_t;
-
-typedef struct {
-    float *signal;
-} filter_comb_ff_out_t;
-typedef struct {
-    float *signal;
-} filter_comb_ff_in_t;
-typedef struct {
-    int   delay_samples;
-    float coefficient;
-} filter_comb_ff_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} filter_comb_ff_state_t;
-
-typedef struct {
-    float *signal;
-} filter_comb_fb_out_t;
-typedef struct {
-    float *signal;
-    float *delay;
-} filter_comb_fb_in_t;
-typedef struct {
-    int   delay_samples;
-    float coefficient;
-} filter_comb_fb_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} filter_comb_fb_state_t;
-
-typedef struct {
-    float *signal;
-} filter_allpass_out_t;
-typedef struct {
-    float *signal;
-} filter_allpass_in_t;
-typedef struct {
-    int   delay_samples;
-    float coefficient;
-} filter_allpass_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} filter_allpass_state_t;
-
-typedef struct {
-    float *signal;
-} filter_integrate_out_t;
-typedef struct {
-    float *signal;
-} filter_integrate_in_t;
-typedef struct { /* no members */
-} filter_integrate_params_t;
-typedef struct {
-    float accumulator;
-} filter_integrate_state_t;
-
-typedef struct {
-    float *signal;
-} filter_differentiate_out_t;
-typedef struct {
-    float *signal;
-} filter_differentiate_in_t;
-typedef struct { /* no members */
-} filter_differentiate_params_t;
-typedef struct {
-    float prev_sample;
-} filter_differentiate_state_t;
-
-/* 🔷 Detection & Analysis */
-
-typedef struct {
-    float *level;
-} detect_peak_out_t;
-typedef struct {
-    float *signal;
-} detect_peak_in_t;
-typedef struct {
-    float attack;
-    float release;
-    float sample_rate;
-} detect_peak_params_t;
-typedef struct {
-    float prev_peak;
-} detect_peak_state_t;
-
-typedef struct {
-    float *envelope;
-} detect_envelope_out_t;
-typedef struct {
-    float *signal;
-} detect_envelope_in_t;
-typedef struct {
-    float attack;
-    float release;
-    float sample_rate;
-} detect_envelope_params_t;
-typedef struct {
-    float prev_envelope;
-} detect_envelope_state_t;
-
 #define APG_DETECT_RMS_CAPACITY             4096u
 #define APG_DETECT_AUTOCORRELATION_CAPACITY 1024u
+#define APG_MODULATION_DELAY_CAPACITY       4096u
 
-typedef struct {
-    float *gate;
-} detect_threshold_out_t;
-typedef struct {
-    float *signal;
-} detect_threshold_in_t;
-typedef struct {
-    float threshold;
-} detect_threshold_params_t;
-typedef struct { /* no members */
-} detect_threshold_state_t;
+/* Each row is: atom, output fields, input fields, parameter fields, state fields. */
+// clang-format off
+#define APG_DSP_TYPE_TABLE(X) \
+    /* Amplitude */ \
+    X(amplitude_accumulate, { float *signal; }, { float *signal; }, {}, { float accumulator; }) \
+    X(amplitude_latch, { float *signal; }, { float *signal; float *gate; }, { float threshold; }, { float latched_value; int prev_gate; }) \
+    X(amplitude_add, { float *signal; }, { float *signal_a; float *signal_b; }, {}, {}) \
+    X(amplitude_clip_hard, { float *signal; }, { float *signal; }, { float threshold; }, {}) \
+    X(amplitude_clip_soft, { float *signal; }, { float *signal; }, { float threshold; int curve; }, {}) \
+    X(amplitude_divide, { float *signal; }, { float *numerator; float *denominator; }, { float epsilon; }, {}) \
+    X(amplitude_multiply, { float *signal; }, { float *signal_a; float *signal_b; }, {}, {}) \
+    X(amplitude_normalize, { float *signal; }, { float *signal; }, { float target_level; int mode; }, { float running_peak; }) \
+    X(amplitude_smooth, { float *signal; }, { float *signal; }, { float attack; float release; float sample_rate; }, { float prev_value; }) \
+    X(amplitude_subtract, { float *signal; }, { float *signal_a; float *signal_b; }, {}, {}) \
+    /* Delay and memory */ \
+    X(delay_fractional, { float *signal; }, { float *signal; }, { float delay_samples; int interpolation; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(delay_line, { float *signal; }, { float *signal; }, { int length; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(delay_tap_feedback, { float *signal; }, { float *buffer; int tap_position; }, { float coefficient; }, {}) \
+    X(delay_tap_feedforward, { float *signal; }, { float *buffer; int tap_position; }, { float coefficient; }, {}) \
+    X(delay_unit, { float *signal; }, { float *signal; }, {}, { float prev_sample; }) \
+    /* Detection and analysis */ \
+    X(detect_autocorrelate, { float *correlation; }, { float *signal; }, { int max_lag; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(detect_pitch, { float *pitch; }, { float *signal; }, { int max_lag; float sample_rate; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(detect_envelope, { float *envelope; }, { float *signal; }, { float attack; float release; float sample_rate; }, { float prev_envelope; }) \
+    X(detect_peak, { float *level; }, { float *signal; }, { float attack; float release; float sample_rate; }, { float prev_peak; }) \
+    X(detect_rms, { float *level; }, { float *signal; }, { int window_size; }, { float *buffer; uint32_t buffer_len; int write_pos; float sum; }) \
+    X(detect_slope, { float *slope; }, { float *signal; }, {}, { float prev_sample; }) \
+    X(detect_threshold, { float *gate; }, { float *signal; }, { float threshold; }, {}) \
+    X(detect_zero_crossing, { float *trigger; }, { float *signal; }, {}, { float prev_sample; }) \
+    /* Filtering */ \
+    X(filter_allpass, { float *signal; }, { float *signal; }, { int delay_samples; float coefficient; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(filter_biquad_coefficients, { float *signal; }, { float *signal; }, { float b0; float b1; float b2; float a1; float a2; }, { float z1; float z2; }) \
+    X(filter_biquad, { float *signal; }, { float *signal; float *cutoff; }, { float cutoff; float q; int mode; float sample_rate; float smoothing_ms; }, { float z1; float z2; float current_cutoff; float current_q; float current_b0; float current_b1; float current_b2; float current_a1; float current_a2; }) \
+    X(filter_comb_fb, { float *signal; }, { float *signal; float *delay; }, { int delay_samples; float coefficient; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(filter_comb_ff, { float *signal; }, { float *signal; }, { int delay_samples; float coefficient; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(filter_dc_block, { float *signal; }, { float *signal; }, { float coefficient; }, { float prev_input; float prev_output; }) \
+    X(filter_differentiate, { float *signal; }, { float *signal; }, {}, { float prev_sample; }) \
+    X(filter_fir, { float *signal; }, { float *signal; }, { float *kernel; int kernel_size; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(filter_integrate, { float *signal; }, { float *signal; }, {}, { float accumulator; }) \
+    /* Frequency domain */ \
+    X(freq_fft, { float *real; float *imag; }, { float *signal; }, { int block_size; }, { float *workspace; uint32_t buffer_len; }) \
+    X(freq_ifft, { float *signal; }, { float *real; float *imag; }, { int block_size; }, { float *workspace; uint32_t buffer_len; }) \
+    X(freq_multiply, { float *real; float *imag; }, { float *real_a; float *imag_a; float *real_b; float *imag_b; }, { int block_size; }, {}) \
+    X(freq_overlap_add, { float *signal; }, { float *frame; }, { int block_size; int hop_size; }, { float *buffer; }) \
+    X(freq_overlap_save, { float *frame; }, { float *signal; }, { int block_size; int hop_size; }, { float *buffer; int write_pos; }) \
+    X(freq_window, { float *signal; }, { float *signal; }, { int window_type; int block_size; }, {}) \
+    X(freq_shift, { float *signal; }, { float *signal; float *pitch_shift; }, { int block_size; }, { float *window; float *real; float *imag; int write_pos; float read_ptr; }) \
+    /* Signal generation */ \
+    X(generation_dc, { float *signal; }, {}, { float value; }, {}) \
+    X(generation_envelope, { float *signal; }, { float *gate; }, { float attack; float decay; float sustain; float release; float sample_rate; }, { float current_level; int stage; }) \
+    X(generation_impulse, { float *signal; }, {}, { float interval; float sample_rate; }, { int counter; }) \
+    X(generation_lfo, { float *signal; }, {}, { float frequency; int waveform; float phase_offset; float sample_rate; }, { float phase; }) \
+    X(generation_noise, { float *signal; }, {}, { float amplitude; int color; }, { uint32_t seed; float prev_value; }) \
+    X(generation_oscillator, { float *signal; }, { float *frequency; }, { float frequency; int waveform; float phase_offset; float sample_rate; }, { float phase; }) \
+    /* Interpolation */ \
+    X(interpolation_cubic, { float *signal; }, { float *signal_n1; float *signal_a; float *signal_b; float *signal_c; float *t; }, {}, {}) \
+    X(interpolation_lagrange, { float *signal; }, { float *samples; float *t; }, { int order; }, { float *buffer; int write_pos; }) \
+    X(interpolation_linear, { float *signal; }, { float *signal_a; float *signal_b; float *t; }, {}, {}) \
+    X(interpolation_sinc, { float *signal; }, { float *buffer; float *position; }, { int num_taps; }, { float *taps; }) \
+    /* Mixing and routing */ \
+    X(mix_crossfade, { float *signal; }, { float *signal_a; float *signal_b; }, { float t; }, {}) \
+    X(mix_decode_ms, { float *left; float *right; }, { float *mid; float *side; }, {}, {}) \
+    X(mix_encode_ms, { float *mid; float *side; }, { float *left; float *right; }, {}, {}) \
+    X(mix_matrix, { float **signals; }, { float **signals; }, { float **coefficients; int num_in; int num_out; }, {}) \
+    X(mix_pan_stereo, { float *left; float *right; }, { float *signal; }, { float position; }, {}) \
+    X(mix_wet_dry, { float *signal; }, { float *dry; float *wet; }, { float mix; }, {}) \
+    /* Modulation */ \
+    X(modulation_amplitude, { float *signal; }, { float *signal; float *modulator; }, { float depth; }, {}) \
+    X(modulation_frequency, { float *signal; }, { float *signal; float *modulator; }, { float depth; }, { float *buffer; uint32_t buffer_len; int write_pos; float current_delay; }) \
+    X(modulation_phase, { float *signal; }, { float *signal; float *modulator; }, { float depth; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(modulation_ring, { float *signal; }, { float *signal; float *modulator; }, {}, {}) \
+    X(modulation_scrub, { float *signal; }, { float *buffer; float *position; }, { int buffer_size; }, {}) \
+    /* Nonlinear and distortion */ \
+    X(nonlinear_bitcrush, { float *signal; }, { float *signal; }, { float bit_depth; }, {}) \
+    X(nonlinear_sample_hold, { float *signal; }, { float *signal; }, { float factor; }, { float last_val; float counter; }) \
+    X(nonlinear_waveshape, { float *signal; }, { float *signal; }, { float *transfer_table; int table_size; }, {}) \
+    /* Sample-rate conversion */ \
+    X(src_antialias, { float *signal; }, { float *signal; }, { float cutoff; float sample_rate; }, { float z1; float z2; }) \
+    X(src_antiimage, { float *signal; }, { float *signal; }, { float cutoff; float sample_rate; }, { float z1; float z2; }) \
+    X(src_convert_format, { float *signal; }, { float *signal; }, { int from_format; int to_format; }, {}) \
+    X(src_downsample, { float *signal; }, { float *signal; }, { int factor; }, {}) \
+    X(src_upsample, { float *signal; }, { float *signal; }, { int factor; }, {}) \
+    /* Frequency domain */ \
+    X(freq_quantize, { float *signal; }, { float *signal; }, { float unused; }, { float unused; })
+// clang-format on
 
-typedef struct {
-    float *level;
-} detect_rms_out_t;
-typedef struct {
-    float *signal;
-} detect_rms_in_t;
-typedef struct {
-    int window_size;
-} detect_rms_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-    float    sum;
-} detect_rms_state_t;
+#define APG_DECLARE_DSP_TYPES(atom_name, out_fields, in_fields, params_fields, state_fields) \
+    typedef struct out_fields    atom_name##_out_t;                                          \
+    typedef struct in_fields     atom_name##_in_t;                                           \
+    typedef struct params_fields atom_name##_params_t;                                       \
+    typedef struct state_fields  atom_name##_state_t;
 
-typedef struct {
-    float *trigger;
-} detect_zero_crossing_out_t;
-typedef struct {
-    float *signal;
-} detect_zero_crossing_in_t;
-typedef struct { /* no members */
-} detect_zero_crossing_params_t;
-typedef struct {
-    float prev_sample;
-} detect_zero_crossing_state_t;
+APG_DSP_TYPE_TABLE(APG_DECLARE_DSP_TYPES)
 
-typedef struct {
-    float *slope;
-} detect_slope_out_t;
-typedef struct {
-    float *signal;
-} detect_slope_in_t;
-typedef struct { /* no members */
-} detect_slope_params_t;
-typedef struct {
-    float prev_sample;
-} detect_slope_state_t;
+#define APG_COUNT_DSP_TYPE_ROW(atom_name, out_fields, in_fields, params_fields, state_fields) +1
+#define APG_COUNT_ATOM_DEFINITION(                                                         \
+    atom_name, category, input_count, config_count, state_count, flags, maturity, dispatch \
+)                                                                                          \
+    +1
+_Static_assert(
+    (0 APG_DSP_TYPE_TABLE(APG_COUNT_DSP_TYPE_ROW)) == (0 APG_ATOM_DEFINITIONS(APG_COUNT_ATOM_DEFINITION)),
+    "DSP type table must contain exactly one row per canonical atom"
+);
 
-typedef struct {
-    float *correlation;
-} detect_autocorrelate_out_t;
-typedef struct {
-    float *signal;
-} detect_autocorrelate_in_t;
-typedef struct {
-    int max_lag;
-} detect_autocorrelate_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} detect_autocorrelate_state_t;
-
-typedef struct {
-    float *pitch;
-} detect_pitch_out_t;
-typedef struct {
-    float *signal;
-} detect_pitch_in_t;
-typedef struct {
-    int   max_lag;
-    float sample_rate;
-} detect_pitch_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} detect_pitch_state_t;
-
-/* 🔷 Modulation */
-
-#define APG_MODULATION_DELAY_CAPACITY 4096u
-
-typedef struct {
-    float *signal;
-} modulation_phase_out_t;
-typedef struct {
-    float *signal;
-    float *modulator;
-} modulation_phase_in_t;
-typedef struct {
-    float depth;
-} modulation_phase_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-} modulation_phase_state_t;
-
-typedef struct {
-    float *signal;
-} modulation_ring_out_t;
-typedef struct {
-    float *signal;
-    float *modulator;
-} modulation_ring_in_t;
-typedef struct { /* no members */
-} modulation_ring_params_t;
-typedef struct { /* no members */
-} modulation_ring_state_t;
-
-typedef struct {
-    float *signal;
-} modulation_amplitude_out_t;
-typedef struct {
-    float *signal;
-    float *modulator;
-} modulation_amplitude_in_t;
-typedef struct {
-    float depth;
-} modulation_amplitude_params_t;
-typedef struct { /* no members */
-} modulation_amplitude_state_t;
-
-typedef struct {
-    float *signal;
-} modulation_frequency_out_t;
-typedef struct {
-    float *signal;
-    float *modulator;
-} modulation_frequency_in_t;
-typedef struct {
-    float depth;
-} modulation_frequency_params_t;
-typedef struct {
-    float   *buffer;
-    uint32_t buffer_len;
-    int      write_pos;
-    float    current_delay;
-} modulation_frequency_state_t;
-
-typedef struct {
-    float *signal;
-} modulation_scrub_out_t;
-typedef struct {
-    float *buffer;
-    float *position;
-} modulation_scrub_in_t;
-typedef struct {
-    int buffer_size;
-} modulation_scrub_params_t;
-typedef struct { /* no members */
-} modulation_scrub_state_t;
-
-/* 🔷 Interpolation */
-
-typedef struct {
-    float *signal;
-} interpolation_linear_out_t;
-typedef struct {
-    float *signal_a;
-    float *signal_b;
-    float *t;
-} interpolation_linear_in_t;
-typedef struct { /* no members */
-} interpolation_linear_params_t;
-typedef struct { /* no members */
-} interpolation_linear_state_t;
-
-typedef struct {
-    float *signal;
-} interpolation_cubic_out_t;
-typedef struct {
-    float *signal_n1;
-    float *signal_a;
-    float *signal_b;
-    float *signal_c;
-    float *t;
-} interpolation_cubic_in_t;
-typedef struct { /* no members */
-} interpolation_cubic_params_t;
-typedef struct { /* no members */
-} interpolation_cubic_state_t;
-
-typedef struct {
-    float *signal;
-} interpolation_sinc_out_t;
-typedef struct {
-    float *buffer;
-    float *position;
-} interpolation_sinc_in_t;
-typedef struct {
-    int num_taps;
-} interpolation_sinc_params_t;
-typedef struct {
-    float *taps;
-} interpolation_sinc_state_t;
-
-typedef struct {
-    float *signal;
-} interpolation_lagrange_out_t;
-typedef struct {
-    float *samples;
-    float *t;
-} interpolation_lagrange_in_t;
-typedef struct {
-    int order;
-} interpolation_lagrange_params_t;
-typedef struct {
-    float *buffer;
-    int    write_pos;
-} interpolation_lagrange_state_t;
-
-/* 🔷 Sample Rate Conversion */
-
-typedef struct {
-    float *signal;
-} src_upsample_out_t;
-typedef struct {
-    float *signal;
-} src_upsample_in_t;
-typedef struct {
-    int factor;
-} src_upsample_params_t;
-typedef struct { /* no members */
-} src_upsample_state_t;
-
-typedef struct {
-    float *signal;
-} src_downsample_out_t;
-typedef struct {
-    float *signal;
-} src_downsample_in_t;
-typedef struct {
-    int factor;
-} src_downsample_params_t;
-typedef struct { /* no members */
-} src_downsample_state_t;
-
-typedef struct {
-    float *signal;
-} src_antialias_out_t;
-typedef struct {
-    float *signal;
-} src_antialias_in_t;
-typedef struct {
-    float cutoff;
-    float sample_rate;
-} src_antialias_params_t;
-typedef struct {
-    float z1;
-    float z2;
-} src_antialias_state_t;
-
-typedef struct {
-    float *signal;
-} src_antiimage_out_t;
-typedef struct {
-    float *signal;
-} src_antiimage_in_t;
-typedef struct {
-    float cutoff;
-    float sample_rate;
-} src_antiimage_params_t;
-typedef struct {
-    float z1;
-    float z2;
-} src_antiimage_state_t;
-
-typedef struct {
-    float *signal;
-} src_convert_format_out_t;
-typedef struct {
-    float *signal;
-} src_convert_format_in_t;
-typedef struct {
-    int from_format;
-    int to_format;
-} src_convert_format_params_t;
-typedef struct { /* no members */
-} src_convert_format_state_t;
-
-/* 🔷 Frequency Domain */
-
-typedef struct {
-    float *real;
-    float *imag;
-} freq_fft_out_t;
-typedef struct {
-    float *signal;
-} freq_fft_in_t;
-typedef struct {
-    int block_size;
-} freq_fft_params_t;
-typedef struct {
-    float   *workspace;
-    uint32_t buffer_len;
-} freq_fft_state_t;
-
-typedef struct {
-    float *signal;
-} freq_ifft_out_t;
-typedef struct {
-    float *real;
-    float *imag;
-} freq_ifft_in_t;
-typedef struct {
-    int block_size;
-} freq_ifft_params_t;
-typedef struct {
-    float   *workspace;
-    uint32_t buffer_len;
-} freq_ifft_state_t;
-
-typedef struct {
-    float *signal;
-} freq_window_out_t;
-typedef struct {
-    float *signal;
-} freq_window_in_t;
-typedef struct {
-    int window_type;
-    int block_size;
-} freq_window_params_t;
-typedef struct { /* no members */
-} freq_window_state_t;
-
-typedef struct {
-    float *real;
-    float *imag;
-} freq_multiply_out_t;
-typedef struct {
-    float *real_a;
-    float *imag_a;
-    float *real_b;
-    float *imag_b;
-} freq_multiply_in_t;
-typedef struct {
-    int block_size;
-} freq_multiply_params_t;
-typedef struct { /* no members */
-} freq_multiply_state_t;
-
-typedef struct {
-    float *signal;
-} freq_overlap_add_out_t;
-typedef struct {
-    float *frame;
-} freq_overlap_add_in_t;
-typedef struct {
-    int block_size;
-    int hop_size;
-} freq_overlap_add_params_t;
-typedef struct {
-    float *buffer;
-} freq_overlap_add_state_t;
-
-typedef struct {
-    float *frame;
-} freq_overlap_save_out_t;
-typedef struct {
-    float *signal;
-} freq_overlap_save_in_t;
-typedef struct {
-    int block_size;
-    int hop_size;
-} freq_overlap_save_params_t;
-typedef struct {
-    float *buffer;
-    int    write_pos;
-} freq_overlap_save_state_t;
-
-typedef struct {
-    float *signal;
-} freq_shift_out_t;
-typedef struct {
-    float *signal;
-    float *pitch_shift;
-} freq_shift_in_t;
-typedef struct {
-    int block_size;
-} freq_shift_params_t;
-typedef struct {
-    float *window;
-    float *real;
-    float *imag;
-    int    write_pos;
-    float  read_ptr;
-} freq_shift_state_t;
-
-/* 🔷 Mixing & Routing */
-
-typedef struct {
-    float *signal;
-} mix_crossfade_out_t;
-typedef struct {
-    float *signal_a;
-    float *signal_b;
-} mix_crossfade_in_t;
-typedef struct {
-    float t;
-} mix_crossfade_params_t;
-typedef struct { /* no members */
-} mix_crossfade_state_t;
-
-typedef struct {
-    float *signal;
-} mix_wet_dry_out_t;
-typedef struct {
-    float *dry;
-    float *wet;
-} mix_wet_dry_in_t;
-typedef struct {
-    float mix;
-} mix_wet_dry_params_t;
-typedef struct { /* no members */
-} mix_wet_dry_state_t;
-
-typedef struct {
-    float **signals;
-} mix_matrix_out_t;
-typedef struct {
-    float **signals;
-} mix_matrix_in_t;
-typedef struct {
-    float **coefficients;
-    int     num_in;
-    int     num_out;
-} mix_matrix_params_t;
-typedef struct { /* no members */
-} mix_matrix_state_t;
-
-typedef struct {
-    float *left;
-    float *right;
-} mix_pan_stereo_out_t;
-typedef struct {
-    float *signal;
-} mix_pan_stereo_in_t;
-typedef struct {
-    float position;
-} mix_pan_stereo_params_t;
-typedef struct { /* no members */
-} mix_pan_stereo_state_t;
-
-typedef struct {
-    float *mid;
-    float *side;
-} mix_encode_ms_out_t;
-typedef struct {
-    float *left;
-    float *right;
-} mix_encode_ms_in_t;
-typedef struct { /* no members */
-} mix_encode_ms_params_t;
-typedef struct { /* no members */
-} mix_encode_ms_state_t;
-
-typedef struct {
-    float *left;
-    float *right;
-} mix_decode_ms_out_t;
-typedef struct {
-    float *mid;
-    float *side;
-} mix_decode_ms_in_t;
-typedef struct { /* no members */
-} mix_decode_ms_params_t;
-typedef struct { /* no members */
-} mix_decode_ms_state_t;
-
-/* 🔷 Nonlinear / Distortion */
-
-typedef struct {
-    float *signal;
-} nonlinear_waveshape_out_t;
-typedef struct {
-    float *signal;
-} nonlinear_waveshape_in_t;
-typedef struct {
-    float *transfer_table;
-    int    table_size;
-} nonlinear_waveshape_params_t;
-typedef struct { /* no members */
-} nonlinear_waveshape_state_t;
-
-typedef struct {
-    float *signal;
-} nonlinear_bitcrush_out_t;
-typedef struct {
-    float *signal;
-} nonlinear_bitcrush_in_t;
-typedef struct {
-    float bit_depth;
-} nonlinear_bitcrush_params_t;
-typedef struct { /* no members */
-} nonlinear_bitcrush_state_t;
-
-typedef struct {
-    float *signal;
-} nonlinear_sample_hold_out_t;
-typedef struct {
-    float *signal;
-} nonlinear_sample_hold_in_t;
-typedef struct {
-    float factor;
-} nonlinear_sample_hold_params_t;
-typedef struct {
-    float last_val;
-    float counter;
-} nonlinear_sample_hold_state_t;
-
-typedef struct {
-    float *signal;
-} freq_quantize_out_t;
-typedef struct {
-    float *signal;
-} freq_quantize_in_t;
-typedef struct {
-    float unused;
-} freq_quantize_params_t;
-typedef struct {
-    float unused;
-} freq_quantize_state_t;
-
-typedef struct {
-    float *signal;
-} amplitude_latch_out_t;
-typedef struct {
-    float *signal;
-    float *gate;
-} amplitude_latch_in_t;
-typedef struct {
-    float threshold;
-} amplitude_latch_params_t;
-typedef struct {
-    float latched_value;
-    int   prev_gate;
-} amplitude_latch_state_t;
+#undef APG_COUNT_ATOM_DEFINITION
+#undef APG_COUNT_DSP_TYPE_ROW
+#undef APG_DECLARE_DSP_TYPES
+#undef APG_DSP_TYPE_TABLE
 
 #endif // AUDIO_PLAYGROUND_DSP_TYPES_H
