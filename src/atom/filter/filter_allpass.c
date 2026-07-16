@@ -5,11 +5,11 @@
 #define MAX_ALLPASS_DELAY 48000u
 
 void filter_allpass_process(
-    filter_allpass_out_t     *out,
-    filter_allpass_in_t      *in,
-    filter_allpass_params_t  *params,
-    filter_allpass_state_t   *state,
-    const apg_process_info_t *info
+    filter_allpass_out_t          *out,
+    const filter_allpass_in_t     *in,
+    const filter_allpass_params_t *params,
+    filter_allpass_state_t        *state,
+    const apg_process_info_t      *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -50,11 +50,4 @@ void filter_allpass_process(
         write_pos = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
     state->write_pos = (int)write_pos;
-}
-
-void filter_allpass(
-    filter_allpass_out_t *out, filter_allpass_in_t *in, filter_allpass_params_t *params, filter_allpass_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    filter_allpass_process(out, in, params, state, &info);
 }

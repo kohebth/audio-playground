@@ -14,11 +14,11 @@ static int clamp_upsample_factor(const src_upsample_params_t *params) {
 }
 
 void src_upsample_process(
-    src_upsample_out_t       *out,
-    src_upsample_in_t        *in,
-    src_upsample_params_t    *params,
-    src_upsample_state_t     *state,
-    const apg_process_info_t *info
+    src_upsample_out_t          *out,
+    const src_upsample_in_t     *in,
+    const src_upsample_params_t *params,
+    src_upsample_state_t        *state,
+    const apg_process_info_t    *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -41,12 +41,4 @@ void src_upsample_process(
             out->signal[out_index++] = 0.0f;
         }
     }
-}
-
-void src_upsample(
-    src_upsample_out_t *out, src_upsample_in_t *in, src_upsample_params_t *params, src_upsample_state_t *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    info.output_frames      = info.frames * (uint32_t)clamp_upsample_factor(params);
-    src_upsample_process(out, in, params, state, &info);
 }

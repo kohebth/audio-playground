@@ -10,8 +10,8 @@
 
 typedef struct {
     void                      *out;
-    void                      *in;
-    void                      *config;
+    const void                *in;
+    const void                *config;
     void                      *state;
     const apg_process_info_t  *info;
     const apg_spectral_info_t *spectral_info;

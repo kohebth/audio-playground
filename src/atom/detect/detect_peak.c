@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 void detect_peak_process(
-    detect_peak_out_t        *out,
-    detect_peak_in_t         *in,
-    detect_peak_params_t     *params,
-    detect_peak_state_t      *state,
-    const apg_process_info_t *info
+    detect_peak_out_t          *out,
+    const detect_peak_in_t     *in,
+    const detect_peak_params_t *params,
+    detect_peak_state_t        *state,
+    const apg_process_info_t   *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -34,11 +34,4 @@ void detect_peak_process(
         out->level[i] = peak;
     }
     state->prev_peak = peak;
-}
-
-void detect_peak(
-    detect_peak_out_t *out, detect_peak_in_t *in, detect_peak_params_t *params, detect_peak_state_t *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    detect_peak_process(out, in, params, state, &info);
 }

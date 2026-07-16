@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 void modulation_phase_process(
-    modulation_phase_out_t    *out,
-    modulation_phase_in_t     *in,
-    modulation_phase_params_t *params,
-    modulation_phase_state_t  *state,
-    const apg_process_info_t  *info
+    modulation_phase_out_t          *out,
+    const modulation_phase_in_t     *in,
+    const modulation_phase_params_t *params,
+    modulation_phase_state_t        *state,
+    const apg_process_info_t        *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -80,14 +80,4 @@ void modulation_phase_process(
     }
 
     state->write_pos = (int)write_pos;
-}
-
-void modulation_phase(
-    modulation_phase_out_t    *out,
-    modulation_phase_in_t     *in,
-    modulation_phase_params_t *params,
-    modulation_phase_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    modulation_phase_process(out, in, params, state, &info);
 }

@@ -7,11 +7,11 @@
 #define MAX_FIR_SIZE 1024
 
 void filter_fir_process(
-    filter_fir_out_t         *out,
-    filter_fir_in_t          *in,
-    filter_fir_params_t      *params,
-    filter_fir_state_t       *state,
-    const apg_process_info_t *info
+    filter_fir_out_t          *out,
+    const filter_fir_in_t     *in,
+    const filter_fir_params_t *params,
+    filter_fir_state_t        *state,
+    const apg_process_info_t  *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -47,9 +47,4 @@ void filter_fir_process(
     }
 
     state->write_pos = (int)write_pos;
-}
-
-void filter_fir(filter_fir_out_t *out, filter_fir_in_t *in, filter_fir_params_t *params, filter_fir_state_t *state) {
-    const apg_process_info_t info = apg_process_info_default();
-    filter_fir_process(out, in, params, state, &info);
 }

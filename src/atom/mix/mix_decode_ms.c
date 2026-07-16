@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void mix_decode_ms_process(
-    mix_decode_ms_out_t      *out,
-    mix_decode_ms_in_t       *in,
-    mix_decode_ms_params_t   *params,
-    mix_decode_ms_state_t    *state,
-    const apg_process_info_t *info
+    mix_decode_ms_out_t          *out,
+    const mix_decode_ms_in_t     *in,
+    const mix_decode_ms_params_t *params,
+    mix_decode_ms_state_t        *state,
+    const apg_process_info_t     *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -21,11 +21,4 @@ void mix_decode_ms_process(
         out->left[i]  = (in->mid[i] + in->side[i]) * inv_sqrt2;
         out->right[i] = (in->mid[i] - in->side[i]) * inv_sqrt2;
     }
-}
-
-void mix_decode_ms(
-    mix_decode_ms_out_t *out, mix_decode_ms_in_t *in, mix_decode_ms_params_t *params, mix_decode_ms_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    mix_decode_ms_process(out, in, params, state, &info);
 }

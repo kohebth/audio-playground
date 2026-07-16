@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void amplitude_divide_process(
-    amplitude_divide_out_t    *out,
-    amplitude_divide_in_t     *in,
-    amplitude_divide_params_t *params,
-    amplitude_divide_state_t  *state,
-    const apg_process_info_t  *info
+    amplitude_divide_out_t          *out,
+    const amplitude_divide_in_t     *in,
+    const amplitude_divide_params_t *params,
+    amplitude_divide_state_t        *state,
+    const apg_process_info_t        *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -23,14 +23,4 @@ void amplitude_divide_process(
             out->signal[i] = 0.0f;
         }
     }
-}
-
-void amplitude_divide(
-    amplitude_divide_out_t    *out,
-    amplitude_divide_in_t     *in,
-    amplitude_divide_params_t *params,
-    amplitude_divide_state_t  *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    amplitude_divide_process(out, in, params, state, &info);
 }

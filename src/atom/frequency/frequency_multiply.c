@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void freq_multiply_process(
-    freq_multiply_out_t       *out,
-    freq_multiply_in_t        *in,
-    freq_multiply_params_t    *params,
-    freq_multiply_state_t     *state,
-    const apg_spectral_info_t *spectral_info
+    freq_multiply_out_t          *out,
+    const freq_multiply_in_t     *in,
+    const freq_multiply_params_t *params,
+    freq_multiply_state_t        *state,
+    const apg_spectral_info_t    *spectral_info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -26,16 +26,4 @@ void freq_multiply_process(
         out->real[i] = a_re * b_re - a_im * b_im;
         out->imag[i] = a_re * b_im + a_im * b_re;
     }
-}
-
-void freq_multiply(
-    freq_multiply_out_t *out, freq_multiply_in_t *in, freq_multiply_params_t *params, freq_multiply_state_t *state
-) {
-    apg_spectral_info_t info = {0};
-    if (params && params->block_size > 0) {
-        info.fft_size  = (uint32_t)params->block_size;
-        info.bin_count = info.fft_size / 2u + 1u;
-        info.hop_size  = info.fft_size;
-    }
-    freq_multiply_process(out, in, params, state, &info);
 }

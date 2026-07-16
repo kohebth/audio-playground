@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 void detect_rms_process(
-    detect_rms_out_t         *out,
-    detect_rms_in_t          *in,
-    detect_rms_params_t      *params,
-    detect_rms_state_t       *state,
-    const apg_process_info_t *info
+    detect_rms_out_t          *out,
+    const detect_rms_in_t     *in,
+    const detect_rms_params_t *params,
+    detect_rms_state_t        *state,
+    const apg_process_info_t  *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -73,9 +73,4 @@ void detect_rms_process(
 
     state->write_pos = (int)write_pos;
     state->sum       = apg_denormal_kill(sum_sq);
-}
-
-void detect_rms(detect_rms_out_t *out, detect_rms_in_t *in, detect_rms_params_t *params, detect_rms_state_t *state) {
-    const apg_process_info_t info = apg_process_info_default();
-    detect_rms_process(out, in, params, state, &info);
 }

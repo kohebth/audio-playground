@@ -8,11 +8,9 @@ static_assert(INTERPOLATION_LAGRANGE == 3, "interpolation enum value changed");
 static_assert(WINDOW_RECTANGULAR == 3, "window enum value changed");
 
 int main() {
-    const auto          legacy          = &generation_dc;
     const auto          process         = &generation_dc_process;
     apg_waveform_type_t waveform        = WAVEFORM_SINE;
     WaveformType        legacy_waveform = waveform;
-    (void)legacy;
     (void)process;
     (void)legacy_waveform;
     return 0;

@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void generation_envelope_process(
-    generation_envelope_out_t    *out,
-    generation_envelope_in_t     *in,
-    generation_envelope_params_t *params,
-    generation_envelope_state_t  *state,
-    const apg_process_info_t     *info
+    generation_envelope_out_t          *out,
+    const generation_envelope_in_t     *in,
+    const generation_envelope_params_t *params,
+    generation_envelope_state_t        *state,
+    const apg_process_info_t           *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -62,14 +62,4 @@ void generation_envelope_process(
 
     state->current_level = current_level;
     state->stage         = stage;
-}
-
-void generation_envelope(
-    generation_envelope_out_t    *out,
-    generation_envelope_in_t     *in,
-    generation_envelope_params_t *params,
-    generation_envelope_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    generation_envelope_process(out, in, params, state, &info);
 }

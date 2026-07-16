@@ -5,11 +5,11 @@
 #define MAX_DELAY_SAMPLES 192000u
 
 void delay_line_process(
-    delay_line_out_t         *out,
-    delay_line_in_t          *in,
-    delay_line_params_t      *params,
-    delay_line_state_t       *state,
-    const apg_process_info_t *info
+    delay_line_out_t          *out,
+    const delay_line_in_t     *in,
+    const delay_line_params_t *params,
+    delay_line_state_t        *state,
+    const apg_process_info_t  *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -35,9 +35,4 @@ void delay_line_process(
     }
 
     state->write_pos = (int)write_pos;
-}
-
-void delay_line(delay_line_out_t *out, delay_line_in_t *in, delay_line_params_t *params, delay_line_state_t *state) {
-    apg_process_info_t info = apg_process_info_default();
-    delay_line_process(out, in, params, state, &info);
 }

@@ -25,8 +25,8 @@ static void bit_reverse(float *data, uint32_t n) {
 
 void freq_fft_process(
     freq_fft_out_t            *out,
-    freq_fft_in_t             *in,
-    freq_fft_params_t         *params,
+    const freq_fft_in_t       *in,
+    const freq_fft_params_t   *params,
     freq_fft_state_t          *state,
     const apg_spectral_info_t *spectral_info
 ) {
@@ -75,14 +75,4 @@ void freq_fft_process(
         out->real[i] = temp[2 * i];
         out->imag[i] = temp[2 * i + 1];
     }
-}
-
-void freq_fft(freq_fft_out_t *out, freq_fft_in_t *in, freq_fft_params_t *params, freq_fft_state_t *state) {
-    apg_spectral_info_t info = {0};
-    if (params && params->block_size > 0) {
-        info.fft_size  = (uint32_t)params->block_size;
-        info.bin_count = info.fft_size / 2u + 1u;
-        info.hop_size  = info.fft_size;
-    }
-    freq_fft_process(out, in, params, state, &info);
 }

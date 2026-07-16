@@ -14,11 +14,11 @@ static void init_midi_table() {
 }
 
 void freq_quantize_process(
-    freq_quantize_out_t      *out,
-    freq_quantize_in_t       *in,
-    freq_quantize_params_t   *params,
-    freq_quantize_state_t    *state,
-    const apg_process_info_t *info
+    freq_quantize_out_t          *out,
+    const freq_quantize_in_t     *in,
+    const freq_quantize_params_t *params,
+    freq_quantize_state_t        *state,
+    const apg_process_info_t     *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -64,11 +64,4 @@ void freq_quantize_process(
             out->signal[i]  = (diff_down < diff_up) ? midi_freqs[high] : midi_freqs[low];
         }
     }
-}
-
-void freq_quantize(
-    freq_quantize_out_t *out, freq_quantize_in_t *in, freq_quantize_params_t *params, freq_quantize_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    freq_quantize_process(out, in, params, state, &info);
 }

@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 void src_antiimage_process(
-    src_antiimage_out_t      *out,
-    src_antiimage_in_t       *in,
-    src_antiimage_params_t   *params,
-    src_antiimage_state_t    *state,
-    const apg_process_info_t *info
+    src_antiimage_out_t          *out,
+    const src_antiimage_in_t     *in,
+    const src_antiimage_params_t *params,
+    src_antiimage_state_t        *state,
+    const apg_process_info_t     *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -53,11 +53,4 @@ void src_antiimage_process(
 
     state->z1 = apg_denormal_kill(z1);
     state->z2 = apg_denormal_kill(z2);
-}
-
-void src_antiimage(
-    src_antiimage_out_t *out, src_antiimage_in_t *in, src_antiimage_params_t *params, src_antiimage_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    src_antiimage_process(out, in, params, state, &info);
 }

@@ -2,11 +2,11 @@
 #include <stddef.h>
 
 void amplitude_latch_process(
-    amplitude_latch_out_t    *out,
-    amplitude_latch_in_t     *in,
-    amplitude_latch_params_t *params,
-    amplitude_latch_state_t  *state,
-    const apg_process_info_t *info
+    amplitude_latch_out_t          *out,
+    const amplitude_latch_in_t     *in,
+    const amplitude_latch_params_t *params,
+    amplitude_latch_state_t        *state,
+    const apg_process_info_t       *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -41,14 +41,4 @@ void amplitude_latch_process(
 
     state->latched_value = latched_value;
     state->prev_gate     = prev_gate;
-}
-
-void amplitude_latch(
-    amplitude_latch_out_t    *out,
-    amplitude_latch_in_t     *in,
-    amplitude_latch_params_t *params,
-    amplitude_latch_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    amplitude_latch_process(out, in, params, state, &info);
 }

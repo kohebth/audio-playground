@@ -7,11 +7,11 @@
 #define APG_SINC_MAX_TAPS 63
 
 void interpolation_sinc_process(
-    interpolation_sinc_out_t    *out,
-    interpolation_sinc_in_t     *in,
-    interpolation_sinc_params_t *params,
-    interpolation_sinc_state_t  *state,
-    const apg_process_info_t    *info
+    interpolation_sinc_out_t          *out,
+    const interpolation_sinc_in_t     *in,
+    const interpolation_sinc_params_t *params,
+    interpolation_sinc_state_t        *state,
+    const apg_process_info_t          *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -68,14 +68,4 @@ void interpolation_sinc_process(
             acc /= weight_sum;
         out->signal[i] = isfinite(acc) ? acc : 0.0f;
     }
-}
-
-void interpolation_sinc(
-    interpolation_sinc_out_t    *out,
-    interpolation_sinc_in_t     *in,
-    interpolation_sinc_params_t *params,
-    interpolation_sinc_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    interpolation_sinc_process(out, in, params, state, &info);
 }

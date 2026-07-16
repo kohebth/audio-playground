@@ -1,5 +1,8 @@
 # DSP Type Refactor Final Audit
 
+> This audit records the first type-header refactor as completed at `2f84b17`. The subsequent execution-API
+> convergence intentionally removes the 69 legacy function symbols and makes process input/config pointers const.
+
 ## Inventory Comparison
 
 | Surface | Baseline | Final | Result |

@@ -2,11 +2,11 @@
 #include <stddef.h>
 
 void amplitude_subtract_process(
-    amplitude_subtract_out_t    *out,
-    amplitude_subtract_in_t     *in,
-    amplitude_subtract_params_t *params,
-    amplitude_subtract_state_t  *state,
-    const apg_process_info_t    *info
+    amplitude_subtract_out_t          *out,
+    const amplitude_subtract_in_t     *in,
+    const amplitude_subtract_params_t *params,
+    amplitude_subtract_state_t        *state,
+    const apg_process_info_t          *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -19,14 +19,4 @@ void amplitude_subtract_process(
     for (uint32_t i = 0; i < frames; ++i) {
         out->signal[i] = in->signal_a[i] - in->signal_b[i];
     }
-}
-
-void amplitude_subtract(
-    amplitude_subtract_out_t    *out,
-    amplitude_subtract_in_t     *in,
-    amplitude_subtract_params_t *params,
-    amplitude_subtract_state_t  *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    amplitude_subtract_process(out, in, params, state, &info);
 }

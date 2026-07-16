@@ -6,11 +6,11 @@
 #define APG_MIX_MATRIX_MAX_CHANNELS 8
 
 void mix_matrix_process(
-    mix_matrix_out_t         *out,
-    mix_matrix_in_t          *in,
-    mix_matrix_params_t      *params,
-    mix_matrix_state_t       *state,
-    const apg_process_info_t *info
+    mix_matrix_out_t          *out,
+    const mix_matrix_in_t     *in,
+    const mix_matrix_params_t *params,
+    mix_matrix_state_t        *state,
+    const apg_process_info_t  *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -51,9 +51,4 @@ void mix_matrix_process(
             }
         }
     }
-}
-
-void mix_matrix(mix_matrix_out_t *out, mix_matrix_in_t *in, mix_matrix_params_t *params, mix_matrix_state_t *state) {
-    const apg_process_info_t info = apg_process_info_default();
-    mix_matrix_process(out, in, params, state, &info);
 }

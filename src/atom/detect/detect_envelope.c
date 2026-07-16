@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 void detect_envelope_process(
-    detect_envelope_out_t    *out,
-    detect_envelope_in_t     *in,
-    detect_envelope_params_t *params,
-    detect_envelope_state_t  *state,
-    const apg_process_info_t *info
+    detect_envelope_out_t          *out,
+    const detect_envelope_in_t     *in,
+    const detect_envelope_params_t *params,
+    detect_envelope_state_t        *state,
+    const apg_process_info_t       *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -34,14 +34,4 @@ void detect_envelope_process(
         out->envelope[i] = env;
     }
     state->prev_envelope = env;
-}
-
-void detect_envelope(
-    detect_envelope_out_t    *out,
-    detect_envelope_in_t     *in,
-    detect_envelope_params_t *params,
-    detect_envelope_state_t  *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    detect_envelope_process(out, in, params, state, &info);
 }

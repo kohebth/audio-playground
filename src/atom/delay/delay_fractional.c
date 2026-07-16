@@ -6,11 +6,11 @@
 #define MAX_DELAY_SAMPLES 192000u
 
 void delay_fractional_process(
-    delay_fractional_out_t    *out,
-    delay_fractional_in_t     *in,
-    delay_fractional_params_t *params,
-    delay_fractional_state_t  *state,
-    const apg_process_info_t  *info
+    delay_fractional_out_t          *out,
+    const delay_fractional_in_t     *in,
+    const delay_fractional_params_t *params,
+    delay_fractional_state_t        *state,
+    const apg_process_info_t        *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -41,14 +41,4 @@ void delay_fractional_process(
     }
 
     state->write_pos = (int)write_pos;
-}
-
-void delay_fractional(
-    delay_fractional_out_t    *out,
-    delay_fractional_in_t     *in,
-    delay_fractional_params_t *params,
-    delay_fractional_state_t  *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    delay_fractional_process(out, in, params, state, &info);
 }

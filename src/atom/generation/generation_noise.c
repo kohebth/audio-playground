@@ -2,11 +2,11 @@
 #include <stdlib.h>
 
 void generation_noise_process(
-    generation_noise_out_t    *out,
-    generation_noise_in_t     *in,
-    generation_noise_params_t *params,
-    generation_noise_state_t  *state,
-    const apg_process_info_t  *info
+    generation_noise_out_t          *out,
+    const generation_noise_in_t     *in,
+    const generation_noise_params_t *params,
+    generation_noise_state_t        *state,
+    const apg_process_info_t        *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -47,14 +47,4 @@ void generation_noise_process(
 
     state->seed       = seed;
     state->prev_value = prev_value;
-}
-
-void generation_noise(
-    generation_noise_out_t    *out,
-    generation_noise_in_t     *in,
-    generation_noise_params_t *params,
-    generation_noise_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    generation_noise_process(out, in, params, state, &info);
 }

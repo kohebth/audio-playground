@@ -6,11 +6,11 @@
 #define TABLE_SIZE 1024
 
 void nonlinear_waveshape_process(
-    nonlinear_waveshape_out_t    *out,
-    nonlinear_waveshape_in_t     *in,
-    nonlinear_waveshape_params_t *params,
-    nonlinear_waveshape_state_t  *state,
-    const apg_process_info_t     *info
+    nonlinear_waveshape_out_t          *out,
+    const nonlinear_waveshape_in_t     *in,
+    const nonlinear_waveshape_params_t *params,
+    nonlinear_waveshape_state_t        *state,
+    const apg_process_info_t           *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -37,14 +37,4 @@ void nonlinear_waveshape_process(
         const float    b     = isfinite(params->transfer_table[idx_b]) ? params->transfer_table[idx_b] : a;
         out->signal[i]       = a * (1.0f - frac) + b * frac;
     }
-}
-
-void nonlinear_waveshape(
-    nonlinear_waveshape_out_t    *out,
-    nonlinear_waveshape_in_t     *in,
-    nonlinear_waveshape_params_t *params,
-    nonlinear_waveshape_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    nonlinear_waveshape_process(out, in, params, state, &info);
 }

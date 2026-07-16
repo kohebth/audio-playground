@@ -2,11 +2,11 @@
 #include <stddef.h>
 
 void modulation_amplitude_process(
-    modulation_amplitude_out_t    *out,
-    modulation_amplitude_in_t     *in,
-    modulation_amplitude_params_t *params,
-    modulation_amplitude_state_t  *state,
-    const apg_process_info_t      *info
+    modulation_amplitude_out_t          *out,
+    const modulation_amplitude_in_t     *in,
+    const modulation_amplitude_params_t *params,
+    modulation_amplitude_state_t        *state,
+    const apg_process_info_t            *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -18,14 +18,4 @@ void modulation_amplitude_process(
     for (uint32_t i = 0; i < frames; ++i) {
         out->signal[i] = in->signal[i] * (1.0f + params->depth * in->modulator[i]);
     }
-}
-
-void modulation_amplitude(
-    modulation_amplitude_out_t    *out,
-    modulation_amplitude_in_t     *in,
-    modulation_amplitude_params_t *params,
-    modulation_amplitude_state_t  *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    modulation_amplitude_process(out, in, params, state, &info);
 }

@@ -2,11 +2,11 @@
 #include <stddef.h>
 
 void filter_dc_block_process(
-    filter_dc_block_out_t    *out,
-    filter_dc_block_in_t     *in,
-    filter_dc_block_params_t *params,
-    filter_dc_block_state_t  *state,
-    const apg_process_info_t *info
+    filter_dc_block_out_t          *out,
+    const filter_dc_block_in_t     *in,
+    const filter_dc_block_params_t *params,
+    filter_dc_block_state_t        *state,
+    const apg_process_info_t       *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -28,14 +28,4 @@ void filter_dc_block_process(
 
     state->prev_input  = x1;
     state->prev_output = y1;
-}
-
-void filter_dc_block(
-    filter_dc_block_out_t    *out,
-    filter_dc_block_in_t     *in,
-    filter_dc_block_params_t *params,
-    filter_dc_block_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    filter_dc_block_process(out, in, params, state, &info);
 }

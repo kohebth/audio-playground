@@ -5,11 +5,11 @@
 #include <stddef.h>
 
 void detect_autocorrelate_process(
-    detect_autocorrelate_out_t    *out,
-    detect_autocorrelate_in_t     *in,
-    detect_autocorrelate_params_t *params,
-    detect_autocorrelate_state_t  *state,
-    const apg_process_info_t      *info
+    detect_autocorrelate_out_t          *out,
+    const detect_autocorrelate_in_t     *in,
+    const detect_autocorrelate_params_t *params,
+    detect_autocorrelate_state_t        *state,
+    const apg_process_info_t            *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -60,14 +60,4 @@ void detect_autocorrelate_process(
     }
 
     state->write_pos = (int)write_pos;
-}
-
-void detect_autocorrelate(
-    detect_autocorrelate_out_t    *out,
-    detect_autocorrelate_in_t     *in,
-    detect_autocorrelate_params_t *params,
-    detect_autocorrelate_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    detect_autocorrelate_process(out, in, params, state, &info);
 }

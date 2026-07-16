@@ -8,11 +8,11 @@
 #endif
 
 void generation_lfo_process(
-    generation_lfo_out_t     *out,
-    generation_lfo_in_t      *in,
-    generation_lfo_params_t  *params,
-    generation_lfo_state_t   *state,
-    const apg_process_info_t *info
+    generation_lfo_out_t          *out,
+    const generation_lfo_in_t     *in,
+    const generation_lfo_params_t *params,
+    generation_lfo_state_t        *state,
+    const apg_process_info_t      *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -53,11 +53,4 @@ void generation_lfo_process(
     }
 
     state->phase = phase;
-}
-
-void generation_lfo(
-    generation_lfo_out_t *out, generation_lfo_in_t *in, generation_lfo_params_t *params, generation_lfo_state_t *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    generation_lfo_process(out, in, params, state, &info);
 }

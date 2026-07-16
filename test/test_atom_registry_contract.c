@@ -230,19 +230,17 @@ static int test_all_atoms_accept_required_frame_sizes(void) {
             .state         = state,
             .spectral_info = &spectral,
         };
-        void **required_fields[] = {
-            &incomplete_call.out,
-            &incomplete_call.in,
-            &incomplete_call.config,
-            &incomplete_call.state,
-        };
-        for (size_t field_index = 0u; field_index < sizeof(required_fields) / sizeof(required_fields[0]);
-             field_index++) {
-            void *saved                   = *required_fields[field_index];
-            *required_fields[field_index] = NULL;
-            entry->thunk(&incomplete_call);
-            *required_fields[field_index] = saved;
-        }
+        incomplete_call.out = NULL;
+        entry->thunk(&incomplete_call);
+        incomplete_call.out = out;
+        incomplete_call.in  = NULL;
+        entry->thunk(&incomplete_call);
+        incomplete_call.in     = in;
+        incomplete_call.config = NULL;
+        entry->thunk(&incomplete_call);
+        incomplete_call.config = config;
+        incomplete_call.state  = NULL;
+        entry->thunk(&incomplete_call);
 
         for (size_t frame_index = 0u; frame_index < sizeof(frame_sizes) / sizeof(frame_sizes[0]); frame_index++) {
             const uint32_t frames = frame_sizes[frame_index];

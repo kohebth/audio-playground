@@ -24,11 +24,11 @@ static inline float poly_blep(float phase, float phase_inc) {
 }
 
 void generation_oscillator_process(
-    generation_oscillator_out_t    *out,
-    generation_oscillator_in_t     *in,
-    generation_oscillator_params_t *params,
-    generation_oscillator_state_t  *state,
-    const apg_process_info_t       *info
+    generation_oscillator_out_t          *out,
+    const generation_oscillator_in_t     *in,
+    const generation_oscillator_params_t *params,
+    generation_oscillator_state_t        *state,
+    const apg_process_info_t             *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -80,14 +80,4 @@ void generation_oscillator_process(
     }
 
     state->phase = phase;
-}
-
-void generation_oscillator(
-    generation_oscillator_out_t    *out,
-    generation_oscillator_in_t     *in,
-    generation_oscillator_params_t *params,
-    generation_oscillator_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    generation_oscillator_process(out, in, params, state, &info);
 }

@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void freq_window_spectral_process(
-    freq_window_out_t         *out,
-    freq_window_in_t          *in,
-    freq_window_params_t      *params,
-    freq_window_state_t       *state,
-    const apg_spectral_info_t *spectral_info
+    freq_window_out_t          *out,
+    const freq_window_in_t     *in,
+    const freq_window_params_t *params,
+    freq_window_state_t        *state,
+    const apg_spectral_info_t  *spectral_info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -38,11 +38,11 @@ void freq_window_spectral_process(
 }
 
 void freq_window_process(
-    freq_window_out_t        *out,
-    freq_window_in_t         *in,
-    freq_window_params_t     *params,
-    freq_window_state_t      *state,
-    const apg_process_info_t *info
+    freq_window_out_t          *out,
+    const freq_window_in_t     *in,
+    const freq_window_params_t *params,
+    freq_window_state_t        *state,
+    const apg_process_info_t   *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -77,11 +77,4 @@ void freq_window_process(
         }
         out->signal[i] = in->signal[i] * w;
     }
-}
-
-void freq_window(
-    freq_window_out_t *out, freq_window_in_t *in, freq_window_params_t *params, freq_window_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    freq_window_process(out, in, params, state, &info);
 }

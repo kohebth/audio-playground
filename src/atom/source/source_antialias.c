@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 void src_antialias_process(
-    src_antialias_out_t      *out,
-    src_antialias_in_t       *in,
-    src_antialias_params_t   *params,
-    src_antialias_state_t    *state,
-    const apg_process_info_t *info
+    src_antialias_out_t          *out,
+    const src_antialias_in_t     *in,
+    const src_antialias_params_t *params,
+    src_antialias_state_t        *state,
+    const apg_process_info_t     *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -53,11 +53,4 @@ void src_antialias_process(
 
     state->z1 = apg_denormal_kill(z1);
     state->z2 = apg_denormal_kill(z2);
-}
-
-void src_antialias(
-    src_antialias_out_t *out, src_antialias_in_t *in, src_antialias_params_t *params, src_antialias_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    src_antialias_process(out, in, params, state, &info);
 }

@@ -5,11 +5,11 @@
 #define MAX_COMB_DELAY 48000u
 
 void filter_comb_fb_process(
-    filter_comb_fb_out_t     *out,
-    filter_comb_fb_in_t      *in,
-    filter_comb_fb_params_t  *params,
-    filter_comb_fb_state_t   *state,
-    const apg_process_info_t *info
+    filter_comb_fb_out_t          *out,
+    const filter_comb_fb_in_t     *in,
+    const filter_comb_fb_params_t *params,
+    filter_comb_fb_state_t        *state,
+    const apg_process_info_t      *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -44,11 +44,4 @@ void filter_comb_fb_process(
         write_pos                = write_pos + 1u == capacity ? 0u : write_pos + 1u;
     }
     state->write_pos = (int)write_pos;
-}
-
-void filter_comb_fb(
-    filter_comb_fb_out_t *out, filter_comb_fb_in_t *in, filter_comb_fb_params_t *params, filter_comb_fb_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    filter_comb_fb_process(out, in, params, state, &info);
 }

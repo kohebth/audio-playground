@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void amplitude_clip_soft_process(
-    amplitude_clip_soft_out_t    *out,
-    amplitude_clip_soft_in_t     *in,
-    amplitude_clip_soft_params_t *params,
-    amplitude_clip_soft_state_t  *state,
-    const apg_process_info_t     *info
+    amplitude_clip_soft_out_t          *out,
+    const amplitude_clip_soft_in_t     *in,
+    const amplitude_clip_soft_params_t *params,
+    amplitude_clip_soft_state_t        *state,
+    const apg_process_info_t           *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -29,14 +29,4 @@ void amplitude_clip_soft_process(
                 out->signal[i] = params->threshold * (x - (x * x * x) / 3.0f);
         }
     }
-}
-
-void amplitude_clip_soft(
-    amplitude_clip_soft_out_t    *out,
-    amplitude_clip_soft_in_t     *in,
-    amplitude_clip_soft_params_t *params,
-    amplitude_clip_soft_state_t  *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    amplitude_clip_soft_process(out, in, params, state, &info);
 }

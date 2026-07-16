@@ -5,11 +5,11 @@
 #define MAX_DELAY 8192
 
 void freq_shift_process(
-    freq_shift_out_t         *out,
-    freq_shift_in_t          *in,
-    freq_shift_params_t      *params,
-    freq_shift_state_t       *state,
-    const apg_process_info_t *info
+    freq_shift_out_t          *out,
+    const freq_shift_in_t     *in,
+    const freq_shift_params_t *params,
+    freq_shift_state_t        *state,
+    const apg_process_info_t  *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -83,9 +83,4 @@ void freq_shift_process(
 
     state->write_pos = write_pos;
     state->read_ptr  = read_ptr;
-}
-
-void freq_shift(freq_shift_out_t *out, freq_shift_in_t *in, freq_shift_params_t *params, freq_shift_state_t *state) {
-    const apg_process_info_t info = apg_process_info_default();
-    freq_shift_process(out, in, params, state, &info);
 }

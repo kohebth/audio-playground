@@ -25,8 +25,8 @@ static void bit_reverse(float *data, uint32_t n) {
 
 void freq_ifft_process(
     freq_ifft_out_t           *out,
-    freq_ifft_in_t            *in,
-    freq_ifft_params_t        *params,
+    const freq_ifft_in_t      *in,
+    const freq_ifft_params_t  *params,
     freq_ifft_state_t         *state,
     const apg_spectral_info_t *spectral_info
 ) {
@@ -79,14 +79,4 @@ void freq_ifft_process(
     for (uint32_t i = 0; i < n; i++) {
         out->signal[i] = work[2 * i] / (float)n;
     }
-}
-
-void freq_ifft(freq_ifft_out_t *out, freq_ifft_in_t *in, freq_ifft_params_t *params, freq_ifft_state_t *state) {
-    apg_spectral_info_t info = {0};
-    if (params && params->block_size > 0) {
-        info.fft_size  = (uint32_t)params->block_size;
-        info.bin_count = info.fft_size / 2u + 1u;
-        info.hop_size  = info.fft_size;
-    }
-    freq_ifft_process(out, in, params, state, &info);
 }

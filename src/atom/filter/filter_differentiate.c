@@ -2,11 +2,11 @@
 #include <stddef.h>
 
 void filter_differentiate_process(
-    filter_differentiate_out_t    *out,
-    filter_differentiate_in_t     *in,
-    filter_differentiate_params_t *params,
-    filter_differentiate_state_t  *state,
-    const apg_process_info_t      *info
+    filter_differentiate_out_t          *out,
+    const filter_differentiate_in_t     *in,
+    const filter_differentiate_params_t *params,
+    filter_differentiate_state_t        *state,
+    const apg_process_info_t            *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -21,14 +21,4 @@ void filter_differentiate_process(
         last           = x0;
     }
     state->prev_sample = last;
-}
-
-void filter_differentiate(
-    filter_differentiate_out_t    *out,
-    filter_differentiate_in_t     *in,
-    filter_differentiate_params_t *params,
-    filter_differentiate_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    filter_differentiate_process(out, in, params, state, &info);
 }

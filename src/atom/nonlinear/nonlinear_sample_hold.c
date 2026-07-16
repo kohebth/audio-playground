@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void nonlinear_sample_hold_process(
-    nonlinear_sample_hold_out_t    *out,
-    nonlinear_sample_hold_in_t     *in,
-    nonlinear_sample_hold_params_t *params,
-    nonlinear_sample_hold_state_t  *state,
-    const apg_process_info_t       *info
+    nonlinear_sample_hold_out_t          *out,
+    const nonlinear_sample_hold_in_t     *in,
+    const nonlinear_sample_hold_params_t *params,
+    nonlinear_sample_hold_state_t        *state,
+    const apg_process_info_t             *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -32,14 +32,4 @@ void nonlinear_sample_hold_process(
 
     state->last_val = last_val;
     state->counter  = counter;
-}
-
-void nonlinear_sample_hold(
-    nonlinear_sample_hold_out_t    *out,
-    nonlinear_sample_hold_in_t     *in,
-    nonlinear_sample_hold_params_t *params,
-    nonlinear_sample_hold_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    nonlinear_sample_hold_process(out, in, params, state, &info);
 }

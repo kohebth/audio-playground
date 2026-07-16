@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 void modulation_frequency_process(
-    modulation_frequency_out_t    *out,
-    modulation_frequency_in_t     *in,
-    modulation_frequency_params_t *params,
-    modulation_frequency_state_t  *state,
-    const apg_process_info_t      *info
+    modulation_frequency_out_t          *out,
+    const modulation_frequency_in_t     *in,
+    const modulation_frequency_params_t *params,
+    modulation_frequency_state_t        *state,
+    const apg_process_info_t            *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -61,14 +61,4 @@ void modulation_frequency_process(
 
     state->write_pos     = (int)write_pos;
     state->current_delay = current_delay;
-}
-
-void modulation_frequency(
-    modulation_frequency_out_t    *out,
-    modulation_frequency_in_t     *in,
-    modulation_frequency_params_t *params,
-    modulation_frequency_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    modulation_frequency_process(out, in, params, state, &info);
 }

@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void mix_encode_ms_process(
-    mix_encode_ms_out_t      *out,
-    mix_encode_ms_in_t       *in,
-    mix_encode_ms_params_t   *params,
-    mix_encode_ms_state_t    *state,
-    const apg_process_info_t *info
+    mix_encode_ms_out_t          *out,
+    const mix_encode_ms_in_t     *in,
+    const mix_encode_ms_params_t *params,
+    mix_encode_ms_state_t        *state,
+    const apg_process_info_t     *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -21,11 +21,4 @@ void mix_encode_ms_process(
         out->mid[i]  = (in->left[i] + in->right[i]) * inv_sqrt2;
         out->side[i] = (in->left[i] - in->right[i]) * inv_sqrt2;
     }
-}
-
-void mix_encode_ms(
-    mix_encode_ms_out_t *out, mix_encode_ms_in_t *in, mix_encode_ms_params_t *params, mix_encode_ms_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    mix_encode_ms_process(out, in, params, state, &info);
 }

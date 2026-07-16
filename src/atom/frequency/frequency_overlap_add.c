@@ -5,11 +5,11 @@
 #define MAX_OVERLAP_WINDOW 8192
 
 void freq_overlap_add_spectral_process(
-    freq_overlap_add_out_t    *out,
-    freq_overlap_add_in_t     *in,
-    freq_overlap_add_params_t *params,
-    freq_overlap_add_state_t  *state,
-    const apg_spectral_info_t *spectral_info
+    freq_overlap_add_out_t          *out,
+    const freq_overlap_add_in_t     *in,
+    const freq_overlap_add_params_t *params,
+    freq_overlap_add_state_t        *state,
+    const apg_spectral_info_t       *spectral_info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -32,11 +32,11 @@ void freq_overlap_add_spectral_process(
 }
 
 void freq_overlap_add_process(
-    freq_overlap_add_out_t    *out,
-    freq_overlap_add_in_t     *in,
-    freq_overlap_add_params_t *params,
-    freq_overlap_add_state_t  *state,
-    const apg_process_info_t  *info
+    freq_overlap_add_out_t          *out,
+    const freq_overlap_add_in_t     *in,
+    const freq_overlap_add_params_t *params,
+    freq_overlap_add_state_t        *state,
+    const apg_process_info_t        *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -72,14 +72,4 @@ void freq_overlap_add_process(
         memmove(state->buffer, state->buffer + hop_size, (MAX_OVERLAP_WINDOW - (size_t)hop_size) * sizeof(float));
         memset(state->buffer + (MAX_OVERLAP_WINDOW - hop_size), 0, (size_t)hop_size * sizeof(float));
     }
-}
-
-void freq_overlap_add(
-    freq_overlap_add_out_t    *out,
-    freq_overlap_add_in_t     *in,
-    freq_overlap_add_params_t *params,
-    freq_overlap_add_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    freq_overlap_add_process(out, in, params, state, &info);
 }

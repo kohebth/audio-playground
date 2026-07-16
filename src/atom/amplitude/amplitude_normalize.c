@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void amplitude_normalize_process(
-    amplitude_normalize_out_t    *out,
-    amplitude_normalize_in_t     *in,
-    amplitude_normalize_params_t *params,
-    amplitude_normalize_state_t  *state,
-    const apg_process_info_t     *info
+    amplitude_normalize_out_t          *out,
+    const amplitude_normalize_in_t     *in,
+    const amplitude_normalize_params_t *params,
+    amplitude_normalize_state_t        *state,
+    const apg_process_info_t           *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -40,14 +40,4 @@ void amplitude_normalize_process(
     }
 
     state->running_peak = peak;
-}
-
-void amplitude_normalize(
-    amplitude_normalize_out_t    *out,
-    amplitude_normalize_in_t     *in,
-    amplitude_normalize_params_t *params,
-    amplitude_normalize_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    amplitude_normalize_process(out, in, params, state, &info);
 }

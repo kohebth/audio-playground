@@ -2,11 +2,11 @@
 #include <stddef.h>
 
 void src_convert_format_process(
-    src_convert_format_out_t    *out,
-    src_convert_format_in_t     *in,
-    src_convert_format_params_t *params,
-    src_convert_format_state_t  *state,
-    const apg_process_info_t    *info
+    src_convert_format_out_t          *out,
+    const src_convert_format_in_t     *in,
+    const src_convert_format_params_t *params,
+    src_convert_format_state_t        *state,
+    const apg_process_info_t          *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -19,14 +19,4 @@ void src_convert_format_process(
     for (uint32_t i = 0; i < frames; ++i) {
         out->signal[i] = in->signal[i];
     }
-}
-
-void src_convert_format(
-    src_convert_format_out_t    *out,
-    src_convert_format_in_t     *in,
-    src_convert_format_params_t *params,
-    src_convert_format_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    src_convert_format_process(out, in, params, state, &info);
 }

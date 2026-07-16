@@ -6,11 +6,11 @@
 #define APG_LAGRANGE_MAX_ORDER 8
 
 void interpolation_lagrange_process(
-    interpolation_lagrange_out_t    *out,
-    interpolation_lagrange_in_t     *in,
-    interpolation_lagrange_params_t *params,
-    interpolation_lagrange_state_t  *state,
-    const apg_process_info_t        *info
+    interpolation_lagrange_out_t          *out,
+    const interpolation_lagrange_in_t     *in,
+    const interpolation_lagrange_params_t *params,
+    interpolation_lagrange_state_t        *state,
+    const apg_process_info_t              *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -58,14 +58,4 @@ void interpolation_lagrange_process(
         }
         out->signal[i] = isfinite(result) ? result : 0.0f;
     }
-}
-
-void interpolation_lagrange(
-    interpolation_lagrange_out_t    *out,
-    interpolation_lagrange_in_t     *in,
-    interpolation_lagrange_params_t *params,
-    interpolation_lagrange_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    interpolation_lagrange_process(out, in, params, state, &info);
 }

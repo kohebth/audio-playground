@@ -5,11 +5,11 @@
 #include <stdint.h>
 
 void generation_impulse_process(
-    generation_impulse_out_t    *out,
-    generation_impulse_in_t     *in,
-    generation_impulse_params_t *params,
-    generation_impulse_state_t  *state,
-    const apg_process_info_t    *info
+    generation_impulse_out_t          *out,
+    const generation_impulse_in_t     *in,
+    const generation_impulse_params_t *params,
+    generation_impulse_state_t        *state,
+    const apg_process_info_t          *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -33,14 +33,4 @@ void generation_impulse_process(
             state->counter--;
         }
     }
-}
-
-void generation_impulse(
-    generation_impulse_out_t    *out,
-    generation_impulse_in_t     *in,
-    generation_impulse_params_t *params,
-    generation_impulse_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    generation_impulse_process(out, in, params, state, &info);
 }

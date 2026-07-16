@@ -68,11 +68,11 @@ static void biquad_mode_coefficients(
 }
 
 void filter_biquad_process(
-    filter_biquad_out_t      *out,
-    filter_biquad_in_t       *in,
-    filter_biquad_params_t   *params,
-    filter_biquad_state_t    *state,
-    const apg_process_info_t *info
+    filter_biquad_out_t          *out,
+    const filter_biquad_in_t     *in,
+    const filter_biquad_params_t *params,
+    filter_biquad_state_t        *state,
+    const apg_process_info_t     *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -155,11 +155,4 @@ void filter_biquad_process(
     state->current_b2     = current_b2;
     state->current_a1     = current_a1;
     state->current_a2     = current_a2;
-}
-
-void filter_biquad(
-    filter_biquad_out_t *out, filter_biquad_in_t *in, filter_biquad_params_t *params, filter_biquad_state_t *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    filter_biquad_process(out, in, params, state, &info);
 }

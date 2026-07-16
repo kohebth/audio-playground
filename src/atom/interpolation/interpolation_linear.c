@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void interpolation_linear_process(
-    interpolation_linear_out_t    *out,
-    interpolation_linear_in_t     *in,
-    interpolation_linear_params_t *params,
-    interpolation_linear_state_t  *state,
-    const apg_process_info_t      *info
+    interpolation_linear_out_t          *out,
+    const interpolation_linear_in_t     *in,
+    const interpolation_linear_params_t *params,
+    interpolation_linear_state_t        *state,
+    const apg_process_info_t            *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -21,14 +21,4 @@ void interpolation_linear_process(
         const float b  = isfinite(in->signal_b[i]) ? in->signal_b[i] : 0.0f;
         out->signal[i] = a * (1.0f - t) + b * t;
     }
-}
-
-void interpolation_linear(
-    interpolation_linear_out_t    *out,
-    interpolation_linear_in_t     *in,
-    interpolation_linear_params_t *params,
-    interpolation_linear_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    interpolation_linear_process(out, in, params, state, &info);
 }

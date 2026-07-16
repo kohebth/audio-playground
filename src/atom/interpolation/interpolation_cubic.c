@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void interpolation_cubic_process(
-    interpolation_cubic_out_t    *out,
-    interpolation_cubic_in_t     *in,
-    interpolation_cubic_params_t *params,
-    interpolation_cubic_state_t  *state,
-    const apg_process_info_t     *info
+    interpolation_cubic_out_t          *out,
+    const interpolation_cubic_in_t     *in,
+    const interpolation_cubic_params_t *params,
+    interpolation_cubic_state_t        *state,
+    const apg_process_info_t           *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -34,14 +34,4 @@ void interpolation_cubic_process(
         const float sample = a * t3 + b * t2 + c * t + d;
         out->signal[i]     = isfinite(sample) ? sample : 0.0f;
     }
-}
-
-void interpolation_cubic(
-    interpolation_cubic_out_t    *out,
-    interpolation_cubic_in_t     *in,
-    interpolation_cubic_params_t *params,
-    interpolation_cubic_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    interpolation_cubic_process(out, in, params, state, &info);
 }

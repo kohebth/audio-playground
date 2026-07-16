@@ -6,11 +6,11 @@
 #define MIN_PITCH_LAG 32u
 
 void detect_pitch_process(
-    detect_pitch_out_t       *out,
-    detect_pitch_in_t        *in,
-    detect_pitch_params_t    *params,
-    detect_pitch_state_t     *state,
-    const apg_process_info_t *info
+    detect_pitch_out_t          *out,
+    const detect_pitch_in_t     *in,
+    const detect_pitch_params_t *params,
+    detect_pitch_state_t        *state,
+    const apg_process_info_t    *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -93,11 +93,4 @@ void detect_pitch_process(
     for (uint32_t i = 0; i < frames; i++) {
         out->pitch[i] = detected_pitch;
     }
-}
-
-void detect_pitch(
-    detect_pitch_out_t *out, detect_pitch_in_t *in, detect_pitch_params_t *params, detect_pitch_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    detect_pitch_process(out, in, params, state, &info);
 }

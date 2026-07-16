@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 void filter_biquad_coefficients_process(
-    filter_biquad_coefficients_out_t    *out,
-    filter_biquad_coefficients_in_t     *in,
-    filter_biquad_coefficients_params_t *params,
-    filter_biquad_coefficients_state_t  *state,
-    const apg_process_info_t            *info
+    filter_biquad_coefficients_out_t          *out,
+    const filter_biquad_coefficients_in_t     *in,
+    const filter_biquad_coefficients_params_t *params,
+    filter_biquad_coefficients_state_t        *state,
+    const apg_process_info_t                  *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -49,14 +49,4 @@ void filter_biquad_coefficients_process(
 
     state->z1 = z1;
     state->z2 = z2;
-}
-
-void filter_biquad_coefficients(
-    filter_biquad_coefficients_out_t    *out,
-    filter_biquad_coefficients_in_t     *in,
-    filter_biquad_coefficients_params_t *params,
-    filter_biquad_coefficients_state_t  *state
-) {
-    apg_process_info_t info = apg_process_info_default();
-    filter_biquad_coefficients_process(out, in, params, state, &info);
 }

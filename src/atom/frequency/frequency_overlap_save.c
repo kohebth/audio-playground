@@ -5,11 +5,11 @@
 #define MAX_FRAME_SIZE 1024
 
 void freq_overlap_save_spectral_process(
-    freq_overlap_save_out_t    *out,
-    freq_overlap_save_in_t     *in,
-    freq_overlap_save_params_t *params,
-    freq_overlap_save_state_t  *state,
-    const apg_spectral_info_t  *spectral_info
+    freq_overlap_save_out_t          *out,
+    const freq_overlap_save_in_t     *in,
+    const freq_overlap_save_params_t *params,
+    freq_overlap_save_state_t        *state,
+    const apg_spectral_info_t        *spectral_info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -32,11 +32,11 @@ void freq_overlap_save_spectral_process(
 }
 
 void freq_overlap_save_process(
-    freq_overlap_save_out_t    *out,
-    freq_overlap_save_in_t     *in,
-    freq_overlap_save_params_t *params,
-    freq_overlap_save_state_t  *state,
-    const apg_process_info_t   *info
+    freq_overlap_save_out_t          *out,
+    const freq_overlap_save_in_t     *in,
+    const freq_overlap_save_params_t *params,
+    freq_overlap_save_state_t        *state,
+    const apg_process_info_t         *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -76,14 +76,4 @@ void freq_overlap_save_process(
     }
 
     state->write_pos = write_pos;
-}
-
-void freq_overlap_save(
-    freq_overlap_save_out_t    *out,
-    freq_overlap_save_in_t     *in,
-    freq_overlap_save_params_t *params,
-    freq_overlap_save_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    freq_overlap_save_process(out, in, params, state, &info);
 }

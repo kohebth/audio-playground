@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 void modulation_scrub_process(
-    modulation_scrub_out_t    *out,
-    modulation_scrub_in_t     *in,
-    modulation_scrub_params_t *params,
-    modulation_scrub_state_t  *state,
-    const apg_process_info_t  *info
+    modulation_scrub_out_t          *out,
+    const modulation_scrub_in_t     *in,
+    const modulation_scrub_params_t *params,
+    modulation_scrub_state_t        *state,
+    const apg_process_info_t        *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -35,14 +35,4 @@ void modulation_scrub_process(
         const float    sample = a * (1.0f - frac) + b * frac;
         out->signal[i]        = isfinite(sample) ? sample : 0.0f;
     }
-}
-
-void modulation_scrub(
-    modulation_scrub_out_t    *out,
-    modulation_scrub_in_t     *in,
-    modulation_scrub_params_t *params,
-    modulation_scrub_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    modulation_scrub_process(out, in, params, state, &info);
 }

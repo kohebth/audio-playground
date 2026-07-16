@@ -2,11 +2,11 @@
 #include <stddef.h>
 
 void detect_slope_process(
-    detect_slope_out_t       *out,
-    detect_slope_in_t        *in,
-    detect_slope_params_t    *params,
-    detect_slope_state_t     *state,
-    const apg_process_info_t *info
+    detect_slope_out_t          *out,
+    const detect_slope_in_t     *in,
+    const detect_slope_params_t *params,
+    detect_slope_state_t        *state,
+    const apg_process_info_t    *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -20,11 +20,4 @@ void detect_slope_process(
         last          = in->signal[i];
     }
     state->prev_sample = last;
-}
-
-void detect_slope(
-    detect_slope_out_t *out, detect_slope_in_t *in, detect_slope_params_t *params, detect_slope_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    detect_slope_process(out, in, params, state, &info);
 }

@@ -53,8 +53,9 @@ New schema entries must record `value`, `borrowed`, `runtime_owned`, or `externa
 ## ABI Policy
 
 Public typedef names, field names, field order, field C types, function names, and function parameter types are
-compatibility surfaces. The LP64 ABI snapshot records 286 public types, 416 fields, and 17 enum values. A permanent
-link test resolves 69 legacy atom functions, 69 primary process functions, and three additional spectral variants.
+versioned API surfaces. The LP64 ABI snapshot records 286 public types, 416 fields, and 17 enum values. A permanent
+link test resolves 69 primary process functions and three additional spectral variants. Process inputs and params are
+read-only; output and state remain mutable.
 
 The only intentional baseline layout exception is the 46 former GNU zero-member structures. They are now distinct
 standard C11 structures containing `uint8_t _reserved`, changing size 0 to size 1 while preserving alignment 1. The
@@ -98,7 +99,7 @@ separate runtime ABI version.
 4. Add matching field descriptors in the family `*_field_descriptors.c`; record buffer bounds where applicable.
 5. Add the canonical `APG_ATOM_DEFINITIONS` row with exact descriptor counts, capabilities, maturity, and dispatch.
 6. Add a compiler/catalog contract row only when v2 metadata exposes that binding contract.
-7. Implement both retained legacy and required process entry points without process-time allocation.
+7. Implement the required process entry point without process-time allocation.
 8. Update focused behavior tests, regenerate ABI evidence only for intentional changes, and run `./build-and-test.sh`.
 9. Update the frozen atom catalog and TypeScript-facing fixtures when public metadata changes.
 

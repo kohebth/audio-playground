@@ -2,11 +2,11 @@
 #include <stddef.h>
 
 void amplitude_clip_hard_process(
-    amplitude_clip_hard_out_t    *out,
-    amplitude_clip_hard_in_t     *in,
-    amplitude_clip_hard_params_t *params,
-    amplitude_clip_hard_state_t  *state,
-    const apg_process_info_t     *info
+    amplitude_clip_hard_out_t          *out,
+    const amplitude_clip_hard_in_t     *in,
+    const amplitude_clip_hard_params_t *params,
+    amplitude_clip_hard_state_t        *state,
+    const apg_process_info_t           *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -23,14 +23,4 @@ void amplitude_clip_hard_process(
             s = -params->threshold;
         out->signal[i] = s;
     }
-}
-
-void amplitude_clip_hard(
-    amplitude_clip_hard_out_t    *out,
-    amplitude_clip_hard_in_t     *in,
-    amplitude_clip_hard_params_t *params,
-    amplitude_clip_hard_state_t  *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    amplitude_clip_hard_process(out, in, params, state, &info);
 }

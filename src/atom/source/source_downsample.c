@@ -15,11 +15,11 @@ static int clamp_downsample_factor(const src_downsample_params_t *params) {
 }
 
 void src_downsample_process(
-    src_downsample_out_t     *out,
-    src_downsample_in_t      *in,
-    src_downsample_params_t  *params,
-    src_downsample_state_t   *state,
-    const apg_process_info_t *info
+    src_downsample_out_t          *out,
+    const src_downsample_in_t     *in,
+    const src_downsample_params_t *params,
+    src_downsample_state_t        *state,
+    const apg_process_info_t      *info
 ) {
     if (out == NULL || in == NULL || params == NULL || state == NULL)
         return;
@@ -41,11 +41,4 @@ void src_downsample_process(
             break;
         input_index += factor;
     }
-}
-
-void src_downsample(
-    src_downsample_out_t *out, src_downsample_in_t *in, src_downsample_params_t *params, src_downsample_state_t *state
-) {
-    const apg_process_info_t info = apg_process_info_default();
-    src_downsample_process(out, in, params, state, &info);
 }
