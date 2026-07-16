@@ -49,6 +49,8 @@ for my $atom (@atoms) {
     }
 }
 
+@atoms = sort { $a->{name} cmp $b->{name} } @atoms;
+
 my $output_dir = dirname($output_path);
 make_path($output_dir) unless -d $output_dir;
 open my $output, '>', $output_path or die "cannot write $output_path: $!\n";
@@ -99,6 +101,37 @@ int main(int argc, char **argv) {
     SNAPSHOT_ENUM(output, WINDOW_HAMMING);
     SNAPSHOT_ENUM(output, WINDOW_BLACKMAN);
     SNAPSHOT_ENUM(output, WINDOW_RECTANGULAR);
+
+    SNAPSHOT_TYPE(output, Signal);
+    SNAPSHOT_TYPE(output, Spectrum);
+    SNAPSHOT_TYPE(output, Buffer);
+
+    SNAPSHOT_TYPE(output, atom_mono_t);
+    SNAPSHOT_FIELD(output, atom_mono_t, signal);
+
+    SNAPSHOT_TYPE(output, atom_pair_t);
+    SNAPSHOT_FIELD(output, atom_pair_t, signal_a);
+    SNAPSHOT_FIELD(output, atom_pair_t, signal_b);
+
+    SNAPSHOT_TYPE(output, atom_stereo_t);
+    SNAPSHOT_FIELD(output, atom_stereo_t, left);
+    SNAPSHOT_FIELD(output, atom_stereo_t, right);
+
+    SNAPSHOT_TYPE(output, atom_complex_t);
+    SNAPSHOT_FIELD(output, atom_complex_t, real);
+    SNAPSHOT_FIELD(output, atom_complex_t, imag);
+
+    SNAPSHOT_TYPE(output, atom_ms_t);
+    SNAPSHOT_FIELD(output, atom_ms_t, mid);
+    SNAPSHOT_FIELD(output, atom_ms_t, side);
+
+    SNAPSHOT_TYPE(output, atom_wet_dry_t);
+    SNAPSHOT_FIELD(output, atom_wet_dry_t, dry);
+    SNAPSHOT_FIELD(output, atom_wet_dry_t, wet);
+
+    SNAPSHOT_TYPE(output, atom_div_t);
+    SNAPSHOT_FIELD(output, atom_div_t, numerator);
+    SNAPSHOT_FIELD(output, atom_div_t, denominator);
 HEADER
 
 for my $atom (@atoms) {

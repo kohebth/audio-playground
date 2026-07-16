@@ -44,6 +44,37 @@ int main(int argc, char **argv) {
     SNAPSHOT_ENUM(output, WINDOW_BLACKMAN);
     SNAPSHOT_ENUM(output, WINDOW_RECTANGULAR);
 
+    SNAPSHOT_TYPE(output, Signal);
+    SNAPSHOT_TYPE(output, Spectrum);
+    SNAPSHOT_TYPE(output, Buffer);
+
+    SNAPSHOT_TYPE(output, atom_mono_t);
+    SNAPSHOT_FIELD(output, atom_mono_t, signal);
+
+    SNAPSHOT_TYPE(output, atom_pair_t);
+    SNAPSHOT_FIELD(output, atom_pair_t, signal_a);
+    SNAPSHOT_FIELD(output, atom_pair_t, signal_b);
+
+    SNAPSHOT_TYPE(output, atom_stereo_t);
+    SNAPSHOT_FIELD(output, atom_stereo_t, left);
+    SNAPSHOT_FIELD(output, atom_stereo_t, right);
+
+    SNAPSHOT_TYPE(output, atom_complex_t);
+    SNAPSHOT_FIELD(output, atom_complex_t, real);
+    SNAPSHOT_FIELD(output, atom_complex_t, imag);
+
+    SNAPSHOT_TYPE(output, atom_ms_t);
+    SNAPSHOT_FIELD(output, atom_ms_t, mid);
+    SNAPSHOT_FIELD(output, atom_ms_t, side);
+
+    SNAPSHOT_TYPE(output, atom_wet_dry_t);
+    SNAPSHOT_FIELD(output, atom_wet_dry_t, dry);
+    SNAPSHOT_FIELD(output, atom_wet_dry_t, wet);
+
+    SNAPSHOT_TYPE(output, atom_div_t);
+    SNAPSHOT_FIELD(output, atom_div_t, numerator);
+    SNAPSHOT_FIELD(output, atom_div_t, denominator);
+
     SNAPSHOT_TYPE(output, amplitude_accumulate_out_t);
     SNAPSHOT_FIELD(output, amplitude_accumulate_out_t, signal);
 
@@ -54,20 +85,6 @@ int main(int argc, char **argv) {
 
     SNAPSHOT_TYPE(output, amplitude_accumulate_state_t);
     SNAPSHOT_FIELD(output, amplitude_accumulate_state_t, accumulator);
-
-    SNAPSHOT_TYPE(output, amplitude_latch_out_t);
-    SNAPSHOT_FIELD(output, amplitude_latch_out_t, signal);
-
-    SNAPSHOT_TYPE(output, amplitude_latch_in_t);
-    SNAPSHOT_FIELD(output, amplitude_latch_in_t, signal);
-    SNAPSHOT_FIELD(output, amplitude_latch_in_t, gate);
-
-    SNAPSHOT_TYPE(output, amplitude_latch_params_t);
-    SNAPSHOT_FIELD(output, amplitude_latch_params_t, threshold);
-
-    SNAPSHOT_TYPE(output, amplitude_latch_state_t);
-    SNAPSHOT_FIELD(output, amplitude_latch_state_t, latched_value);
-    SNAPSHOT_FIELD(output, amplitude_latch_state_t, prev_gate);
 
     SNAPSHOT_TYPE(output, amplitude_add_out_t);
     SNAPSHOT_FIELD(output, amplitude_add_out_t, signal);
@@ -114,6 +131,20 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, amplitude_divide_params_t, epsilon);
 
     SNAPSHOT_TYPE(output, amplitude_divide_state_t);
+
+    SNAPSHOT_TYPE(output, amplitude_latch_out_t);
+    SNAPSHOT_FIELD(output, amplitude_latch_out_t, signal);
+
+    SNAPSHOT_TYPE(output, amplitude_latch_in_t);
+    SNAPSHOT_FIELD(output, amplitude_latch_in_t, signal);
+    SNAPSHOT_FIELD(output, amplitude_latch_in_t, gate);
+
+    SNAPSHOT_TYPE(output, amplitude_latch_params_t);
+    SNAPSHOT_FIELD(output, amplitude_latch_params_t, threshold);
+
+    SNAPSHOT_TYPE(output, amplitude_latch_state_t);
+    SNAPSHOT_FIELD(output, amplitude_latch_state_t, latched_value);
+    SNAPSHOT_FIELD(output, amplitude_latch_state_t, prev_gate);
 
     SNAPSHOT_TYPE(output, amplitude_multiply_out_t);
     SNAPSHOT_FIELD(output, amplitude_multiply_out_t, signal);
@@ -242,21 +273,6 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, detect_autocorrelate_state_t, buffer_len);
     SNAPSHOT_FIELD(output, detect_autocorrelate_state_t, write_pos);
 
-    SNAPSHOT_TYPE(output, detect_pitch_out_t);
-    SNAPSHOT_FIELD(output, detect_pitch_out_t, pitch);
-
-    SNAPSHOT_TYPE(output, detect_pitch_in_t);
-    SNAPSHOT_FIELD(output, detect_pitch_in_t, signal);
-
-    SNAPSHOT_TYPE(output, detect_pitch_params_t);
-    SNAPSHOT_FIELD(output, detect_pitch_params_t, max_lag);
-    SNAPSHOT_FIELD(output, detect_pitch_params_t, sample_rate);
-
-    SNAPSHOT_TYPE(output, detect_pitch_state_t);
-    SNAPSHOT_FIELD(output, detect_pitch_state_t, buffer);
-    SNAPSHOT_FIELD(output, detect_pitch_state_t, buffer_len);
-    SNAPSHOT_FIELD(output, detect_pitch_state_t, write_pos);
-
     SNAPSHOT_TYPE(output, detect_envelope_out_t);
     SNAPSHOT_FIELD(output, detect_envelope_out_t, envelope);
 
@@ -284,6 +300,21 @@ int main(int argc, char **argv) {
 
     SNAPSHOT_TYPE(output, detect_peak_state_t);
     SNAPSHOT_FIELD(output, detect_peak_state_t, prev_peak);
+
+    SNAPSHOT_TYPE(output, detect_pitch_out_t);
+    SNAPSHOT_FIELD(output, detect_pitch_out_t, pitch);
+
+    SNAPSHOT_TYPE(output, detect_pitch_in_t);
+    SNAPSHOT_FIELD(output, detect_pitch_in_t, signal);
+
+    SNAPSHOT_TYPE(output, detect_pitch_params_t);
+    SNAPSHOT_FIELD(output, detect_pitch_params_t, max_lag);
+    SNAPSHOT_FIELD(output, detect_pitch_params_t, sample_rate);
+
+    SNAPSHOT_TYPE(output, detect_pitch_state_t);
+    SNAPSHOT_FIELD(output, detect_pitch_state_t, buffer);
+    SNAPSHOT_FIELD(output, detect_pitch_state_t, buffer_len);
+    SNAPSHOT_FIELD(output, detect_pitch_state_t, write_pos);
 
     SNAPSHOT_TYPE(output, detect_rms_out_t);
     SNAPSHOT_FIELD(output, detect_rms_out_t, level);
@@ -348,23 +379,6 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, filter_allpass_state_t, buffer_len);
     SNAPSHOT_FIELD(output, filter_allpass_state_t, write_pos);
 
-    SNAPSHOT_TYPE(output, filter_biquad_coefficients_out_t);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_out_t, signal);
-
-    SNAPSHOT_TYPE(output, filter_biquad_coefficients_in_t);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_in_t, signal);
-
-    SNAPSHOT_TYPE(output, filter_biquad_coefficients_params_t);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, b0);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, b1);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, b2);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, a1);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, a2);
-
-    SNAPSHOT_TYPE(output, filter_biquad_coefficients_state_t);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_state_t, z1);
-    SNAPSHOT_FIELD(output, filter_biquad_coefficients_state_t, z2);
-
     SNAPSHOT_TYPE(output, filter_biquad_out_t);
     SNAPSHOT_FIELD(output, filter_biquad_out_t, signal);
 
@@ -389,6 +403,23 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, filter_biquad_state_t, current_b2);
     SNAPSHOT_FIELD(output, filter_biquad_state_t, current_a1);
     SNAPSHOT_FIELD(output, filter_biquad_state_t, current_a2);
+
+    SNAPSHOT_TYPE(output, filter_biquad_coefficients_out_t);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_out_t, signal);
+
+    SNAPSHOT_TYPE(output, filter_biquad_coefficients_in_t);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_in_t, signal);
+
+    SNAPSHOT_TYPE(output, filter_biquad_coefficients_params_t);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, b0);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, b1);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, b2);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, a1);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_params_t, a2);
+
+    SNAPSHOT_TYPE(output, filter_biquad_coefficients_state_t);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_state_t, z1);
+    SNAPSHOT_FIELD(output, filter_biquad_coefficients_state_t, z2);
 
     SNAPSHOT_TYPE(output, filter_comb_fb_out_t);
     SNAPSHOT_FIELD(output, filter_comb_fb_out_t, signal);
@@ -541,17 +572,17 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, freq_overlap_save_state_t, buffer);
     SNAPSHOT_FIELD(output, freq_overlap_save_state_t, write_pos);
 
-    SNAPSHOT_TYPE(output, freq_window_out_t);
-    SNAPSHOT_FIELD(output, freq_window_out_t, signal);
+    SNAPSHOT_TYPE(output, freq_quantize_out_t);
+    SNAPSHOT_FIELD(output, freq_quantize_out_t, signal);
 
-    SNAPSHOT_TYPE(output, freq_window_in_t);
-    SNAPSHOT_FIELD(output, freq_window_in_t, signal);
+    SNAPSHOT_TYPE(output, freq_quantize_in_t);
+    SNAPSHOT_FIELD(output, freq_quantize_in_t, signal);
 
-    SNAPSHOT_TYPE(output, freq_window_params_t);
-    SNAPSHOT_FIELD(output, freq_window_params_t, window_type);
-    SNAPSHOT_FIELD(output, freq_window_params_t, block_size);
+    SNAPSHOT_TYPE(output, freq_quantize_params_t);
+    SNAPSHOT_FIELD(output, freq_quantize_params_t, unused);
 
-    SNAPSHOT_TYPE(output, freq_window_state_t);
+    SNAPSHOT_TYPE(output, freq_quantize_state_t);
+    SNAPSHOT_FIELD(output, freq_quantize_state_t, unused);
 
     SNAPSHOT_TYPE(output, freq_shift_out_t);
     SNAPSHOT_FIELD(output, freq_shift_out_t, signal);
@@ -569,6 +600,18 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, freq_shift_state_t, imag);
     SNAPSHOT_FIELD(output, freq_shift_state_t, write_pos);
     SNAPSHOT_FIELD(output, freq_shift_state_t, read_ptr);
+
+    SNAPSHOT_TYPE(output, freq_window_out_t);
+    SNAPSHOT_FIELD(output, freq_window_out_t, signal);
+
+    SNAPSHOT_TYPE(output, freq_window_in_t);
+    SNAPSHOT_FIELD(output, freq_window_in_t, signal);
+
+    SNAPSHOT_TYPE(output, freq_window_params_t);
+    SNAPSHOT_FIELD(output, freq_window_params_t, window_type);
+    SNAPSHOT_FIELD(output, freq_window_params_t, block_size);
+
+    SNAPSHOT_TYPE(output, freq_window_state_t);
 
     SNAPSHOT_TYPE(output, generation_dc_out_t);
     SNAPSHOT_FIELD(output, generation_dc_out_t, signal);
@@ -940,18 +983,6 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, src_upsample_params_t, factor);
 
     SNAPSHOT_TYPE(output, src_upsample_state_t);
-
-    SNAPSHOT_TYPE(output, freq_quantize_out_t);
-    SNAPSHOT_FIELD(output, freq_quantize_out_t, signal);
-
-    SNAPSHOT_TYPE(output, freq_quantize_in_t);
-    SNAPSHOT_FIELD(output, freq_quantize_in_t, signal);
-
-    SNAPSHOT_TYPE(output, freq_quantize_params_t);
-    SNAPSHOT_FIELD(output, freq_quantize_params_t, unused);
-
-    SNAPSHOT_TYPE(output, freq_quantize_state_t);
-    SNAPSHOT_FIELD(output, freq_quantize_state_t, unused);
 
     if (output != stdout && fclose(output) != 0)
         return 1;
