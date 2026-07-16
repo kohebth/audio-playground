@@ -31,4 +31,3 @@ change even when size, alignment, and offsets are identical.
 Reconsider aliases only as part of an explicitly versioned public API change with downstream FFI coverage and a clear
 consumer benefit. Until then, shared field-profile macros provide the maintenance benefit while preserving existing
 type separation and ABI records.
-

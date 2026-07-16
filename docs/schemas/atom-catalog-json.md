@@ -13,9 +13,9 @@
       "category": "generation",
       "sizes": {
         "out": 8,
-        "in": 0,
+        "in": 1,
         "config": 4,
-        "state": 0
+        "state": 1
       },
       "stateful": false,
       "profiles": {
@@ -59,3 +59,6 @@ Registry state/config field types:
 Input/output contracts are populated for atoms covered by the v2 compiler binding metadata. Atoms outside that contract set still appear in the catalog with registry size/config/state metadata, but may have empty `inputs` and `outputs` until their v2 binding contract is added.
 
 Profile flags are compatibility hints for UI filtering. They are conservative metadata, not a replacement for full unit/project validation.
+
+An atom role with no semantic fields still has a standard one-byte C layout containing `_reserved`; `sizes` reports
+that physical byte. Reserved storage does not create a catalog field and does not make an atom logically stateful.

@@ -34,4 +34,3 @@ enum object or depend on compiler enum width.
 Changing enum tags and typedefs does not change any parameter size, field offset, catalog shape, or YAML mapping.
 Renaming or namespacing the legacy enumerators themselves would be a separate public source-compatibility change and is
 not part of this refactor.
-

@@ -36,4 +36,3 @@ the `dsp_atoms.h` function API.
 macros independently select frame or spectral signatures and reference all three additional spectral variants. The
 test must compile with `-Wall -Wextra -Wpedantic -Werror` and link against `apgcore`, so a missing symbol or declaration
 type mismatch fails the build. It is included in both the `types` and `v2` CTest labels and in `check_v2`.
-

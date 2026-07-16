@@ -56,4 +56,3 @@ The transition passes:
 - the C++17 public-header smoke test;
 - Arm GNU 13.2.1 Cortex-M7 freestanding C11 with the same warning policy;
 - the Debug AddressSanitizer/UndefinedBehaviorSanitizer build and all 70 CTest tests.
-

@@ -59,4 +59,3 @@ ctest --test-dir build -R '^test_dsp_type_schema_generation$' --output-on-failur
 
 The next candidate should cover a pointer-owning state family so ownership/capacity validation is exercised before
 schema expansion across all categories.
-
