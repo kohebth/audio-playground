@@ -150,7 +150,7 @@ add_executable(test_dsp_headers_c
 )
 target_include_directories(test_dsp_headers_c PRIVATE ${CMAKE_SOURCE_DIR}/inc)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(test_dsp_headers_c PRIVATE -Wall -Wextra -Werror)
+    target_compile_options(test_dsp_headers_c PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME test_dsp_headers_c COMMAND test_dsp_headers_c)
 
@@ -165,12 +165,17 @@ add_test(NAME test_dsp_headers_cpp COMMAND test_dsp_headers_cpp)
 
 add_executable(test_dsp_types_abi_snapshot test/abi/dsp_types_abi_snapshot.c)
 target_include_directories(test_dsp_types_abi_snapshot PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_dsp_types_abi_snapshot PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     add_test(
             NAME test_dsp_types_abi
             COMMAND ${CMAKE_COMMAND}
                     -DSNAPSHOT_EXE=$<TARGET_FILE:test_dsp_types_abi_snapshot>
-                    -DEXPECTED_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_baseline_lp64.csv
+                    -DEXPECTED_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_c11_lp64.csv
+                    -DBASELINE_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_baseline_lp64.csv
+                    -DEXPECTED_EMPTY_TRANSITIONS=46
                     -DACTUAL_FILE=${CMAKE_BINARY_DIR}/test-artifacts/dsp-types-abi-actual.csv
                     -P ${CMAKE_SOURCE_DIR}/test/abi/verify_dsp_types_abi.cmake
     )

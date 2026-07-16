@@ -5,9 +5,9 @@
 
 // clang-format off
 #define APG_NONLINEAR_DSP_TYPE_TABLE(X) \
-    X(nonlinear_bitcrush, SIGNAL, SIGNAL, { float bit_depth; }, {}) \
+    X(nonlinear_bitcrush, SIGNAL, SIGNAL, { float bit_depth; }, { uint8_t _reserved; }) \
     X(nonlinear_sample_hold, SIGNAL, SIGNAL, { float factor; }, { float last_val; float counter; }) \
-    X(nonlinear_waveshape, SIGNAL, SIGNAL, { float *transfer_table; int table_size; }, {})
+    X(nonlinear_waveshape, SIGNAL, SIGNAL, { float *transfer_table; int table_size; }, { uint8_t _reserved; })
 // clang-format on
 
 APG_NONLINEAR_DSP_TYPE_TABLE(APG_DECLARE_DSP_TYPES)

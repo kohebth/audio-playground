@@ -452,7 +452,8 @@ void apg_atom_catalog_write_json(FILE *out) {
             entry->config_size, entry->state_size
         );
         fputs(",\"stateful\":", out);
-        fputs(entry->state_size > 0u ? "true" : "false", out);
+        /* One-byte state layouts are reserved placeholders, not logical state. */
+        fputs(entry->n_state_fields > 0 || entry->state_size > 1u ? "true" : "false", out);
         fputs(",\"profiles\":{\"desktop_full\":", out);
         fputs(apg_atom_profile_supported(entry->name, "desktop_full") ? "true" : "false", out);
         fputs(",\"wasm_realtime\":", out);

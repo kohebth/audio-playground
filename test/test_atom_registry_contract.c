@@ -51,10 +51,26 @@ typedef struct {
     int         state_count;
     uint32_t    flags;
     uint32_t    maturity;
+    size_t      out_size;
+    size_t      in_size;
+    size_t      config_size;
+    size_t      state_size;
 } canonical_atom_t;
 
 #define CANONICAL_ATOM(name, category, input_count, config_count, state_count, flags, maturity, dispatch) \
-    {#name, #category, input_count, config_count, state_count, flags, maturity},
+    {                                                                                                     \
+        #name,                                                                                            \
+        #category,                                                                                        \
+        input_count,                                                                                      \
+        config_count,                                                                                     \
+        state_count,                                                                                      \
+        flags,                                                                                            \
+        maturity,                                                                                         \
+        sizeof(name##_out_t),                                                                             \
+        sizeof(name##_in_t),                                                                              \
+        sizeof(name##_params_t),                                                                          \
+        sizeof(name##_state_t),                                                                           \
+    },
 static const canonical_atom_t canonical_atoms[] = {APG_ATOM_DEFINITIONS(CANONICAL_ATOM)};
 #undef CANONICAL_ATOM
 
@@ -68,7 +84,9 @@ static int test_registry_matches_canonical_definitions(void) {
         if (!actual || strcmp(actual->name, expected->name) != 0 || strcmp(actual->category, expected->category) != 0 ||
             actual->n_input_fields != expected->input_count || actual->n_config_fields != expected->config_count ||
             actual->n_state_fields != expected->state_count || actual->flags != expected->flags ||
-            actual->maturity != expected->maturity)
+            actual->maturity != expected->maturity || actual->out_size != expected->out_size ||
+            actual->in_size != expected->in_size || actual->config_size != expected->config_size ||
+            actual->state_size != expected->state_size)
             return fail_entry("registry row differs from canonical definition", actual);
     }
     return 0;

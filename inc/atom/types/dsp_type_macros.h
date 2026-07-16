@@ -5,7 +5,7 @@
 
 /* I/O profiles describe C member layouts, not YAML binding contracts. */
 // clang-format off
-#define APG_IO_FIELDS_EMPTY                 {}
+#define APG_IO_FIELDS_EMPTY                 { uint8_t _reserved; }
 #define APG_IO_FIELDS_SIGNAL                { float *signal; }
 #define APG_IO_FIELDS_SIGNAL_PAIR           { float *signal_a; float *signal_b; }
 #define APG_IO_FIELDS_STEREO                { float *left; float *right; }

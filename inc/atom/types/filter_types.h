@@ -11,9 +11,9 @@
     X(filter_comb_fb, SIGNAL, SIGNAL_DELAY, { int delay_samples; float coefficient; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
     X(filter_comb_ff, SIGNAL, SIGNAL, { int delay_samples; float coefficient; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
     X(filter_dc_block, SIGNAL, SIGNAL, { float coefficient; }, { float prev_input; float prev_output; }) \
-    X(filter_differentiate, SIGNAL, SIGNAL, {}, { float prev_sample; }) \
+    X(filter_differentiate, SIGNAL, SIGNAL, { uint8_t _reserved; }, { float prev_sample; }) \
     X(filter_fir, SIGNAL, SIGNAL, { float *kernel; int kernel_size; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
-    X(filter_integrate, SIGNAL, SIGNAL, {}, { float accumulator; })
+    X(filter_integrate, SIGNAL, SIGNAL, { uint8_t _reserved; }, { float accumulator; })
 // clang-format on
 
 APG_FILTER_DSP_TYPE_TABLE(APG_DECLARE_DSP_TYPES)

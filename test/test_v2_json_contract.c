@@ -1,7 +1,6 @@
 #include <apgcore/host/json_contract_v2.h>
 #include <apgcore/metadata/atom_catalog.h>
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,15 +43,6 @@ static char *capture_atom_catalog(void) {
     char *json = read_stream(file);
     fclose(file);
     return json;
-}
-
-static uint64_t fnv1a64(const char *text) {
-    uint64_t hash = UINT64_C(1469598103934665603);
-    for (const unsigned char *p = (const unsigned char *)text; p && *p; p++) {
-        hash ^= (uint64_t)*p;
-        hash *= UINT64_C(1099511628211);
-    }
-    return hash;
 }
 
 static char *read_file(const char *path) {
@@ -198,20 +188,23 @@ static int test_invalid_validation_json_contains_diagnostic_fields(void) {
 }
 
 static int test_atom_inspect_json_is_available(void) {
-    char *json = capture_atom_catalog();
-    if (!json)
+    char *json     = capture_atom_catalog();
+    char *expected = read_file("test/golden/v2-inspect-atoms.json");
+    if (!json || !expected) {
+        free(json);
+        free(expected);
         return fail("failed to write atom catalog json");
+    }
     if (!strstr(json, "\"schema\":\"apg.atom_catalog.v2\"") || !strstr(json, "\"name\":\"generation_dc\"") ||
         !strstr(json, "\"name\":\"coefficients\",\"type\":\"float_matrix\"")) {
         free(json);
+        free(expected);
         return fail("atom inspect json lacked expected catalog fields");
     }
-    if (strlen(json) != 26654u || fnv1a64(json) != UINT64_C(0xe042d292264743a4)) {
-        free(json);
-        return fail("atom inspect json changed from the frozen sample contract");
-    }
+    int matches_golden = strcmp(json, expected) == 0;
     free(json);
-    return 0;
+    free(expected);
+    return matches_golden ? 0 : fail("atom inspect json changed from the frozen sample contract");
 }
 
 int main(void) {

@@ -5,12 +5,12 @@
 
 // clang-format off
 #define APG_MIX_DSP_TYPE_TABLE(X) \
-    X(mix_crossfade, SIGNAL, SIGNAL_PAIR, { float t; }, {}) \
-    X(mix_decode_ms, STEREO, MS, {}, {}) \
-    X(mix_encode_ms, MS, STEREO, {}, {}) \
-    X(mix_matrix, SIGNAL_MATRIX, SIGNAL_MATRIX, { float **coefficients; int num_in; int num_out; }, {}) \
-    X(mix_pan_stereo, STEREO, SIGNAL, { float position; }, {}) \
-    X(mix_wet_dry, SIGNAL, WET_DRY, { float mix; }, {})
+    X(mix_crossfade, SIGNAL, SIGNAL_PAIR, { float t; }, { uint8_t _reserved; }) \
+    X(mix_decode_ms, STEREO, MS, { uint8_t _reserved; }, { uint8_t _reserved; }) \
+    X(mix_encode_ms, MS, STEREO, { uint8_t _reserved; }, { uint8_t _reserved; }) \
+    X(mix_matrix, SIGNAL_MATRIX, SIGNAL_MATRIX, { float **coefficients; int num_in; int num_out; }, { uint8_t _reserved; }) \
+    X(mix_pan_stereo, STEREO, SIGNAL, { float position; }, { uint8_t _reserved; }) \
+    X(mix_wet_dry, SIGNAL, WET_DRY, { float mix; }, { uint8_t _reserved; })
 // clang-format on
 
 APG_MIX_DSP_TYPE_TABLE(APG_DECLARE_DSP_TYPES)
