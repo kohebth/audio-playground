@@ -818,7 +818,7 @@ refactor(atom): centralize atom process declarations
 
 # Phase 7 — Source-of-truth generation design
 
-> **Implemented 2026-07-17.** `schema/atoms/atoms.json` now owns all 69 atoms and generates the family ABI headers,
+> **Implemented 2026-07-17.** `schema/atoms/atoms.json` now owns all 71 atoms across 12 families and generates the family ABI headers,
 > declarations, canonical rows, descriptors, backend catalog contracts, TypeScript catalog, and JSON Schema. The
 > deterministic stale-output test is active. See `docs/refactor/dsp-type-generation-design.md`; the remainder of this
 > phase records the original migration plan.

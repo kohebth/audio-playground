@@ -1,0 +1,50 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: math_roundtrip
+version: 2.0.0
+
+meta:
+  title: Math Roundtrip
+  category: utility
+  description: Exercises the canonical difference and integration primitives.
+
+params: {}
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - difference
+    - output
+
+  nodes:
+    - id: difference
+      atom: math_difference
+      in:
+        signal: input
+      out:
+        signal: difference
+
+    - id: integrate
+      atom: math_integrate
+      in:
+        signal: difference
+      out:
+        signal: output
+      config:
+        leakage: 1.0
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

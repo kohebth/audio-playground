@@ -1,4 +1,7 @@
 #include <atom/dsp_atoms.h>
+
+#include "../internal/primitive_kernels.h"
+
 #include <stddef.h>
 
 void filter_differentiate_process(
@@ -10,17 +13,7 @@ void filter_differentiate_process(
 ) {
     if (!apg_process_context_valid(info))
         return;
-    if (out == NULL || in == NULL || params == NULL || state == NULL)
+    if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal == NULL)
         return;
-    if (out->signal == NULL || in->signal == NULL || state == NULL)
-        return;
-
-    const uint32_t frames = apg_process_context_frames(info);
-    float          last   = state->prev_sample;
-    for (uint32_t i = 0; i < frames; ++i) {
-        float x0       = in->signal[i];
-        out->signal[i] = x0 - last;
-        last           = x0;
-    }
-    state->prev_sample = last;
+    apg_difference_kernel(out->signal, in->signal, &state->prev_sample, apg_process_context_frames(info));
 }

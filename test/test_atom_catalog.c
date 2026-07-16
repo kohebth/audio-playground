@@ -190,6 +190,10 @@ int main(void) {
         return fail("unknown atom lookup succeeded");
     if (apg_atom_visibility("generation_dc") != APG_ATOM_VISIBILITY_PUBLIC ||
         apg_atom_visibility("filter_biquad_coefficients") != APG_ATOM_VISIBILITY_ADVANCED ||
+        apg_atom_visibility("math_difference") != APG_ATOM_VISIBILITY_ADVANCED ||
+        apg_atom_visibility("math_integrate") != APG_ATOM_VISIBILITY_ADVANCED ||
+        apg_atom_visibility("generation_lfo") != APG_ATOM_VISIBILITY_INTERNAL ||
+        apg_atom_visibility("mix_wet_dry") != APG_ATOM_VISIBILITY_INTERNAL ||
         apg_atom_visibility("src_antialias") != APG_ATOM_VISIBILITY_INTERNAL ||
         apg_atom_visibility("not_a_real_atom") != APG_ATOM_VISIBILITY_UNKNOWN ||
         apg_atom_visibility(NULL) != APG_ATOM_VISIBILITY_UNKNOWN)
@@ -245,12 +249,34 @@ int main(void) {
         expect_field("detect_peak", APG_ATOM_CONTRACT_CONFIG, "attack", APG_ATOM_FIELD_FLOAT, true) ||
         expect_field("detect_peak", APG_ATOM_CONTRACT_CONFIG, "release", APG_ATOM_FIELD_FLOAT, true))
         return 1;
-    if (expect_field("mix_crossfade", APG_ATOM_CONTRACT_CONFIG, "t", APG_ATOM_FIELD_FLOAT, true) ||
+    if (apg_atom_contract_field_count("mix_crossfade", APG_ATOM_CONTRACT_CONFIG) != 2u ||
+        expect_field("mix_crossfade", APG_ATOM_CONTRACT_CONFIG, "t", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("mix_crossfade", APG_ATOM_CONTRACT_CONFIG, "curve", APG_ATOM_FIELD_INT, false) ||
         expect_field("mix_pan_stereo", APG_ATOM_CONTRACT_CONFIG, "position", APG_ATOM_FIELD_FLOAT, true) ||
         expect_field("nonlinear_bitcrush", APG_ATOM_CONTRACT_CONFIG, "bit_depth", APG_ATOM_FIELD_FLOAT, true) ||
         expect_field("freq_fft", APG_ATOM_CONTRACT_CONFIG, "block_size", APG_ATOM_FIELD_INT, true) ||
         expect_field("freq_window", APG_ATOM_CONTRACT_CONFIG, "window_type", APG_ATOM_FIELD_INT, true))
         return 1;
+    apg_atom_contract_field_t curve_field;
+    if (!apg_atom_contract_find_field("mix_crossfade", APG_ATOM_CONTRACT_CONFIG, "curve", &curve_field) ||
+        !curve_field.parameter_type || strcmp(curve_field.parameter_type, "enum") != 0 ||
+        strcmp(curve_field.default_json, "0") != 0 || curve_field.options_len != 2u ||
+        strcmp(curve_field.options[0], "linear") != 0 || strcmp(curve_field.options[1], "equal_power") != 0 ||
+        curve_field.option_values[0] != 0 || curve_field.option_values[1] != 1 || !curve_field.realtime ||
+        curve_field.structural)
+        return fail("mix_crossfade curve parameter metadata is wrong");
+    if (apg_atom_contract_field_count("math_difference", APG_ATOM_CONTRACT_CONFIG) != 0u ||
+        expect_field("math_difference", APG_ATOM_CONTRACT_IN, "signal", APG_ATOM_FIELD_SIGNAL, true) ||
+        expect_field("math_difference", APG_ATOM_CONTRACT_OUT, "signal", APG_ATOM_FIELD_SIGNAL, true) ||
+        apg_atom_contract_field_count("math_integrate", APG_ATOM_CONTRACT_CONFIG) != 1u ||
+        expect_field("math_integrate", APG_ATOM_CONTRACT_CONFIG, "leakage", APG_ATOM_FIELD_FLOAT, true))
+        return 1;
+    apg_atom_contract_field_t leakage_field;
+    if (!apg_atom_contract_find_field("math_integrate", APG_ATOM_CONTRACT_CONFIG, "leakage", &leakage_field) ||
+        strcmp(leakage_field.default_json, "1") != 0 || !leakage_field.has_min || leakage_field.min_value != 0.0 ||
+        !leakage_field.has_max || leakage_field.max_value != 1.0 || !leakage_field.unit ||
+        strcmp(leakage_field.unit, "ratio") != 0 || !leakage_field.realtime || leakage_field.structural)
+        return fail("math_integrate leakage parameter metadata is wrong");
     if (apg_atom_contract_find_field("generation_dc", APG_ATOM_CONTRACT_CONFIG, "missing", NULL))
         return fail("unknown metadata field lookup succeeded");
     if (apg_atom_contract_field_type("missing_atom", APG_ATOM_CONTRACT_IN, "signal") != APG_ATOM_FIELD_UNKNOWN)

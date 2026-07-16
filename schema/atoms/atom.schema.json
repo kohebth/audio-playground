@@ -3176,6 +3176,21 @@
             "config" : {
                "additionalProperties" : false,
                "properties" : {
+                  "curve" : {
+                     "default" : 0,
+                     "enum" : [
+                        0,
+                        1
+                     ],
+                     "type" : "integer",
+                     "x-apg-field-type" : "enum",
+                     "x-apg-options" : [
+                        "linear",
+                        "equal_power"
+                     ],
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false
+                  },
                   "t" : {
                      "default" : 0.5,
                      "maximum" : 1,
@@ -4379,6 +4394,110 @@
          "title" : "freq_quantize",
          "type" : "object",
          "x-apg-category" : "freq",
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "math_difference"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {},
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "math_difference",
+         "type" : "object",
+         "x-apg-category" : "math",
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
+               "const" : "math_integrate"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "leakage" : {
+                     "default" : 1,
+                     "maximum" : 1,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
+                  }
+               },
+               "required" : [
+                  "leakage"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "math_integrate",
+         "type" : "object",
+         "x-apg-category" : "math",
          "x-apg-dispatch" : "process",
          "x-apg-visibility" : "advanced"
       }

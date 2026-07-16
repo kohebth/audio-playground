@@ -20,6 +20,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   freq: '#6366f1',
   generation: '#f59e0b',
   interpolation: '#84cc16',
+  math: '#94a3b8',
   mix: '#ec4899',
   modulation: '#f97316',
   nonlinear: '#ef4444',

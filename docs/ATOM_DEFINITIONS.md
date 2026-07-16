@@ -16,9 +16,9 @@ Field order is C ABI order. Atom order is canonical registry order. Empty roles 
 
 `tools/generate_atom_artifacts.pl` validates that source and owns these checked-in outputs:
 
-- `inc/atom/types/dsp_type_macros.h` and all 11 family `*_types.h` headers;
+- `inc/atom/types/dsp_type_macros.h` and all 12 family `*_types.h` headers;
 - `inc/atom/generated/atom_definitions.generated.h` and `dsp_atoms.generated.h`;
-- all 11 family `*_field_descriptors.c` files;
+- all 12 family `*_field_descriptors.c` files;
 - `src/apgcore/metadata/atom_catalog_contracts.generated.inc`;
 - `web-tools/unit-editor/src/atoms/atomCatalog.generated.ts`;
 - `schema/atoms/atom.schema.json`.

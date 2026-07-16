@@ -578,4 +578,20 @@ void freq_quantize_process(
     const apg_process_context_t *context
 );
 
+void math_difference_process(
+    math_difference_out_t *out,
+    const math_difference_in_t *in,
+    const math_difference_params_t *params,
+    math_difference_state_t *state,
+    const apg_process_context_t *context
+);
+
+void math_integrate_process(
+    math_integrate_out_t *out,
+    const math_integrate_in_t *in,
+    const math_integrate_params_t *params,
+    math_integrate_state_t *state,
+    const apg_process_context_t *context
+);
+
 #endif // AUDIO_PLAYGROUND_DSP_ATOMS_GENERATED_H

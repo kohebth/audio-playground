@@ -170,6 +170,10 @@ The generated TypeScript catalog and backend inspect contract provide a structur
 - supported target profiles
 - constraints such as fixed-size or stateful behavior
 
+The current generated catalog contains 71 atoms: 27 public, 25 advanced, and 19 internal. The default palette shows
+the public subset, advanced mode adds the advanced subset, and internal compatibility/infrastructure atoms remain
+loadable without being addable from the palette.
+
 ### Project Contract
 
 The UI needs a full pedalboard/session model:

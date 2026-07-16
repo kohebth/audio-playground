@@ -1,20 +1,21 @@
 # DSP Type Refactor Final Audit
 
 > This living audit records the type-header split completed at `2f84b17` and the subsequent execution-context,
-> state-capacity, and production-generation convergence. Historical phase-1 evidence remains frozen separately.
+> state-capacity, production-generation, metadata, visibility, and primitive-consolidation convergence. Historical
+> phase-1 evidence remains frozen separately.
 
 ## Inventory Comparison
 
 | Surface | Baseline | Final | Result |
 |---|---:|---:|---|
-| Canonical atoms | 69 | 69 | Exact name set retained |
-| Atom ABI typedefs | 276 | 276 | All four names retained per atom |
-| Total public ABI type records | 286 | 286 | Exact name set retained |
-| Non-empty public type records | 240 | 240 | Size, alignment, and fields unchanged |
-| Field records | 370 | 405 | Reserved fields added; parameter sample-rate duplication removed |
+| Canonical atoms | 69 | 71 | All 69 names retained; `math_difference` and `math_integrate` added |
+| Atom ABI typedefs | 276 | 284 | Four names per canonical atom |
+| Total public ABI type records | 286 | 294 | Original names retained plus eight math-family types |
+| Non-empty public type records | 240 | 294 | GNU empty layouts replaced by one-byte C11 layouts |
+| Field records | 370 | 414 | Reserved fields added, sample-rate duplication removed, canonical math and crossfade fields added |
 | Zero-size GNU structures | 46 | 0 | Replaced by standard one-byte C11 layouts |
 | Shared enum values | 17 | 17 | Names and numeric values unchanged |
-| Public atom function symbols | 141 | 72 | Legacy non-context symbols removed; 69 primary and 3 spectral variants remain |
+| Public atom function symbols | 141 | 74 | Legacy non-context symbols removed; 71 primary and 3 spectral variants remain |
 
 The immutable GNU-layout reference is `test/abi/dsp_types_abi_baseline_lp64.csv`; the first C11 result is
 `test/abi/dsp_types_abi_phase1_lp64.csv`; and `test/abi/dsp_types_abi_c11_lp64.csv` tracks the current ABI. CTest
@@ -23,15 +24,19 @@ checks the current snapshot exactly and separately proves that the historical GN
 
 The family type tables, descriptor sources, canonical rows, public declarations, backend catalog contracts,
 TypeScript catalog, and atom-binding JSON Schema are now generated from `schema/atoms/atoms.json`. DSP algorithms
-remain handwritten. The frozen catalog reports all 69 atoms with current ports and fields, and the unit-editor consumes
-the generated TypeScript counterpart.
+remain handwritten. The frozen catalog reports all 71 atoms with current ports, visibility, and complete metadata for
+86 config fields, and the unit-editor consumes the generated TypeScript counterpart.
+
+Oscillator/LFO, difference/slope, integrate/accumulate, and crossfade/wet-dry now execute shared internal kernels.
+`generation_oscillator`, `math_difference`, `math_integrate`, and `mix_crossfade` are the preferred names; the six old
+names remain internal compatibility entries for existing metadata.
 
 ## Verification Matrix
 
 | Environment | Verification | Result |
 |---|---|---|
 | GCC 13.3.0, Linux x86_64 C11 | `./build-and-test.sh` | 72/72 passed |
-| GCC 13.3.0, ASan + UBSan Debug | clean `/tmp` configure/build and CTest | 72/72 passed |
+| GCC 13.3.0, ASan + UBSan Debug | `build-asan` configure/build and CTest | 72/72 passed |
 | GCC 13.3.0, 32-bit syntax mode | strict `dsp_atoms.h` freestanding compile | Passed |
 | G++ 13.3.0 | public `extern "C"` include and typed symbol smoke | Passed |
 | Arm GNU 13.2.1, Cortex-M7 | strict freestanding `dsp_atoms.h` and symbol-TU compile | Passed |
@@ -47,10 +52,10 @@ the generated TypeScript counterpart.
 ## Acceptance Criteria
 
 - [x] `dsp_types.h` is an include-only compatibility umbrella.
-- [x] Shared primitives, enums, ports, and 11 family ABI headers have explicit ownership.
+- [x] Shared primitives, enums, ports, and 12 family ABI headers have explicit ownership.
 - [x] Every new header compiles standalone with strict C11 warnings as errors.
 - [x] Existing umbrella and `dsp_atoms.h` includes compile in C and C++.
-- [x] All public atom type names are retained; the 69 context-only entry points and three spectral variants link.
+- [x] All original atom type names are retained; the 71 primary entry points and three spectral variants link.
 - [x] Intentional ABI changes are isolated in the current snapshot; historical empty-layout evidence remains frozen.
 - [x] Include-order tests pass and no circular include was introduced.
 - [x] Canonical coverage rejects missing, duplicate-count, and orphan family rows.
@@ -59,6 +64,7 @@ the generated TypeScript counterpart.
 - [x] Type ownership, enum policy, empty layouts, new-atom workflow, and ABI rules are documented.
 - [x] Production generation is deterministic and stale checked across C, TypeScript, and JSON Schema outputs.
 - [x] C catalog golden data and the TypeScript consumer build remain synchronized.
+- [x] Canonical primitives share one implementation kernel while internal compatibility names remain loadable.
 
 ## Commits
 
@@ -75,12 +81,12 @@ the generated TypeScript counterpart.
 | `1cab3a7` | Context-only public atom execution API |
 | `66ecd02` | Separate fixed-rate process and variable-rate stream contexts |
 | `9aeaff0` | Context-only sample rate and explicit runtime state capacities |
+| `ccff439` | Production atom ABI, catalog, TypeScript, and schema generation |
+| `fce3eb8` | Generated visibility and complete parameter metadata |
 
 ## Follow-Ups
 
 - Run the permanent header tests under Clang, Emscripten, and a Windows compiler when those toolchains are added to CI.
-- Add editor visibility and rich parameter metadata to the authoritative schema and generated catalog.
-- Consolidate oscillator/LFO, difference/slope, integration/accumulation, and wet/dry/crossfade implementation pairs.
 - Resolve the pre-existing `freq_quantize` zero-descriptor versus four-byte `unused` params/state mismatch as a separate
   metadata/API decision.
 - Keep atom-specific I/O structures distinct; alias deduplication was rejected because profile macros already remove

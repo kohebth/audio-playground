@@ -2037,6 +2037,18 @@
                },
                "name" : "t",
                "ownership" : "value"
+            },
+            {
+               "c_type" : "int",
+               "catalog" : {
+                  "required" : false,
+                  "type" : "int"
+               },
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "curve",
+               "ownership" : "value"
             }
          ],
          "state" : [
@@ -2688,6 +2700,65 @@
                "ownership" : "value"
             }
          ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "math",
+         "dispatch" : "PROCESS",
+         "family" : "math",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "math_difference",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "prev_sample",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "math",
+         "dispatch" : "PROCESS",
+         "family" : "math",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "math_integrate",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "leakage",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "accumulator",
+               "ownership" : "value"
+            }
+         ]
       }
    ],
    "empty_layout" : {
@@ -2809,6 +2880,15 @@
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "nonlinear",
          "table_macro" : "APG_NONLINEAR_DSP_TYPE_TABLE"
+      },
+      {
+         "category" : "math",
+         "descriptor_source" : "src/atom/math/math_field_descriptors.c",
+         "guard" : "AUDIO_PLAYGROUND_MATH_TYPES_H",
+         "header" : "inc/atom/types/math_types.h",
+         "include" : "atom/types/dsp_type_macros.h",
+         "name" : "math",
+         "table_macro" : "APG_MATH_DSP_TYPE_TABLE"
       }
    ],
    "io_profiles" : [
@@ -3337,6 +3417,8 @@
       "generation_oscillator.waveform" : { "default" : 0, "options" : [ "sine", "saw", "square", "triangle" ], "realtime" : true, "structural" : false, "type" : "enum" },
       "interpolation_lagrange.order" : { "default" : 3, "max" : 16, "min" : 1, "realtime" : false, "structural" : true },
       "interpolation_sinc.num_taps" : { "default" : 32, "max" : 128, "min" : 2, "realtime" : false, "structural" : true, "unit" : "samples" },
+      "math_integrate.leakage" : { "default" : 1.0, "max" : 1.0, "min" : 0.0, "realtime" : true, "structural" : false, "unit" : "ratio" },
+      "mix_crossfade.curve" : { "default" : 0, "options" : [ "linear", "equal_power" ], "realtime" : true, "structural" : false, "type" : "enum" },
       "mix_crossfade.t" : { "default" : 0.5, "max" : 1.0, "min" : 0.0, "realtime" : true, "structural" : false, "unit" : "ratio" },
       "mix_matrix.coefficients" : { "default" : [ [ 1.0 ] ], "realtime" : false, "structural" : true },
       "mix_pan_stereo.position" : { "default" : 0.0, "max" : 1.0, "min" : -1.0, "realtime" : true, "structural" : false, "unit" : "ratio" },
@@ -3375,6 +3457,8 @@
          "freq_ifft",
          "freq_multiply",
          "freq_quantize",
+         "math_difference",
+         "math_integrate",
          "mix_decode_ms",
          "mix_encode_ms",
          "mix_matrix",

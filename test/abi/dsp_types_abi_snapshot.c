@@ -767,6 +767,30 @@ int main(int argc, char **argv) {
     SNAPSHOT_TYPE(output, interpolation_sinc_state_t);
     SNAPSHOT_FIELD(output, interpolation_sinc_state_t, _reserved);
 
+    SNAPSHOT_TYPE(output, math_difference_out_t);
+    SNAPSHOT_FIELD(output, math_difference_out_t, signal);
+
+    SNAPSHOT_TYPE(output, math_difference_in_t);
+    SNAPSHOT_FIELD(output, math_difference_in_t, signal);
+
+    SNAPSHOT_TYPE(output, math_difference_params_t);
+    SNAPSHOT_FIELD(output, math_difference_params_t, _reserved);
+
+    SNAPSHOT_TYPE(output, math_difference_state_t);
+    SNAPSHOT_FIELD(output, math_difference_state_t, prev_sample);
+
+    SNAPSHOT_TYPE(output, math_integrate_out_t);
+    SNAPSHOT_FIELD(output, math_integrate_out_t, signal);
+
+    SNAPSHOT_TYPE(output, math_integrate_in_t);
+    SNAPSHOT_FIELD(output, math_integrate_in_t, signal);
+
+    SNAPSHOT_TYPE(output, math_integrate_params_t);
+    SNAPSHOT_FIELD(output, math_integrate_params_t, leakage);
+
+    SNAPSHOT_TYPE(output, math_integrate_state_t);
+    SNAPSHOT_FIELD(output, math_integrate_state_t, accumulator);
+
     SNAPSHOT_TYPE(output, mix_crossfade_out_t);
     SNAPSHOT_FIELD(output, mix_crossfade_out_t, signal);
 
@@ -776,6 +800,7 @@ int main(int argc, char **argv) {
 
     SNAPSHOT_TYPE(output, mix_crossfade_params_t);
     SNAPSHOT_FIELD(output, mix_crossfade_params_t, t);
+    SNAPSHOT_FIELD(output, mix_crossfade_params_t, curve);
 
     SNAPSHOT_TYPE(output, mix_crossfade_state_t);
     SNAPSHOT_FIELD(output, mix_crossfade_state_t, _reserved);

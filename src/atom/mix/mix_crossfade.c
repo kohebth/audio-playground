@@ -1,4 +1,7 @@
 #include <atom/dsp_atoms.h>
+
+#include "../internal/primitive_kernels.h"
+
 #include <stddef.h>
 
 void mix_crossfade_process(
@@ -10,20 +13,10 @@ void mix_crossfade_process(
 ) {
     if (!apg_process_context_valid(info))
         return;
-    if (out == NULL || in == NULL || params == NULL || state == NULL)
+    if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->signal_a == NULL ||
+        in->signal_b == NULL)
         return;
-    (void)state;
-    if (out->signal == NULL || in->signal_a == NULL || in->signal_b == NULL || params == NULL)
-        return;
-
-    float t = params->t;
-    if (t < 0.0f)
-        t = 0.0f;
-    if (t > 1.0f)
-        t = 1.0f;
-
-    const uint32_t frames = apg_process_context_frames(info);
-    for (uint32_t i = 0; i < frames; ++i) {
-        out->signal[i] = (1.0f - t) * in->signal_a[i] + t * in->signal_b[i];
-    }
+    apg_crossfade_kernel(
+        out->signal, in->signal_a, in->signal_b, params->t, params->curve, apg_process_context_frames(info)
+    );
 }

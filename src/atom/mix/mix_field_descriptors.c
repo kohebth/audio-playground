@@ -9,6 +9,7 @@
 // clang-format off
 const atom_field_desc_t mix_crossfade_config_fields[] = {
     {"t", FIELD_FLOAT, offsetof(mix_crossfade_params_t, t)},
+    {"curve", FIELD_INT, offsetof(mix_crossfade_params_t, curve)},
 };
 FIELD_COUNT(mix_crossfade_config_fields);
 

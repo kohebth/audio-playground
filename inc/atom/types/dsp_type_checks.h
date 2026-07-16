@@ -9,6 +9,7 @@
 #include <atom/types/frequency_types.h>
 #include <atom/types/generation_types.h>
 #include <atom/types/interpolation_types.h>
+#include <atom/types/math_types.h>
 #include <atom/types/mix_types.h>
 #include <atom/types/modulation_types.h>
 #include <atom/types/nonlinear_types.h>
@@ -22,6 +23,7 @@
     APG_FREQUENCY_DSP_TYPE_TABLE(X)     \
     APG_GENERATION_DSP_TYPE_TABLE(X)    \
     APG_INTERPOLATION_DSP_TYPE_TABLE(X) \
+    APG_MATH_DSP_TYPE_TABLE(X)          \
     APG_MIX_DSP_TYPE_TABLE(X)           \
     APG_MODULATION_DSP_TYPE_TABLE(X)    \
     APG_NONLINEAR_DSP_TYPE_TABLE(X)     \
@@ -65,6 +67,7 @@ APG_ATOM_DEFINITIONS(APG_CHECK_DSP_TYPE_PRESENT)
 #undef APG_NONLINEAR_DSP_TYPE_TABLE
 #undef APG_MODULATION_DSP_TYPE_TABLE
 #undef APG_MIX_DSP_TYPE_TABLE
+#undef APG_MATH_DSP_TYPE_TABLE
 #undef APG_INTERPOLATION_DSP_TYPE_TABLE
 #undef APG_GENERATION_DSP_TYPE_TABLE
 #undef APG_FREQUENCY_DSP_TYPE_TABLE

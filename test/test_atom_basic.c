@@ -25,6 +25,7 @@ int test_process_info_remaining_spectral_frame_limits(void);
 int test_process_info_downsample_frame_limits(void);
 int test_process_info_remaining_overlap_frame_limits(void);
 int test_process_info_freq_shift_frame_limits(void);
+int test_atom_consolidation(void);
 
 int main(void) {
     if (test_amplitude_multiply())
@@ -76,6 +77,8 @@ int main(void) {
     if (test_process_info_remaining_overlap_frame_limits())
         return 1;
     if (test_process_info_freq_shift_frame_limits())
+        return 1;
+    if (test_atom_consolidation())
         return 1;
     return 0;
 }

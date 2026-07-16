@@ -15,6 +15,7 @@
 #include <atom/types/interpolation_types.h>
 #include <atom/types/src_types.h>
 #include <atom/types/frequency_types.h>
+#include <atom/types/math_types.h>
 #include <atom/types/mix_types.h>
 #include <atom/types/nonlinear_types.h>
 

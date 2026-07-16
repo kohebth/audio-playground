@@ -13,6 +13,7 @@ set(generated_files
         inc/atom/types/detect_types.h
         inc/atom/types/modulation_types.h
         inc/atom/types/interpolation_types.h
+        inc/atom/types/math_types.h
         inc/atom/types/src_types.h
         inc/atom/types/frequency_types.h
         inc/atom/types/mix_types.h
@@ -26,6 +27,7 @@ set(generated_files
         src/atom/detect/detect_field_descriptors.c
         src/atom/modulation/modulation_field_descriptors.c
         src/atom/interpolation/interpolation_field_descriptors.c
+        src/atom/math/math_field_descriptors.c
         src/atom/source/source_field_descriptors.c
         src/atom/frequency/frequency_field_descriptors.c
         src/atom/mix/mix_field_descriptors.c

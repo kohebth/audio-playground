@@ -613,8 +613,12 @@ static const apg_atom_contract_field_t catalog_mix_crossfade_outputs[] = {
     {"signal", APG_ATOM_FIELD_SIGNAL, true},
 };
 
+static const char *const catalog_mix_crossfade_config_curve_options[] = {"linear", "equal_power"};
+static const int catalog_mix_crossfade_config_curve_option_values[] = {0, 1};
+
 static const apg_atom_contract_field_t catalog_mix_crossfade_config[] = {
     {"t", APG_ATOM_FIELD_FLOAT, true, "float", "0.5", true, 0, true, 1, "ratio", NULL, true, false, 0.0, false, NULL, NULL, 0u},
+    {"curve", APG_ATOM_FIELD_INT, false, "enum", "0", false, 0.0, false, 0.0, NULL, NULL, true, false, 0.0, false, catalog_mix_crossfade_config_curve_options, catalog_mix_crossfade_config_curve_option_values, FIELD_COUNT(catalog_mix_crossfade_config_curve_options)},
 };
 
 static const apg_atom_contract_field_t catalog_mix_decode_ms_inputs[] = {
@@ -847,6 +851,26 @@ static const apg_atom_contract_field_t catalog_freq_quantize_outputs[] = {
     {"signal", APG_ATOM_FIELD_SIGNAL, true},
 };
 
+static const apg_atom_contract_field_t catalog_math_difference_inputs[] = {
+    {"signal", APG_ATOM_FIELD_SIGNAL, true},
+};
+
+static const apg_atom_contract_field_t catalog_math_difference_outputs[] = {
+    {"signal", APG_ATOM_FIELD_SIGNAL, true},
+};
+
+static const apg_atom_contract_field_t catalog_math_integrate_inputs[] = {
+    {"signal", APG_ATOM_FIELD_SIGNAL, true},
+};
+
+static const apg_atom_contract_field_t catalog_math_integrate_outputs[] = {
+    {"signal", APG_ATOM_FIELD_SIGNAL, true},
+};
+
+static const apg_atom_contract_field_t catalog_math_integrate_config[] = {
+    {"leakage", APG_ATOM_FIELD_FLOAT, true, "float", "1", true, 0, true, 1, "ratio", NULL, true, false, 0.0, false, NULL, NULL, 0u},
+};
+
 static const apg_catalog_contract_t catalog_contracts[] = {
     {"amplitude_accumulate", APG_ATOM_VISIBILITY_INTERNAL, catalog_amplitude_accumulate_inputs, FIELD_COUNT(catalog_amplitude_accumulate_inputs), catalog_amplitude_accumulate_outputs, FIELD_COUNT(catalog_amplitude_accumulate_outputs), NULL, 0u},
     {"amplitude_latch", APG_ATOM_VISIBILITY_ADVANCED, catalog_amplitude_latch_inputs, FIELD_COUNT(catalog_amplitude_latch_inputs), catalog_amplitude_latch_outputs, FIELD_COUNT(catalog_amplitude_latch_outputs), catalog_amplitude_latch_config, FIELD_COUNT(catalog_amplitude_latch_config)},
@@ -917,4 +941,6 @@ static const apg_catalog_contract_t catalog_contracts[] = {
     {"src_downsample", APG_ATOM_VISIBILITY_INTERNAL, catalog_src_downsample_inputs, FIELD_COUNT(catalog_src_downsample_inputs), catalog_src_downsample_outputs, FIELD_COUNT(catalog_src_downsample_outputs), catalog_src_downsample_config, FIELD_COUNT(catalog_src_downsample_config)},
     {"src_upsample", APG_ATOM_VISIBILITY_INTERNAL, catalog_src_upsample_inputs, FIELD_COUNT(catalog_src_upsample_inputs), catalog_src_upsample_outputs, FIELD_COUNT(catalog_src_upsample_outputs), catalog_src_upsample_config, FIELD_COUNT(catalog_src_upsample_config)},
     {"freq_quantize", APG_ATOM_VISIBILITY_ADVANCED, catalog_freq_quantize_inputs, FIELD_COUNT(catalog_freq_quantize_inputs), catalog_freq_quantize_outputs, FIELD_COUNT(catalog_freq_quantize_outputs), NULL, 0u},
+    {"math_difference", APG_ATOM_VISIBILITY_ADVANCED, catalog_math_difference_inputs, FIELD_COUNT(catalog_math_difference_inputs), catalog_math_difference_outputs, FIELD_COUNT(catalog_math_difference_outputs), NULL, 0u},
+    {"math_integrate", APG_ATOM_VISIBILITY_ADVANCED, catalog_math_integrate_inputs, FIELD_COUNT(catalog_math_integrate_inputs), catalog_math_integrate_outputs, FIELD_COUNT(catalog_math_integrate_outputs), catalog_math_integrate_config, FIELD_COUNT(catalog_math_integrate_config)},
 };

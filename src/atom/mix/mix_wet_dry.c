@@ -1,4 +1,7 @@
 #include <atom/dsp_atoms.h>
+
+#include "../internal/primitive_kernels.h"
+
 #include <stddef.h>
 
 void mix_wet_dry_process(
@@ -10,20 +13,8 @@ void mix_wet_dry_process(
 ) {
     if (!apg_process_context_valid(info))
         return;
-    if (out == NULL || in == NULL || params == NULL || state == NULL)
+    if (out == NULL || in == NULL || params == NULL || state == NULL || out->signal == NULL || in->dry == NULL ||
+        in->wet == NULL)
         return;
-    (void)state;
-    if (out->signal == NULL || in->dry == NULL || in->wet == NULL || params == NULL)
-        return;
-
-    float mix = params->mix;
-    if (mix < 0.0f)
-        mix = 0.0f;
-    if (mix > 1.0f)
-        mix = 1.0f;
-
-    const uint32_t frames = apg_process_context_frames(info);
-    for (uint32_t i = 0; i < frames; ++i) {
-        out->signal[i] = (1.0f - mix) * in->dry[i] + mix * in->wet[i];
-    }
+    apg_crossfade_kernel(out->signal, in->dry, in->wet, params->mix, 0, apg_process_context_frames(info));
 }

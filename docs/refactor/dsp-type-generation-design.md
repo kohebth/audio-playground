@@ -2,7 +2,7 @@
 
 ## Status
 
-Production generation is active for all 69 atoms and all 11 families. `schema/atoms/atoms.json` uses
+Production generation is active for all 71 atoms and all 12 families. `schema/atoms/atoms.json` uses
 `apg.atom-definitions.v1` and is authoritative; the former `src`-only candidate schema and generator have been removed.
 
 JSON keeps generation dependency-free through Perl's core `JSON::PP` parser. Generated files are checked in so C,
@@ -57,7 +57,7 @@ missing or stale path without rewriting it.
 
 `test_atom_artifact_generation` generates two independent trees and compares a fixed output manifest byte for byte. It
 then checks the repository tree, mutates a generated declaration in one temporary tree, and requires `--check` to name
-that stale path. Header smoke tests, the 69-atom registry contract, the 72-symbol link test, and the LP64 ABI snapshot
+that stale path. Header smoke tests, the 71-atom registry contract, the 74-symbol link test, and the LP64 ABI snapshot
 remain independent gates.
 
 Public catalog changes also require the frozen backend JSON sample and frontend build/lint checks. Algorithm behavior

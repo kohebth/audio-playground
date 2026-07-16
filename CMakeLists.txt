@@ -105,6 +105,7 @@ foreach(TEST_TARGET ${TEST_TARGETS})
                 test/test_process_info_downsample_frame_limits.c
                 test/test_process_info_remaining_overlap_frame_limits.c
                 test/test_process_info_freq_shift_frame_limits.c
+                test/test_atom_consolidation.c
         )
         add_executable(${TEST_TARGET}
                 ${TEST_ATOM_BASIC_SOURCES}
@@ -139,6 +140,7 @@ set(DSP_HEADER_SMOKE_SOURCES
         test/abi/headers/frequency_types.c
         test/abi/headers/generation_types.c
         test/abi/headers/interpolation_types.c
+        test/abi/headers/math_types.c
         test/abi/headers/mix_types.c
         test/abi/headers/modulation_types.c
         test/abi/headers/nonlinear_types.c

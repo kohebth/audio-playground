@@ -14,6 +14,7 @@ void apg_header_smoke_filter_types(void);
 void apg_header_smoke_frequency_types(void);
 void apg_header_smoke_generation_types(void);
 void apg_header_smoke_interpolation_types(void);
+void apg_header_smoke_math_types(void);
 void apg_header_smoke_mix_types(void);
 void apg_header_smoke_modulation_types(void);
 void apg_header_smoke_nonlinear_types(void);
@@ -33,6 +34,7 @@ int main(void) {
     apg_header_smoke_frequency_types();
     apg_header_smoke_generation_types();
     apg_header_smoke_interpolation_types();
+    apg_header_smoke_math_types();
     apg_header_smoke_mix_types();
     apg_header_smoke_modulation_types();
     apg_header_smoke_nonlinear_types();

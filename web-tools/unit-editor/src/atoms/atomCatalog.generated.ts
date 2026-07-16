@@ -21,7 +21,7 @@ export type FieldDef = {
 
 export type AtomDef = {
   name: string;
-  category: 'generation' | 'amplitude' | 'delay' | 'filter' | 'detect' | 'modulation' | 'interpolation' | 'src' | 'freq' | 'mix' | 'nonlinear';
+  category: 'generation' | 'amplitude' | 'delay' | 'filter' | 'detect' | 'modulation' | 'interpolation' | 'src' | 'freq' | 'mix' | 'nonlinear' | 'math';
   visibility: AtomVisibility;
   dispatch: 'process' | 'fft' | 'ifft' | 'multiply' | 'window' | 'overlap_add' | 'overlap_save' | 'stream';
   ins: string[];
@@ -478,7 +478,7 @@ export const ATOM_CATALOG: AtomDef[] = [
     dispatch: 'process',
     ins: ["signal_a", "signal_b"],
     outs: ["signal"],
-    config: [{ name: "t", type: "float", required: true, default: 0.5, min: 0, max: 1, unit: "ratio", realtime: true, structural: false }],
+    config: [{ name: "t", type: "float", required: true, default: 0.5, min: 0, max: 1, unit: "ratio", realtime: true, structural: false }, { name: "curve", type: "enum", required: false, default: 0, realtime: true, structural: false, options: ["linear","equal_power"], optionValues: [0,1] }],
   },
   {
     name: 'mix_decode_ms',
@@ -650,6 +650,24 @@ export const ATOM_CATALOG: AtomDef[] = [
     ins: ["signal"],
     outs: ["signal"],
     config: [],
+  },
+  {
+    name: 'math_difference',
+    category: 'math',
+    visibility: 'advanced',
+    dispatch: 'process',
+    ins: ["signal"],
+    outs: ["signal"],
+    config: [],
+  },
+  {
+    name: 'math_integrate',
+    category: 'math',
+    visibility: 'advanced',
+    dispatch: 'process',
+    ins: ["signal"],
+    outs: ["signal"],
+    config: [{ name: "leakage", type: "float", required: true, default: 1, min: 0, max: 1, unit: "ratio", realtime: true, structural: false }],
   },
 ];
 

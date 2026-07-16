@@ -14,4 +14,5 @@ export const CATEGORY_COLORS: Record<AtomDef['category'], string> = {
   freq: '#6366f1',
   src: '#14b8a6',
   interpolation: '#84cc16',
+  math: '#94a3b8',
 };
