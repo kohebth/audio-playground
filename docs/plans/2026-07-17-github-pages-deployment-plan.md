@@ -86,7 +86,7 @@
 | 6 | Risk | Source maps or static examples unintentionally expose private material | Publish only selected v2 fixtures explicitly approved as examples; scan the final artifact and document that all `VITE_*` values are public |
 | 7 | Risk | Push or Pages-setting changes affect external production state | Make repository changes and local gates pass first, inspect the exact remote/repository target, then mutate only `kohebth/audio-playground` and monitor the resulting run |
 | 8 | Assumption | The authenticated GitHub identity can push `main` and administer Pages settings | Verify repository/Pages API access before the external mutation; do not broaden credentials or expose secrets |
-| 9 | Assumption | Current official major actions are `checkout@v6`, `setup-node@v6`, `configure-pages@v5`, `upload-pages-artifact@v4`, and `deploy-pages@v4` | Use current official GitHub documentation and recheck action metadata before committing the workflow |
+| 9 | Assumption | Current official major actions are `checkout@v7`, `setup-node@v7`, `configure-pages@v6`, `upload-pages-artifact@v5`, and `deploy-pages@v5` | Verified against the official stable releases on 2026-07-17; recheck action metadata during future maintenance |
 
 ---
 
