@@ -26,8 +26,32 @@
   example YAML, commit diagnostics, and clean-install browser verification.
 - `3cd764c` completed the deployment gates: current Pages workflow actions, clean CI installs, Emscripten/WASM smoke,
   artifact policy validation, production-build Playwright acceptance, and browser-compatible atom filtering.
-- Local verification covers all repository-controlled build and application criteria. External Pages source migration,
-  push/manual workflow runs, live HTTP/browser acceptance, and the final completion audit remain pending.
+- `2fa445b` completed the deployment, diagnostics, public-data, troubleshooting, and rollback runbook.
+- `4a85a30` moved the official Pages action chain to its stable Node 24 majors after the first successful deployment
+  exposed the upstream Node 20 deprecation annotation.
+- Pages source migration, the `main` push and manual workflow runs, live HTTP/browser acceptance, and the final
+  requirement audit are complete.
+
+## Completion Evidence
+
+- Production application revision: `4a85a30b8432e476b90bce7e3fccb2b8ad288d6b`.
+- Push run `29566796038` completed successfully: build/validation job `87841113762` and deployment job `87841361572`
+  both passed with zero annotations.
+- Manual run `29566959580` completed successfully: build/validation job `87841616398` and deployment job `87841884975`
+  both passed with zero annotations.
+- The final manual `github-pages` artifact is `8401498748`, 1,155,048 bytes, with digest
+  `sha256:6d25bec31ba38dd5b70ff85b2f364dbcd763e44ed3ed6f51d79f3fb005fbf557`.
+- The Pages API reports `status: built`, `build_type: workflow`, and HTTPS enforcement. The `github-pages` environment
+  has one custom deployment branch policy, for `main` only.
+- `https://kohebth.github.io/audio-playground/` returns HTTP 200. The current HTML, local SVG icon, hashed JavaScript,
+  JavaScript source map, CSS, public v2 YAML, control/processor JavaScript and WASM, and processor Worklet return HTTP
+  200 with the expected content types.
+- The live Pages Playwright suite passed 5/5 while asserting the full production SHA. It covered hash-route reloads,
+  project/unit/atom surfaces, public YAML and diagnostics, drag-and-drop/autosave/export, four file/microphone
+  AudioWorklet cycles with cleanup, denied microphone permission, and invalid-DSP containment/recovery.
+- Clean local and Actions gates passed for dependency installation, TypeScript, ESLint, unit/contract tests, pinned
+  Emscripten builds, Node WASM smoke, the production Vite build, artifact policy validation, and production Chromium
+  acceptance. Generated `dist`, browser WASM, and Playwright output remain ignored and untracked.
 
 ---
 
@@ -92,21 +116,23 @@
 
 ## Success Criteria
 
-- [ ] `web-tools/` installs reproducibly with `npm ci`; TypeScript, ESLint, unit/contract tests, WASM smoke tests, production build, artifact validation, and Pages Playwright smoke tests pass.
-- [ ] The production artifact contains `index.html`, hashed CSS/JavaScript, `.nojekyll`, selected public YAML, `apg_control`/`apg_processor` JavaScript and WASM, and the AudioWorklet script at base-safe URLs.
-- [ ] The artifact contains no absolute `/assets/`, `/wasm/`, or `/units/` reference, no `localhost` or `file://` runtime URL, no symlink, no repository secret, no private YAML, no test audio, and no native/debug binary.
-- [ ] Hash URLs and reloads render the project browser and relevant project/unit editor state without a Pages 404.
-- [ ] Drag-and-drop, YAML import/export surfaces, and locally autosaved projects work against the production build.
-- [ ] WASM initializes from `/audio-playground/`, AudioWorklet registration succeeds, audio executes off the React thread, media permission failure is visible, DSP failure is contained, and repeated start/stop leaves no active processor or stream resource.
-- [ ] Unsupported/unvalidated atoms are not presented as browser-compatible.
-- [ ] The workflow runs on relevant pull requests and `main`, uses fixed Node and clean installs, and deploys only after every build gate succeeds.
-- [ ] GitHub Pages reports workflow publishing, the `github-pages` environment is limited to `main` where configurable, and both a push deployment and manual `workflow_dispatch` complete successfully.
-- [ ] `https://kohebth.github.io/audio-playground/` returns HTTP 200; HTML, CSS, JavaScript, YAML, WASM, and worklet requests return successfully with no production request to localhost or a domain-root asset path.
-- [ ] Developer Diagnostics displays the exact deployed commit SHA, and the operator documentation explains standard and emergency rollback without editing build output or maintaining a `gh-pages` branch.
-- [ ] A failed build cannot invoke the deploy job, preserving the previous successful Pages deployment.
+- [x] `web-tools/` installs reproducibly with `npm ci`; TypeScript, ESLint, unit/contract tests, WASM smoke tests, production build, artifact validation, and Pages Playwright smoke tests pass.
+- [x] The production artifact contains `index.html`, hashed CSS/JavaScript, `.nojekyll`, selected public YAML, `apg_control`/`apg_processor` JavaScript and WASM, and the AudioWorklet script at base-safe URLs.
+- [x] The artifact contains no absolute `/assets/`, `/wasm/`, or `/units/` reference, no `localhost` or `file://` runtime URL, no symlink, no repository secret, no private YAML, no test audio, and no native/debug binary.
+- [x] Hash URLs and reloads render the project browser and relevant project/unit editor state without a Pages 404.
+- [x] Drag-and-drop, YAML import/export surfaces, and locally autosaved projects work against the production build.
+- [x] WASM initializes from `/audio-playground/`, AudioWorklet registration succeeds, audio executes off the React thread, media permission failure is visible, DSP failure is contained, and repeated start/stop leaves no active processor or stream resource.
+- [x] Unsupported/unvalidated atoms are not presented as browser-compatible.
+- [x] The workflow runs on relevant pull requests and `main`, uses fixed Node and clean installs, and deploys only after every build gate succeeds.
+- [x] GitHub Pages reports workflow publishing, the `github-pages` environment is limited to `main` where configurable, and both a push deployment and manual `workflow_dispatch` complete successfully.
+- [x] `https://kohebth.github.io/audio-playground/` returns HTTP 200; HTML, CSS, JavaScript, YAML, WASM, and worklet requests return successfully with no production request to localhost or a domain-root asset path.
+- [x] Developer Diagnostics displays the exact deployed commit SHA, and the operator documentation explains standard and emergency rollback without editing build output or maintaining a `gh-pages` branch.
+- [x] A failed build cannot invoke the deploy job, preserving the previous successful Pages deployment.
 
 ---
 
-## First Action
+## Outcome
 
-Make the clean production web boundary deterministic: add declared Node/Vite environment types, `VITE_BASE_PATH`, explicit build output settings, HashRouter, base-safe public example URLs, and build metadata diagnostics before changing the deployment workflow.
+Completed on 2026-07-17. Audio Playground v2 is published by the gated custom workflow at the target GitHub Pages URL,
+and all repository, Actions, Pages, HTTP, artifact, routing, editor, WASM/AudioWorklet, diagnostics, and rollback acceptance
+criteria above are supported by direct evidence.

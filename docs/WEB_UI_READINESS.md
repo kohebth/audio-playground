@@ -83,8 +83,11 @@ v2 fixture is shipped under `units/` with a contract test that prevents fixture 
 rebuilds and smoke-tests the Emscripten control/processor modules, uses clean installs and fixed Node 22, runs TypeScript,
 lint, contract, artifact-policy, and production-build Playwright gates, uploads only `web-tools/dist`, and deploys only
 after a successful `main` build. The browser palette hides the three advanced frequency atoms whose backend profiles
-mark `wasm_realtime` unsupported. The live site remains a 404 until this workflow is pushed and the repository publishing
-source is switched from legacy `main:/` to GitHub Actions as tracked in
+mark `wasm_realtime` unsupported. GitHub Pages now publishes the workflow artifact at
+`https://kohebth.github.io/audio-playground/`; Pages reports `built/workflow`, HTTPS is enforced, and the deployment
+environment permits only `main`. Push run `29566796038` and manual run `29566959580` passed the complete build and
+deployment gates for production revision `4a85a30b8432e476b90bce7e3fccb2b8ad288d6b`, and live Playwright acceptance
+passed 5/5 while asserting that exact diagnostic SHA. Evidence is recorded in
 `docs/plans/2026-07-17-github-pages-deployment-plan.md`. Production operation, local reproduction, public-data rules,
 diagnostics, troubleshooting, and rollback are documented in `docs/GITHUB_PAGES_DEPLOY.md`.
 
