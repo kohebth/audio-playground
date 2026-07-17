@@ -1,4 +1,5 @@
 import { Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -109,6 +110,7 @@ type WorkspaceHistoryEntry = {
 
 const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v2';
 const LEGACY_WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v1';
+const PROJECT_ROUTE = '/projects';
 
 function resolveWorkspacePath(baseFile: string, reference: string): string {
   const segments = baseFile.split('/');
@@ -123,6 +125,27 @@ function resolveWorkspacePath(baseFile: string, reference: string): string {
     }
   }
   return segments.join('/');
+}
+
+function unitRouteId(path: string): string {
+  const filename = path.split('/').at(-1) ?? path;
+  return filename.replace(/\.unit\.v2\.yaml$/i, '');
+}
+
+function unitRoute(path: string): string {
+  return `/unit/${encodeURIComponent(unitRouteId(path))}`;
+}
+
+function workspacePathFromRoute(pathname: string, files: WorkspaceFile[]): string | null {
+  const match = /^\/unit\/([^/]+)\/?$/.exec(pathname);
+  if (!match) return null;
+  let routeId: string;
+  try {
+    routeId = decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+  return files.find(file => file.role === 'unit' && unitRouteId(file.path) === routeId)?.path ?? null;
 }
 
 function loadWorkspaceState(): { entryProject: string; files: WorkspaceFile[] } {
@@ -153,8 +176,11 @@ function loadWorkspaceState(): { entryProject: string; files: WorkspaceFile[] } 
 }
 
 export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [runtimeReady, setRuntimeReady] = useState(false);
   const [initialWorkspace] = useState(loadWorkspaceState);
+  const initialRouteWorkspacePath = workspacePathFromRoute(location.pathname, initialWorkspace.files);
   const initialProjectInspect = useMemo(() => {
     try {
       const file = initialWorkspace.files.find(item => item.path === initialWorkspace.entryProject);
@@ -180,12 +206,21 @@ export default function App() {
     () => ({ controller: liveBypassController, setController: setLiveBypassController }),
     [liveBypassController],
   );
-  const [selectedId, setSelectedId] = useState<string | null>(() =>
-    initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
+  const initialRouteUnit = initialRouteWorkspacePath
+    ? initialProjectInspect.units.find(unit => (
+        resolveWorkspacePath(initialProjectInspect.file, unit.file) === initialRouteWorkspacePath
+      ))
+    : null;
+  const initialRouteNode = initialRouteUnit
+    ? initialProjectInspect.nodes.find(node => node.unit === initialRouteUnit.id)
+    : null;
+  const [selectedId, setSelectedId] = useState<string | null>(() => initialRouteNode
+    ? `unit-${initialRouteNode.id}`
+    : initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
   const [canvasFitRevision, setCanvasFitRevision] = useState(0);
-  const [inspectorView, setInspectorView] = useState<InspectorView>('project');
-  const [canvasMode, setCanvasMode] = useState<CanvasMode>('project');
+  const [inspectorView, setInspectorView] = useState<InspectorView>(initialRouteWorkspacePath ? 'contract' : 'project');
+  const [canvasMode, setCanvasMode] = useState<CanvasMode>(initialRouteNode ? 'contract' : 'project');
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
   const [atomClipboard, setAtomClipboard] = useState<UnitGraphNode | null>(null);
   const [graphEditError, setGraphEditError] = useState<string | null>(null);
@@ -197,7 +232,10 @@ export default function App() {
     incrementPerfCounter('state.workspace.dispatches');
     setWorkspaceFilesState(update);
   }, []);
-  const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(initialWorkspace.entryProject);
+  const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(
+    initialRouteWorkspacePath ?? initialWorkspace.entryProject,
+  );
+  const appliedRoutePath = useRef<string | null>(null);
   const undoStack = useRef<WorkspaceHistoryEntry[]>([]);
   const redoStack = useRef<WorkspaceHistoryEntry[]>([]);
   const autosaveTimeout = useRef<number | null>(null);
@@ -223,6 +261,9 @@ export default function App() {
     setSelectedAtomId(entry.selectedAtomId);
     setCanvasMode(entry.canvasMode);
     setInspectorView(entry.inspectorView);
+    navigate(entry.files.find(file => file.path === entry.selectedWorkspacePath)?.role === 'unit'
+      ? unitRoute(entry.selectedWorkspacePath)
+      : PROJECT_ROUTE);
     try {
       const projectFile = entry.files.find(file => file.path === entry.entryProject);
       const inspect = projectFile
@@ -234,7 +275,7 @@ export default function App() {
       setParamDrafts(buildParamDrafts(backendSamples.project));
       setParamOriginals(buildParamOriginals(backendSamples.project));
     }
-  }, [setWorkspaceFiles]);
+  }, [navigate, setWorkspaceFiles]);
   const pushHistory = useCallback(() => {
     undoStack.current = [...undoStack.current.slice(-49), currentHistoryEntry()];
     redoStack.current = [];
@@ -309,6 +350,43 @@ export default function App() {
   }, [selectedUnitWorkspaceFile]);
   const selectedAtom =
     selectedUnitGraph?.nodes.find(node => node.id === selectedAtomId) ?? selectedUnitGraph?.nodes[0] ?? null;
+
+  useEffect(() => {
+    if (appliedRoutePath.current === location.pathname) return;
+    appliedRoutePath.current = location.pathname;
+
+    if (location.pathname === '/' || location.pathname === '') {
+      navigate(PROJECT_ROUTE, { replace: true });
+      return;
+    }
+
+    if (location.pathname === PROJECT_ROUTE) {
+      setSelectedWorkspacePath(entryProject);
+      setCanvasMode('project');
+      setInspectorView('project');
+      return;
+    }
+
+    const path = workspacePathFromRoute(location.pathname, workspaceFiles);
+    if (!path) {
+      navigate(PROJECT_ROUTE, { replace: true });
+      return;
+    }
+
+    const unit = project.units.find(item => resolveWorkspacePath(project.file, item.file) === path);
+    const node = unit ? project.nodes.find(item => item.unit === unit.id) : null;
+    setSelectedWorkspacePath(path);
+    setSelectedRouteIndex(null);
+    setSelectedAtomId(null);
+    setSelectedId(node ? `unit-${node.id}` : null);
+    setCanvasMode(node ? 'contract' : 'project');
+    setInspectorView('contract');
+  }, [entryProject, location.pathname, navigate, project.file, project.nodes, project.units, workspaceFiles]);
+
+  const selectWorkspaceFile = useCallback((path: string) => {
+    const file = workspaceFiles.find(item => item.path === path);
+    navigate(file?.role === 'unit' ? unitRoute(path) : PROJECT_ROUTE);
+  }, [navigate, workspaceFiles]);
 
   const projectPorts = useMemo<ProjectPortCatalog>(() => Object.fromEntries(projectDraft.units.map(reference => {
     const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
@@ -486,8 +564,9 @@ export default function App() {
       setCanvasMode('contract');
       setInspectorView('contract');
       setSelectedAtomId(null);
+      navigate(unitRoute(path));
     });
-  }, [nodes, project.file]);
+  }, [navigate, nodes, project.file]);
 
   const selectRoute = useCallback((index: number) => {
     markPerfSpan('ui.select.route', () => {
@@ -706,8 +785,9 @@ export default function App() {
       setSelectedAtomId(null);
       setInspectorView('contract');
       setCanvasMode('project');
+      navigate(unitRoute(path));
     });
-  }, [pushHistory, setWorkspaceFiles, workspaceFiles]);
+  }, [navigate, pushHistory, setWorkspaceFiles, workspaceFiles]);
 
   const updateSelectedUnitFile = useCallback((update: (content: string) => string, nextAtomId?: string | null) => {
     markPerfSpan('graph.update.unitFile', () => {
@@ -857,12 +937,13 @@ export default function App() {
       setSelectedId('unit-drive1');
       setSelectedRouteIndex(null);
       setCanvasFitRevision(revision => revision + 1);
+      navigate(PROJECT_ROUTE);
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
         window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
       }
     });
-  }, [pushHistory, setWorkspaceFiles]);
+  }, [navigate, pushHistory, setWorkspaceFiles]);
 
   const saveWorkspace = useCallback(() => {
     try {
@@ -913,11 +994,12 @@ export default function App() {
         setSelectedId(null);
         setSelectedRouteIndex(null);
         setCanvasFitRevision(revision => revision + 1);
+        navigate(PROJECT_ROUTE);
       } catch (error) {
         setGraphEditError(error instanceof Error ? error.message : 'Workspace import failed.');
       }
     });
-  }, [pushHistory, setWorkspaceFiles]);
+  }, [navigate, pushHistory, setWorkspaceFiles]);
 
   const handleRenderProfile = useCallback((
     id: string,
@@ -997,7 +1079,7 @@ export default function App() {
           selectedWorkspacePath={selectedWorkspacePath}
           selectedNodeId={selectedId}
           selectedRouteIndex={selectedRouteIndex}
-          onSelectWorkspaceFile={setSelectedWorkspacePath}
+          onSelectWorkspaceFile={selectWorkspaceFile}
           onCreateUnit={createUnit}
           onAddInstance={addProjectNode}
           onAddUnitFromLibrary={addProjectNodeFromLibrary}
@@ -1016,7 +1098,7 @@ export default function App() {
               selectedAtomId={selectedAtomId}
               selectedUnitLabel={selectedNode.unit.name}
               workspaceFile={selectedUnitWorkspaceFile}
-              onBackToProject={() => markPerfSpan('ui.returnToProject', () => setCanvasMode('project'))}
+              onBackToProject={() => markPerfSpan('ui.returnToProject', () => navigate(PROJECT_ROUTE))}
               onAddAtomAt={addAtom}
               onInsertAtomAtEdge={insertAtomOnConnection}
               onMoveAtom={moveAtom}

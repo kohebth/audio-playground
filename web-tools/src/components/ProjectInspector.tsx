@@ -16,6 +16,7 @@ import type {
 import { type ParamOverride } from '../lib/projectParams';
 import { AUDIO_TRACE_STAGE_LABELS, exportAudioTraceReport, formatAudioTraceBudget } from '../lib/audioTrace';
 import { formatLatencyHint } from '../lib/audioIo';
+import { buildInfo } from '../lib/buildInfo';
 import { useLiveBypass } from '../lib/liveBypass';
 import {
   previewAtomReplacement,
@@ -731,6 +732,18 @@ export function ProjectInspector({
             <div className="workspace-editor__meta">
               <strong>{selectedUnitFile.path}</strong>
               <span>{selectedUnitFile.role}</span>
+            </div>
+            <div className="command-panel" data-testid="build-diagnostics">
+              <span>Build commit</span>
+              <code data-testid="build-commit-sha">{buildInfo.commitSha}</code>
+            </div>
+            <div className="command-panel">
+              <span>Deployment base</span>
+              <code data-testid="build-base-path">{buildInfo.basePath}</code>
+            </div>
+            <div className="command-panel">
+              <span>Build mode</span>
+              <code>{buildInfo.mode}</code>
             </div>
             <div className="command-panel">
               <span>Validation Command</span>

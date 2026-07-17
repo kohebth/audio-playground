@@ -1,10 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const githubPagesBase = process.env.VITE_GITHUB_PAGES_BASE || '/';
+function normalizeBasePath(value: string | undefined): string {
+  if (!value || value === '/') return '/'
+  return `/${value.replace(/^\/+|\/+$/g, '')}/`
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: githubPagesBase,
+  base: normalizeBasePath(process.env.VITE_BASE_PATH),
   plugins: [react()],
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    sourcemap: true,
+  },
 })

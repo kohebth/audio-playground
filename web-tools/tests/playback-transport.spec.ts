@@ -4,7 +4,19 @@ async function openWorkspace(page: Page) {
   await page.goto('/');
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 15_000 });
   await expect(page.getByTestId('launch-workspace')).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/projects$/);
 }
+
+test('keeps project and unit views on stable hash routes', async ({ page }) => {
+  await page.goto('/#/unit/overdrive');
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 15_000 });
+  await expect(page).toHaveURL(/#\/unit\/overdrive$/);
+  await expect(page.getByTestId('contract-canvas')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Project graph' }).click();
+  await expect(page).toHaveURL(/#\/projects$/);
+  await expect(page.getByTestId('project-canvas')).toBeVisible();
+});
 
 test('controls file and microphone playback with transport shortcuts', async ({ page }) => {
   const pageErrors: string[] = [];

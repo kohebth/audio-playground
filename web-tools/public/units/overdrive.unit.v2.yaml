@@ -1,0 +1,126 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: overdrive
+version: 2.0.0
+
+meta:
+  title: Overdrive
+  category: drive
+  description: Boosts mono guitar input, soft clips it, shapes tone, and applies output level.
+
+params:
+  drive:
+    type: float
+    default: 2.0
+    min: 1.0
+    max: 8.0
+    smoothing_ms: 5
+    ui:
+      label: Drive
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
+  tone:
+    type: float
+    default: 0.85
+    min: 0.2
+    max: 1.2
+    smoothing_ms: 5
+    ui:
+      label: Tone
+      control: knob
+      scale: linear
+      display_precision: 2
+  level:
+    type: float
+    default: 0.8
+    min: 0.0
+    max: 2.0
+    smoothing_ms: 5
+    ui:
+      label: Level
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - drive_value
+    - driven
+    - clipped
+    - toned
+    - level_value
+    - output
+
+  nodes:
+    - id: drive_value
+      atom: generation_dc
+      out:
+        signal: drive_value
+      config:
+        value: ${params.drive}
+
+    - id: apply_drive
+      atom: amplitude_multiply
+      in:
+        signal_a: input
+        signal_b: drive_value
+      out:
+        signal: driven
+
+    - id: clip_drive
+      atom: amplitude_clip_soft
+      in:
+        signal: driven
+      out:
+        signal: clipped
+      config:
+        threshold: 0.85
+        curve: 0
+
+    - id: tone_filter
+      atom: filter_biquad_coefficients
+      in:
+        signal: clipped
+      out:
+        signal: toned
+      config:
+        b0: ${params.tone}
+        b1: 0.0
+        b2: 0.0
+        a1: 0.0
+        a2: 0.0
+
+    - id: level_value
+      atom: generation_dc
+      out:
+        signal: level_value
+      config:
+        value: ${params.level}
+
+    - id: apply_level
+      atom: amplitude_multiply
+      in:
+        signal_a: toned
+        signal_b: level_value
+      out:
+        signal: output
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

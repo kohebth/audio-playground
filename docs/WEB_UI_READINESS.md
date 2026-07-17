@@ -76,6 +76,13 @@ remain unchanged.
 The live microphone-path estimate remains neutral through 20 ms, warns above 20 ms, and shows danger above 30 ms.
 Output-only estimates and measured acoustic-loopback status retain their existing presentation.
 
+The GitHub Pages production boundary uses a configurable Vite base path and hash routes for the project and unit views.
+Developer Diagnostics exposes the injected build commit, deployment base, and mode, and the explicitly public overdrive
+v2 fixture is shipped under `units/` with a contract test that prevents fixture drift. Clean `npm ci`, lint, tests, a
+`/audio-playground/` production build, and the project/unit browser route flow pass locally. The live site remains a 404
+until the Pages workflow is hardened and the repository publishing source is switched from legacy `main:/` to GitHub
+Actions as tracked in `docs/plans/2026-07-17-github-pages-deployment-plan.md`.
+
 The processor keeps an active, staged, and retired runtime slot. It only promotes a staged slot at a block boundary and
 crossfades that block; retired-slot destruction occurs during a later control-thread staging operation, never in the
 audio callback. A CMake boundary test rejects allocation, slot destruction, formatting, parsing, compilation, image

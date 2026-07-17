@@ -36,7 +36,10 @@ const unit = json('test/golden/v2-inspect-unit-simple_gain.json');
 const render = json('test/golden/v2-render-project-guitar-pedalboard.json');
 
 const app = read('web-tools/src/App.tsx');
+const main = read('web-tools/src/main.tsx');
 const appLogo = read('web-tools/src/components/AppLogo.tsx');
+const buildInfo = read('web-tools/src/lib/buildInfo.ts');
+const viteConfig = read('web-tools/vite.config.ts');
 const backendSamples = read('web-tools/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
 const projectSidebar = read('web-tools/src/components/ProjectSidebar.tsx');
@@ -53,6 +56,7 @@ const wasmFacade = read('wasm-tools/web/facade.ts');
 const processorWorklet = read('wasm-tools/web/processor.worklet.js');
 const compatibility = read('web-tools/src/components/CompatibilityExportPanel.tsx');
 const workspacePersistence = read('web-tools/src/lib/workspacePersistence.ts');
+const publicOverdrive = read('web-tools/public/units/overdrive.unit.v2.yaml');
 
 // AC: Contract-accurate web data is sourced from a frozen backend atom catalog fixture.
 assert(atomCatalog.schema === 'apg.atom_catalog.v2', 'atom catalog fixture schema changed');
@@ -228,6 +232,19 @@ includesContent(app, '<AppLogo />', 'launch screen must use the stable applicati
 includesContent(projectTopbar, '<AppLogo />', 'project header must use the stable application logo');
 includesContent(appLogo, 'icon.svg', 'application logo component must load the bundled SVG');
 includes('web-tools/public/icon.svg', 'M0 0h1v1H0zM2 0h1v2H2zM4 0h1v4H4zM0 2h3v1H0zM0 4h5v1H0z', 'application logo must preserve the supplied 5x5 mark');
+includesContent(main, '<HashRouter>', 'application entry point must use Pages-safe hash routing');
+includesContent(app, "const PROJECT_ROUTE = '/projects'", 'project workspace must expose a stable hash route');
+includesContent(app, '`/unit/${encodeURIComponent(unitRouteId(path))}`', 'unit workspaces must expose stable hash routes');
+includesContent(viteConfig, 'process.env.VITE_BASE_PATH', 'Vite must read its deployment base from the workflow');
+includesContent(viteConfig, "outDir: 'dist'", 'Vite must emit the Pages artifact to dist');
+includesContent(viteConfig, 'emptyOutDir: true', 'Vite must replace stale build output');
+includesContent(viteConfig, 'sourcemap: true', 'production builds must emit supportable source maps');
+includesContent(buildInfo, 'import.meta.env.VITE_COMMIT_SHA', 'build diagnostics must use the injected commit SHA');
+includesContent(projectInspector, 'data-testid="build-commit-sha"', 'Developer Diagnostics must expose the deployed commit SHA');
+assert(
+  publicOverdrive === read('test/fixtures/units-v2/overdrive.unit.v2.yaml'),
+  'public overdrive YAML must remain synchronized with its v2 contract fixture',
+);
 includesContent(liveLatencyBadge, "'Mic path est.'", 'live latency badge must distinguish microphone path estimates');
 includesContent(liveLatencyBadge, 'micPathLatencySeverity(totalLatencyMs)', 'microphone path estimate must expose latency severity');
 includesContent(liveLatencyBadge, 'Loopback ready', 'live latency badge must show measured loopback results');
