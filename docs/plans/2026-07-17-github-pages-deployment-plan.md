@@ -20,6 +20,15 @@
 - The repository has no root `plan.md`, `task.md`, or `problem.md`; deployment state will be recorded in this plan, `docs/WEB_UI_READINESS.md`, and a focused operator document.
 - `build-asan/` is unrelated untracked user state and must remain untouched.
 
+## Execution Progress
+
+- `d486a84` completed the production-safe web boundary: clean Node types, configurable base path, hash routes, public
+  example YAML, commit diagnostics, and clean-install browser verification.
+- `3cd764c` completed the deployment gates: current Pages workflow actions, clean CI installs, Emscripten/WASM smoke,
+  artifact policy validation, production-build Playwright acceptance, and browser-compatible atom filtering.
+- Local verification covers all repository-controlled build and application criteria. External Pages source migration,
+  push/manual workflow runs, live HTTP/browser acceptance, and the final completion audit remain pending.
+
 ---
 
 ## Approaches Considered

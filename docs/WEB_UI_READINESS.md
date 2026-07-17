@@ -85,7 +85,8 @@ lint, contract, artifact-policy, and production-build Playwright gates, uploads 
 after a successful `main` build. The browser palette hides the three advanced frequency atoms whose backend profiles
 mark `wasm_realtime` unsupported. The live site remains a 404 until this workflow is pushed and the repository publishing
 source is switched from legacy `main:/` to GitHub Actions as tracked in
-`docs/plans/2026-07-17-github-pages-deployment-plan.md`.
+`docs/plans/2026-07-17-github-pages-deployment-plan.md`. Production operation, local reproduction, public-data rules,
+diagnostics, troubleshooting, and rollback are documented in `docs/GITHUB_PAGES_DEPLOY.md`.
 
 The processor keeps an active, staged, and retired runtime slot. It only promotes a staged slot at a block boundary and
 crossfades that block; retired-slot destruction occurs during a later control-thread staging operation, never in the
