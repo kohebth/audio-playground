@@ -44,13 +44,24 @@ function profileLabel(atom: AtomCatalogAtom): string {
 
 export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) {
   const unitAtomNames = unit.graph.nodes.map(node => node.atom);
-  const initialPaletteAtom = catalog.atoms.find(atom => atom.visibility === 'public') ?? catalog.atoms[0];
+  const initialPaletteAtom = catalog.atoms.find(
+    atom => atom.visibility === 'public' && atom.profiles.wasm_realtime === true,
+  ) ?? catalog.atoms[0];
   const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? initialPaletteAtom?.name ?? '');
   const [filter, setFilter] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const paletteAtoms = useMemo(
-    () => catalog.atoms.filter(atom => atom.visibility === 'public' || (showAdvanced && atom.visibility === 'advanced')),
+    () => catalog.atoms.filter(atom => (
+      atom.profiles.wasm_realtime === true
+      && (atom.visibility === 'public' || (showAdvanced && atom.visibility === 'advanced'))
+    )),
     [catalog.atoms, showAdvanced],
+  );
+  const hiddenBrowserAtoms = useMemo(
+    () => catalog.atoms.filter(atom => (
+      atom.visibility !== 'internal' && atom.profiles.wasm_realtime !== true
+    )).length,
+    [catalog.atoms],
   );
   const selectedAtom = catalog.atoms.find(atom => atom.name === selectedAtomName) ?? initialPaletteAtom;
   const filteredAtoms = useMemo(() => {
@@ -71,7 +82,8 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) 
     <details className="inspector-block" open>
       <summary className="inspector-block__label">Atom Palette</summary>
       <div className="atom-palette__summary">
-        <strong>{paletteAtoms.length} available / {catalog.atoms.length} backend</strong>
+        <strong>{paletteAtoms.length} browser-validated / {catalog.atoms.length} backend</strong>
+        <span data-testid="atom-palette-browser-hidden">{hiddenBrowserAtoms} browser-incompatible hidden</span>
         <span>{manifest.schema} / {manifest.bytes} bytes</span>
       </div>
 

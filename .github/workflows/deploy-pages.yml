@@ -1,0 +1,153 @@
+name: Deploy Audio Playground
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-pages.yml"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "inc/**"
+      - "schema/**"
+      - "src/**"
+      - "test/fixtures/**"
+      - "test/golden/**"
+      - "tools/generate_atom_artifacts.py"
+      - "wasm-tools/**"
+      - "web-tools/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-pages.yml"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "inc/**"
+      - "schema/**"
+      - "src/**"
+      - "test/fixtures/**"
+      - "test/golden/**"
+      - "tools/generate_atom_artifacts.py"
+      - "wasm-tools/**"
+      - "web-tools/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and validate
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            wasm-tools/package-lock.json
+            web-tools/package-lock.json
+
+      - name: Set up Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 5.0.1
+          actions-cache-folder: emsdk-cache
+
+      - name: Install WASM facade dependencies
+        working-directory: wasm-tools
+        run: npm ci
+
+      - name: Build WASM facade
+        working-directory: wasm-tools
+        run: npm run build
+
+      - name: Build and smoke-test WASM runtime
+        run: |
+          emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-wasm --target apg_control apg_processor -j2
+          node wasm-tools/test/emscripten_runtime_smoke.mjs build-wasm/wasm-tools .
+          mkdir -p web-tools/public/wasm
+          cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm web-tools/public/wasm/
+          cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm web-tools/public/wasm/
+          cp wasm-tools/web/processor.worklet.js web-tools/public/wasm/processor.worklet.js
+
+      - name: Install web dependencies
+        working-directory: web-tools
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: web-tools
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: web-tools
+        run: npm run lint
+
+      - name: Test
+        working-directory: web-tools
+        run: npm test
+
+      - name: Build Pages application
+        working-directory: web-tools
+        env:
+          VITE_BASE_PATH: /audio-playground/
+          VITE_COMMIT_SHA: ${{ github.sha }}
+        run: npm run build
+
+      - name: Disable Jekyll processing
+        run: touch web-tools/dist/.nojekyll
+
+      - name: Validate Pages artifact
+        working-directory: web-tools
+        env:
+          VITE_BASE_PATH: /audio-playground/
+        run: npm run pages:validate
+
+      - name: Install Chromium
+        working-directory: web-tools
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Pages smoke tests
+        working-directory: web-tools
+        env:
+          APG_EXPECTED_COMMIT_SHA: ${{ github.sha }}
+        run: npm run pages:smoke
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: web-tools/dist
+
+  deploy:
+    name: Deploy
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

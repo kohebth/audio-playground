@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
     "lint": "eslint .",
     "perf:fixtures": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-fixtures.mts",
     "perf:benchmark": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-benchmark.mts",
@@ -18,6 +19,8 @@
     "perf:ui:report": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-ui-report.mts",
     "perf:ui:baseline": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-ui-baseline.mts",
     "test": "node scripts/contract-tests.mjs && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/unit-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/project-v2-graph-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/workspace-persistence-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/audio-trace-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/audio-io-tests.mts && node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/perf-ui-baseline-tests.mts",
+    "pages:validate": "node scripts/validate-pages-artifact.mjs",
+    "pages:smoke": "playwright test --config playwright.pages.config.ts",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -82,6 +82,8 @@ includes(
 assert(!backendSamples.includes('../atoms/atomCatalog'), 'project workbench backend samples must not use the local atom catalog fallback');
 includes('web-tools/src/components/ProjectInspector.tsx', '<strong>{atomCatalog.schema}</strong>', 'contract view must expose atom catalog schema');
 includesContent(atomPalette, 'filteredAtoms.map(', 'atom palette must render its filtered backend atoms');
+includesContent(atomPalette, 'atom.profiles.wasm_realtime === true', 'browser atom palette must require WASM validation');
+includesContent(atomPalette, 'atom-palette-browser-hidden', 'browser atom palette must report hidden incompatible atoms');
 includesContent(atomPalette, "atom.visibility === 'public'", 'atom palette must show public atoms by default');
 includesContent(atomPalette, "atom.visibility === 'advanced'", 'atom palette must make advanced atoms opt-in');
 includesContent(atomPalette, 'atom-palette-show-advanced', 'atom palette must expose its advanced visibility control');
