@@ -2,20 +2,8 @@ name: Deploy Audio Playground
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/deploy-pages.yml"
-      - "CMakeLists.txt"
-      - "cmake/**"
-      - "inc/**"
-      - "schema/**"
-      - "src/**"
-      - "test/fixtures/**"
-      - "test/golden/**"
-      - "tools/generate_atom_artifacts.py"
-      - "wasm-tools/**"
-      - "web-tools/**"
+    tags:
+      - 'v2.0-beta[0-9]+'
   pull_request:
     branches:
       - main
@@ -31,13 +19,11 @@ on:
       - "tools/generate_atom_artifacts.py"
       - "wasm-tools/**"
       - "web-tools/**"
-  workflow_dispatch:
-
 permissions:
   contents: read
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: pages-${{ github.event_name == 'push' && 'production' || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -128,14 +114,14 @@ jobs:
         run: npm run pages:smoke
 
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' && github.ref_type == 'tag'
         uses: actions/upload-pages-artifact@v5
         with:
           path: web-tools/dist
 
   deploy:
     name: Deploy
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     needs: build
     runs-on: ubuntu-24.04
 

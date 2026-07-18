@@ -136,3 +136,11 @@
 Completed on 2026-07-17. Audio Playground v2 is published by the gated custom workflow at the target GitHub Pages URL,
 and all repository, Actions, Pages, HTTP, artifact, routing, editor, WASM/AudioWorklet, diagnostics, and rollback acceptance
 criteria above are supported by direct evidence.
+
+## Release-policy amendment
+
+On 2026-07-19, production publishing moved from `main` pushes/manual dispatches to numbered beta tags only. The Pages
+workflow now accepts `v2.0-beta[0-9]+` tag pushes, retains non-publishing pull-request validation, and requires both
+artifact upload and deployment to originate from a tag-push event. The `github-pages` environment policy moved from its
+historical `main` branch rule to the corresponding beta-tag family. The original completion evidence above remains a
+historical record of the first deployment rather than the current release trigger.

@@ -41,6 +41,7 @@ const main = read('web-tools/src/main.tsx');
 const appLogo = read('web-tools/src/components/AppLogo.tsx');
 const buildInfo = read('web-tools/src/lib/buildInfo.ts');
 const viteConfig = read('web-tools/vite.config.ts');
+const pagesWorkflow = read('.github/workflows/deploy-pages.yml');
 const backendSamples = read('web-tools/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
 const projectSidebar = read('web-tools/src/components/ProjectSidebar.tsx');
@@ -254,6 +255,15 @@ includesContent(viteConfig, 'emptyOutDir: true', 'Vite must replace stale build 
 includesContent(viteConfig, 'sourcemap: true', 'production builds must emit supportable source maps');
 includesContent(buildInfo, 'import.meta.env.VITE_COMMIT_SHA', 'build diagnostics must use the injected commit SHA');
 includesContent(projectInspector, 'data-testid="build-commit-sha"', 'Developer Diagnostics must expose the deployed commit SHA');
+includesContent(pagesWorkflow, "- 'v2.0-beta[0-9]+'", 'Pages deployment must require a numbered v2.0 beta tag');
+assert(!pagesWorkflow.includes('refs/heads/main'), 'main pushes must not deploy Pages');
+assert(!pagesWorkflow.includes('workflow_dispatch:'), 'manual workflow runs must not deploy Pages');
+assertAtLeast(
+  pagesWorkflow,
+  "github\\.event_name == 'push' && github\\.ref_type == 'tag'",
+  2,
+  'Pages artifact upload and deployment must both require a tag push',
+);
 assert(
   publicOverdrive === read('test/fixtures/units-v2/overdrive.unit.v2.yaml'),
   'public overdrive YAML must remain synchronized with its v2 contract fixture',

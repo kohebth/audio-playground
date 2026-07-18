@@ -38,8 +38,9 @@ published.
 
 ## Workflow
 
-`.github/workflows/deploy-pages.yml` runs for relevant pull requests, relevant pushes to `main`, and manual dispatches.
-Its build job uses Ubuntu 24.04, Node 22, Emscripten 5.0.1, and clean `npm ci` installs.
+`.github/workflows/deploy-pages.yml` runs for relevant pull requests and pushes of tags matching
+`v2.0-beta[0-9]+` (for example, `v2.0-beta1` or `v2.0-beta12`). Ordinary branch pushes and manual dispatches do not
+start a production deployment. Its build job uses Ubuntu 24.04, Node 22, Emscripten 5.0.1, and clean `npm ci` installs.
 
 The build gate performs, in order:
 
@@ -50,8 +51,8 @@ The build gate performs, in order:
 5. Run TypeScript, ESLint, contract/unit tests, and a production Vite build.
 6. Add `.nojekyll` and validate the complete static artifact.
 7. Serve the built artifact below `/audio-playground/` and run the Chromium Pages smoke suite.
-8. Upload the Pages artifact only for a push or manual run; pull requests never deploy.
-9. Run the deployment job only for `refs/heads/main` after the build job succeeds.
+8. Upload the Pages artifact only for a matching release-tag push; pull requests never upload or deploy.
+9. Run the deployment job only for that tag push after the build job succeeds.
 
 The artifact validator requires all runtime assets and source maps, enforces the public YAML and root-entry allowlists,
 rejects symlinks, native/debug files, test audio, environment/private files, root-relative asset URLs, `file://` URLs,
@@ -112,8 +113,9 @@ change is:
 gh api --method PUT repos/kohebth/audio-playground/pages -f build_type=workflow
 ```
 
-The `github-pages` environment must use a custom deployment branch policy allowing only the `main` branch. Verify both
-settings without changing them:
+The `github-pages` environment must use a selected-tag deployment policy for `v2.0-beta[0-9]*`, with no `main` branch
+rule. The environment pattern is a secondary guard; the workflow's stricter `v2.0-beta[0-9]+` trigger is authoritative
+and rejects non-numeric suffixes. Verify both settings without changing them:
 
 ```sh
 gh api repos/kohebth/audio-playground/pages
@@ -124,15 +126,29 @@ gh api repos/kohebth/audio-playground/environments/github-pages/deployment-branc
 No production secret is required. Optional required reviewers can be added to `github-pages` through repository policy;
 do not add a reviewer merely to store or reveal a frontend credential.
 
-## Deploy and monitor
-
-A relevant merge or push to `main` triggers the workflow. A manual production rebuild uses:
+In the GitHub UI, edit **Settings → Environments → github-pages → Deployment branches and tags**, remove the `main`
+branch rule, and add the `v2.0-beta[0-9]*` tag rule. The equivalent API operations use the policy ID returned by the
+last command above:
 
 ```sh
-gh workflow run deploy-pages.yml --ref main
+gh api --method POST repos/kohebth/audio-playground/environments/github-pages/deployment-branch-policies \
+  -f 'name=v2.0-beta[0-9]*' -f type=tag
+gh api --method DELETE \
+  repos/kohebth/audio-playground/environments/github-pages/deployment-branch-policies/<main-policy-id>
+```
+
+## Deploy and monitor
+
+Create an annotated, monotonically increasing beta tag on the release commit, then push only that tag:
+
+```sh
+git tag -a v2.0-beta1 -m "Audio Playground v2.0 beta 1"
+git push origin v2.0-beta1
 gh run list --workflow deploy-pages.yml --limit 5
 gh run watch <run-id> --exit-status
 ```
+
+Pushing or merging `main` does not deploy. Do not move or reuse a published tag; create the next beta number instead.
 
 After deployment, verify HTTP and the browser flow:
 
@@ -157,13 +173,14 @@ Standard rollback:
 2. Create a rollback branch from current `main`.
 3. Revert the defective commit or commit range; do not rewrite `main` history.
 4. Open and merge the rollback pull request.
-5. Let the same Pages workflow validate and deploy the revert.
-6. Confirm the displayed build SHA and rerun live smoke acceptance.
+5. Create and push the next `v2.0-beta<number>` tag on the reverted commit.
+6. Let the Pages workflow validate and deploy that tagged revert.
+7. Confirm the displayed build SHA and rerun live smoke acceptance.
 
 Emergency rollback uses the same history-preserving route: prepare the smallest revert/hotfix against `main`, merge it,
-and manually dispatch `deploy-pages.yml` from `main` if the path filter did not trigger. The `github-pages` environment
-intentionally rejects tag or non-main deployments. If the replacement build fails, fix the build gate rather than
-bypassing it; production remains on the last successful artifact.
+and publish the next beta tag. The `github-pages` environment intentionally rejects branch deployments. If the
+replacement build fails, fix the build gate rather than bypassing it; production remains on the last successful
+artifact.
 
 Never roll back by editing `web-tools/dist`, changing Pages back to legacy branch publishing, force-pushing `main`, or
 maintaining production in a `gh-pages` branch.
@@ -178,4 +195,5 @@ maintaining production in a `gh-pages` branch.
 | Audio engine remains in `error` during initialization | Inspect the control module/WASM responses and structured Developer Diagnostics |
 | Audio starts locally but not on Pages | Confirm HTTPS secure context and the Worklet, processor module, and processor WASM artifact files |
 | Artifact validation rejects size | Review the generated bundle report; raise a limit only with an intentional, documented payload decision |
-| Deploy job is skipped after a green build | Confirm the event is a push/manual dispatch on `refs/heads/main` and the environment policy allows `main` |
+| A normal `main` push does not deploy | Expected; production publishes only from numbered `v2.0-beta` tags |
+| Deploy job is skipped after a green tag build | Confirm the tag matches `v2.0-beta[0-9]+` and the environment has a matching tag rule rather than a `main` branch rule |
