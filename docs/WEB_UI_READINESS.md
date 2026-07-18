@@ -115,6 +115,11 @@ YAML bindings and pass through the common validation/swap pipeline. The transfor
 incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates UI-only position state
 and does not change DSP YAML or announce a workspace revision.
 
+The unit contract canvas derives two fixed round boundary nodes from public audio ports. The left `Previous / IN` node
+shows where the preceding project stage enters atom inputs, and the right `Next / OUT` node shows which atom signals
+leave for the following stage. Boundary nodes and their highlighted edges are view-only, remain outside atom counts and
+unit YAML, and cannot be selected, dragged, deleted, reconnected, or used as insertion targets.
+
 Project chain editing is driven from the current project YAML rather than the frozen inspect sample. Users can add,
 duplicate, remove, rename, and reorder instances; add, replace, disconnect, and reorder routes; and select endpoints from
 resolved unit port metadata. Rename updates route endpoints, parameter-control identities, and scene paths atomically.

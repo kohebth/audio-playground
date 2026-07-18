@@ -25,6 +25,18 @@ export type UnitGraphNode = {
   };
 };
 
+export type UnitPortDraft = {
+  name: string;
+  type: string;
+  channels?: number;
+  signals: string[];
+};
+
+export type UnitPortsDraft = {
+  inputs: UnitPortDraft[];
+  outputs: UnitPortDraft[];
+};
+
 export type UnitGraphDraft = {
   name: string;
   params: UnitParamDraft[];
@@ -140,6 +152,19 @@ function parseNode(value: unknown, index: number): UnitGraphNode {
   };
 }
 
+function parsePort(value: unknown, index: number, direction: 'input' | 'output'): UnitPortDraft {
+  const raw = isObject(value) ? value : {};
+  const channels = Number(raw.channels);
+  return {
+    name: String(raw.name ?? `${direction}_${index + 1}`),
+    type: String(raw.type ?? (raw.kind === 'signal' ? 'audio' : 'control')),
+    channels: Number.isFinite(channels) ? channels : undefined,
+    signals: Array.isArray(raw.signals)
+      ? raw.signals.filter((signal): signal is string => typeof signal === 'string')
+      : [],
+  };
+}
+
 function parseGraphFromDocument(doc: UnitDocument): UnitGraphDraft {
   const params = isObject(doc.params)
     ? Object.entries(doc.params).map(([name, value]) => parseParam(name, value))
@@ -155,6 +180,18 @@ function parseGraphFromDocument(doc: UnitDocument): UnitGraphDraft {
     params,
     signals,
     nodes,
+  };
+}
+
+function parsePortsFromDocument(doc: UnitDocument): UnitPortsDraft {
+  const ports = isObject(doc.ports) ? doc.ports : {};
+  return {
+    inputs: Array.isArray(ports.inputs)
+      ? ports.inputs.map((port, index) => parsePort(port, index, 'input'))
+      : [],
+    outputs: Array.isArray(ports.outputs)
+      ? ports.outputs.map((port, index) => parsePort(port, index, 'output'))
+      : [],
   };
 }
 
@@ -460,6 +497,10 @@ export function createUnitV2({ name, title, category }: CreateUnitOptions): stri
 
 export function parseUnitGraphDraft(content: string): UnitGraphDraft {
   return parseGraphFromDocument(loadDocument(content));
+}
+
+export function parseUnitPortsDraft(content: string): UnitPortsDraft {
+  return parsePortsFromDocument(loadDocument(content));
 }
 
 export function serializeUnitGraphNodeUpdate(content: string, node: UnitGraphNode, originalId = node.id): string {

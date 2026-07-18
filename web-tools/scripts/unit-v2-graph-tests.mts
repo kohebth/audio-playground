@@ -11,6 +11,7 @@ import {
   insertAtomNodeOnConnection,
   moveUnitConnection,
   parseUnitGraphDraft,
+  parseUnitPortsDraft,
   previewAtomReplacement,
   reconnectUnitConnection,
   removeAtomNodeFromUnit,
@@ -25,7 +26,10 @@ const catalog = JSON.parse(readFileSync(resolve(repo, 'test/golden/v2-inspect-at
 
 const created = createUnitV2({ name: 'browser_gain', title: 'Browser Gain' });
 const createdGraph = parseUnitGraphDraft(created);
+const createdPorts = parseUnitPortsDraft(created);
 assert.equal(createdGraph.name, 'browser_gain');
+assert.deepEqual(createdPorts.inputs, [{ name: 'input', type: 'audio', channels: 1, signals: [] }]);
+assert.deepEqual(createdPorts.outputs, [{ name: 'output', type: 'audio', channels: 1, signals: [] }]);
 assert.deepEqual(createdGraph.nodes.map(node => node.id), ['gain_value', 'apply_gain']);
 assert.throws(() => createUnitV2({ name: 'Not Valid' }), /lowercase snake_case/);
 

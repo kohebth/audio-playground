@@ -79,10 +79,26 @@ test('serves base-safe project and unit routes with release diagnostics', async 
 
   await openWorkspace(page, testInfo, '/unit/overdrive');
   await expect(page).toHaveURL(/\/audio-playground\/#\/unit\/overdrive$/);
-  await expect(page.getByTestId('contract-canvas')).toBeVisible();
+  const contractCanvas = page.getByTestId('contract-canvas');
+  await expect(contractCanvas).toBeVisible();
+  await expect(contractCanvas).toHaveAttribute('data-boundary-count', '2');
+  const inputBoundary = page.getByTestId('unit-boundary-input');
+  const outputBoundary = page.getByTestId('unit-boundary-output');
+  await expect(inputBoundary).toBeVisible();
+  await expect(inputBoundary).toContainText('Previous');
+  await expect(inputBoundary).toContainText('IN');
+  await expect(inputBoundary).toContainText('input');
+  await expect(outputBoundary).toBeVisible();
+  await expect(outputBoundary).toContainText('Next');
+  await expect(outputBoundary).toContainText('OUT');
+  await expect(outputBoundary).toContainText('output');
+  await expect(page.locator('.react-flow__edge.contract-edge--boundary-input')).toHaveCount(1);
+  await expect(page.locator('.react-flow__edge.contract-edge--boundary-output')).toHaveCount(1);
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  await expect(page.getByTestId('contract-canvas')).toBeVisible();
+  await expect(contractCanvas).toBeVisible();
+  await expect(inputBoundary).toBeVisible();
+  await expect(outputBoundary).toBeVisible();
   await expect(page.getByTestId('atom-palette-browser-hidden')).toContainText('3 browser-incompatible hidden');
   await page.getByTestId('atom-palette-show-advanced').check();
   await expect(page.getByTestId('atom-palette-item-freq_fft')).toHaveCount(0);

@@ -1336,6 +1336,70 @@ body {
   background: var(--contract-node-color) !important;
 }
 
+.react-flow__node-unitBoundaryNode {
+  width: 88px !important;
+  height: 88px !important;
+}
+
+.unit-boundary-node {
+  box-sizing: border-box;
+  display: grid;
+  width: 88px;
+  height: 88px;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  border: 1px solid color-mix(in srgb, var(--boundary-color) 72%, #334155);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--boundary-color) 18%, transparent), transparent 48%),
+    #101a2b;
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--boundary-color) 8%, transparent),
+    0 12px 28px rgba(0, 0, 0, 0.38);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.unit-boundary-node__context {
+  color: var(--boundary-color);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.unit-boundary-node strong {
+  color: #f8fafc;
+  font-size: 18px;
+  letter-spacing: .08em;
+  line-height: 1.1;
+}
+
+.unit-boundary-node__ports {
+  overflow: hidden;
+  width: 62px;
+  color: var(--text-muted);
+  font-size: 8px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unit-boundary-node__handle {
+  width: 12px !important;
+  height: 12px !important;
+  border: 3px solid #101a2b !important;
+  background: var(--boundary-color) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--boundary-color) 28%, transparent);
+}
+
+.contract-edge--boundary path {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, currentColor 28%, transparent));
+}
+
 .project-node {
   position: relative;
   width: 224px;
