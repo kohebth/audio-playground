@@ -18,9 +18,13 @@ import {
   validateProjectRoutes,
   type ProjectPortCatalog,
 } from '../src/lib/projectV2Graph.ts';
+import { buildProjectGraph } from '../src/lib/projectGraph.ts';
 
 const repo = resolve(import.meta.dirname, '../..');
 const project = readFileSync(resolve(repo, 'test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml'), 'utf8');
+const projectInspect = JSON.parse(
+  readFileSync(resolve(repo, 'test/golden/v2-inspect-project-guitar-pedalboard.json'), 'utf8'),
+);
 const ports: ProjectPortCatalog = {
   noise_gate_unit: { inputs: ['input'], outputs: ['output'] },
   phaser_unit: { inputs: ['input'], outputs: ['output'] },
@@ -37,6 +41,7 @@ const draft = parseProjectGraphDraft(project);
 assert.equal(draft.nodes.length, 8);
 assert.equal(draft.routes.length, 9);
 assert.doesNotThrow(() => validateProjectRoutes(project, ports));
+assert(buildProjectGraph(projectInspect).edges.every(edge => edge.label === undefined));
 
 const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' }, { x: 320, y: 180 });
 assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.id, 'drive2');

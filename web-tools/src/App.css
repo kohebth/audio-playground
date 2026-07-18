@@ -1426,13 +1426,6 @@ body {
   flex: 1;
 }
 
-.project-node__tools {
-  display: flex;
-  align-items: flex-start;
-  flex-shrink: 0;
-  gap: 6px;
-}
-
 .project-node__eyebrow {
   max-width: 142px;
   overflow: hidden;
@@ -1460,34 +1453,6 @@ body {
   max-width: 142px;
   color: var(--text-muted);
   font-size: 12px;
-}
-
-.project-node__bypass {
-  width: 29px;
-  height: 29px;
-  border: 1px solid #4a5c74;
-  border-radius: 50%;
-  background: #0a111e;
-  color: #cbd5e1;
-  font: 800 8px var(--font-sans);
-  letter-spacing: 0;
-  cursor: pointer;
-}
-
-.project-node__bypass:hover:not(:disabled) {
-  border-color: #f59e0b;
-  color: #fef3c7;
-}
-
-.project-node__bypass--active {
-  border-color: #e8a53b;
-  background: #563713;
-  color: #fef3c7;
-}
-
-.project-node__bypass:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .project-node__knobs {
@@ -3732,7 +3697,7 @@ body {
   background: transparent;
   box-shadow: 0 4px 20px rgba(0,0,0,.3);
   cursor: pointer;
-  transition: all .25s ease;
+  transition: opacity .2s ease, transform .25s ease, box-shadow .25s ease;
 }
 
 .project-node.node-card:hover {
@@ -3742,6 +3707,10 @@ body {
 
 .project-node.node-card.project-node--selected {
   box-shadow: 0 4px 20px rgba(0,0,0,.3), var(--shadow-glow-blue);
+}
+
+.project-node.node-card.project-node--bypassed {
+  opacity: .5;
 }
 
 .project-node.project-node--system {
@@ -3827,51 +3796,6 @@ body {
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-.project-node__tools {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  gap: 4px;
-}
-
-.project-node__bypass,
-.bypass-btn {
-  display: flex;
-  width: 18px;
-  height: 18px;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 50%;
-  background: var(--accent-green);
-  color: #000;
-  font-size: 6px;
-  font-weight: 900;
-  cursor: pointer;
-  letter-spacing: 0;
-  transition: transform .15s ease, opacity .15s ease, background .15s ease;
-}
-
-.project-node__bypass:hover:not(:disabled) {
-  transform: scale(1.08);
-}
-
-.project-node__bypass--active,
-.bypass-btn.off {
-  background: var(--accent-red);
-  color: #fff;
-}
-
-.bypass-btn.on {
-  background: var(--accent-green);
-  color: #000;
-}
-
-.project-node__bypass:disabled {
-  cursor: not-allowed;
-  opacity: .55;
 }
 
 .node-pedal-body {
@@ -3987,14 +3911,52 @@ body {
 
 .node-pedal-footer {
   display: flex;
-  justify-content: space-between;
-  padding: 4px 12px;
+  width: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 0;
   border-top: 1px solid var(--border-subtle);
-  background: var(--bg-base);
-  color: var(--text-dim);
-  font: 7px var(--font-mono);
+  background: color-mix(in srgb, var(--accent-green) 9%, var(--bg-base));
+  color: var(--accent-green);
+  font: 800 8px var(--font-mono);
   letter-spacing: 1px;
+  cursor: pointer;
   text-transform: uppercase;
+  transition: background .15s ease, color .15s ease;
+}
+
+.node-pedal-footer:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-green) 18%, var(--bg-base));
+}
+
+.node-pedal-footer--off {
+  background: color-mix(in srgb, var(--accent-red) 12%, var(--bg-base));
+  color: var(--accent-red);
+}
+
+.node-pedal-footer--off:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-red) 20%, var(--bg-base));
+}
+
+.node-pedal-footer:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.node-pedal-footer:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.node-pedal-footer__indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 7px currentColor;
 }
 
 .project-node__handle {

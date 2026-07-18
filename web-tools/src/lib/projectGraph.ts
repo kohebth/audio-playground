@@ -46,10 +46,6 @@ function endpointNodeId(endpoint: string): string {
   return `unit-${endpoint.split('.')[0]}`;
 }
 
-function endpointPort(endpoint: string): string {
-  return endpoint.split('.').slice(1).join('.') || endpoint;
-}
-
 function createSystemNode(id: string, label: string, detail: string, color: string): Node<ProjectNodeData> {
   return {
     id,
@@ -69,10 +65,7 @@ function createRouteEdge(route: ProjectRoute, index: number): Edge {
     target,
     sourceHandle: 'out',
     targetHandle: 'in',
-    label: `${endpointPort(route.from)} -> ${endpointPort(route.to)}`,
     style: { stroke: '#64748b', strokeWidth: 1.6 },
-    labelStyle: { fill: '#e2e8f0', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: { fill: '#111827', fillOpacity: 0.9 },
   };
 }
 

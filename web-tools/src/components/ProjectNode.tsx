@@ -57,28 +57,13 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   return (
     <div
       data-testid={`project-node-${data.instance.id}`}
-      className={`project-node node-card ${selected ? 'project-node--selected selected' : ''}`}
+      className={`project-node node-card ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
       style={style}
     >
       <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />
       <div className={`node-pedal${wide ? ' wide' : ''}`}>
         <div className="node-pedal-header">
           <span className="pedal-type-name">{data.unit.name}</span>
-          <div className="project-node__tools">
-            <button
-              data-testid={`project-node-bypass-${data.instance.id}`}
-              aria-label={`Turn ${bypassed ? 'on' : 'off'} ${data.instance.id}`}
-              aria-pressed={bypassed}
-              className={`project-node__bypass bypass-btn ${bypassed ? 'off project-node__bypass--active' : 'on'} nodrag nopan`}
-              disabled={!controller}
-              onClick={() => void controller?.setBypass(data.instance.id, !bypassed)}
-              onPointerDown={event => event.stopPropagation()}
-              title={bypassed ? 'Turn on' : 'Turn off'}
-              type="button"
-            >
-              {bypassed ? 'OFF' : 'ON'}
-            </button>
-          </div>
         </div>
         <div className="node-pedal-body">
           <span className="pedal-instance">{data.instance.id}</span>
@@ -106,10 +91,24 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
             <span className="project-node__empty">No exposed controls</span>
           )}
         </div>
-        <div className="node-pedal-footer" aria-hidden="true">
-          <span>IN</span>
-          <span>OUT</span>
-        </div>
+        <button
+          data-testid={`project-node-bypass-${data.instance.id}`}
+          aria-label={`Turn ${bypassed ? 'on' : 'off'} ${data.instance.id}`}
+          aria-pressed={!bypassed}
+          className={`node-pedal-footer ${bypassed ? 'node-pedal-footer--off' : 'node-pedal-footer--on'} nodrag nopan`}
+          disabled={!controller}
+          onClick={event => {
+            event.stopPropagation();
+            void controller?.setBypass(data.instance.id, !bypassed);
+          }}
+          onDoubleClick={event => event.stopPropagation()}
+          onPointerDown={event => event.stopPropagation()}
+          title={bypassed ? 'Turn on' : 'Turn off'}
+          type="button"
+        >
+          <span className="node-pedal-footer__indicator" aria-hidden="true" />
+          <span>{bypassed ? 'OFF' : 'ON'}</span>
+        </button>
       </div>
       <Handle type="source" position={Position.Right} id="out" className="project-node__handle" />
     </div>

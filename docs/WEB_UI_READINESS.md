@@ -105,8 +105,10 @@ and corrupt-image rollback before public editor artifacts are replaced.
 
 Bypass and mute use indexed Worklet controls. The facade retains per-instance bypass and project mute shadows, applies
 them to a newly hydrated runtime before commit, and therefore preserves live control state across structural swaps.
-The preview exposes both controls while running. The current project schema has no persisted bypass or mute field, so
-these controls do not invent non-schema YAML properties.
+The preview exposes both controls while running. Each pedal card uses its full-width footer as the on/off target and
+fades to 50% opacity while bypassed, making inactive stages visible at a glance. Project routes omit repetitive
+`output -> input` edge labels while retaining their selectable paths. The current project schema has no persisted bypass
+or mute field, so these controls do not invent non-schema YAML properties.
 
 Unit Atom CRUD is backed by structured YAML transforms and executable transformer tests. The editor can create a valid
 unit scaffold, add catalog-derived atoms, rename nodes, edit bindings/configuration, and remove unreferenced atoms.

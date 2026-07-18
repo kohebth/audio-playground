@@ -63,6 +63,30 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await expect(page.getByTestId('project-canvas')).toBeVisible();
   const gateNode = page.getByTestId('project-node-gate1');
   await expect(gateNode).toBeVisible();
+  const gateBypass = gateNode.getByTestId('project-node-bypass-gate1');
+  await expect(gateBypass).toBeEnabled();
+  await expect(gateBypass).toHaveClass(/node-pedal-footer/);
+  await expect(gateBypass).toHaveText('ON');
+  await expect(gateBypass).toHaveAttribute('aria-pressed', 'true');
+  const bypassHitArea = await gateBypass.evaluate(button => {
+    const pedal = button.parentElement;
+    if (!pedal) throw new Error('Bypass footer has no pedal container');
+    return {
+      footerWidth: button.offsetWidth,
+      pedalWidth: pedal.clientWidth,
+      minHeight: Number.parseFloat(getComputedStyle(button).minHeight),
+    };
+  });
+  expect(bypassHitArea.footerWidth).toBe(bypassHitArea.pedalWidth);
+  expect(bypassHitArea.minHeight).toBe(28);
+  await expect(page.locator('.react-flow__edge-text')).toHaveCount(0);
+  await gateBypass.click();
+  await expect(gateBypass).toHaveText('OFF');
+  await expect(gateBypass).toHaveAttribute('aria-pressed', 'false');
+  await expect(gateNode).toHaveCSS('opacity', '0.5');
+  await gateBypass.click();
+  await expect(gateBypass).toHaveText('ON');
+  await expect(gateNode).toHaveCSS('opacity', '1');
   for (const control of ['threshold', 'attack', 'release']) {
     await expect(gateNode.getByTestId(`param-knob-gate1-${control}`)).toBeVisible();
   }
