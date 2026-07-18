@@ -151,6 +151,8 @@ int main(void) {
         return fail("enum parameter metadata is missing");
     if (!strstr(json, "\"name\":\"generation_lfo\""))
         return fail("generation_lfo atom is missing");
+    if (!strstr(json, "\"name\":\"modulation_phaser\""))
+        return fail("modulation_phaser atom is missing");
     if (!strstr(json, "\"name\":\"frequency\",\"type\":\"float\""))
         return fail("generation_lfo frequency contract is missing");
     if (!strstr(json, "\"name\":\"detect_threshold\""))
@@ -192,6 +194,7 @@ int main(void) {
         apg_atom_visibility("filter_biquad_coefficients") != APG_ATOM_VISIBILITY_ADVANCED ||
         apg_atom_visibility("math_difference") != APG_ATOM_VISIBILITY_ADVANCED ||
         apg_atom_visibility("math_integrate") != APG_ATOM_VISIBILITY_ADVANCED ||
+        apg_atom_visibility("modulation_phaser") != APG_ATOM_VISIBILITY_ADVANCED ||
         apg_atom_visibility("generation_lfo") != APG_ATOM_VISIBILITY_INTERNAL ||
         apg_atom_visibility("mix_wet_dry") != APG_ATOM_VISIBILITY_INTERNAL ||
         apg_atom_visibility("src_antialias") != APG_ATOM_VISIBILITY_INTERNAL ||
@@ -218,6 +221,13 @@ int main(void) {
         return 1;
     if (expect_field("filter_comb_fb", APG_ATOM_CONTRACT_IN, "delay", APG_ATOM_FIELD_SIGNAL_OPTIONAL, false))
         return 1;
+    if (!apg_atom_profile_supported("modulation_phaser", "wasm_realtime") ||
+        !apg_atom_profile_supported("modulation_phaser", "m7_static") ||
+        apg_atom_contract_field_count("modulation_phaser", APG_ATOM_CONTRACT_CONFIG) != 3u ||
+        expect_field("modulation_phaser", APG_ATOM_CONTRACT_CONFIG, "center_frequency", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("modulation_phaser", APG_ATOM_CONTRACT_CONFIG, "depth", APG_ATOM_FIELD_FLOAT, true) ||
+        expect_field("modulation_phaser", APG_ATOM_CONTRACT_CONFIG, "feedback", APG_ATOM_FIELD_FLOAT, true))
+        return fail("modulation_phaser catalog contract is wrong");
     if (apg_atom_contract_field_count("filter_biquad", APG_ATOM_CONTRACT_CONFIG) != 4u ||
         expect_field("filter_biquad", APG_ATOM_CONTRACT_IN, "cutoff", APG_ATOM_FIELD_SIGNAL_OPTIONAL, false) ||
         expect_field("filter_biquad", APG_ATOM_CONTRACT_CONFIG, "cutoff", APG_ATOM_FIELD_FLOAT, true) ||

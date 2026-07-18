@@ -553,6 +553,15 @@ export const ATOM_CATALOG: AtomDef[] = [
     config: [{ name: "depth", type: "float", required: true, default: 1, min: 0, max: 4094, unit: "samples", realtime: true, structural: false }],
   },
   {
+    name: 'modulation_phaser',
+    category: 'modulation',
+    visibility: 'advanced',
+    dispatch: 'process',
+    ins: ["signal", "modulator"],
+    outs: ["signal"],
+    config: [{ name: "center_frequency", type: "float", required: true, default: 900, min: 100, max: 4000, unit: "hz", scale: "logarithmic", realtime: true, smoothingMs: 10, structural: false }, { name: "depth", type: "float", required: true, default: 0.7, min: 0, max: 1, unit: "ratio", realtime: true, smoothingMs: 10, structural: false }, { name: "feedback", type: "float", required: true, default: 0.2, min: -0.85, max: 0.85, unit: "ratio", realtime: true, smoothingMs: 10, structural: false }],
+  },
+  {
     name: 'modulation_ring',
     category: 'modulation',
     visibility: 'public',

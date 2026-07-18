@@ -94,10 +94,11 @@ static int expect_valid_pedalboard_fixture(void) {
         return fail("guitar pedalboard fixture did not resolve");
     }
 
-    if (resolved.units_len != 7u || resolved.project.nodes_len != 7u || resolved.project.routes_len != 9u)
+    if (resolved.units_len != 8u || resolved.project.nodes_len != 8u || resolved.project.routes_len != 9u)
         return fail("unexpected pedalboard project shape");
-    if (strcmp(resolved.units[0].unit.name, "noise_gate") != 0 ||
-        strcmp(resolved.units[6].unit.name, "schroeder_reverb") != 0)
+    if (strcmp(resolved.units[0].unit.name, "noise_gate") != 0 || strcmp(resolved.units[1].unit.name, "phaser") != 0 ||
+        strcmp(resolved.units[5].unit.name, "chorus") != 0 ||
+        strcmp(resolved.units[7].unit.name, "schroeder_reverb") != 0)
         return fail("unexpected pedalboard unit order");
 
     uc_arena_free(&arena);

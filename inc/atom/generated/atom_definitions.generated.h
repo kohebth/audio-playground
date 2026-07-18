@@ -62,6 +62,7 @@
     X(modulation_amplitude, modulation, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS) \
     X(modulation_frequency, modulation, 0, 1, 4, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS) \
     X(modulation_phase, modulation, 0, 1, 3, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS) \
+    X(modulation_phaser, modulation, 0, 3, 3, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS) \
     X(modulation_ring, modulation, 0, 0, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS) \
     X(modulation_scrub, modulation, 0, 1, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_EXPERIMENTAL, PROCESS) \
     X(nonlinear_bitcrush, nonlinear, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS) \

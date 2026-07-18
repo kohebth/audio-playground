@@ -1105,7 +1105,7 @@ test.describe('Scalability checkpoints', () => {
     const mediumPayload = buildPerfWorkspacePayload('test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml');
 
     const exerciseWindow = async (suffix: string) => {
-      await importWorkspacePayload(page, defaultPayload, 7);
+      await importWorkspacePayload(page, defaultPayload, 8);
       await page.getByTestId('project-instance-unit').selectOption('tone_stack_unit');
       await page.getByTestId('project-instance-id').fill(`lifecycle_route_${suffix}`);
       await page.getByTestId('project-instance-add').click();
@@ -1157,7 +1157,7 @@ test.describe('Scalability checkpoints', () => {
 
       for (let index = 0; index < 5; index += 1) {
         await importWorkspacePayload(page, mediumPayload, 1);
-        await importWorkspacePayload(page, defaultPayload, 7);
+        await importWorkspacePayload(page, defaultPayload, 8);
       }
       await page.waitForTimeout(450);
     };
@@ -1753,7 +1753,7 @@ test.describe('Live WASM runtime performance', () => {
     };
 
     await clearPerfSpans(page);
-    await dispatchProjectEdgeDrop(page, 'route-2-unit-drive1-unit-tone1', 'tone_stack_unit');
+    await dispatchProjectEdgeDrop(page, 'route-3-unit-drive1-unit-tone1', 'tone_stack_unit');
     await expect(page.getByTestId('project-node-tone_stack')).toBeVisible();
     await waitForHotSwap('insert-unit');
 

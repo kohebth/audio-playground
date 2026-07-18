@@ -202,6 +202,17 @@ static int test_atom_inspect_json_is_available(void) {
         return fail("atom inspect json lacked expected catalog fields");
     }
     int matches_golden = strcmp(json, expected) == 0;
+    if (!matches_golden) {
+        size_t actual_len   = strlen(json);
+        size_t expected_len = strlen(expected);
+        size_t first_diff   = 0u;
+        while (first_diff < actual_len && first_diff < expected_len && json[first_diff] == expected[first_diff])
+            first_diff++;
+        fprintf(
+            stderr, "atom catalog mismatch at byte %zu (actual length %zu, expected length %zu)\n", first_diff,
+            actual_len, expected_len
+        );
+    }
     free(json);
     free(expected);
     return matches_golden ? 0 : fail("atom inspect json changed from the frozen sample contract");

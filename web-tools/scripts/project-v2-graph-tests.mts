@@ -23,16 +23,18 @@ const repo = resolve(import.meta.dirname, '../..');
 const project = readFileSync(resolve(repo, 'test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml'), 'utf8');
 const ports: ProjectPortCatalog = {
   noise_gate_unit: { inputs: ['input'], outputs: ['output'] },
+  phaser_unit: { inputs: ['input'], outputs: ['output'] },
   overdrive_unit: { inputs: ['input'], outputs: ['output'] },
   tone_stack_unit: { inputs: ['input'], outputs: ['output'] },
   tremolo_unit: { inputs: ['input'], outputs: ['output'] },
+  chorus_unit: { inputs: ['input'], outputs: ['output'] },
   delay_unit: { inputs: ['input'], outputs: ['output'] },
   wet_dry_mix_unit: { inputs: ['dry', 'wet'], outputs: ['output'] },
   reverb_unit: { inputs: ['input'], outputs: ['output'] },
 };
 
 const draft = parseProjectGraphDraft(project);
-assert.equal(draft.nodes.length, 7);
+assert.equal(draft.nodes.length, 8);
 assert.equal(draft.routes.length, 9);
 assert.doesNotThrow(() => validateProjectRoutes(project, ports));
 
@@ -47,20 +49,29 @@ const inserted = insertProjectInstanceOnRoute(
   ports,
   'tone_stack_unit',
   'tone_inserted',
-  2,
+  3,
   { bass: '1.0' },
   { x: 400, y: 200 },
 );
 const insertedDraft = parseProjectGraphDraft(inserted.content);
 assert.equal(insertedDraft.nodes.find(node => node.id === inserted.id)?.unit, 'tone_stack_unit');
 assert.deepEqual(insertedDraft.nodes.find(node => node.id === inserted.id)?.ui?.position, { x: 400, y: 200 });
-assert.deepEqual(insertedDraft.routes.slice(2, 4), [
+assert.deepEqual(insertedDraft.routes.slice(3, 5), [
   { from: 'drive1.output', to: 'tone_inserted.input' },
   { from: 'tone_inserted.output', to: 'tone1.input' },
 ]);
 assert.doesNotThrow(() => validateProjectRoutes(inserted.content, ports));
 assert.throws(
-  () => insertProjectInstanceOnRoute(project, ports, 'wet_dry_mix_unit', 'ambiguous_mix', 2),
+  () => insertProjectInstanceOnRoute(
+    project.replace(
+      '  - id: reverb_unit\n',
+      '  - id: wet_dry_mix_unit\n    file: ../units-v2/wet_dry_mix.unit.v2.yaml\n  - id: reverb_unit\n',
+    ),
+    ports,
+    'wet_dry_mix_unit',
+    'ambiguous_mix',
+    3,
+  ),
   /exactly one input and one output/,
 );
 
@@ -86,16 +97,16 @@ assert.equal(moved.nodes[4].id, 'drive1');
 const positioned = parseProjectGraphDraft(setProjectInstancePosition(project, 'drive1', { x: 42, y: 84 }));
 assert.deepEqual(positioned.nodes.find(node => node.id === 'drive1')?.ui?.position, { x: 42, y: 84 });
 
-const disconnected = removeProjectRoute(project, 2);
+const disconnected = removeProjectRoute(project, 3);
 assert.equal(parseProjectGraphDraft(disconnected).routes.length, 8);
 const restored = addProjectRoute(disconnected, ports, { from: 'drive1.output', to: 'tone1.input' });
 assert.equal(parseProjectGraphDraft(restored).routes.length, 9);
 assert.throws(
-  () => addProjectRoute(project, ports, { from: 'gate1.output', to: 'drive1.input' }),
+  () => addProjectRoute(project, ports, { from: 'gate1.output', to: 'phaser1.input' }),
   /already connected/,
 );
 assert.throws(
-  () => addProjectRoute(removeProjectRoute(project, 1), ports, { from: 'tone1.output', to: 'drive1.input' }),
+  () => addProjectRoute(removeProjectRoute(project, 2), ports, { from: 'tone1.output', to: 'drive1.input' }),
   /creates a cycle/,
 );
 assert.throws(
@@ -109,9 +120,10 @@ assert.throws(
 
 const replaced = parseProjectGraphDraft(replaceProjectRoute(project, ports, 5, {
   from: 'drive1.output',
-  to: 'blend1.dry',
+  to: 'chorus1.input',
 }));
 assert.equal(replaced.routes[5].from, 'drive1.output');
+assert.equal(replaced.routes[5].to, 'chorus1.input');
 const reorderedRoutes = parseProjectGraphDraft(moveProjectRoute(project, 8, 0));
 assert.equal(reorderedRoutes.routes[0].to, 'system.output');
 

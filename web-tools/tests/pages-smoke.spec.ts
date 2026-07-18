@@ -67,6 +67,12 @@ test('serves base-safe project and unit routes with release diagnostics', async 
     await expect(gateNode.getByTestId(`param-knob-gate1-${control}`)).toBeVisible();
   }
   await expect(gateNode.locator('.knob-label')).toHaveText(['Threshold', 'Attack', 'Release']);
+  const phaserNode = page.getByTestId('project-node-phaser1');
+  await expect(phaserNode).toBeVisible();
+  for (const control of ['rate', 'depth', 'center', 'feedback', 'mix']) {
+    await expect(phaserNode.getByTestId(`param-knob-phaser1-${control}`)).toBeVisible();
+  }
+  await expect(phaserNode.locator('.knob-label')).toHaveText(['Rate', 'Depth', 'Center', 'Resonance', 'Mix']);
   const toneNode = page.getByTestId('project-node-tone1');
   await expect(toneNode).toBeVisible();
   for (const control of ['gain', 'bass', 'mid', 'treble', 'presence', 'volume']) {
@@ -90,6 +96,19 @@ test('serves base-safe project and unit routes with release diagnostics', async 
     return [...rows.values()];
   });
   expect(toneKnobRows).toEqual([3, 3]);
+  const chorusNode = page.getByTestId('project-node-chorus1');
+  await expect(chorusNode).toBeVisible();
+  for (const control of ['rate', 'depth', 'mix']) {
+    await expect(chorusNode.getByTestId(`param-knob-chorus1-${control}`)).toBeVisible();
+  }
+  await expect(chorusNode.locator('.knob-label')).toHaveText(['Rate', 'Depth', 'Mix']);
+  const delayNode = page.getByTestId('project-node-delay1');
+  await expect(delayNode).toBeVisible();
+  for (const control of ['time_samples', 'feedback', 'mix']) {
+    await expect(delayNode.getByTestId(`param-knob-delay1-${control}`)).toBeVisible();
+  }
+  await expect(delayNode.locator('.knob-label')).toHaveText(['Time', 'Feedback', 'Mix']);
+  await expect(page.getByTestId('project-node-blend1')).toHaveCount(0);
   await page.getByTestId('inspector-tab-contract').click();
   const diagnostics = page.locator('details.developer-diagnostics');
   await diagnostics.locator(':scope > summary').click();

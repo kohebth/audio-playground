@@ -11,6 +11,7 @@
     X(modulation_amplitude, SIGNAL, SIGNAL_MODULATOR, { float depth; }, { uint8_t _reserved; }) \
     X(modulation_frequency, SIGNAL, SIGNAL_MODULATOR, { float depth; }, { float *buffer; uint32_t buffer_len; int write_pos; float current_delay; }) \
     X(modulation_phase, SIGNAL, SIGNAL_MODULATOR, { float depth; }, { float *buffer; uint32_t buffer_len; int write_pos; }) \
+    X(modulation_phaser, SIGNAL, SIGNAL_MODULATOR, { float center_frequency; float depth; float feedback; }, { float *buffer; uint32_t buffer_len; float feedback_sample; }) \
     X(modulation_ring, SIGNAL, SIGNAL_MODULATOR, { uint8_t _reserved; }, { uint8_t _reserved; }) \
     X(modulation_scrub, SIGNAL, BUFFER_POSITION, { int buffer_size; }, { uint8_t _reserved; })
 // clang-format on

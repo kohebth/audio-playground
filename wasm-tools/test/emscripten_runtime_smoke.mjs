@@ -49,11 +49,12 @@ const entryProject = 'test/fixtures/projects-v2/guitar-pedalboard.project.v2.yam
 const files = [
   [1, entryProject],
   [2, 'test/fixtures/units-v2/noise_gate.unit.v2.yaml'],
+  [2, 'test/fixtures/units-v2/phaser.unit.v2.yaml'],
   [2, 'test/fixtures/units-v2/overdrive.unit.v2.yaml'],
   [2, 'test/fixtures/units-v2/tone_stack.unit.v2.yaml'],
   [2, 'test/fixtures/units-v2/tremolo.unit.v2.yaml'],
+  [2, 'test/fixtures/units-v2/chorus.unit.v2.yaml'],
   [2, 'test/fixtures/units-v2/delay.unit.v2.yaml'],
-  [2, 'test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml'],
   [2, 'test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml'],
 ];
 

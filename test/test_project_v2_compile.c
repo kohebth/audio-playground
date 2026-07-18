@@ -275,19 +275,23 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
         return 1;
     }
 
-    if (compiled.expanded_unit.params_len != 19u ||
+    if (compiled.expanded_unit.params_len != 27u ||
         strcmp(compiled.expanded_unit.params[0].name, "gate1.threshold") != 0 ||
         strcmp(compiled.expanded_unit.params[1].name, "gate1.attack") != 0 ||
         strcmp(compiled.expanded_unit.params[2].name, "gate1.release") != 0 ||
-        strcmp(compiled.expanded_unit.params[6].name, "tone1.gain") != 0 ||
-        strcmp(compiled.expanded_unit.params[10].name, "tone1.presence") != 0 ||
-        strcmp(compiled.expanded_unit.params[11].name, "tone1.volume") != 0)
+        strcmp(compiled.expanded_unit.params[3].name, "phaser1.rate") != 0 ||
+        strcmp(compiled.expanded_unit.params[7].name, "phaser1.mix") != 0 ||
+        strcmp(compiled.expanded_unit.params[11].name, "tone1.gain") != 0 ||
+        strcmp(compiled.expanded_unit.params[15].name, "tone1.presence") != 0 ||
+        strcmp(compiled.expanded_unit.params[16].name, "tone1.volume") != 0 ||
+        strcmp(compiled.expanded_unit.params[19].name, "chorus1.rate") != 0 ||
+        strcmp(compiled.expanded_unit.params[23].name, "delay1.feedback") != 0)
         return fail("pedalboard project params were not namespaced");
-    if (compiled.expanded_unit.nodes_len != 46u || compiled.plan.nodes_len != 46u)
+    if (compiled.expanded_unit.nodes_len != 52u || compiled.plan.nodes_len != 52u)
         return fail("pedalboard project did not expand the product unit graphs");
-    if (compiled.plan.instances_len != 7u || compiled.plan.instances[0].id_len != 5u ||
+    if (compiled.plan.instances_len != 8u || compiled.plan.instances[0].id_len != 5u ||
         strncmp(compiled.plan.instances[0].id, "gate1", 5u) != 0 ||
-        strncmp(compiled.plan.instances[6].id, "reverb1", 7u) != 0)
+        strncmp(compiled.plan.instances[7].id, "reverb1", 7u) != 0)
         return fail("pedalboard compiler instance metadata is wrong");
     for (size_t i = 0; i < compiled.plan.instances_len; i++) {
         if (compiled.plan.instances[i].bypassable && (compiled.plan.instances[i].input_signal_index == (size_t)-1u ||
@@ -304,8 +308,8 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
         return fail("failed to initialize pedalboard runtime");
     }
 
-    if (!test_runtime_set_param_by_name(&runtime, "blend1.mix", 0.5f))
-        return fail("pedalboard runtime did not accept namespaced mix param");
+    if (!test_runtime_set_param_by_name(&runtime, "delay1.feedback", 0.5f))
+        return fail("pedalboard runtime did not accept namespaced delay feedback param");
 
     const float input[4]  = {0.3f, 0.6f, -0.2f, 0.1f};
     float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};

@@ -1,21 +1,23 @@
 kind: apg.project
 schema: apg.project.v2
 name: guitar-pedalboard
-version: 2.0.0
+version: 2.1.0
 
 units:
   - id: noise_gate_unit
     file: ../units-v2/noise_gate.unit.v2.yaml
+  - id: phaser_unit
+    file: ../units-v2/phaser.unit.v2.yaml
   - id: overdrive_unit
     file: ../units-v2/overdrive.unit.v2.yaml
   - id: tone_stack_unit
     file: ../units-v2/tone_stack.unit.v2.yaml
   - id: tremolo_unit
     file: ../units-v2/tremolo.unit.v2.yaml
+  - id: chorus_unit
+    file: ../units-v2/chorus.unit.v2.yaml
   - id: delay_unit
     file: ../units-v2/delay.unit.v2.yaml
-  - id: wet_dry_mix_unit
-    file: ../units-v2/wet_dry_mix.unit.v2.yaml
   - id: reverb_unit
     file: ../units-v2/schroeder_reverb.unit.v2.yaml
 
@@ -27,6 +29,14 @@ chain:
         threshold: 0.15
         attack: 0.005
         release: 0.15
+    - id: phaser1
+      unit: phaser_unit
+      params:
+        rate: 0.55
+        depth: 0.68
+        center: 850.0
+        feedback: 0.22
+        mix: 0.45
     - id: drive1
       unit: overdrive_unit
       params:
@@ -47,15 +57,18 @@ chain:
       params:
         rate: 4.0
         depth: 0.25
+    - id: chorus1
+      unit: chorus_unit
+      params:
+        rate: 0.8
+        depth: 384.0
+        mix: 0.3
     - id: delay1
       unit: delay_unit
       params:
-        time_samples: 2
-        mix: 0.35
-    - id: blend1
-      unit: wet_dry_mix_unit
-      params:
-        mix: 0.25
+        time_samples: 12000
+        feedback: 0.35
+        mix: 0.3
     - id: reverb1
       unit: reverb_unit
       params:
@@ -66,18 +79,18 @@ chain:
     - from: system.input
       to: gate1.input
     - from: gate1.output
+      to: phaser1.input
+    - from: phaser1.output
       to: drive1.input
     - from: drive1.output
       to: tone1.input
     - from: tone1.output
       to: trem1.input
     - from: trem1.output
+      to: chorus1.input
+    - from: chorus1.output
       to: delay1.input
-    - from: trem1.output
-      to: blend1.dry
     - from: delay1.output
-      to: blend1.wet
-    - from: blend1.output
       to: reverb1.input
     - from: reverb1.output
       to: system.output
@@ -88,6 +101,11 @@ scenes:
       gate1.threshold: 0.12
       gate1.attack: 0.008
       gate1.release: 0.25
+      phaser1.rate: 0.35
+      phaser1.depth: 0.55
+      phaser1.center: 750.0
+      phaser1.feedback: 0.15
+      phaser1.mix: 0.32
       drive1.drive: 1.4
       drive1.level: 0.75
       tone1.gain: 0.9
@@ -96,12 +114,22 @@ scenes:
       tone1.treble: 0.65
       tone1.presence: 0.15
       tone1.volume: 0.72
-      blend1.mix: 0.15
+      chorus1.rate: 0.65
+      chorus1.depth: 320.0
+      chorus1.mix: 0.2
+      delay1.time_samples: 14400
+      delay1.feedback: 0.25
+      delay1.mix: 0.15
   - name: Lead
     params:
       gate1.threshold: 0.18
       gate1.attack: 0.003
       gate1.release: 0.12
+      phaser1.rate: 0.75
+      phaser1.depth: 0.82
+      phaser1.center: 1100.0
+      phaser1.feedback: 0.42
+      phaser1.mix: 0.55
       drive1.drive: 4.5
       drive1.level: 0.9
       tone1.gain: 2.2
@@ -110,8 +138,12 @@ scenes:
       tone1.treble: 0.78
       tone1.presence: 0.4
       tone1.volume: 0.75
-      delay1.mix: 0.45
-      blend1.mix: 0.35
+      chorus1.rate: 1.1
+      chorus1.depth: 480.0
+      chorus1.mix: 0.3
+      delay1.time_samples: 16800
+      delay1.feedback: 0.48
+      delay1.mix: 0.4
       reverb1.decay: 0.82
       reverb1.mix: 0.28
 

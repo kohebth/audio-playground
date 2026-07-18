@@ -1,0 +1,100 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: chorus
+version: 2.0.0
+
+meta:
+  title: Chorus
+  category: modulation
+  description: Thickens mono input with an LFO-modulated short delay and an internal wet/dry blend.
+
+params:
+  rate:
+    type: float
+    default: 0.8
+    min: 0.1
+    max: 5.0
+    smoothing_ms: 10
+    ui:
+      label: Rate
+      control: knob
+      unit: Hz
+      scale: log
+      display_precision: 2
+  depth:
+    type: float
+    default: 384.0
+    min: 48.0
+    max: 960.0
+    smoothing_ms: 10
+    ui:
+      label: Depth
+      control: knob
+      unit: samples
+      scale: linear
+      display_precision: 0
+  mix:
+    type: float
+    default: 0.35
+    min: 0.0
+    max: 1.0
+    smoothing_ms: 10
+    ui:
+      label: Mix
+      control: knob
+      unit: "%"
+      scale: linear
+      display_precision: 2
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - lfo
+    - wet
+    - output
+
+  nodes:
+    - id: lfo
+      atom: generation_lfo
+      out:
+        signal: lfo
+      config:
+        frequency: ${params.rate}
+        waveform: 0
+        phase_offset: 0.0
+
+    - id: modulated_delay
+      atom: modulation_phase
+      in:
+        signal: input
+        modulator: lfo
+      out:
+        signal: wet
+      config:
+        depth: ${params.depth}
+
+    - id: blend
+      atom: mix_wet_dry
+      in:
+        dry: input
+        wet: wet
+      out:
+        signal: output
+      config:
+        mix: ${params.mix}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: false
+  offline_render: true

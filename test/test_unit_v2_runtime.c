@@ -1395,8 +1395,9 @@ static int test_delay_tap_scalar_input_refresh(void) {
 
 static int test_product_fixture_library_runtime_smoke(void) {
     const char *mono_fixtures[] = {
-        "test/fixtures/units-v2/overdrive.unit.v2.yaml",  "test/fixtures/units-v2/delay.unit.v2.yaml",
-        "test/fixtures/units-v2/tremolo.unit.v2.yaml",    "test/fixtures/units-v2/tone_stack.unit.v2.yaml",
+        "test/fixtures/units-v2/overdrive.unit.v2.yaml",  "test/fixtures/units-v2/phaser.unit.v2.yaml",
+        "test/fixtures/units-v2/tremolo.unit.v2.yaml",    "test/fixtures/units-v2/chorus.unit.v2.yaml",
+        "test/fixtures/units-v2/delay.unit.v2.yaml",      "test/fixtures/units-v2/tone_stack.unit.v2.yaml",
         "test/fixtures/units-v2/noise_gate.unit.v2.yaml",
     };
     const float input[4] = {0.1f, 0.25f, -0.5f, 0.75f};
@@ -1463,6 +1464,110 @@ static int test_product_fixture_library_runtime_smoke(void) {
         return fail("wet/dry fixture processing failed");
     const float expected[2] = {0.5f, 0.5f};
     if (expect_samples(output, expected, 2u, "wet/dry fixture"))
+        return 1;
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_delay_feedback_and_internal_mix(void) {
+    enum { FRAMES = 16 };
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("delay feedback arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("test/fixtures/units-v2/delay.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err = {0};
+    if (test_apg_v2_runtime_init_registry(&plan, FRAMES, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+        fprintf(stderr, "delay feedback runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize delay feedback runtime");
+    }
+    if (!test_runtime_set_param_by_name(&runtime, "time_samples", 4.0f) ||
+        !test_runtime_set_param_by_name(&runtime, "feedback", 0.5f) ||
+        !test_runtime_set_param_by_name(&runtime, "mix", 1.0f))
+        return fail("delay feedback controls are missing");
+
+    float input[FRAMES]  = {1.0f};
+    float output[FRAMES] = {0};
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, FRAMES))
+        return fail("delay feedback impulse processing failed");
+    const float expected[FRAMES] = {
+        0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.25f, 0.0f, 0.0f, 0.0f,
+    };
+    if (expect_samples(output, expected, FRAMES, "delay feedback impulse"))
+        return 1;
+
+    if (!apg_v2_runtime_reset(&runtime) || !test_runtime_set_param_by_name(&runtime, "time_samples", 4.0f) ||
+        !test_runtime_set_param_by_name(&runtime, "feedback", 0.8f) ||
+        !test_runtime_set_param_by_name(&runtime, "mix", 0.0f))
+        return fail("delay mix reset failed");
+    for (size_t i = 0u; i < FRAMES; i++) {
+        input[i]  = ((float)i - 8.0f) * 0.1f;
+        output[i] = 0.0f;
+    }
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, FRAMES))
+        return fail("delay dry mix processing failed");
+    if (expect_samples(output, input, FRAMES, "delay dry mix"))
+        return 1;
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_chorus_has_modulated_delay_and_internal_mix(void) {
+    enum { FRAMES = 128 };
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("chorus arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("test/fixtures/units-v2/chorus.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err = {0};
+    if (test_apg_v2_runtime_init_registry(&plan, FRAMES, 48000.0f, &arena, &runtime, &err) != UC_OK) {
+        fprintf(stderr, "chorus runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize chorus runtime");
+    }
+    if (!test_runtime_set_param_by_name(&runtime, "rate", 0.1f) ||
+        !test_runtime_set_param_by_name(&runtime, "depth", 48.0f) ||
+        !test_runtime_set_param_by_name(&runtime, "mix", 1.0f))
+        return fail("chorus controls are missing");
+
+    float input[FRAMES]  = {1.0f};
+    float output[FRAMES] = {0};
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, FRAMES))
+        return fail("chorus wet impulse processing failed");
+    float delayed_energy = 0.0f;
+    for (size_t i = 32u; i < 80u; i++)
+        delayed_energy += fabsf(output[i]);
+    if (delayed_energy < 0.5f)
+        return fail("chorus did not produce a short modulated-delay response");
+
+    if (!apg_v2_runtime_reset(&runtime) || !test_runtime_set_param_by_name(&runtime, "mix", 0.0f))
+        return fail("chorus mix reset failed");
+    for (size_t i = 0u; i < FRAMES; i++) {
+        input[i]  = sinf((float)i * 0.1f);
+        output[i] = 0.0f;
+    }
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, FRAMES))
+        return fail("chorus dry mix processing failed");
+    if (expect_samples(output, input, FRAMES, "chorus dry mix"))
         return 1;
 
     apg_v2_runtime_destroy(&runtime);
@@ -1986,6 +2091,10 @@ int main(void) {
     if (test_filter_state_buffer_uses_descriptor_capacity())
         return 1;
     if (test_product_fixture_library_runtime_smoke())
+        return 1;
+    if (test_delay_feedback_and_internal_mix())
+        return 1;
+    if (test_chorus_has_modulated_delay_and_internal_mix())
         return 1;
     if (test_noise_gate_has_full_wave_detection_and_ballistics())
         return 1;

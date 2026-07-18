@@ -98,8 +98,8 @@ int main(void) {
     }
 
     if (!test_runtime_set_param_by_name(&runtime, "drive1.drive", 3.0f) ||
+        !test_runtime_set_param_by_name(&runtime, "delay1.feedback", 0.48f) ||
         !test_runtime_set_param_by_name(&runtime, "delay1.mix", 0.45f) ||
-        !test_runtime_set_param_by_name(&runtime, "blend1.mix", 0.35f) ||
         !test_runtime_set_param_by_name(&runtime, "reverb1.decay", 0.82f) ||
         !test_runtime_set_param_by_name(&runtime, "reverb1.mix", 0.28f))
         return fail("failed to set pedalboard render params");

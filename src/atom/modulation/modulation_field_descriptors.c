@@ -37,6 +37,20 @@ const atom_field_desc_t modulation_phase_state_fields[] = {
 };
 FIELD_COUNT(modulation_phase_state_fields);
 
+const atom_field_desc_t modulation_phaser_config_fields[] = {
+    {"center_frequency", FIELD_FLOAT, offsetof(modulation_phaser_params_t, center_frequency)},
+    {"depth", FIELD_FLOAT, offsetof(modulation_phaser_params_t, depth)},
+    {"feedback", FIELD_FLOAT, offsetof(modulation_phaser_params_t, feedback)},
+};
+FIELD_COUNT(modulation_phaser_config_fields);
+
+const atom_field_desc_t modulation_phaser_state_fields[] = {
+    {"buffer", FIELD_BUFFER, offsetof(modulation_phaser_state_t, buffer), 12u},
+    {"buffer_len", FIELD_INT, offsetof(modulation_phaser_state_t, buffer_len)},
+    {"feedback_sample", FIELD_FLOAT, offsetof(modulation_phaser_state_t, feedback_sample)},
+};
+FIELD_COUNT(modulation_phaser_state_fields);
+
 const atom_field_desc_t modulation_scrub_config_fields[] = {
     {"buffer_size", FIELD_INT, offsetof(modulation_scrub_params_t, buffer_size)},
 };

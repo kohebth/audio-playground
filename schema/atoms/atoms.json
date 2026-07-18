@@ -2352,6 +2352,70 @@
          "input_descriptors" : [],
          "input_profile" : "SIGNAL_MODULATOR",
          "maturity" : "MUSICAL",
+         "name" : "modulation_phaser",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "center_frequency",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "depth",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "feedback",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "float *",
+               "descriptor" : {
+                  "capacity" : "12u",
+                  "field_type" : "FIELD_BUFFER"
+               },
+               "name" : "buffer",
+               "ownership" : "runtime_owned"
+            },
+            {
+               "c_type" : "uint32_t",
+               "descriptor" : {
+                  "field_type" : "FIELD_INT"
+               },
+               "name" : "buffer_len",
+               "ownership" : "value"
+            },
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "feedback_sample",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "modulation",
+         "dispatch" : "PROCESS",
+         "family" : "modulation",
+         "input_descriptors" : [],
+         "input_profile" : "SIGNAL_MODULATOR",
+         "maturity" : "MUSICAL",
          "name" : "modulation_ring",
          "output_profile" : "SIGNAL",
          "params" : [
@@ -3426,6 +3490,9 @@
       "modulation_amplitude.depth" : { "default" : 0.5, "max" : 2.0, "min" : 0.0, "realtime" : true, "structural" : false, "unit" : "ratio" },
       "modulation_frequency.depth" : { "default" : 1.0, "max" : 4094.0, "min" : -4094.0, "realtime" : true, "structural" : false, "unit" : "samples" },
       "modulation_phase.depth" : { "default" : 1.0, "max" : 4094.0, "min" : 0.0, "realtime" : true, "structural" : false, "unit" : "samples" },
+      "modulation_phaser.center_frequency" : { "default" : 900.0, "max" : 4000.0, "min" : 100.0, "realtime" : true, "scale" : "logarithmic", "smoothing_ms" : 10.0, "structural" : false, "unit" : "hz" },
+      "modulation_phaser.depth" : { "default" : 0.7, "max" : 1.0, "min" : 0.0, "realtime" : true, "smoothing_ms" : 10.0, "structural" : false, "unit" : "ratio" },
+      "modulation_phaser.feedback" : { "default" : 0.2, "max" : 0.85, "min" : -0.85, "realtime" : true, "smoothing_ms" : 10.0, "structural" : false, "unit" : "ratio" },
       "modulation_scrub.buffer_size" : { "default" : 1024, "max" : 192000, "min" : 1, "realtime" : false, "structural" : true, "unit" : "samples" },
       "nonlinear_bitcrush.bit_depth" : { "default" : 8.0, "max" : 24.0, "min" : 1.0, "realtime" : true, "structural" : false },
       "nonlinear_sample_hold.factor" : { "default" : 4.0, "max" : 1024.0, "min" : 1.0, "realtime" : true, "structural" : false, "unit" : "samples" },
@@ -3464,6 +3531,7 @@
          "mix_matrix",
          "modulation_frequency",
          "modulation_phase",
+         "modulation_phaser",
          "modulation_scrub",
          "src_convert_format"
       ],

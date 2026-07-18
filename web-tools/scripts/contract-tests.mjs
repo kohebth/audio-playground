@@ -132,9 +132,11 @@ includes(
 );
 
 // AD: Workspace and autosave behavior remains draft-driven.
-assert(project.units.length === 7, 'pedalboard workspace fixture should include seven referenced units');
+assert(project.units.length === 8, 'pedalboard workspace fixture should include eight referenced units');
 assert(
-  project.routes.some(route => route.from === 'trem1.output' && route.to === 'blend1.dry'),
+  project.routes.some(route => route.from === 'trem1.output' && route.to === 'chorus1.input') &&
+    project.routes.some(route => route.from === 'phaser1.output' && route.to === 'drive1.input') &&
+    !project.nodes.some(node => node.id === 'blend1'),
   'pedalboard route graph fixture changed',
 );
 assert((backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length, 'workspace bundle must include all referenced unit files');

@@ -933,6 +933,23 @@ int main(int argc, char **argv) {
     SNAPSHOT_FIELD(output, modulation_phase_state_t, buffer_len);
     SNAPSHOT_FIELD(output, modulation_phase_state_t, write_pos);
 
+    SNAPSHOT_TYPE(output, modulation_phaser_out_t);
+    SNAPSHOT_FIELD(output, modulation_phaser_out_t, signal);
+
+    SNAPSHOT_TYPE(output, modulation_phaser_in_t);
+    SNAPSHOT_FIELD(output, modulation_phaser_in_t, signal);
+    SNAPSHOT_FIELD(output, modulation_phaser_in_t, modulator);
+
+    SNAPSHOT_TYPE(output, modulation_phaser_params_t);
+    SNAPSHOT_FIELD(output, modulation_phaser_params_t, center_frequency);
+    SNAPSHOT_FIELD(output, modulation_phaser_params_t, depth);
+    SNAPSHOT_FIELD(output, modulation_phaser_params_t, feedback);
+
+    SNAPSHOT_TYPE(output, modulation_phaser_state_t);
+    SNAPSHOT_FIELD(output, modulation_phaser_state_t, buffer);
+    SNAPSHOT_FIELD(output, modulation_phaser_state_t, buffer_len);
+    SNAPSHOT_FIELD(output, modulation_phaser_state_t, feedback_sample);
+
     SNAPSHOT_TYPE(output, modulation_ring_out_t);
     SNAPSHOT_FIELD(output, modulation_ring_out_t, signal);
 

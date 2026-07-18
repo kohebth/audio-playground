@@ -490,6 +490,14 @@ void modulation_phase_process(
     const apg_process_context_t *context
 );
 
+void modulation_phaser_process(
+    modulation_phaser_out_t *out,
+    const modulation_phaser_in_t *in,
+    const modulation_phaser_params_t *params,
+    modulation_phaser_state_t *state,
+    const apg_process_context_t *context
+);
+
 void modulation_ring_process(
     modulation_ring_out_t *out,
     const modulation_ring_in_t *in,

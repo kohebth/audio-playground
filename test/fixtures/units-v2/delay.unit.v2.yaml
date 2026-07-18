@@ -1,28 +1,40 @@
 kind: apg.unit
 schema: apg.unit.v2
 name: delay
-version: 2.0.0
+version: 2.1.0
 
 meta:
   title: Delay
   category: delay
-  description: Mixes mono dry input with a stateful delayed signal.
+  description: Produces a repeating mono echo train with feedback and an internal wet/dry blend.
 
 params:
   time_samples:
     type: int
-    default: 2
-    min: 0
-    max: 48000
+    default: 12000
+    min: 1
+    max: 47999
     ui:
       label: Time
       control: slider
       unit: samples
       scale: linear
       display_precision: 0
-  mix:
+  feedback:
     type: float
     default: 0.35
+    min: 0.0
+    max: 0.9
+    smoothing_ms: 10
+    ui:
+      label: Feedback
+      control: knob
+      unit: "%"
+      scale: linear
+      display_precision: 2
+  mix:
+    type: float
+    default: 0.3
     min: 0.0
     max: 1.0
     smoothing_ms: 10
@@ -46,14 +58,25 @@ ports:
 graph:
   signals:
     - input
+    - feedback_train
     - delayed
     - output
 
   nodes:
+    - id: feedback_echoes
+      atom: filter_comb_fb
+      in:
+        signal: input
+      out:
+        signal: feedback_train
+      config:
+        delay_samples: ${params.time_samples}
+        coefficient: ${params.feedback}
+
     - id: delay_line
       atom: delay_line
       in:
-        signal: input
+        signal: feedback_train
       out:
         signal: delayed
       config:
@@ -72,5 +95,5 @@ graph:
 compatibility:
   desktop_full: true
   wasm_realtime: true
-  m7_static: true
+  m7_static: false
   offline_render: true

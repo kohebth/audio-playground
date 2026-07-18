@@ -12,11 +12,12 @@ typedef struct {
 static const fixture_file_t fixture_files[] = {
     {"test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml", APG_WASM_FILE_PROJECT},
     {             "test/fixtures/units-v2/noise_gate.unit.v2.yaml",    APG_WASM_FILE_UNIT},
+    {                 "test/fixtures/units-v2/phaser.unit.v2.yaml",    APG_WASM_FILE_UNIT},
     {              "test/fixtures/units-v2/overdrive.unit.v2.yaml",    APG_WASM_FILE_UNIT},
     {             "test/fixtures/units-v2/tone_stack.unit.v2.yaml",    APG_WASM_FILE_UNIT},
     {                "test/fixtures/units-v2/tremolo.unit.v2.yaml",    APG_WASM_FILE_UNIT},
+    {                 "test/fixtures/units-v2/chorus.unit.v2.yaml",    APG_WASM_FILE_UNIT},
     {                  "test/fixtures/units-v2/delay.unit.v2.yaml",    APG_WASM_FILE_UNIT},
-    {            "test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml",    APG_WASM_FILE_UNIT},
     {       "test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml",    APG_WASM_FILE_UNIT},
 };
 
@@ -100,7 +101,7 @@ int main(void) {
     if (apg_wasm_control_compile_workspace(control) != APG_WASM_STATUS_OK)
         return fail(control, "in-memory workspace compilation failed");
     const apg_wasm_workspace_summary_t *summary = apg_wasm_control_workspace_summary(control);
-    if (!summary || summary->revision != 1u || summary->unit_count != 7u || summary->instance_count != 7u ||
+    if (!summary || summary->revision != 1u || summary->unit_count != 8u || summary->instance_count != 8u ||
         summary->node_count == 0u || summary->schedule_count == 0u || summary->signal_count == 0u ||
         summary->param_count == 0u)
         return fail(control, "compiled workspace summary is incomplete");

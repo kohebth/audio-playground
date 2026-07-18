@@ -718,6 +718,21 @@ static const apg_atom_contract_field_t catalog_modulation_phase_config[] = {
     {"depth", APG_ATOM_FIELD_FLOAT, true, "float", "1", true, 0, true, 4094, "samples", NULL, true, false, 0.0, false, NULL, NULL, 0u},
 };
 
+static const apg_atom_contract_field_t catalog_modulation_phaser_inputs[] = {
+    {"signal", APG_ATOM_FIELD_SIGNAL, true},
+    {"modulator", APG_ATOM_FIELD_SIGNAL, true},
+};
+
+static const apg_atom_contract_field_t catalog_modulation_phaser_outputs[] = {
+    {"signal", APG_ATOM_FIELD_SIGNAL, true},
+};
+
+static const apg_atom_contract_field_t catalog_modulation_phaser_config[] = {
+    {"center_frequency", APG_ATOM_FIELD_FLOAT, true, "float", "900", true, 100, true, 4000, "hz", "logarithmic", true, true, 10, false, NULL, NULL, 0u},
+    {"depth", APG_ATOM_FIELD_FLOAT, true, "float", "0.7", true, 0, true, 1, "ratio", NULL, true, true, 10, false, NULL, NULL, 0u},
+    {"feedback", APG_ATOM_FIELD_FLOAT, true, "float", "0.2", true, -0.85, true, 0.85, "ratio", NULL, true, true, 10, false, NULL, NULL, 0u},
+};
+
 static const apg_atom_contract_field_t catalog_modulation_ring_inputs[] = {
     {"signal", APG_ATOM_FIELD_SIGNAL, true},
     {"modulator", APG_ATOM_FIELD_SIGNAL, true},
@@ -930,6 +945,7 @@ static const apg_catalog_contract_t catalog_contracts[] = {
     {"modulation_amplitude", APG_ATOM_VISIBILITY_PUBLIC, catalog_modulation_amplitude_inputs, FIELD_COUNT(catalog_modulation_amplitude_inputs), catalog_modulation_amplitude_outputs, FIELD_COUNT(catalog_modulation_amplitude_outputs), catalog_modulation_amplitude_config, FIELD_COUNT(catalog_modulation_amplitude_config)},
     {"modulation_frequency", APG_ATOM_VISIBILITY_ADVANCED, catalog_modulation_frequency_inputs, FIELD_COUNT(catalog_modulation_frequency_inputs), catalog_modulation_frequency_outputs, FIELD_COUNT(catalog_modulation_frequency_outputs), catalog_modulation_frequency_config, FIELD_COUNT(catalog_modulation_frequency_config)},
     {"modulation_phase", APG_ATOM_VISIBILITY_ADVANCED, catalog_modulation_phase_inputs, FIELD_COUNT(catalog_modulation_phase_inputs), catalog_modulation_phase_outputs, FIELD_COUNT(catalog_modulation_phase_outputs), catalog_modulation_phase_config, FIELD_COUNT(catalog_modulation_phase_config)},
+    {"modulation_phaser", APG_ATOM_VISIBILITY_ADVANCED, catalog_modulation_phaser_inputs, FIELD_COUNT(catalog_modulation_phaser_inputs), catalog_modulation_phaser_outputs, FIELD_COUNT(catalog_modulation_phaser_outputs), catalog_modulation_phaser_config, FIELD_COUNT(catalog_modulation_phaser_config)},
     {"modulation_ring", APG_ATOM_VISIBILITY_PUBLIC, catalog_modulation_ring_inputs, FIELD_COUNT(catalog_modulation_ring_inputs), catalog_modulation_ring_outputs, FIELD_COUNT(catalog_modulation_ring_outputs), NULL, 0u},
     {"modulation_scrub", APG_ATOM_VISIBILITY_ADVANCED, catalog_modulation_scrub_inputs, FIELD_COUNT(catalog_modulation_scrub_inputs), catalog_modulation_scrub_outputs, FIELD_COUNT(catalog_modulation_scrub_outputs), catalog_modulation_scrub_config, FIELD_COUNT(catalog_modulation_scrub_config)},
     {"nonlinear_bitcrush", APG_ATOM_VISIBILITY_PUBLIC, catalog_nonlinear_bitcrush_inputs, FIELD_COUNT(catalog_nonlinear_bitcrush_inputs), catalog_nonlinear_bitcrush_outputs, FIELD_COUNT(catalog_nonlinear_bitcrush_outputs), catalog_nonlinear_bitcrush_config, FIELD_COUNT(catalog_nonlinear_bitcrush_config)},

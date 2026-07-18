@@ -3746,6 +3746,95 @@
          "additionalProperties" : false,
          "properties" : {
             "atom" : {
+               "const" : "modulation_phaser"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "center_frequency" : {
+                     "default" : 900,
+                     "maximum" : 4000,
+                     "minimum" : 100,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-scale" : "logarithmic",
+                     "x-apg-smoothing-ms" : 10,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "hz"
+                  },
+                  "depth" : {
+                     "default" : 0.7,
+                     "maximum" : 1,
+                     "minimum" : 0,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-smoothing-ms" : 10,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
+                  },
+                  "feedback" : {
+                     "default" : 0.2,
+                     "maximum" : 0.85,
+                     "minimum" : -0.85,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-smoothing-ms" : 10,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "ratio"
+                  }
+               },
+               "required" : [
+                  "center_frequency",
+                  "depth",
+                  "feedback"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "modulator" : {
+                     "type" : "string"
+                  },
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal",
+                  "modulator"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "modulation_phaser",
+         "type" : "object",
+         "x-apg-category" : "modulation",
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "advanced"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
                "const" : "modulation_ring"
             },
             "config" : {
