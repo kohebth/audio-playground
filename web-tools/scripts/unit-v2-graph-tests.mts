@@ -10,6 +10,7 @@ import {
   disconnectUnitInput,
   insertAtomNodeOnConnection,
   moveUnitConnection,
+  moveUnitParam,
   parseUnitGraphDraft,
   parseUnitPortsDraft,
   previewAtomReplacement,
@@ -32,6 +33,21 @@ assert.deepEqual(createdPorts.inputs, [{ name: 'input', type: 'audio', channels:
 assert.deepEqual(createdPorts.outputs, [{ name: 'output', type: 'audio', channels: 1, signals: [] }]);
 assert.deepEqual(createdGraph.nodes.map(node => node.id), ['gain_value', 'apply_gain']);
 assert.throws(() => createUnitV2({ name: 'Not Valid' }), /lowercase snake_case/);
+
+const toneStack = readFileSync(resolve(repo, 'test/fixtures/units-v2/tone_stack.unit.v2.yaml'), 'utf8');
+assert.deepEqual(
+  parseUnitGraphDraft(toneStack).params.map(param => param.name),
+  ['gain', 'bass', 'mid', 'treble', 'presence', 'volume'],
+);
+const reorderedToneStack = moveUnitParam(toneStack, 'volume', 4);
+const reorderedToneGraph = parseUnitGraphDraft(reorderedToneStack);
+assert.deepEqual(
+  reorderedToneGraph.params.map(param => param.name),
+  ['gain', 'bass', 'mid', 'treble', 'volume', 'presence'],
+);
+assert.equal(reorderedToneGraph.params[4].default, '0.65');
+assert.deepEqual(reorderedToneGraph.nodes.map(node => node.id), parseUnitGraphDraft(toneStack).nodes.map(node => node.id));
+assert.throws(() => moveUnitParam(toneStack, 'missing_param', 0), /was not found/);
 
 const configuredNode = { ...createdGraph.nodes[0], config: { ...createdGraph.nodes[0].config, value: '0.5' } };
 const configured = serializeUnitGraphNodeUpdate(created, configuredNode);

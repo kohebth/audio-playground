@@ -44,6 +44,7 @@ import {
   createUnitV2,
   disconnectUnitInput,
   insertAtomNodeOnConnection,
+  moveUnitParam,
   pasteAtomNodeIntoUnit,
   parseUnitGraphDraft,
   removeAtomNodeFromUnit,
@@ -811,6 +812,12 @@ export default function App() {
     });
   }, [updateSelectedUnitFile]);
 
+  const reorderUnitParam = useCallback((paramName: string, nextIndex: number) => {
+    markPerfSpan('contract.reorder.param', () => {
+      updateSelectedUnitFile(content => moveUnitParam(content, paramName, nextIndex));
+    });
+  }, [updateSelectedUnitFile]);
+
   const addAtom = useCallback((atomName: string, position?: UnitGraphPosition) => {
     markPerfSpan('contract.add.atom', () => {
       try {
@@ -1159,6 +1166,7 @@ export default function App() {
             onRemoveInstance={removeProjectNode}
             onRenameInstance={renameProjectNode}
             onReorderInstance={reorderProjectNode}
+            onReorderUnitParam={reorderUnitParam}
             onUpdateRoute={updateProjectRoute}
             onRemoveRoute={deleteProjectRoute}
             onReorderRoute={reorderProjectRoute}

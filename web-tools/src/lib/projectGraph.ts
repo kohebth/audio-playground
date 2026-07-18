@@ -30,8 +30,12 @@ export type ProjectParamControl = {
   unit?: string;
 };
 
-const NODE_WIDTH = 190;
-const NODE_HEIGHT = 148;
+const UNIT_NODE_COMPACT_WIDTH = 140;
+const UNIT_NODE_WIDE_WIDTH = 190;
+const UNIT_NODE_EMPTY_HEIGHT = 132;
+const UNIT_NODE_FIRST_KNOB_ROW_HEIGHT = 166;
+const UNIT_NODE_EXTRA_KNOB_ROW_HEIGHT = 77;
+const KNOBS_PER_ROW = 3;
 const SYSTEM_NODE_WIDTH = 100;
 const SYSTEM_NODE_HEIGHT = 118;
 const UNIT_COLORS = ['#3b82f6', '#059669', '#2563eb', '#db2777', '#7c3aed', '#dc2626'];
@@ -72,6 +76,16 @@ function createRouteEdge(route: ProjectRoute, index: number): Edge {
   };
 }
 
+function unitNodeDimensions(paramCount: number): { width: number; height: number } {
+  const rows = Math.ceil(paramCount / KNOBS_PER_ROW);
+  return {
+    width: paramCount >= KNOBS_PER_ROW ? UNIT_NODE_WIDE_WIDTH : UNIT_NODE_COMPACT_WIDTH,
+    height: rows === 0
+      ? UNIT_NODE_EMPTY_HEIGHT
+      : UNIT_NODE_FIRST_KNOB_ROW_HEIGHT + (rows - 1) * UNIT_NODE_EXTRA_KNOB_ROW_HEIGHT,
+  };
+}
+
 export function buildProjectGraph(
   project: ProjectInspect,
   draft?: ProjectGraphDraft,
@@ -109,8 +123,7 @@ export function buildProjectGraph(
     };
 
     nodes.push(node);
-    const nodeWidth = instance.params.length > 1 ? NODE_WIDTH : 140;
-    graph.setNode(node.id, { width: nodeWidth, height: NODE_HEIGHT });
+    graph.setNode(node.id, unitNodeDimensions(instance.params.length));
   });
 
   const edges = project.routes.map(createRouteEdge);
@@ -124,11 +137,12 @@ export function buildProjectGraph(
   for (const node of nodes) {
     if (node.data.kind === 'unit' && positionByInstance.get(node.data.instance.id)) continue;
     const position = graph.node(node.id);
-    const width = node.data.kind === 'system' ? SYSTEM_NODE_WIDTH : node.data.instance.params.length > 1 ? NODE_WIDTH : 140;
-    const height = node.data.kind === 'system' ? SYSTEM_NODE_HEIGHT : NODE_HEIGHT;
+    const dimensions = node.data.kind === 'system'
+      ? { width: SYSTEM_NODE_WIDTH, height: SYSTEM_NODE_HEIGHT }
+      : unitNodeDimensions(node.data.instance.params.length);
     node.position = {
-      x: position.x - width / 2,
-      y: position.y - height / 2,
+      x: position.x - dimensions.width / 2,
+      y: position.y - dimensions.height / 2,
     };
   }
 

@@ -2555,6 +2555,89 @@ body {
   margin-top: 12px;
 }
 
+.contract-param-order {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.contract-param-order__hint {
+  margin: 0;
+  color: var(--text-muted);
+  font: 10px/1.5 var(--font-mono);
+}
+
+.contract-param-order__item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 7px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #111827;
+}
+
+.contract-param-order__index {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: #17243a;
+  color: var(--text-dim);
+  font: 9px var(--font-mono);
+}
+
+.contract-param-order__identity {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.contract-param-order__identity strong,
+.contract-param-order__identity code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contract-param-order__identity strong {
+  color: var(--text-primary);
+  font-size: 11px;
+}
+
+.contract-param-order__identity code {
+  color: var(--text-muted);
+  font: 9px var(--font-mono);
+}
+
+.contract-param-order__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.contract-param-order__actions button {
+  min-width: 34px;
+  padding: 5px;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  background: #0a0e1a;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 9px var(--font-mono);
+}
+
+.contract-param-order__actions button:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.contract-param-order__actions button:disabled {
+  cursor: not-allowed;
+  opacity: .35;
+}
+
 .unit-route-list > span,
 .atom-binding-editor__header span,
 .atom-contract-hint span,
@@ -3813,8 +3896,10 @@ body {
 .project-node__knobs.knobs-row {
   display: flex;
   width: 100%;
+  max-width: 148px;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 12px 14px;
   margin-top: 0;
 }
 

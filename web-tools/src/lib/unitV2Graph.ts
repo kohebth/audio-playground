@@ -503,6 +503,19 @@ export function parseUnitPortsDraft(content: string): UnitPortsDraft {
   return parsePortsFromDocument(loadDocument(content));
 }
 
+export function moveUnitParam(content: string, paramName: string, nextIndex: number): string {
+  const doc = loadDocument(content);
+  if (!isObject(doc.params)) throw new Error('Unit parameters must be a mapping.');
+  const params = Object.entries(doc.params);
+  const index = params.findIndex(([name]) => name === paramName);
+  if (index < 0) throw new Error(`Unit parameter "${paramName}" was not found.`);
+  const bounded = Math.max(0, Math.min(params.length - 1, nextIndex));
+  const [param] = params.splice(index, 1);
+  params.splice(bounded, 0, param);
+  doc.params = Object.fromEntries(params);
+  return dumpDocument(doc);
+}
+
 export function serializeUnitGraphNodeUpdate(content: string, node: UnitGraphNode, originalId = node.id): string {
   const doc = loadDocument(content);
   const graph = ensureGraph(doc);

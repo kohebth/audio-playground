@@ -66,6 +66,24 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   for (const control of ['gain', 'bass', 'mid', 'treble', 'presence', 'volume']) {
     await expect(toneNode.getByTestId(`param-knob-tone1-${control}`)).toBeVisible();
   }
+  const toneKnobLabels = toneNode.locator('.knob-label');
+  await expect(toneKnobLabels).toHaveText([
+    'Preamp Gain',
+    'Bass',
+    'Middle',
+    'Treble',
+    'Presence',
+    'Master Volume',
+  ]);
+  const toneKnobRows = await toneNode.locator('.unit-knob').evaluateAll(knobs => {
+    const rows = new Map<number, number>();
+    for (const knob of knobs) {
+      const top = Math.round(knob.getBoundingClientRect().top);
+      rows.set(top, (rows.get(top) ?? 0) + 1);
+    }
+    return [...rows.values()];
+  });
+  expect(toneKnobRows).toEqual([3, 3]);
   await page.getByTestId('inspector-tab-contract').click();
   const diagnostics = page.locator('details.developer-diagnostics');
   await diagnostics.locator(':scope > summary').click();
@@ -91,6 +109,20 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await expect(page.getByTestId('contract-node-mid_bandpass')).toContainText('filter_biquad');
   await expect(page.getByRole('button', { name: 'preamp_saturation amplitude_clip_soft' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'power_saturation amplitude_clip_soft' })).toHaveCount(1);
+  const contractParamNames = page.locator('.contract-param-order__identity code');
+  await expect(contractParamNames).toHaveText(['gain', 'bass', 'mid', 'treble', 'presence', 'volume']);
+  await page.getByTestId('contract-param-volume-up').click();
+  await expect(contractParamNames).toHaveText(['gain', 'bass', 'mid', 'treble', 'volume', 'presence']);
+  await page.getByRole('button', { name: 'Project graph' }).click();
+  await expect(page).toHaveURL(/\/audio-playground\/#\/projects$/);
+  await expect(toneKnobLabels).toHaveText([
+    'Preamp Gain',
+    'Bass',
+    'Middle',
+    'Treble',
+    'Master Volume',
+    'Presence',
+  ]);
 
   // Keep the boundary-node sizing check on a compact graph: the larger tone
   // stack intentionally virtualizes its far-edge nodes at the minimum zoom.

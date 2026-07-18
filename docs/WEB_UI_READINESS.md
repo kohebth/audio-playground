@@ -56,6 +56,8 @@ the same fast path before the synchronized YAML revision is prepared.
 Project-unit parameters are edited directly on their canvas cards. Each card renders compact knobs from the referenced
 unit's parameter metadata, including label, range, and unit; the inspector retains structural actions and reset only.
 Dragging a card knob uses the same clamped YAML update and live parameter synchronization path as other parameter edits.
+Cards grow by parameter-row count and wrap at three knobs per row for every unit. Knob order follows the referenced unit
+YAML parameter mapping exactly, and the Contract inspector can move parameters up or down through a structured YAML edit.
 Scalar updates preserve the existing React Flow nodes, edges, and viewport; only topology changes rebuild the Dagre
 layout, preventing control drags from flashing the canvas.
 
