@@ -275,10 +275,13 @@ static int test_guitar_pedalboard_project_compiles_and_runs(void) {
         return 1;
     }
 
-    if (compiled.expanded_unit.params_len != 14u ||
-        strcmp(compiled.expanded_unit.params[0].name, "gate1.threshold") != 0)
+    if (compiled.expanded_unit.params_len != 17u ||
+        strcmp(compiled.expanded_unit.params[0].name, "gate1.threshold") != 0 ||
+        strcmp(compiled.expanded_unit.params[4].name, "tone1.gain") != 0 ||
+        strcmp(compiled.expanded_unit.params[8].name, "tone1.presence") != 0 ||
+        strcmp(compiled.expanded_unit.params[9].name, "tone1.volume") != 0)
         return fail("pedalboard project params were not namespaced");
-    if (compiled.expanded_unit.nodes_len != 26u || compiled.plan.nodes_len != 26u)
+    if (compiled.expanded_unit.nodes_len != 44u || compiled.plan.nodes_len != 44u)
         return fail("pedalboard project did not expand the product unit graphs");
     if (compiled.plan.instances_len != 7u || compiled.plan.instances[0].id_len != 5u ||
         strncmp(compiled.plan.instances[0].id, "gate1", 5u) != 0 ||

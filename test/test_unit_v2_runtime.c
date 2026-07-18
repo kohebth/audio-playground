@@ -1470,6 +1470,124 @@ static int test_product_fixture_library_runtime_smoke(void) {
     return 0;
 }
 
+static int measure_tone_stack_rms(float frequency, float gain, float presence, float volume, float *rms) {
+    enum {
+        BLOCK_FRAMES  = 128,
+        BLOCK_COUNT   = 96,
+        WARMUP_BLOCKS = 48,
+    };
+    const float sample_rate = 48000.0f;
+    const float amplitude   = 0.05f;
+
+    uc_arena arena;
+    if (!rms || uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("tone stack measurement arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("test/fixtures/units-v2/tone_stack.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err = {0};
+    if (test_apg_v2_runtime_init_registry(&plan, BLOCK_FRAMES, sample_rate, &arena, &runtime, &err) != UC_OK) {
+        fprintf(stderr, "tone stack runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize tone stack measurement runtime");
+    }
+    if (!test_runtime_set_param_by_name(&runtime, "gain", gain) ||
+        !test_runtime_set_param_by_name(&runtime, "presence", presence) ||
+        !test_runtime_set_param_by_name(&runtime, "volume", volume)) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("tone stack measurement params are missing");
+    }
+
+    float    input[BLOCK_FRAMES];
+    float    output[BLOCK_FRAMES];
+    double   energy  = 0.0;
+    uint64_t samples = 0u;
+    for (uint32_t block = 0u; block < BLOCK_COUNT; block++) {
+        for (uint32_t frame = 0u; frame < BLOCK_FRAMES; frame++) {
+            const uint64_t sample_index = (uint64_t)block * BLOCK_FRAMES + frame;
+            input[frame]  = amplitude * sinf(6.28318530717958647692f * frequency * (float)sample_index / sample_rate);
+            output[frame] = 0.0f;
+        }
+        if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, BLOCK_FRAMES)) {
+            apg_v2_runtime_destroy(&runtime);
+            uc_arena_free(&arena);
+            return fail("tone stack measurement processing failed");
+        }
+        if (block < WARMUP_BLOCKS)
+            continue;
+        for (uint32_t frame = 0u; frame < BLOCK_FRAMES; frame++) {
+            if (!isfinite(output[frame])) {
+                apg_v2_runtime_destroy(&runtime);
+                uc_arena_free(&arena);
+                return fail("tone stack measurement produced non-finite output");
+            }
+            energy += (double)output[frame] * output[frame];
+            samples++;
+        }
+    }
+
+    *rms = samples > 0u ? (float)sqrt(energy / (double)samples) : 0.0f;
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_tone_stack_has_audible_filter_and_amp_controls(void) {
+    float bass_rms   = 0.0f;
+    float mid_rms    = 0.0f;
+    float treble_rms = 0.0f;
+    if (measure_tone_stack_rms(120.0f, 1.8f, 0.35f, 0.75f, &bass_rms) ||
+        measure_tone_stack_rms(700.0f, 1.8f, 0.35f, 0.75f, &mid_rms) ||
+        measure_tone_stack_rms(5000.0f, 1.8f, 0.35f, 0.75f, &treble_rms))
+        return 1;
+
+    const float max_band = fmaxf(bass_rms, fmaxf(mid_rms, treble_rms));
+    const float min_band = fminf(bass_rms, fminf(mid_rms, treble_rms));
+    if (!(min_band > 0.0f) || max_band < min_band * 1.15f) {
+        fprintf(stderr, "tone stack response rms: bass=%f mid=%f treble=%f\n", bass_rms, mid_rms, treble_rms);
+        return fail("tone stack still behaves like a frequency-independent scalar");
+    }
+
+    float presence_off = 0.0f;
+    float presence_on  = 0.0f;
+    if (measure_tone_stack_rms(5000.0f, 1.8f, 0.0f, 0.75f, &presence_off) ||
+        measure_tone_stack_rms(5000.0f, 1.8f, 1.0f, 0.75f, &presence_on))
+        return 1;
+    if (presence_on < presence_off * 1.2f) {
+        fprintf(stderr, "tone stack presence rms: off=%f on=%f\n", presence_off, presence_on);
+        return fail("tone stack presence control did not lift the high band");
+    }
+
+    float low_gain  = 0.0f;
+    float high_gain = 0.0f;
+    if (measure_tone_stack_rms(700.0f, 0.75f, 0.35f, 0.75f, &low_gain) ||
+        measure_tone_stack_rms(700.0f, 3.0f, 0.35f, 0.75f, &high_gain))
+        return 1;
+    if (high_gain < low_gain * 1.5f) {
+        fprintf(stderr, "tone stack gain rms: low=%f high=%f\n", low_gain, high_gain);
+        return fail("tone stack preamp gain did not drive the signal");
+    }
+
+    float low_volume  = 0.0f;
+    float high_volume = 0.0f;
+    if (measure_tone_stack_rms(700.0f, 1.8f, 0.35f, 0.25f, &low_volume) ||
+        measure_tone_stack_rms(700.0f, 1.8f, 0.35f, 1.0f, &high_volume))
+        return 1;
+    if (high_volume < low_volume * 2.5f) {
+        fprintf(stderr, "tone stack volume rms: low=%f high=%f\n", low_volume, high_volume);
+        return fail("tone stack master volume did not scale the output");
+    }
+
+    return 0;
+}
+
 static int test_runtime_capable_fixture_library(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -1743,6 +1861,8 @@ int main(void) {
     if (test_filter_state_buffer_uses_descriptor_capacity())
         return 1;
     if (test_product_fixture_library_runtime_smoke())
+        return 1;
+    if (test_tone_stack_has_audible_filter_and_amp_controls())
         return 1;
     if (test_runtime_capable_fixture_library())
         return 1;

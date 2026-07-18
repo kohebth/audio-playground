@@ -61,6 +61,11 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await openWorkspace(page, testInfo);
   await expect(page).toHaveURL(/\/audio-playground\/#\/projects$/);
   await expect(page.getByTestId('project-canvas')).toBeVisible();
+  const toneNode = page.getByTestId('project-node-tone1');
+  await expect(toneNode).toBeVisible();
+  for (const control of ['gain', 'bass', 'mid', 'treble', 'presence', 'volume']) {
+    await expect(toneNode.getByTestId(`param-knob-tone1-${control}`)).toBeVisible();
+  }
   await page.getByTestId('inspector-tab-contract').click();
   const diagnostics = page.locator('details.developer-diagnostics');
   await diagnostics.locator(':scope > summary').click();
@@ -77,11 +82,22 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   expect(example.text).toContain('schema: apg.unit.v2');
   expect(example.text).toContain('wasm_realtime: true');
 
-  await openWorkspace(page, testInfo, '/unit/overdrive');
-  await expect(page).toHaveURL(/\/audio-playground\/#\/unit\/overdrive$/);
+  await openWorkspace(page, testInfo, '/unit/tone_stack');
+  await expect(page).toHaveURL(/\/audio-playground\/#\/unit\/tone_stack$/);
   const contractCanvas = page.getByTestId('contract-canvas');
   await expect(contractCanvas).toBeVisible();
+  await expect(contractCanvas).toHaveAttribute('data-atom-count', '21');
   await expect(contractCanvas).toHaveAttribute('data-boundary-count', '2');
+  await expect(page.getByTestId('contract-node-mid_bandpass')).toContainText('filter_biquad');
+  await expect(page.getByRole('button', { name: 'preamp_saturation amplitude_clip_soft' })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'power_saturation amplitude_clip_soft' })).toHaveCount(1);
+
+  // Keep the boundary-node sizing check on a compact graph: the larger tone
+  // stack intentionally virtualizes its far-edge nodes at the minimum zoom.
+  await openWorkspace(page, testInfo, '/unit/overdrive');
+  await expect(page).toHaveURL(/\/audio-playground\/#\/unit\/overdrive$/);
+  await page.reload();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
   const inputBoundary = page.getByTestId('unit-boundary-input');
   const outputBoundary = page.getByTestId('unit-boundary-output');
   await expect(inputBoundary).toBeVisible();
@@ -172,6 +188,9 @@ test('registers the AudioWorklet and releases repeated audio resources', async (
 
 test('shows microphone permission failure without crashing the editor', async ({ page }, testInfo) => {
   await openWorkspace(page, testInfo);
+  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 20_000 });
+  await page.getByTestId('preview-compile').click();
+  await expect(page.locator('.transport-state')).toHaveText('ready', { timeout: 20_000 });
   await page.evaluate(() => {
     Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
       configurable: true,

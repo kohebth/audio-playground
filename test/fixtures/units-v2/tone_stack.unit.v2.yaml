@@ -1,48 +1,79 @@
 kind: apg.unit
 schema: apg.unit.v2
 name: tone_stack
-version: 2.0.0
+version: 2.1.0
 
 meta:
-  title: Tone Stack
-  category: eq
-  description: Applies deterministic bass, mid, and treble gain stages through biquad atoms.
+  title: Plexi Tone Stage
+  category: amp
+  description: Adds Plexi-inspired preamp and power saturation, interactive tone filters, presence, cabinet roll-off, and master volume.
 
 params:
+  gain:
+    type: float
+    default: 1.8
+    min: 0.75
+    max: 4.0
+    smoothing_ms: 10
+    ui:
+      label: Preamp Gain
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
   bass:
     type: float
-    default: 1.0
-    min: 0.2
-    max: 2.0
+    default: 0.6
+    min: 0.0
+    max: 1.0
     smoothing_ms: 10
     ui:
       label: Bass
       control: knob
-      unit: x
       scale: linear
       display_precision: 2
   mid:
     type: float
-    default: 0.9
-    min: 0.2
-    max: 2.0
+    default: 0.35
+    min: 0.0
+    max: 1.0
     smoothing_ms: 10
     ui:
-      label: Mid
+      label: Middle
       control: knob
-      unit: x
       scale: linear
       display_precision: 2
   treble:
     type: float
-    default: 1.1
-    min: 0.2
-    max: 2.0
+    default: 0.7
+    min: 0.0
+    max: 1.0
     smoothing_ms: 10
     ui:
       label: Treble
       control: knob
-      unit: x
+      scale: linear
+      display_precision: 2
+  presence:
+    type: float
+    default: 0.2
+    min: 0.0
+    max: 1.0
+    smoothing_ms: 10
+    ui:
+      label: Presence
+      control: knob
+      scale: linear
+      display_precision: 2
+  volume:
+    type: float
+    default: 0.65
+    min: 0.0
+    max: 1.0
+    smoothing_ms: 10
+    ui:
+      label: Master Volume
+      control: knob
       scale: linear
       display_precision: 2
 
@@ -59,52 +90,230 @@ ports:
 graph:
   signals:
     - input
-    - bass_stage
-    - mid_stage
+    - input_tight
+    - gain_value
+    - preamp_hot
+    - preamp_clipped
+    - bass_cut
+    - bass_shaped
+    - mid_band
+    - mid_value
+    - mid_shaped
+    - mid_mix
+    - treble_dark
+    - tone_shaped
+    - volume_value
+    - power_drive
+    - power_clipped
+    - presence_band
+    - presence_value
+    - presence_shaped
+    - plexi_mix
+    - cabinet_shaped
     - output
 
   nodes:
-    - id: bass_stage
-      atom: filter_biquad_coefficients
+    - id: input_highpass
+      atom: filter_biquad
       in:
         signal: input
       out:
-        signal: bass_stage
+        signal: input_tight
       config:
-        b0: ${params.bass}
-        b1: 0.0
-        b2: 0.0
-        a1: 0.0
-        a2: 0.0
+        cutoff: 75.0
+        q: 0.707
+        mode: 1
+        smoothing_ms: 10.0
 
-    - id: mid_stage
-      atom: filter_biquad_coefficients
-      in:
-        signal: bass_stage
+    - id: gain_value
+      atom: generation_dc
       out:
-        signal: mid_stage
+        signal: gain_value
       config:
-        b0: ${params.mid}
-        b1: 0.0
-        b2: 0.0
-        a1: 0.0
-        a2: 0.0
+        value: ${params.gain}
 
-    - id: treble_stage
-      atom: filter_biquad_coefficients
+    - id: apply_preamp_gain
+      atom: amplitude_multiply
       in:
-        signal: mid_stage
+        signal_a: input_tight
+        signal_b: gain_value
+      out:
+        signal: preamp_hot
+
+    - id: preamp_saturation
+      atom: amplitude_clip_soft
+      in:
+        signal: preamp_hot
+      out:
+        signal: preamp_clipped
+      config:
+        threshold: 0.72
+        curve: 1
+
+    - id: bass_cut_highpass
+      atom: filter_biquad
+      in:
+        signal: preamp_clipped
+      out:
+        signal: bass_cut
+      config:
+        cutoff: 219.0
+        q: 0.707
+        mode: 1
+        smoothing_ms: 10.0
+
+    - id: bass_control
+      atom: mix_crossfade
+      in:
+        signal_a: bass_cut
+        signal_b: preamp_clipped
+      out:
+        signal: bass_shaped
+      config:
+        t: ${params.bass}
+        curve: 0
+
+    - id: mid_bandpass
+      atom: filter_biquad
+      in:
+        signal: bass_shaped
+      out:
+        signal: mid_band
+      config:
+        cutoff: 700.0
+        q: 0.707
+        mode: 2
+        smoothing_ms: 10.0
+
+    - id: mid_value
+      atom: generation_dc
+      out:
+        signal: mid_value
+      config:
+        value: ${params.mid}
+
+    - id: apply_mid
+      atom: amplitude_multiply
+      in:
+        signal_a: mid_band
+        signal_b: mid_value
+      out:
+        signal: mid_shaped
+
+    - id: mix_mid
+      atom: amplitude_add
+      in:
+        signal_a: bass_shaped
+        signal_b: mid_shaped
+      out:
+        signal: mid_mix
+
+    - id: treble_lowpass
+      atom: filter_biquad
+      in:
+        signal: mid_mix
+      out:
+        signal: treble_dark
+      config:
+        cutoff: 1400.0
+        q: 0.707
+        mode: 0
+        smoothing_ms: 10.0
+
+    - id: treble_control
+      atom: mix_crossfade
+      in:
+        signal_a: treble_dark
+        signal_b: mid_mix
+      out:
+        signal: tone_shaped
+      config:
+        t: ${params.treble}
+        curve: 0
+
+    - id: volume_value
+      atom: generation_dc
+      out:
+        signal: volume_value
+      config:
+        value: ${params.volume}
+
+    - id: apply_master_volume
+      atom: amplitude_multiply
+      in:
+        signal_a: tone_shaped
+        signal_b: volume_value
+      out:
+        signal: power_drive
+
+    - id: power_saturation
+      atom: amplitude_clip_soft
+      in:
+        signal: power_drive
+      out:
+        signal: power_clipped
+      config:
+        threshold: 0.9
+        curve: 1
+
+    - id: presence_highpass
+      atom: filter_biquad
+      in:
+        signal: power_clipped
+      out:
+        signal: presence_band
+      config:
+        cutoff: 2800.0
+        q: 0.707
+        mode: 1
+        smoothing_ms: 10.0
+
+    - id: presence_value
+      atom: generation_dc
+      out:
+        signal: presence_value
+      config:
+        value: ${params.presence}
+
+    - id: apply_presence
+      atom: amplitude_multiply
+      in:
+        signal_a: presence_band
+        signal_b: presence_value
+      out:
+        signal: presence_shaped
+
+    - id: mix_presence
+      atom: amplitude_add
+      in:
+        signal_a: power_clipped
+        signal_b: presence_shaped
+      out:
+        signal: plexi_mix
+
+    - id: cabinet_rolloff
+      atom: filter_biquad
+      in:
+        signal: plexi_mix
+      out:
+        signal: cabinet_shaped
+      config:
+        cutoff: 5000.0
+        q: 0.707
+        mode: 0
+        smoothing_ms: 10.0
+
+    - id: output_limiter
+      atom: amplitude_clip_hard
+      in:
+        signal: cabinet_shaped
       out:
         signal: output
       config:
-        b0: ${params.treble}
-        b1: 0.0
-        b2: 0.0
-        a1: 0.0
-        a2: 0.0
+        threshold: 0.98
 
 compatibility:
   desktop_full: true
   wasm_realtime: true
-  m7_static: true
+  m7_static: false
   offline_render: true

@@ -34,9 +34,12 @@ chain:
     - id: tone1
       unit: tone_stack_unit
       params:
-        bass: 1.0
-        mid: 0.9
-        treble: 1.1
+        gain: 1.3
+        bass: 0.65
+        mid: 0.45
+        treble: 0.72
+        presence: 0.22
+        volume: 0.68
     - id: trem1
       unit: tremolo_unit
       params:
@@ -83,12 +86,24 @@ scenes:
       gate1.threshold: 0.12
       drive1.drive: 1.4
       drive1.level: 0.75
+      tone1.gain: 0.9
+      tone1.bass: 0.75
+      tone1.mid: 0.3
+      tone1.treble: 0.65
+      tone1.presence: 0.15
+      tone1.volume: 0.72
       blend1.mix: 0.15
   - name: Lead
     params:
       gate1.threshold: 0.18
       drive1.drive: 4.5
       drive1.level: 0.9
+      tone1.gain: 2.2
+      tone1.bass: 0.55
+      tone1.mid: 0.65
+      tone1.treble: 0.78
+      tone1.presence: 0.4
+      tone1.volume: 0.75
       delay1.mix: 0.45
       blend1.mix: 0.35
       reverb1.decay: 0.82
