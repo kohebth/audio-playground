@@ -1337,63 +1337,49 @@ body {
 }
 
 .react-flow__node-unitBoundaryNode {
-  width: 88px !important;
-  height: 88px !important;
+  width: 10px !important;
+  height: 10px !important;
 }
 
 .unit-boundary-node {
-  box-sizing: border-box;
-  display: grid;
-  width: 88px;
-  height: 88px;
-  place-content: center;
-  justify-items: center;
-  gap: 2px;
-  border: 1px solid color-mix(in srgb, var(--boundary-color) 72%, #334155);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--boundary-color) 18%, transparent), transparent 48%),
-    #101a2b;
-  box-shadow:
-    0 0 0 5px color-mix(in srgb, var(--boundary-color) 8%, transparent),
-    0 12px 28px rgba(0, 0, 0, 0.38);
-  color: var(--text-primary);
+  position: relative;
+  width: 10px;
+  height: 10px;
   font-family: var(--font-mono);
-  text-align: center;
 }
 
-.unit-boundary-node__context {
-  color: var(--boundary-color);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .12em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.unit-boundary-node strong {
-  color: #f8fafc;
-  font-size: 18px;
-  letter-spacing: .08em;
-  line-height: 1.1;
-}
-
-.unit-boundary-node__ports {
+.unit-boundary-node__signal {
+  position: absolute;
+  top: 50%;
+  max-width: 120px;
   overflow: hidden;
-  width: 62px;
-  color: var(--text-muted);
-  font-size: 8px;
+  padding: 2px 5px;
+  border: 1px solid color-mix(in srgb, var(--boundary-color) 24%, #334155);
+  border-radius: 3px;
+  background: color-mix(in srgb, #101a2b 92%, transparent);
+  color: var(--boundary-color);
+  font-size: 9px;
+  font-weight: 700;
   line-height: 1.2;
+  pointer-events: none;
   text-overflow: ellipsis;
+  transform: translateY(-50%);
   white-space: nowrap;
 }
 
+.unit-boundary-node--input .unit-boundary-node__signal {
+  right: 18px;
+}
+
+.unit-boundary-node--output .unit-boundary-node__signal {
+  left: 18px;
+}
+
 .unit-boundary-node__handle {
-  width: 12px !important;
-  height: 12px !important;
-  border: 3px solid #101a2b !important;
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid #1e293b !important;
   background: var(--boundary-color) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--boundary-color) 28%, transparent);
 }
 
 .contract-edge--boundary path {

@@ -45,7 +45,6 @@ type ContractNodeData = {
 
 type UnitBoundaryNodeData = {
   direction: 'input' | 'output';
-  portNames: string[];
   signalNames: string[];
   color: string;
 };
@@ -91,7 +90,7 @@ type ParsedContractGraph = {
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 136;
-const BOUNDARY_NODE_SIZE = 88;
+const BOUNDARY_NODE_SIZE = 10;
 const BOUNDARY_NODE_GAP = 96;
 const INPUT_BOUNDARY_ID = 'contract-unit-input';
 const OUTPUT_BOUNDARY_ID = 'contract-unit-output';
@@ -132,7 +131,6 @@ function sameContractNodeData(left: ContractNodeData, right: ContractNodeData): 
 function sameBoundaryNodeData(left: UnitBoundaryNodeData, right: UnitBoundaryNodeData): boolean {
   return left.direction === right.direction
     && left.color === right.color
-    && sameStringArray(left.portNames, right.portNames)
     && sameStringArray(left.signalNames, right.signalNames);
 }
 
@@ -201,7 +199,6 @@ function buildContractFlow(
     position: { x: 0, y: 0 },
     data: {
       direction: 'input',
-      portNames: inputPorts.map(port => port.name),
       signalNames: inputSignalNames,
       color: INPUT_BOUNDARY_COLOR,
     },
@@ -216,7 +213,6 @@ function buildContractFlow(
     position: { x: 0, y: 0 },
     data: {
       direction: 'output',
-      portNames: outputPorts.map(port => port.name),
       signalNames: outputSignalNames,
       color: OUTPUT_BOUNDARY_COLOR,
     },
@@ -385,26 +381,19 @@ ContractNode.displayName = 'ContractNode';
 const UnitBoundaryNode = memo(({ data }: NodeProps<UnitBoundaryFlowNode>) => {
   useEffect(() => markComponentRender('UnitBoundaryNode', data.direction));
   const isInput = data.direction === 'input';
-  const portSummary = data.portNames.length === 0
-    ? 'No audio port'
-    : data.portNames.length === 1
-      ? data.portNames[0]
-      : `${data.portNames.length} ports`;
-  const signalSummary = data.signalNames.join(', ') || 'No graph signal';
+  const signalSummary = data.signalNames.join(', ') || 'unbound';
   const style = { '--boundary-color': data.color } as CSSProperties;
 
   return (
     <div
-      aria-label={`Unit ${data.direction} boundary, ${portSummary}: ${signalSummary}`}
+      aria-label={`Unit ${data.direction} signal: ${signalSummary}`}
       className={`unit-boundary-node unit-boundary-node--${data.direction}`}
       data-testid={`unit-boundary-${data.direction}`}
       role="img"
       style={style}
-      title={`${isInput ? 'From previous stage' : 'To next stage'} · ${signalSummary}`}
+      title={`${isInput ? 'From previous stage' : 'To next stage'}: ${signalSummary}`}
     >
-      <span className="unit-boundary-node__context">{isInput ? 'Previous' : 'Next'}</span>
-      <strong>{isInput ? 'IN' : 'OUT'}</strong>
-      <span className="unit-boundary-node__ports">{portSummary}</span>
+      <span className="unit-boundary-node__signal">{signalSummary}</span>
       <Handle
         className="unit-boundary-node__handle"
         id={isInput ? 'boundary-out' : 'boundary-in'}
