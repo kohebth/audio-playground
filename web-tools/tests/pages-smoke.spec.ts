@@ -61,6 +61,12 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await openWorkspace(page, testInfo);
   await expect(page).toHaveURL(/\/audio-playground\/#\/projects$/);
   await expect(page.getByTestId('project-canvas')).toBeVisible();
+  const gateNode = page.getByTestId('project-node-gate1');
+  await expect(gateNode).toBeVisible();
+  for (const control of ['threshold', 'attack', 'release']) {
+    await expect(gateNode.getByTestId(`param-knob-gate1-${control}`)).toBeVisible();
+  }
+  await expect(gateNode.locator('.knob-label')).toHaveText(['Threshold', 'Attack', 'Release']);
   const toneNode = page.getByTestId('project-node-tone1');
   await expect(toneNode).toBeVisible();
   for (const control of ['gain', 'bass', 'mid', 'treble', 'presence', 'volume']) {

@@ -25,6 +25,8 @@ chain:
       unit: noise_gate_unit
       params:
         threshold: 0.15
+        attack: 0.005
+        release: 0.15
     - id: drive1
       unit: overdrive_unit
       params:
@@ -84,6 +86,8 @@ scenes:
   - name: Clean
     params:
       gate1.threshold: 0.12
+      gate1.attack: 0.008
+      gate1.release: 0.25
       drive1.drive: 1.4
       drive1.level: 0.75
       tone1.gain: 0.9
@@ -96,6 +100,8 @@ scenes:
   - name: Lead
     params:
       gate1.threshold: 0.18
+      gate1.attack: 0.003
+      gate1.release: 0.12
       drive1.drive: 4.5
       drive1.level: 0.9
       tone1.gain: 2.2

@@ -1470,6 +1470,131 @@ static int test_product_fixture_library_runtime_smoke(void) {
     return 0;
 }
 
+typedef struct {
+    float attack_gain;
+    float positive_output;
+    float negative_output;
+    float release_gain;
+    float release_output;
+} noise_gate_measurement_t;
+
+static int measure_noise_gate_ballistics(float attack, float release, noise_gate_measurement_t *measurement) {
+    enum {
+        BLOCK_FRAMES = 256,
+    };
+
+    if (!measurement)
+        return fail("noise gate measurement output is missing");
+
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("noise gate measurement arena init failed");
+
+    apg_unit_v2_t          unit;
+    apg_v2_compiled_unit_t plan;
+    if (load_and_compile_fixture("test/fixtures/units-v2/noise_gate.unit.v2.yaml", &arena, &unit, &plan)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err = {0};
+    if (test_apg_v2_runtime_init_registry(&plan, BLOCK_FRAMES, 1000.0f, &arena, &runtime, &err) != UC_OK) {
+        fprintf(stderr, "noise gate runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize noise gate measurement runtime");
+    }
+    if (!test_runtime_set_param_by_name(&runtime, "threshold", 0.2f) ||
+        !test_runtime_set_param_by_name(&runtime, "attack", attack) ||
+        !test_runtime_set_param_by_name(&runtime, "release", release)) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("noise gate measurement params are missing");
+    }
+
+    float input[BLOCK_FRAMES];
+    float output[BLOCK_FRAMES];
+    for (size_t i = 0u; i < BLOCK_FRAMES; i++) {
+        input[i]  = i % 2u == 0u ? 0.05f : -0.05f;
+        output[i] = 0.0f;
+    }
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, BLOCK_FRAMES)) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("noise gate closed-level warmup failed");
+    }
+
+    float *gate_gain = runtime_signal_by_name_for_test(&runtime, "gate_gain");
+    if (!gate_gain) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("noise gate gain signal is missing");
+    }
+    if (gate_gain[BLOCK_FRAMES - 1u] > 0.001f || fabsf(output[BLOCK_FRAMES - 1u]) > 0.0001f) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("noise gate did not attenuate a closed low-level signal");
+    }
+
+    for (size_t i = 0u; i < BLOCK_FRAMES; i++) {
+        input[i]  = i % 2u == 0u ? 1.0f : -1.0f;
+        output[i] = 0.0f;
+    }
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, BLOCK_FRAMES)) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("noise gate attack measurement failed");
+    }
+    measurement->attack_gain     = gate_gain[20];
+    measurement->positive_output = output[20];
+    measurement->negative_output = output[21];
+
+    for (size_t i = 0u; i < BLOCK_FRAMES; i++) {
+        input[i]  = i % 2u == 0u ? 0.05f : -0.05f;
+        output[i] = 0.0f;
+    }
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, BLOCK_FRAMES)) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("noise gate release measurement failed");
+    }
+    measurement->release_gain   = gate_gain[200];
+    measurement->release_output = output[200];
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int test_noise_gate_has_full_wave_detection_and_ballistics(void) {
+    noise_gate_measurement_t fast         = {0};
+    noise_gate_measurement_t slow_attack  = {0};
+    noise_gate_measurement_t slow_release = {0};
+    if (measure_noise_gate_ballistics(0.001f, 0.01f, &fast) ||
+        measure_noise_gate_ballistics(0.05f, 0.01f, &slow_attack) ||
+        measure_noise_gate_ballistics(0.001f, 0.5f, &slow_release))
+        return 1;
+
+    if (fast.positive_output < 0.9f || fast.negative_output > -0.9f) {
+        fprintf(
+            stderr, "noise gate bipolar output: positive=%f negative=%f\n", fast.positive_output, fast.negative_output
+        );
+        return fail("noise gate did not pass both waveform polarities");
+    }
+    if (fast.attack_gain < slow_attack.attack_gain * 2.0f) {
+        fprintf(stderr, "noise gate attack gain: fast=%f slow=%f\n", fast.attack_gain, slow_attack.attack_gain);
+        return fail("noise gate attack control did not change opening speed");
+    }
+    if (fast.release_gain > 0.01f || slow_release.release_gain < 0.4f ||
+        slow_release.release_gain < fast.release_gain * 20.0f) {
+        fprintf(stderr, "noise gate release gain: fast=%f slow=%f\n", fast.release_gain, slow_release.release_gain);
+        return fail("noise gate release control did not change closing speed across blocks");
+    }
+    if (fabsf(fast.release_output) > 0.001f)
+        return fail("noise gate fast release did not suppress low-level input");
+    return 0;
+}
+
 static int measure_tone_stack_rms(float frequency, float gain, float presence, float volume, float *rms) {
     enum {
         BLOCK_FRAMES  = 128,
@@ -1861,6 +1986,8 @@ int main(void) {
     if (test_filter_state_buffer_uses_descriptor_capacity())
         return 1;
     if (test_product_fixture_library_runtime_smoke())
+        return 1;
+    if (test_noise_gate_has_full_wave_detection_and_ballistics())
         return 1;
     if (test_tone_stack_has_audible_filter_and_amp_controls())
         return 1;

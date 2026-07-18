@@ -1,12 +1,12 @@
 kind: apg.unit
 schema: apg.unit.v2
 name: noise_gate
-version: 2.0.0
+version: 2.1.0
 
 meta:
   title: Noise Gate
   category: dynamics
-  description: Opens a gate when the mono input crosses a threshold and mutes lower samples.
+  description: Uses full-wave level detection and adjustable attack and release to suppress low-level noise without hard switching.
 
 params:
   threshold:
@@ -21,6 +21,30 @@ params:
       unit: x
       scale: linear
       display_precision: 2
+  attack:
+    type: float
+    default: 0.005
+    min: 0.0001
+    max: 0.1
+    smoothing_ms: 5
+    ui:
+      label: Attack
+      control: knob
+      unit: s
+      scale: log
+      display_precision: 4
+  release:
+    type: float
+    default: 0.15
+    min: 0.01
+    max: 1.0
+    smoothing_ms: 5
+    ui:
+      label: Release
+      control: knob
+      unit: s
+      scale: log
+      display_precision: 3
 
 ports:
   inputs:
@@ -35,24 +59,46 @@ ports:
 graph:
   signals:
     - input
-    - gate
+    - detected_envelope
+    - gate_trigger
+    - gate_gain
     - output
 
   nodes:
-    - id: threshold_detect
-      atom: detect_threshold
+    - id: envelope_detector
+      atom: detect_envelope
       in:
         signal: input
       out:
-        gate: gate
+        envelope: detected_envelope
+      config:
+        attack: 0.0001
+        release: 0.02
+
+    - id: threshold_detect
+      atom: detect_threshold
+      in:
+        signal: detected_envelope
+      out:
+        gate: gate_trigger
       config:
         threshold: ${params.threshold}
+
+    - id: gate_smoothing
+      atom: amplitude_smooth
+      in:
+        signal: gate_trigger
+      out:
+        signal: gate_gain
+      config:
+        attack: ${params.attack}
+        release: ${params.release}
 
     - id: apply_gate
       atom: amplitude_multiply
       in:
         signal_a: input
-        signal_b: gate
+        signal_b: gate_gain
       out:
         signal: output
 
