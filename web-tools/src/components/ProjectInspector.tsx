@@ -1,6 +1,7 @@
 import { AtomCatalogPanel } from './AtomCatalogPanel';
 import { CompatibilityExportPanel } from './CompatibilityExportPanel';
 import { DraftExportPanel } from './DraftExportPanel';
+import { StructuredUnitEditor } from './StructuredUnitEditor';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import { useEffect, useMemo, useState } from 'react';
 import type {
@@ -20,6 +21,7 @@ import { buildInfo } from '../lib/buildInfo';
 import { useLiveBypass } from '../lib/liveBypass';
 import {
   previewAtomReplacement,
+  parseUnitPortsDraft,
   type AtomReplacementPreview,
   type UnitGraphDraft,
   type UnitGraphNode,
@@ -69,6 +71,7 @@ type Props = {
   onSelectAtom: (id: string) => void;
   onSelectedAtomChange: (node: UnitGraphNode, originalId?: string) => void;
   onWorkspaceFileChange: (path: string, content: string) => void;
+  onSaveToLibrary: () => void;
 };
 
 function compatibilityLabel(flags: Record<string, boolean>): string {
@@ -154,6 +157,7 @@ export function ProjectInspector({
   onSelectAtom,
   onSelectedAtomChange,
   onWorkspaceFileChange,
+  onSaveToLibrary,
 }: Props) {
   const { controller: liveAudio } = useLiveBypass();
   const initialPublicAtom = atomCatalog.atoms.find(atom => atom.visibility === 'public') ?? atomCatalog.atoms[0];
@@ -185,6 +189,13 @@ export function ProjectInspector({
   const audioOutputs = liveAudio?.audioDevices.filter(device => device.kind === 'audiooutput') ?? [];
   const audioRuntime = liveAudio?.audioRuntimeSettings ?? null;
   const calibrationRunning = liveAudio?.audioCalibration.status === 'running';
+  const selectedUnitPorts = useMemo(() => {
+    try {
+      return selectedUnitFile.role === 'unit' ? parseUnitPortsDraft(selectedUnitFile.content) : null;
+    } catch {
+      return null;
+    }
+  }, [selectedUnitFile]);
 
   useEffect(() => {
     setRenameDraft(selectedNode?.kind === 'unit' ? selectedNode.instance.id : '');
@@ -541,49 +552,16 @@ export function ProjectInspector({
 
       {isContractView && (
         <>
-          <details className="inspector-block" open>
-            <summary className="inspector-block__label">Parameters</summary>
-            <p className="contract-param-order__hint">Knobs follow this YAML order, three per row.</p>
-            {selectedUnitGraph?.params.length ? (
-              <div aria-label="Unit parameter order" className="contract-param-order">
-                {selectedUnitGraph.params.map((param, index) => (
-                  <div
-                    className="contract-param-order__item"
-                    data-testid={`contract-param-row-${param.name}`}
-                    key={param.name}
-                  >
-                    <span aria-hidden="true" className="contract-param-order__index">{index + 1}</span>
-                    <div className="contract-param-order__identity">
-                      <strong>{param.ui?.label ?? param.name}</strong>
-                      <code>{param.name}</code>
-                    </div>
-                    <div className="contract-param-order__actions">
-                      <button
-                        aria-label={`Move ${param.name} up`}
-                        data-testid={`contract-param-${param.name}-up`}
-                        disabled={index === 0}
-                        onClick={() => onReorderUnitParam(param.name, index - 1)}
-                        type="button"
-                      >
-                        Up
-                      </button>
-                      <button
-                        aria-label={`Move ${param.name} down`}
-                        data-testid={`contract-param-${param.name}-down`}
-                        disabled={index === selectedUnitGraph.params.length - 1}
-                        onClick={() => onReorderUnitParam(param.name, index + 1)}
-                        type="button"
-                      >
-                        Down
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="diagnostic-empty">This unit exposes no parameters.</div>
-            )}
-          </details>
+          {selectedUnitGraph && selectedUnitPorts ? (
+            <StructuredUnitEditor
+              file={selectedUnitFile}
+              onChange={content => onWorkspaceFileChange(selectedUnitFile.path, content)}
+              onReorderParam={onReorderUnitParam}
+              onSaveToLibrary={onSaveToLibrary}
+              ports={selectedUnitPorts}
+              unit={selectedUnitGraph}
+            />
+          ) : <div className="diagnostic-empty">Select a valid unit to edit its contract.</div>}
 
           <details className="inspector-block" open>
             <summary className="inspector-block__label">Atom Focus</summary>
@@ -621,7 +599,7 @@ export function ProjectInspector({
                 ))}
               </div>
             ) : (
-              <div className="diagnostic-empty">Select a valid unit YAML file to edit atoms.</div>
+              <div className="diagnostic-empty">Select a valid unit to edit atoms.</div>
             )}
           </details>
 
@@ -773,7 +751,7 @@ export function ProjectInspector({
           <details className="inspector-block developer-diagnostics">
             <summary className="inspector-block__label">
               <i className="fa-solid fa-code" aria-hidden="true" />
-              Developer Diagnostics
+              Engine Diagnostics
             </summary>
             <div className="workspace-editor__meta">
               <strong>{selectedUnitFile.path}</strong>
@@ -942,13 +920,6 @@ export function ProjectInspector({
                 </pre>
               </details>
             ) : null}
-            <textarea
-              aria-label={`Workspace file ${selectedUnitFile.path}`}
-              className="workspace-editor"
-              onChange={event => onWorkspaceFileChange(selectedUnitFile.path, event.target.value)}
-              spellCheck={false}
-              value={selectedUnitFile.content}
-            />
           </details>
 
           <AtomCatalogPanel unit={unit} catalog={atomCatalog} manifest={atomCatalogManifest} onAddAtom={onAddAtom} />

@@ -80,3 +80,38 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   await page.getByTestId('topbar-export').click();
   expect((await download).suggestedFilename()).toMatch(/\.apg$/);
 });
+
+test('edits a unit through structured Pro controls without exposing raw source', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'Skip tour' })).toBeVisible();
+  await page.getByRole('button', { name: 'Skip tour' }).click();
+  await page.getByRole('button', { name: 'Pro', exact: true }).click();
+  await page.getByTestId('project-instance-item-drive1').dblclick();
+
+  await expect(page).toHaveURL(/#\/unit\/overdrive$/);
+  await expect(page.getByTestId('structured-unit-editor')).toBeVisible();
+  await expect(page.locator('textarea.workspace-editor')).toHaveCount(0);
+  expect((await page.locator('.file-item').allTextContents()).join(' ')).not.toContain('.yaml');
+
+  const title = page.getByLabel('Unit display name');
+  await title.fill('Studio Overdrive');
+  await title.press('Tab');
+  await expect(title).toHaveValue('Studio Overdrive');
+
+  await page.getByLabel('New parameter name').fill('presence_extra');
+  await page.getByRole('button', { name: 'Add control' }).click();
+  await expect(page.getByTestId('contract-param-row-presence_extra')).toBeVisible();
+  await page.getByRole('button', { name: 'Remove presence_extra' }).click();
+  await expect(page.getByTestId('contract-param-row-presence_extra')).toHaveCount(0);
+
+  const inputName = page.getByLabel('inputs 1 name');
+  await inputName.fill('source');
+  await inputName.press('Tab');
+  await expect(page.getByTestId('unit-boundary-input')).toHaveText('source');
+
+  await page.getByRole('button', { name: /Save this unit to Personal Library/ }).click();
+  await page.getByRole('button', { name: 'Simple', exact: true }).click();
+  await expect(page.locator('.effect-library-card').filter({ hasText: 'Yours' })).toBeVisible();
+});

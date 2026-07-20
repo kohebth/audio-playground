@@ -28,6 +28,12 @@ export const UNIT_DRAG_TYPE = 'application/x-apg-unit';
 const unitDotColors = ['var(--accent-blue)', 'var(--accent-orange)', 'var(--accent-cyan)', 'var(--accent-purple)', 'var(--accent-green)', '#f472b6'];
 type SidebarSection = 'workspace' | 'pedalboard' | 'routes' | 'drafts';
 
+function friendlyFileName(file: WorkspaceFile): string {
+  if (file.role === 'project') return 'Project settings';
+  const name = file.path.split('/').at(-1)?.replace(/\.unit\.v2\.yaml$/i, '') ?? file.path;
+  return name.replace(/_/g, ' ');
+}
+
 export function ProjectSidebar({
   project,
   workspaceFiles,
@@ -107,10 +113,10 @@ export function ProjectSidebar({
           onClick={() => toggleSection('workspace')}
           type="button"
         >
-          <span>Workspace Ledger</span>
+          <span>Project files</span>
           <i className="fa-solid fa-chevron-down chevron" aria-hidden="true" />
         </button>
-        <button className="sidebar-icon-btn" onClick={() => setUnitName('new_unit')} title="New unit file" type="button">+</button>
+        <button className="sidebar-icon-btn" onClick={() => setUnitName('new_unit')} title="Create a unit" type="button">+</button>
       </div>
 
       <div className={`file-list ${collapsedSections.workspace ? 'hidden' : ''}`} aria-label="Workspace files">
@@ -122,7 +128,7 @@ export function ProjectSidebar({
             type="button"
           >
             <i className={`fa-solid ${file.role === 'project' ? 'fa-folder-open' : 'fa-file-code'}`} aria-hidden="true" />
-            <code>{file.path}</code>
+            <span className="file-item__copy"><strong>{friendlyFileName(file)}</strong><small>{file.role === 'project' ? 'Project' : 'Unit'}</small></span>
           </button>
         ))}
       </div>

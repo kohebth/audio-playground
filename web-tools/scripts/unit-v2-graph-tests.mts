@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import type { AtomCatalog } from '../src/lib/backendSamples.ts';
 import {
   addAtomNodeToUnit,
+  addUnitPort,
   connectUnitNodes,
   createUnitV2,
   disconnectUnitInput,
@@ -16,10 +17,15 @@ import {
   previewAtomReplacement,
   reconnectUnitConnection,
   removeAtomNodeFromUnit,
+  removeUnitParam,
   replaceAtomNodeInUnit,
   replaceUnitConnection,
   serializeUnitGraphNodeUpdate,
   setAtomNodePosition,
+  updateUnitCompatibility,
+  updateUnitDefinition,
+  updateUnitParam,
+  updateUnitPort,
 } from '../src/lib/unitV2Graph.ts';
 
 const repo = resolve(import.meta.dirname, '../..');
@@ -29,10 +35,43 @@ const created = createUnitV2({ name: 'browser_gain', title: 'Browser Gain' });
 const createdGraph = parseUnitGraphDraft(created);
 const createdPorts = parseUnitPortsDraft(created);
 assert.equal(createdGraph.name, 'browser_gain');
+assert.equal(createdGraph.meta.title, 'Browser Gain');
 assert.deepEqual(createdPorts.inputs, [{ name: 'input', type: 'audio', channels: 1, signals: [] }]);
 assert.deepEqual(createdPorts.outputs, [{ name: 'output', type: 'audio', channels: 1, signals: [] }]);
 assert.deepEqual(createdGraph.nodes.map(node => node.id), ['gain_value', 'apply_gain']);
 assert.throws(() => createUnitV2({ name: 'Not Valid' }), /lowercase snake_case/);
+
+const described = parseUnitGraphDraft(updateUnitDefinition(created, {
+  title: 'Studio Gain',
+  category: 'dynamics',
+  description: 'A structured unit.',
+  version: '1.2.0',
+}));
+assert.equal(described.meta.title, 'Studio Gain');
+assert.equal(described.version, '1.2.0');
+assert.equal(parseUnitGraphDraft(updateUnitCompatibility(created, 'wasm_realtime', false)).compatibility.wasm_realtime, false);
+
+const withToneParam = updateUnitParam(created, null, {
+  name: 'tone',
+  type: 'float',
+  default: '0.5',
+  min: '0',
+  max: '1',
+  smoothingMs: '8',
+  ui: { label: 'Tone', control: 'knob', unit: '%', display_precision: '2' },
+});
+assert.equal(parseUnitGraphDraft(withToneParam).params.at(-1)?.ui?.label, 'Tone');
+const toneParam = parseUnitGraphDraft(withToneParam).params.at(-1)!;
+const renamedTone = updateUnitParam(withToneParam, 'tone', { ...toneParam, name: 'color' });
+assert(parseUnitGraphDraft(renamedTone).params.some(param => param.name === 'color'));
+assert.equal(parseUnitGraphDraft(removeUnitParam(renamedTone, 'color')).params.length, 1);
+assert.throws(() => removeUnitParam(created, 'gain'), /still used by an atom/);
+
+const renamedInput = updateUnitPort(created, 'inputs', 0, { ...createdPorts.inputs[0], name: 'source' });
+assert.equal(parseUnitPortsDraft(renamedInput).inputs[0].name, 'source');
+assert.equal(parseUnitGraphDraft(renamedInput).nodes.find(node => node.id === 'apply_gain')?.in.signal_a, 'source');
+const withSidechain = addUnitPort(created, 'inputs', { name: 'sidechain', type: 'audio', channels: 1, signals: [] });
+assert.equal(parseUnitPortsDraft(withSidechain).inputs.at(-1)?.name, 'sidechain');
 
 const toneStack = readFileSync(resolve(repo, 'test/fixtures/units-v2/tone_stack.unit.v2.yaml'), 'utf8');
 assert.deepEqual(

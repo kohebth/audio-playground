@@ -7,8 +7,10 @@ export type UnitParamDraft = {
   default: string;
   min?: string;
   max?: string;
+  smoothingMs?: string;
   ui?: {
     label?: string;
+    control?: string;
     unit?: string;
     display_precision?: string;
   };
@@ -39,6 +41,13 @@ export type UnitPortsDraft = {
 
 export type UnitGraphDraft = {
   name: string;
+  version: string;
+  meta: {
+    title: string;
+    category: string;
+    description: string;
+  };
+  compatibility: Record<string, boolean>;
   params: UnitParamDraft[];
   signals: string[];
   nodes: UnitGraphNode[];
@@ -128,8 +137,10 @@ function parseParam(name: string, value: unknown): UnitParamDraft {
     default: String(raw.default ?? '0'),
     min: scalarString(raw.min),
     max: scalarString(raw.max),
+    smoothingMs: scalarString(raw.smoothing_ms),
     ui: {
       label: scalarString(ui.label),
+      control: scalarString(ui.control),
       unit: scalarString(ui.unit),
       display_precision: scalarString(ui.display_precision),
     },
@@ -174,9 +185,22 @@ function parseGraphFromDocument(doc: UnitDocument): UnitGraphDraft {
     ? graph.signals.filter((signal): signal is string => typeof signal === 'string')
     : [];
   const nodes = Array.isArray(graph.nodes) ? graph.nodes.map(parseNode) : [];
+  const meta = isObject(doc.meta) ? doc.meta : {};
+  const compatibility = isObject(doc.compatibility)
+    ? Object.fromEntries(Object.entries(doc.compatibility).flatMap(([target, enabled]) => (
+      typeof enabled === 'boolean' ? [[target, enabled]] : []
+    )))
+    : {};
 
   return {
     name: String(doc.name ?? 'unnamed_unit'),
+    version: String(doc.version ?? '1.0.0'),
+    meta: {
+      title: String(meta.title ?? doc.name ?? 'Unnamed unit'),
+      category: String(meta.category ?? 'custom'),
+      description: String(meta.description ?? ''),
+    },
+    compatibility,
     params,
     signals,
     nodes,
@@ -501,6 +525,172 @@ export function parseUnitGraphDraft(content: string): UnitGraphDraft {
 
 export function parseUnitPortsDraft(content: string): UnitPortsDraft {
   return parsePortsFromDocument(loadDocument(content));
+}
+
+function editorScalar(raw: string | undefined): unknown {
+  if (raw === undefined || raw.trim() === '') return undefined;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) ? numeric : raw;
+}
+
+function replaceStrings(value: unknown, replacements: Record<string, string>): unknown {
+  if (typeof value === 'string') {
+    return Object.entries(replacements).reduce((current, [from, to]) => current.split(from).join(to), value);
+  }
+  if (Array.isArray(value)) return value.map(item => replaceStrings(item, replacements));
+  if (isObject(value)) {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replaceStrings(item, replacements)]));
+  }
+  return value;
+}
+
+export function updateUnitDefinition(
+  content: string,
+  update: Partial<{ name: string; version: string; title: string; category: string; description: string }>,
+): string {
+  const doc = loadDocument(content);
+  if (update.name !== undefined) {
+    const name = update.name.trim();
+    if (!/^[a-z][a-z0-9_]*$/.test(name)) throw new Error('Unit name must use lowercase snake_case.');
+    doc.name = name;
+  }
+  if (update.version !== undefined) {
+    const version = update.version.trim();
+    if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Unit version must use semantic versioning, such as 1.0.0.');
+    doc.version = version;
+  }
+  const meta = isObject(doc.meta) ? doc.meta : {};
+  if (update.title !== undefined) meta.title = update.title.trim();
+  if (update.category !== undefined) meta.category = update.category.trim();
+  if (update.description !== undefined) meta.description = update.description.trim();
+  doc.meta = meta;
+  return dumpDocument(doc);
+}
+
+export function updateUnitCompatibility(content: string, target: string, enabled: boolean): string {
+  if (!/^[a-z][a-z0-9_]*$/.test(target)) throw new Error('Compatibility target is invalid.');
+  const doc = loadDocument(content);
+  const compatibility = isObject(doc.compatibility) ? doc.compatibility : {};
+  compatibility[target] = enabled;
+  doc.compatibility = compatibility;
+  return dumpDocument(doc);
+}
+
+export function updateUnitParam(
+  content: string,
+  originalName: string | null,
+  param: UnitParamDraft,
+): string {
+  const name = param.name.trim();
+  if (!/^[a-z][a-z0-9_]*$/.test(name)) throw new Error('Parameter name must use lowercase snake_case.');
+  const doc = loadDocument(content);
+  const params = isObject(doc.params) ? doc.params : {};
+  if (originalName === null && name in params) throw new Error(`Unit parameter "${name}" already exists.`);
+  if (originalName !== null && !(originalName in params)) throw new Error(`Unit parameter "${originalName}" was not found.`);
+  if (originalName !== name && name in params) throw new Error(`Unit parameter "${name}" already exists.`);
+
+  const current = originalName !== null && isObject(params[originalName]) ? params[originalName] : {};
+  const ui = isObject(current.ui) ? current.ui : {};
+  const next: Record<string, unknown> = {
+    ...current,
+    type: param.type,
+    default: editorScalar(param.default) ?? 0,
+  };
+  const min = editorScalar(param.min);
+  const max = editorScalar(param.max);
+  const smoothingMs = editorScalar(param.smoothingMs);
+  if (min === undefined) delete next.min; else next.min = min;
+  if (max === undefined) delete next.max; else next.max = max;
+  if (smoothingMs === undefined) delete next.smoothing_ms; else next.smoothing_ms = smoothingMs;
+  for (const [key, value] of Object.entries({
+    label: param.ui?.label,
+    control: param.ui?.control,
+    unit: param.ui?.unit,
+    display_precision: editorScalar(param.ui?.display_precision),
+  })) {
+    if (value === undefined || value === '') delete ui[key];
+    else ui[key] = value;
+  }
+  if (Object.keys(ui).length > 0) next.ui = ui; else delete next.ui;
+
+  const ordered = Object.entries(params).flatMap(([key, value]) => (
+    key === originalName ? [[name, next] as const] : [[key, value] as const]
+  ));
+  if (originalName === null) ordered.push([name, next]);
+  doc.params = Object.fromEntries(ordered);
+  if (originalName && originalName !== name && doc.graph) {
+    doc.graph = replaceStrings(doc.graph, { [`\${params.${originalName}}`]: `\${params.${name}}` }) as UnitDocument['graph'];
+  }
+  return dumpDocument(doc);
+}
+
+export function removeUnitParam(content: string, name: string): string {
+  const doc = loadDocument(content);
+  if (!isObject(doc.params) || !(name in doc.params)) throw new Error(`Unit parameter "${name}" was not found.`);
+  if (JSON.stringify(doc.graph ?? {}).includes(`\${params.${name}}`)) {
+    throw new Error(`Parameter "${name}" is still used by an atom. Rebind the atom before removing it.`);
+  }
+  doc.params = Object.fromEntries(Object.entries(doc.params).filter(([key]) => key !== name));
+  return dumpDocument(doc);
+}
+
+export function updateUnitPort(
+  content: string,
+  direction: 'inputs' | 'outputs',
+  index: number,
+  port: UnitPortDraft,
+): string {
+  const name = port.name.trim();
+  if (!/^[a-z][a-z0-9_]*$/.test(name)) throw new Error('Port name must use lowercase snake_case.');
+  const doc = loadDocument(content);
+  const ports = isObject(doc.ports) ? doc.ports : {};
+  const list = Array.isArray(ports[direction]) ? [...ports[direction] as unknown[]] : [];
+  const current = list[index];
+  if (!isObject(current)) throw new Error(`Unit ${direction.slice(0, -1)} ${index + 1} was not found.`);
+  if (list.some((item, itemIndex) => itemIndex !== index && isObject(item) && String(item.name) === name)) {
+    throw new Error(`Port "${name}" already exists.`);
+  }
+  const previousSignals = portSignals(current);
+  const nextSignals = port.signals.length > 0 ? port.signals : [name];
+  list[index] = {
+    ...current,
+    name,
+    type: port.type,
+    ...(port.channels === undefined ? {} : { channels: port.channels }),
+    ...(port.signals.length > 0 ? { signals: port.signals } : {}),
+  };
+  ports[direction] = list;
+  doc.ports = ports;
+  const replacements = Object.fromEntries(previousSignals.flatMap((signal, signalIndex) => (
+    nextSignals[signalIndex] && nextSignals[signalIndex] !== signal ? [[signal, nextSignals[signalIndex]]] : []
+  )));
+  if (Object.keys(replacements).length > 0 && doc.graph) {
+    doc.graph = replaceStrings(doc.graph, replacements) as UnitDocument['graph'];
+  }
+  return dumpDocument(doc);
+}
+
+export function addUnitPort(
+  content: string,
+  direction: 'inputs' | 'outputs',
+  port: UnitPortDraft,
+): string {
+  const doc = loadDocument(content);
+  const ports = isObject(doc.ports) ? doc.ports : {};
+  const list = Array.isArray(ports[direction]) ? ports[direction] as unknown[] : [];
+  if (list.some(item => isObject(item) && String(item.name) === port.name)) throw new Error(`Port "${port.name}" already exists.`);
+  ports[direction] = [...list, {
+    name: port.name,
+    type: port.type,
+    ...(port.channels === undefined ? {} : { channels: port.channels }),
+    ...(port.signals.length > 0 ? { signals: port.signals } : {}),
+  }];
+  doc.ports = ports;
+  const graph = ensureGraph(doc);
+  for (const signal of port.signals.length > 0 ? port.signals : [port.name]) {
+    if (!graph.signals!.includes(signal)) graph.signals!.push(signal);
+  }
+  return dumpDocument(doc);
 }
 
 export function moveUnitParam(content: string, paramName: string, nextIndex: number): string {

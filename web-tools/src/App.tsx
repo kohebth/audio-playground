@@ -1608,6 +1608,7 @@ export function EditorWorkspace({
             onSelectAtom={setSelectedAtomId}
             onSelectedAtomChange={updateSelectedAtom}
             onWorkspaceFileChange={updateWorkspaceFile}
+            onSaveToLibrary={saveSelectedUnitToLibrary}
             />
           </Profiler>
         )}

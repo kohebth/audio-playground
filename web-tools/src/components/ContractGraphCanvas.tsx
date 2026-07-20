@@ -444,7 +444,7 @@ export function ContractGraphCanvas({
     } catch (error) {
       return {
         unit: null,
-        error: error instanceof Error ? error.message : 'Unable to parse unit YAML.',
+        error: error instanceof Error ? error.message : 'Unable to read the unit source.',
         flow: { nodes: [], edges: [] },
       };
     }

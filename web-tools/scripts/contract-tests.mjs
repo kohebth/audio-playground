@@ -47,6 +47,7 @@ const backendSamples = read('web-tools/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
 const projectSidebar = read('web-tools/src/components/ProjectSidebar.tsx');
 const projectInspector = read('web-tools/src/components/ProjectInspector.tsx');
+const structuredUnitEditor = read('web-tools/src/components/StructuredUnitEditor.tsx');
 const projectCanvas = read('web-tools/src/components/ProjectCanvas.tsx');
 const projectNode = read('web-tools/src/components/ProjectNode.tsx');
 const projectGraph = read('web-tools/src/lib/projectGraph.ts');
@@ -164,7 +165,13 @@ includesContent(projectTopbar, 'Unsaved edits', 'dirty workspace state must be v
 includesContent(projectTopbar, 'Saved locally', 'clean workspace state must be visible');
 includesContent(projectInspector, 'Unsaved local edits', 'validation/render should show stale state');
 includesContent(projectInspector, 'Up to date', 'validation/render should show synced state');
-includesContent(projectInspector, 'Developer Diagnostics', 'developer diagnostics panel should own raw YAML and command details');
+includesContent(projectInspector, 'Engine Diagnostics', 'engine diagnostics should remain available in Pro mode');
+includes(
+  'web-tools/src/components/StructuredUnitEditor.tsx',
+  'data-testid="structured-unit-editor"',
+  'Pro mode must expose structured unit editing',
+);
+assert(!projectInspector.includes('<textarea\n              aria-label={`Workspace file'), 'raw source editing must not be exposed');
 includesContent(projectInspector, 'commands.validateProject', 'developer diagnostics should expose validation command details');
 assert(unit.graph.nodes.length > 0 && unit.graph.signals.includes('input'), 'unit inspect graph fixture is empty');
 
@@ -221,7 +228,7 @@ includesContent(projectNode, "integer={control?.type === 'int'}", 'integer knob 
 includesContent(projectNode, 'orderParamsByUnitContract', 'unit card knobs must follow unit YAML parameter order');
 includesContent(appStyles, '.project-node__knobs.knobs-row', 'unit card knobs must have a shared layout rule');
 includesContent(appStyles, 'flex-wrap: wrap', 'unit card knobs must wrap onto additional rows');
-includesContent(projectInspector, 'contract-param-order', 'Contract view must expose unit parameter ordering');
+includesContent(structuredUnitEditor, 'onReorderParam', 'Contract view must expose unit parameter ordering');
 includesContent(app, 'moveUnitParam(content, paramName, nextIndex)', 'unit parameter reorder must update YAML structurally');
 includesContent(app, 'graphTopologySignature', 'scalar parameter edits must be separated from graph topology changes');
 includesContent(projectCanvas, 'nodes={nodes}', 'project canvas must preserve node identities during scalar edits');
