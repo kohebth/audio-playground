@@ -1,21 +1,27 @@
-import type { ProjectInspect, ValidationResult } from '../lib/backendSamples';
+import { useState } from 'react';
+
+import type { ProjectInspect } from '../lib/backendSamples';
 import { AppLogo } from './AppLogo';
 import { PreviewPanel } from './PreviewPanel';
 import type { ParamOverride } from '../lib/projectParams';
 import type { WorkspaceFile } from '../lib/backendSamples';
-import type { StudioMode } from '../lib/projectPackage';
+import type {
+  ApgAudioAsset,
+  ProjectReadinessSnapshot,
+  StudioMode,
+} from '../lib/projectPackage';
 import { ModeToggle } from './ModeToggle';
+import { ProjectReadinessPanel } from './ProjectReadinessPanel';
 
 type Props = {
   project: ProjectInspect;
-  validation: ValidationResult;
   dirtyParamCount: number;
   hasDirtyParamDrafts: boolean;
   hasWorkspaceDrafts: boolean;
   workspaceSaveError: string | null;
   workspaceFileCount: number;
   onExportWorkspace: () => void;
-  onImportWorkspace: (file: File | null) => void;
+  onImportWorkspace: (file: File) => void;
   onResetWorkspace: () => void;
   onSaveWorkspace: () => void;
   onUndo: () => void;
@@ -30,11 +36,14 @@ type Props = {
   onModeChange: (mode: StudioMode) => void;
   onHome: () => void;
   onTour: () => void;
+  packagedAudio: ApgAudioAsset[];
+  readiness: ProjectReadinessSnapshot;
+  onAudioAssetChange: (asset: ApgAudioAsset | null) => void;
+  onReadinessUpdate: (update: Partial<ProjectReadinessSnapshot>) => void;
 };
 
 export function ProjectTopbar({
   project,
-  validation,
   dirtyParamCount,
   hasDirtyParamDrafts,
   hasWorkspaceDrafts,
@@ -56,8 +65,14 @@ export function ProjectTopbar({
   onModeChange,
   onHome,
   onTour,
+  packagedAudio,
+  readiness,
+  onAudioAssetChange,
+  onReadinessUpdate,
 }: Props) {
+  const [readinessOpen, setReadinessOpen] = useState(false);
   const draftStateClass = workspaceSaveError ? 'status-pill--bad' : hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
+  const readinessOk = readiness.validation === 'ready' && readiness.preview !== 'blocked';
 
   return (
     <header className="topbar topbar--project app-header">
@@ -88,15 +103,23 @@ export function ProjectTopbar({
         paramOverrides={paramOverrides}
         workspaceFiles={workspaceFiles}
         onSaveWorkspace={onSaveWorkspace}
+        studioMode={mode}
+        packagedAudio={packagedAudio}
+        onAudioAssetChange={onAudioAssetChange}
+        onReadinessUpdate={onReadinessUpdate}
       />
 
       <div className="header-right">
         <ModeToggle compact mode={mode} onChange={onModeChange} />
         <button className="topbar__help" onClick={onTour} title="Show guided tour" type="button">?</button>
         <div className="topbar__status" aria-label="Project status">
-          <div className={`status-pill ${validation.ok ? 'status-pill--ok' : 'status-pill--bad'}`}>
-            {validation.ok ? 'Valid' : 'Invalid'}
-          </div>
+          <button
+            className={`status-pill ${readinessOk ? 'status-pill--ok' : 'status-pill--bad'}`}
+            onClick={() => setReadinessOpen(open => !open)}
+            type="button"
+          >
+            {readinessOk ? 'Ready' : readiness.validation === 'unknown' ? 'Checking' : 'Blocked'}
+          </button>
           <div
             className={`status-pill ${draftStateClass}`}
             data-testid="workspace-save-status"
@@ -131,22 +154,24 @@ export function ProjectTopbar({
           Import
           <input
             data-testid="topbar-import-input"
-            accept="application/json"
+            accept=".apg,application/json"
             onChange={event => {
-              void onImportWorkspace(event.target.files?.[0] ?? null);
+              const file = event.target.files?.[0];
+              if (file) onImportWorkspace(file);
               event.target.value = '';
             }}
             type="file"
           />
         </label>
         <button className="btn btn--ghost" data-testid="topbar-export" onClick={onExportWorkspace} type="button">
-          Export
+          Export .apg
         </button>
         <button className="btn btn--ghost" data-testid="topbar-reset" disabled={!hasWorkspaceDrafts} onClick={onResetWorkspace} type="button">
           Reset
         </button>
         </div>
       </div>
+      <ProjectReadinessPanel onClose={() => setReadinessOpen(false)} open={readinessOpen} readiness={readiness} />
     </header>
   );
 }

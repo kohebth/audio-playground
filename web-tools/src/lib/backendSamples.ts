@@ -12,6 +12,7 @@ import projectValidationRaw from '../../../test/golden/v2-validate-project-guita
 import schroederReverbUnitYaml from '../../../test/fixtures/units-v2/schroeder_reverb.unit.v2.yaml?raw';
 import toneStackUnitYaml from '../../../test/fixtures/units-v2/tone_stack.unit.v2.yaml?raw';
 import tremoloUnitYaml from '../../../test/fixtures/units-v2/tremolo.unit.v2.yaml?raw';
+import wetDryMixUnitYaml from '../../../test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml?raw';
 import unitInspectRaw from '../../../test/golden/v2-inspect-unit-simple_gain.json?raw';
 
 export type Compatibility = Record<string, boolean>;
@@ -296,3 +297,10 @@ export const initialWorkspaceFiles: WorkspaceFile[] = [
     originalContent: schroederReverbUnitYaml,
   },
 ];
+
+export const wetDryMixWorkspaceFile: WorkspaceFile = {
+  path: 'test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml',
+  role: 'unit',
+  content: wetDryMixUnitYaml,
+  originalContent: wetDryMixUnitYaml,
+};

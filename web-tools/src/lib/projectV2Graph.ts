@@ -229,6 +229,50 @@ export function insertProjectInstanceOnRoute(
   return { content: next, id: added.id };
 }
 
+export function insertProjectParallelOnRoute(
+  content: string,
+  ports: ProjectPortCatalog,
+  effectUnit: string,
+  effectId: string,
+  mixerUnit: string,
+  mixerId: string,
+  routeIndex: number,
+  effectParams: Record<string, string> = {},
+  mixerParams: Record<string, string> = { mix: '0.5' },
+  positions?: { effect?: GraphPosition; mixer?: GraphPosition },
+): { content: string; effectId: string; mixerId: string } {
+  const draft = parseProjectGraphDraft(content);
+  const route = draft.routes[routeIndex];
+  if (!route) throw new Error(`Project route ${routeIndex} was not found.`);
+  const effectPorts = ports[effectUnit];
+  if (!effectPorts || effectPorts.inputs.length !== 1 || effectPorts.outputs.length !== 1) {
+    throw new Error(`Parallel effect "${effectUnit}" must have exactly one input and one output.`);
+  }
+  const mixerPorts = ports[mixerUnit];
+  if (!mixerPorts
+    || mixerPorts.inputs.length !== 2
+    || !mixerPorts.inputs.includes('dry')
+    || !mixerPorts.inputs.includes('wet')
+    || mixerPorts.outputs.length !== 1) {
+    throw new Error(`Parallel mixer "${mixerUnit}" must expose dry and wet inputs and one output.`);
+  }
+
+  const effect = addProjectInstance(content, effectUnit, effectId, effectParams, positions?.effect);
+  const mixer = addProjectInstance(effect.content, mixerUnit, mixerId, mixerParams, positions?.mixer);
+  const doc = loadDocument(mixer.content);
+  const chain = ensureChain(doc);
+  const routes = (chain.routes as unknown[]).filter(isObject);
+  routes.splice(routeIndex, 1,
+    { from: route.from, to: `${effectId}.${effectPorts.inputs[0]}` },
+    { from: route.from, to: `${mixerId}.dry` },
+    { from: `${effectId}.${effectPorts.outputs[0]}`, to: `${mixerId}.wet` },
+    { from: `${mixerId}.${mixerPorts.outputs[0]}`, to: route.to });
+  chain.routes = routes;
+  const next = dumpDocument(doc);
+  validateProjectRoutes(next, ports);
+  return { content: next, effectId, mixerId };
+}
+
 export function duplicateProjectInstance(content: string, instanceId: string): { content: string; id: string } {
   const draft = parseProjectGraphDraft(content);
   const source = draft.nodes.find(node => node.id === instanceId);

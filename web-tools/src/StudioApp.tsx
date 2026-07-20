@@ -13,6 +13,8 @@ import {
   type StudioMode,
 } from './lib/projectPackage';
 import { createEmptyProjectPackage } from './lib/projectTemplates';
+import { evaluateWorkspaceReadiness } from './lib/projectReadiness';
+import type { PersonalUnitRecord, UnitPreset } from './lib/presetLibrary';
 import { createStudioRepository } from './lib/studioRepository';
 import { findMigratableBrowserWorkspace } from './lib/workspaceMigrations';
 import type { WorkspacePayload } from './lib/workspacePersistence';
@@ -31,13 +33,14 @@ function storedMode(): StudioMode {
 }
 
 function starterProject(now = new Date().toISOString()): ApgProjectPackage {
-  return createApgProjectPackageFromFiles(backendSamples.project.file, initialWorkspaceFiles, {
+  const project = createApgProjectPackageFromFiles(backendSamples.project.file, initialWorkspaceFiles, {
     id: 'guitar-pedalboard-starter',
     name: 'Guitar Pedalboard',
     description: 'A complete live guitar signal chain.',
     createdAt: now,
     updatedAt: now,
   });
+  return { ...project, readiness: evaluateWorkspaceReadiness(project.workspace, project.readiness) };
 }
 
 function downloadProject(project: ApgProjectPackage): void {
@@ -55,6 +58,8 @@ export default function StudioApp() {
   const repository = useMemo(() => createStudioRepository(), []);
   const [projects, setProjects] = useState<ApgProjectPackage[]>([]);
   const [activeProject, setActiveProject] = useState<ApgProjectPackage | null>(null);
+  const [personalPresets, setPersonalPresets] = useState<UnitPreset[]>([]);
+  const [personalUnits, setPersonalUnits] = useState<PersonalUnitRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setModeState] = useState<StudioMode>(storedMode);
@@ -80,6 +85,13 @@ export default function StudioApp() {
         }
         if (cancelled) return;
         setProjects(stored);
+        const [presets, units] = await Promise.all([
+          repository.listPersonalPresets(),
+          repository.listPersonalUnits(),
+        ]);
+        if (cancelled) return;
+        setPersonalPresets(presets);
+        setPersonalUnits(units);
         const lastId = typeof window === 'undefined' ? null : window.localStorage.getItem(LAST_PROJECT_STORAGE_KEY);
         setActiveProject(stored.find(project => project.manifest.id === lastId) ?? stored[0] ?? null);
       } catch (caught) {
@@ -109,7 +121,8 @@ export default function StudioApp() {
   }, [navigate]);
 
   const createProject = useCallback((name: string) => {
-    const project = createEmptyProjectPackage({ id: newId(), name, mode });
+    const created = createEmptyProjectPackage({ id: newId(), name, mode });
+    const project = { ...created, readiness: evaluateWorkspaceReadiness(created.workspace, created.readiness) };
     void repository.saveProject(project).then(() => {
       setProjects(current => [project, ...current]);
       openProject(project);
@@ -163,6 +176,7 @@ export default function StudioApp() {
         ...current,
         manifest: { ...current.manifest, updatedAt: new Date().toISOString(), lastMode: mode },
         workspace,
+        readiness: evaluateWorkspaceReadiness(workspace, { ...current.readiness, preview: 'unknown' }),
       };
       void repository.saveProject(updated).then(() => {
         setProjects(items => [updated, ...items.filter(item => item.manifest.id !== updated.manifest.id)]);
@@ -170,6 +184,70 @@ export default function StudioApp() {
       return updated;
     });
   }, [mode, repository]);
+
+  const updateActivePackage = useCallback((update: (project: ApgProjectPackage) => ApgProjectPackage) => {
+    setActiveProject(current => {
+      if (!current) return current;
+      const updated = update(current);
+      if (updated === current) return current;
+      void repository.saveProject(updated).then(() => {
+        setProjects(items => [updated, ...items.filter(item => item.manifest.id !== updated.manifest.id)]);
+      }).catch(caught => setError(caught instanceof Error ? caught.message : 'Local project save failed.'));
+      return updated;
+    });
+  }, [repository]);
+
+  const savePersonalPreset = useCallback((preset: UnitPreset) => {
+    void repository.savePersonalPreset(preset).then(async () => {
+      setPersonalPresets(await repository.listPersonalPresets());
+    }).catch(caught => setError(caught instanceof Error ? caught.message : 'Unable to save that preset.'));
+  }, [repository]);
+
+  const deletePersonalPreset = useCallback((id: string) => {
+    void repository.deletePersonalPreset(id).then(() => {
+      setPersonalPresets(items => items.filter(item => item.id !== id));
+    }).catch(caught => setError(caught instanceof Error ? caught.message : 'Unable to delete that preset.'));
+  }, [repository]);
+
+  const savePersonalUnit = useCallback((unit: PersonalUnitRecord) => {
+    void repository.savePersonalUnit(unit).then(async () => {
+      setPersonalUnits(await repository.listPersonalUnits());
+    }).catch(caught => setError(caught instanceof Error ? caught.message : 'Unable to save that personal unit.'));
+  }, [repository]);
+
+  const deletePersonalUnit = useCallback((id: string) => {
+    void repository.deletePersonalUnit(id).then(() => {
+      setPersonalUnits(items => items.filter(item => item.id !== id));
+    }).catch(caught => setError(caught instanceof Error ? caught.message : 'Unable to delete that personal unit.'));
+  }, [repository]);
+
+  const exportActiveProject = useCallback((workspace: WorkspacePayload) => {
+    if (!activeProject) return;
+    const project = {
+      ...activeProject,
+      manifest: { ...activeProject.manifest, updatedAt: new Date().toISOString(), lastMode: mode },
+      workspace,
+      readiness: evaluateWorkspaceReadiness(workspace, activeProject.readiness),
+    };
+    downloadProject(project);
+    updateActivePackage(() => project);
+  }, [activeProject, mode, updateActivePackage]);
+
+  const importIntoEditor = useCallback((file: File) => {
+    void file.text().then(text => {
+      const imported = parseApgProjectPackage(text);
+      const now = new Date().toISOString();
+      const conflict = projects.some(project => project.manifest.id === imported.manifest.id);
+      const project = conflict ? {
+        ...imported,
+        manifest: { ...imported.manifest, id: newId('import'), name: `${imported.manifest.name} Imported`, updatedAt: now },
+      } : imported;
+      return repository.saveProject(project).then(() => {
+        setProjects(current => [project, ...current.filter(item => item.manifest.id !== project.manifest.id)]);
+        openProject(project);
+      });
+    }).catch(caught => setError(caught instanceof Error ? caught.message : 'That .apg project could not be imported.'));
+  }, [openProject, projects, repository]);
 
   if (isHome) {
     return (
@@ -204,8 +282,17 @@ export default function StudioApp() {
       key={activeProject.manifest.id}
       mode={mode}
       onHome={() => navigate('/')}
+      onDeletePersonalUnit={deletePersonalUnit}
+      onDeletePreset={deletePersonalPreset}
+      onExportProject={exportActiveProject}
+      onImportProject={importIntoEditor}
       onModeChange={setMode}
+      onProjectPackageChange={updateActivePackage}
+      onSavePersonalUnit={savePersonalUnit}
+      onSavePreset={savePersonalPreset}
       onWorkspaceChange={updateWorkspace}
+      personalPresets={personalPresets}
+      personalUnits={personalUnits}
       projectPackage={activeProject}
     />
   );

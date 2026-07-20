@@ -8,6 +8,7 @@ import {
   addProjectUnitReference,
   applyProjectScene,
   duplicateProjectInstance,
+  insertProjectParallelOnRoute,
   insertProjectInstanceOnRoute,
   moveProjectInstance,
   moveProjectRoute,
@@ -108,6 +109,37 @@ assert.throws(
   ),
   /exactly one input and one output/,
 );
+
+const parallelSource = addProjectUnitReference(
+  emptyProject,
+  'wet_dry_mix_unit',
+  '../units/wet_dry_mix.unit.v2.yaml',
+);
+const parallelRegistered = addProjectUnitReference(
+  parallelSource,
+  'overdrive_unit',
+  '../units/overdrive.unit.v2.yaml',
+);
+const parallel = insertProjectParallelOnRoute(
+  parallelRegistered,
+  ports,
+  'overdrive_unit',
+  'parallel_drive',
+  'wet_dry_mix_unit',
+  'parallel_mix',
+  0,
+  { drive: '2.4' },
+  { mix: '0.35' },
+);
+const parallelDraft = parseProjectGraphDraft(parallel.content);
+assert.equal(parallelDraft.nodes.length, 2);
+assert.deepEqual(parallelDraft.routes, [
+  { from: 'system.input', to: 'parallel_drive.input' },
+  { from: 'system.input', to: 'parallel_mix.dry' },
+  { from: 'parallel_drive.output', to: 'parallel_mix.wet' },
+  { from: 'parallel_mix.output', to: 'system.output' },
+]);
+assert.doesNotThrow(() => validateProjectRoutes(parallel.content, ports));
 
 const duplicated = duplicateProjectInstance(project, 'drive1');
 const duplicate = parseProjectGraphDraft(duplicated.content).nodes.find(node => node.id === duplicated.id);

@@ -19,6 +19,8 @@ type Props = {
   onSelectNode: (id: string) => void;
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
+  selectedInstanceIds: string[];
+  onToggleBatchInstance: (instanceId: string) => void;
 };
 
 export const UNIT_DRAG_TYPE = 'application/x-apg-unit';
@@ -42,6 +44,8 @@ export function ProjectSidebar({
   onSelectRoute,
   routeSources,
   routeTargets,
+  selectedInstanceIds,
+  onToggleBatchInstance,
 }: Props) {
   const [unitName, setUnitName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
@@ -189,14 +193,14 @@ export function ProjectSidebar({
           const nodeId = `unit-${instance.id}`;
 
           return (
-            <button
-              key={instance.id}
-              className={`project-list__item unit-item ${selectedNodeId === nodeId ? 'project-list__item--active' : ''}`}
-              data-testid={`project-instance-item-${instance.id}`}
-              onClick={() => onSelectNode(nodeId)}
-              onDoubleClick={() => onOpenContractGraph(nodeId)}
-              type="button"
-            >
+            <div className="project-list__row" key={instance.id}>
+              <button
+                className={`project-list__item unit-item ${selectedNodeId === nodeId ? 'project-list__item--active' : ''}`}
+                data-testid={`project-instance-item-${instance.id}`}
+                onClick={() => onSelectNode(nodeId)}
+                onDoubleClick={() => onOpenContractGraph(nodeId)}
+                type="button"
+              >
               <span className="project-list__main">
                 <span className="project-list__index unit-dot" style={{ background: unitDotColors[index % unitDotColors.length] }} />
                 <span className="project-list__name unit-name">{instance.id}</span>
@@ -205,7 +209,18 @@ export function ProjectSidebar({
               <span className="project-list__params unit-params">
                 {instance.params.length} {instance.params.length === 1 ? 'param' : 'params'}
               </span>
-            </button>
+              </button>
+              <button
+                aria-label={`Select ${instance.id} for batch editing`}
+                aria-pressed={selectedInstanceIds.includes(instance.id)}
+                className="project-list__batch"
+                onClick={() => onToggleBatchInstance(instance.id)}
+                title="Add to batch selection"
+                type="button"
+              >
+                <i className={`fa-solid ${selectedInstanceIds.includes(instance.id) ? 'fa-check-square' : 'fa-square'}`} aria-hidden="true" />
+              </button>
+            </div>
           );
         })}
       </div>

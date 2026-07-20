@@ -28,7 +28,7 @@ type Props = {
   fitViewRevision: number;
   onNodesChange: OnNodesChange<Node<ProjectNodeData>>;
   onEdgesChange: OnEdgesChange;
-  onSelectNode: (id: string) => void;
+  onSelectNode: (id: string, additive?: boolean) => void;
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
   onAddUnitAt: (unitId: string, position: GraphPosition) => void;
@@ -108,7 +108,7 @@ function ProjectFlow({
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={(_, node) => onSelectNode(node.id)}
+        onNodeClick={(event, node) => onSelectNode(node.id, event.shiftKey)}
         onNodeDoubleClick={(_, node) => onOpenContractGraph(node.id)}
         onNodeDragStart={(_, node) => {
           dragStartAtByNode.current[node.id] = performance.now();
@@ -136,6 +136,8 @@ function ProjectFlow({
         fitViewOptions={{ padding: 0.16 }}
         minZoom={0.35}
         maxZoom={1.5}
+        multiSelectionKeyCode="Shift"
+        selectionOnDrag
       >
         <Controls />
         <MiniMap

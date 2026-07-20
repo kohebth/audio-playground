@@ -5,15 +5,23 @@ import '@xyflow/react/dist/style.css';
 
 import { AppLogo } from './components/AppLogo';
 import { ContractGraphCanvas } from './components/ContractGraphCanvas';
+import { BatchActionBar } from './components/BatchActionBar';
 import { GuidedTour } from './components/GuidedTour';
 import { LiveLatencyBadge } from './components/LiveLatencyBadge';
 import { ProjectCanvas } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
+import { SceneBar } from './components/SceneBar';
 import { SimpleInspector } from './components/SimpleInspector';
 import { SimpleLibraryPanel, type EffectLibraryItem } from './components/SimpleLibraryPanel';
-import { backendCommands, backendSamples, initialWorkspaceFiles, type WorkspaceFile } from './lib/backendSamples';
+import {
+  backendCommands,
+  backendSamples,
+  initialWorkspaceFiles,
+  wetDryMixWorkspaceFile,
+  type WorkspaceFile,
+} from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData, type ProjectParamControl } from './lib/projectGraph';
 import { LiveBypassContext, type LiveBypassController } from './lib/liveBypass';
 import {
@@ -26,7 +34,9 @@ import {
   addProjectInstance,
   addProjectRoute,
   addProjectUnitReference,
+  applyProjectScene,
   duplicateProjectInstance,
+  insertProjectParallelOnRoute,
   insertProjectInstanceOnRoute,
   moveProjectInstance,
   moveProjectRoute,
@@ -35,14 +45,23 @@ import {
   projectDraftToInspect,
   removeProjectInstance,
   removeProjectRoute,
+  removeProjectScene,
   renameProjectInstance,
+  renameProjectScene,
   replaceProjectRoute,
   setProjectInstancePosition,
+  upsertProjectScene,
   type GraphPosition as ProjectGraphPosition,
   type ProjectPortCatalog,
   type ProjectRouteDraft,
 } from './lib/projectV2Graph';
 import type { ApgProjectPackage, StudioMode } from './lib/projectPackage';
+import {
+  createPersonalPreset,
+  listPresetsForUnit,
+  type PersonalUnitRecord,
+  type UnitPreset,
+} from './lib/presetLibrary';
 import {
   addAtomNodeToUnit,
   connectUnitNodes,
@@ -202,12 +221,21 @@ function loadWorkspaceState(projectPackage?: ApgProjectPackage): { entryProject:
 type EditorWorkspaceProps = {
   projectPackage: ApgProjectPackage;
   mode: StudioMode;
+  personalPresets: UnitPreset[];
+  personalUnits: PersonalUnitRecord[];
   onModeChange: (mode: StudioMode) => void;
   onHome: () => void;
+  onDeletePersonalUnit: (id: string) => void;
+  onDeletePreset: (id: string) => void;
+  onExportProject: (workspace: WorkspacePayload) => void;
+  onImportProject: (file: File) => void;
+  onProjectPackageChange: (update: (project: ApgProjectPackage) => ApgProjectPackage) => void;
+  onSavePersonalUnit: (unit: PersonalUnitRecord) => void;
+  onSavePreset: (preset: UnitPreset) => void;
   onWorkspaceChange: (workspace: WorkspacePayload) => void;
 };
 
-const effectLibraryCopy: Record<string, Omit<EffectLibraryItem, 'id'>> = {
+const effectLibraryCopy: Record<string, Omit<EffectLibraryItem, 'id' | 'scope' | 'recordId'>> = {
   noise_gate: { title: 'Noise Gate', category: 'dynamics', description: 'Tames background noise between notes.' },
   phaser: { title: 'Phaser', category: 'modulation', description: 'Adds a moving, liquid sweep.' },
   overdrive: { title: 'Overdrive', category: 'drive', description: 'Warm saturation and extra bite.' },
@@ -218,18 +246,43 @@ const effectLibraryCopy: Record<string, Omit<EffectLibraryItem, 'id'>> = {
   schroeder_reverb: { title: 'Reverb', category: 'reverb', description: 'Places the sound in a smooth room.' },
 };
 
-const simpleEffectLibrary: EffectLibraryItem[] = initialWorkspaceFiles
+const builtInSimpleEffectLibrary: EffectLibraryItem[] = initialWorkspaceFiles
   .filter(file => file.role === 'unit')
   .map(file => {
     const id = file.path.split('/').at(-1)?.replace(/\.unit\.v2\.yaml$/i, '') ?? file.path;
-    return { id, ...(effectLibraryCopy[id] ?? { title: id.replace(/_/g, ' '), category: 'other', description: 'Custom effect.' }) };
+    return {
+      id,
+      ...(effectLibraryCopy[id] ?? { title: id.replace(/_/g, ' '), category: 'other', description: 'Custom effect.' }),
+      scope: 'built-in' as const,
+    };
   });
+
+function libraryWorkspaceSource(item: EffectLibraryItem, personalUnits: PersonalUnitRecord[]): WorkspaceFile | null {
+  if (item.scope === 'personal') {
+    const personal = personalUnits.find(unit => unit.id === item.recordId);
+    if (!personal) return null;
+    const path = `personal/${personal.name}.unit.v2.yaml`;
+    return { path, role: 'unit', content: personal.content, originalContent: personal.content };
+  }
+  return initialWorkspaceFiles.find(file => (
+    file.role === 'unit' && file.path.endsWith(`/${item.id}.unit.v2.yaml`)
+  )) ?? null;
+}
 
 export function EditorWorkspace({
   projectPackage,
   mode,
+  personalPresets,
+  personalUnits,
   onModeChange,
   onHome,
+  onDeletePersonalUnit,
+  onDeletePreset,
+  onExportProject,
+  onImportProject,
+  onProjectPackageChange,
+  onSavePersonalUnit,
+  onSavePreset,
   onWorkspaceChange,
 }: EditorWorkspaceProps) {
   const location = useLocation();
@@ -239,6 +292,17 @@ export function EditorWorkspace({
   const [tourOpen, setTourOpen] = useState(() => (
     mode === 'simple' && typeof window !== 'undefined' && !window.localStorage.getItem('apg.studio.tour.v1')
   ));
+  const simpleEffectLibrary = useMemo<EffectLibraryItem[]>(() => [
+    ...builtInSimpleEffectLibrary,
+    ...personalUnits.map(unit => ({
+      id: unit.name,
+      title: unit.title,
+      category: unit.category,
+      description: unit.description,
+      scope: 'personal' as const,
+      recordId: unit.id,
+    })),
+  ], [personalUnits]);
   const initialRouteWorkspacePath = workspacePathFromRoute(location.pathname, initialWorkspace.files);
   const initialProjectInspect = useMemo(() => {
     try {
@@ -276,6 +340,8 @@ export function EditorWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(() => initialRouteNode
     ? `unit-${initialRouteNode.id}`
     : initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
+  const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
+  const [activeScene, setActiveScene] = useState<string | null>(null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
   const [canvasFitRevision, setCanvasFitRevision] = useState(0);
   const [inspectorView, setInspectorView] = useState<InspectorView>(initialRouteWorkspacePath ? 'contract' : 'project');
@@ -601,9 +667,17 @@ export function EditorWorkspace({
     };
   }, [entryProject, onWorkspaceChange, workspaceFiles]);
 
-  const selectProjectNode = useCallback((id: string) => {
+  const selectProjectNode = useCallback((id: string, additive = false) => {
     markPerfSpan('ui.select.projectNode', () => {
       setSelectedId(id);
+      if (id.startsWith('unit-')) {
+        const instanceId = id.slice('unit-'.length);
+        setSelectedInstanceIds(current => additive
+          ? current.includes(instanceId) ? current.filter(item => item !== instanceId) : [...current, instanceId]
+          : [instanceId]);
+      } else {
+        setSelectedInstanceIds([]);
+      }
       setSelectedRouteIndex(null);
       setSelectedAtomId(null);
       if (id.startsWith('unit-')) {
@@ -739,9 +813,7 @@ export function EditorWorkspace({
   const addSimpleEffect = useCallback((item: EffectLibraryItem) => {
     markPerfSpan('graph.add.simpleEffect', () => {
       try {
-        const source = initialWorkspaceFiles.find(file => (
-          file.role === 'unit' && file.path.endsWith(`/${item.id}.unit.v2.yaml`)
-        ));
+        const source = libraryWorkspaceSource(item, personalUnits);
         if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
         const outputRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
         if (outputRouteIndex < 0) throw new Error('Connect the board to Output before adding another effect.');
@@ -755,7 +827,9 @@ export function EditorWorkspace({
 
         const unitId = `${item.id}_unit`;
         const instanceId = uniqueInstanceId(project.nodes.map(node => node.id), unitId);
-        const targetPath = `units/${item.id}.unit.v2.yaml`;
+        const targetPath = item.scope === 'personal'
+          ? `personal/${item.id}.unit.v2.yaml`
+          : `units/${item.id}.unit.v2.yaml`;
         const reference = relativeWorkspaceReference(projectWorkspaceFile.path, targetPath);
         const defaults = Object.fromEntries(parseUnitGraphDraft(source.content).params.map(param => [
           param.name,
@@ -795,6 +869,91 @@ export function EditorWorkspace({
     });
   }, [
     insertProjectNodeOnRoute,
+    project.nodes,
+    project.routes,
+    projectDraft.units,
+    projectPorts,
+    projectWorkspaceFile.content,
+    projectWorkspaceFile.path,
+    personalUnits,
+    pushHistory,
+    setWorkspaceFiles,
+  ]);
+
+  const addSimpleParallelEffect = useCallback((item: EffectLibraryItem) => {
+    markPerfSpan('graph.add.simpleParallelEffect', () => {
+      try {
+        const source = libraryWorkspaceSource(item, personalUnits);
+        if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
+        const outputRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
+        if (outputRouteIndex < 0) throw new Error('Connect the board to Output before adding a parallel effect.');
+
+        let content = projectWorkspaceFile.content;
+        const nextPorts = { ...projectPorts };
+        const filesToAdd: WorkspaceFile[] = [];
+        let effectReference = projectDraft.units.find(reference => (
+          reference.id === `${item.id}_unit` || reference.file.endsWith(`/${item.id}.unit.v2.yaml`)
+        ));
+        if (!effectReference) {
+          const id = `${item.id}_unit`;
+          const path = item.scope === 'personal' ? `personal/${item.id}.unit.v2.yaml` : `units/${item.id}.unit.v2.yaml`;
+          content = addProjectUnitReference(content, id, relativeWorkspaceReference(projectWorkspaceFile.path, path));
+          effectReference = { id, file: relativeWorkspaceReference(projectWorkspaceFile.path, path) };
+          nextPorts[id] = parseUnitPortNames(source.content);
+          filesToAdd.push({ ...source, path });
+        }
+
+        let mixerReference = parseProjectGraphDraft(content).units.find(reference => reference.id === 'wet_dry_mix_unit');
+        if (!mixerReference) {
+          const mixerPath = 'units/wet_dry_mix.unit.v2.yaml';
+          content = addProjectUnitReference(
+            content,
+            'wet_dry_mix_unit',
+            relativeWorkspaceReference(projectWorkspaceFile.path, mixerPath),
+          );
+          mixerReference = { id: 'wet_dry_mix_unit', file: relativeWorkspaceReference(projectWorkspaceFile.path, mixerPath) };
+          nextPorts.wet_dry_mix_unit = parseUnitPortNames(wetDryMixWorkspaceFile.content);
+          filesToAdd.push({ ...wetDryMixWorkspaceFile, path: mixerPath });
+        }
+
+        const effectDefaults = Object.fromEntries(parseUnitGraphDraft(source.content).params.map(param => [param.name, param.default]));
+        const mixerDefaults = Object.fromEntries(parseUnitGraphDraft(wetDryMixWorkspaceFile.content).params.map(param => [param.name, param.default]));
+        const effectId = uniqueInstanceId(project.nodes.map(node => node.id), effectReference.id);
+        const mixerId = uniqueInstanceId([...project.nodes.map(node => node.id), effectId], 'wet_dry_mix_unit');
+        const positionX = 180 + project.nodes.length * 260;
+        const result = insertProjectParallelOnRoute(
+          content,
+          nextPorts,
+          effectReference.id,
+          effectId,
+          mixerReference.id,
+          mixerId,
+          outputRouteIndex,
+          effectDefaults,
+          mixerDefaults,
+          { effect: { x: positionX, y: 100 }, mixer: { x: positionX + 230, y: 260 } },
+        );
+        pushHistory();
+        setWorkspaceFiles(files => {
+          const updated = files.map(file => file.path === projectWorkspaceFile.path ? { ...file, content: result.content } : file);
+          return filesToAdd.reduce((current, file) => (
+            current.some(item => item.path === file.path) ? current : [...current, file]
+          ), updated);
+        });
+        const values = Object.fromEntries([
+          ...Object.entries(effectDefaults).map(([key, value]) => [paramDraftKey(effectId, key), value]),
+          ...Object.entries(mixerDefaults).map(([key, value]) => [paramDraftKey(mixerId, key), value]),
+        ]);
+        setParamDrafts(current => ({ ...current, ...values }));
+        setParamOriginals(current => ({ ...current, ...values }));
+        setSelectedId(`unit-${effectId}`);
+        setCanvasFitRevision(revision => revision + 1);
+      } catch (caught) {
+        setGraphEditError(caught instanceof Error ? caught.message : 'Unable to build that parallel path.');
+      }
+    });
+  }, [
+    personalUnits,
     project.nodes,
     project.routes,
     projectDraft.units,
@@ -845,6 +1004,118 @@ export function EditorWorkspace({
       setSelectedId(null);
     });
   }, [updateProjectFile]);
+
+  const saveScene = useCallback((name: string) => {
+    const params = Object.fromEntries(project.nodes.flatMap(node => (
+      node.params.map(param => [`${node.id}.${param.key}`, param.value])
+    )));
+    const bypass = Object.fromEntries(project.nodes.map(node => [
+      node.id,
+      liveBypassController?.bypassByInstance[node.id] ?? false,
+    ]));
+    if (updateProjectFile(content => upsertProjectScene(content, name, params, bypass))) setActiveScene(name);
+  }, [liveBypassController, project.nodes, updateProjectFile]);
+
+  const applyScene = useCallback((name: string) => {
+    try {
+      const result = applyProjectScene(projectWorkspaceFile.content, name);
+      if (!updateProjectFile(() => result.content)) return;
+      const scene = parseProjectGraphDraft(result.content).scenes.find(item => item.name === name);
+      if (scene) {
+        setParamDrafts(current => ({
+          ...current,
+          ...Object.fromEntries(Object.entries(scene.params).map(([path, value]) => [path, value])),
+        }));
+      }
+      for (const [instanceId, bypassed] of Object.entries(result.bypass)) {
+        void liveBypassController?.setBypass(instanceId, bypassed);
+      }
+      setActiveScene(name);
+    } catch (caught) {
+      setGraphEditError(caught instanceof Error ? caught.message : 'Unable to recall that scene.');
+    }
+  }, [liveBypassController, projectWorkspaceFile.content, updateProjectFile]);
+
+  const renameScene = useCallback((name: string, nextName: string) => {
+    if (!updateProjectFile(content => renameProjectScene(content, name, nextName))) return;
+    setActiveScene(current => current === name ? nextName : current);
+  }, [updateProjectFile]);
+
+  const deleteScene = useCallback((name: string) => {
+    if (!updateProjectFile(content => removeProjectScene(content, name))) return;
+    setActiveScene(current => current === name ? null : current);
+  }, [updateProjectFile]);
+
+  const selectedUnitName = selectedNode?.kind === 'unit'
+    ? selectedUnitGraph?.name ?? selectedNode.unit.name.replace(/_unit$/, '')
+    : null;
+  const selectedUnitPresets = useMemo(
+    () => selectedUnitName ? listPresetsForUnit(selectedUnitName, personalPresets) : [],
+    [personalPresets, selectedUnitName],
+  );
+
+  const applyPreset = useCallback((preset: UnitPreset) => {
+    if (!selectedNode || selectedNode.kind !== 'unit') return;
+    const instanceId = selectedNode.instance.id;
+    const next = Object.entries(preset.params).reduce(
+      (content, [key, value]) => updateProjectInstanceParam(content, instanceId, key, value),
+      projectWorkspaceFile.content,
+    );
+    if (!updateProjectFile(() => next)) return;
+    setParamDrafts(current => ({
+      ...current,
+      ...Object.fromEntries(Object.entries(preset.params).map(([key, value]) => [paramDraftKey(instanceId, key), value])),
+    }));
+    setActiveScene(null);
+  }, [projectWorkspaceFile.content, selectedNode, updateProjectFile]);
+
+  const savePreset = useCallback((name: string) => {
+    if (!selectedNode || selectedNode.kind !== 'unit' || !selectedUnitName) return;
+    onSavePreset(createPersonalPreset({
+      id: globalThis.crypto?.randomUUID?.() ?? `preset-${Date.now()}`,
+      name,
+      description: `Saved from ${selectedNode.instance.id}.`,
+      unitName: selectedUnitName,
+      params: Object.fromEntries(selectedNode.instance.params.map(param => [param.key, param.value])),
+    }));
+  }, [onSavePreset, selectedNode, selectedUnitName]);
+
+  const saveSelectedUnitToLibrary = useCallback(() => {
+    if (!selectedNode || selectedNode.kind !== 'unit' || !selectedUnitName || selectedUnitWorkspaceFile.role !== 'unit') return;
+    const now = new Date().toISOString();
+    onSavePersonalUnit({
+      schema: 'apg.personal-unit.v1',
+      version: 1,
+      id: globalThis.crypto?.randomUUID?.() ?? `unit-${Date.now()}`,
+      name: selectedUnitName,
+      title: selectedNode.unit.name.replace(/_/g, ' '),
+      category: 'personal',
+      description: `Saved from ${projectPackage.manifest.name}.`,
+      content: selectedUnitWorkspaceFile.content,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }, [onSavePersonalUnit, projectPackage.manifest.name, selectedNode, selectedUnitName, selectedUnitWorkspaceFile]);
+
+  const batchBypass = useCallback((enabled: boolean) => {
+    for (const instanceId of selectedInstanceIds) void liveBypassController?.setBypass(instanceId, enabled);
+  }, [liveBypassController, selectedInstanceIds]);
+
+  const removeSelectedInstances = useCallback(() => {
+    if (selectedInstanceIds.length < 2) return;
+    const removed = new Set(selectedInstanceIds);
+    if (!updateProjectFile(content => selectedInstanceIds.reduce(
+      (current, instanceId) => removeProjectInstance(current, instanceId),
+      content,
+    ))) return;
+    const removeValues = (values: Record<string, string>) => Object.fromEntries(
+      Object.entries(values).filter(([key]) => !removed.has(key.split('.')[0])),
+    );
+    setParamDrafts(removeValues);
+    setParamOriginals(removeValues);
+    setSelectedInstanceIds([]);
+    setSelectedId(null);
+  }, [selectedInstanceIds, updateProjectFile]);
 
   const reorderProjectNode = useCallback((instanceId: string, nextIndex: number) => {
     markPerfSpan('graph.reorder.projectNode', () => {
@@ -1098,41 +1369,35 @@ export function EditorWorkspace({
   const exportWorkspace = useCallback(() => {
     markPerfSpan('workspace.export', () => {
       const payload = createWorkspacePayload(entryProject, workspaceFiles);
-      const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'audio-playground-workspace.json';
-      link.click();
-      URL.revokeObjectURL(url);
+      onExportProject(payload);
     });
-  }, [entryProject, workspaceFiles]);
+  }, [entryProject, onExportProject, workspaceFiles]);
 
-  const importWorkspace = useCallback(async (file: File | null) => {
-    if (!file) return;
+  const importWorkspace = useCallback((file: File) => {
+    markPerfSpan('workspace.import', () => onImportProject(file));
+  }, [onImportProject]);
 
-    markPerfSpan('workspace.import', async () => {
-      try {
-        const payload = parseWorkspacePayload(await file.text());
-        const imported = hydrateWorkspaceFiles(payload, initialWorkspaceFiles);
-        const importedProject = imported.find(item => item.path === payload.entryProject);
-        if (!importedProject) return;
-        const importedDraft = parseProjectGraphDraft(importedProject.content);
-        const importedInspect = projectDraftToInspect(importedDraft, backendSamples.project, payload.entryProject);
-        pushHistory();
-        setWorkspaceFiles(imported);
-        setEntryProject(payload.entryProject);
-        setSelectedWorkspacePath(payload.entryProject);
-        setParamDrafts(buildParamDrafts(importedInspect));
-        setParamOriginals(buildParamOriginals(importedInspect));
-        setSelectedId(null);
-        setSelectedRouteIndex(null);
-        setCanvasFitRevision(revision => revision + 1);
-        navigate(PROJECT_ROUTE);
-      } catch (error) {
-        setGraphEditError(error instanceof Error ? error.message : 'Workspace import failed.');
-      }
+  const updateReadiness = useCallback((update: Partial<ApgProjectPackage['readiness']>) => {
+    onProjectPackageChange(current => {
+      const readiness = {
+        ...current.readiness,
+        ...update,
+        targets: update.targets ?? current.readiness.targets,
+        diagnostics: update.diagnostics ?? current.readiness.diagnostics,
+      };
+      return JSON.stringify(readiness) === JSON.stringify(current.readiness)
+        ? current
+        : { ...current, readiness };
     });
-  }, [navigate, pushHistory, setWorkspaceFiles]);
+  }, [onProjectPackageChange]);
+
+  const updatePackagedAudio = useCallback((asset: ApgProjectPackage['audio'][number] | null) => {
+    onProjectPackageChange(current => ({
+      ...current,
+      manifest: { ...current.manifest, updatedAt: new Date().toISOString() },
+      audio: asset ? [asset] : [],
+    }));
+  }, [onProjectPackageChange]);
 
   const handleRenderProfile = useCallback((
     id: string,
@@ -1185,7 +1450,6 @@ export function EditorWorkspace({
     <div className={`app app--project app--${mode}`}>
         <ProjectTopbar
           project={project}
-          validation={backendSamples.validation}
           dirtyParamCount={dirtyParamCount + workspaceDraftCount}
           hasDirtyParamDrafts={hasDirtyDrafts}
           hasWorkspaceDrafts={hasWorkspaceDrafts}
@@ -1207,11 +1471,20 @@ export function EditorWorkspace({
           onModeChange={onModeChange}
           onHome={onHome}
           onTour={() => setTourOpen(true)}
+          packagedAudio={projectPackage.audio}
+          readiness={projectPackage.readiness}
+          onAudioAssetChange={updatePackagedAudio}
+          onReadinessUpdate={updateReadiness}
         />
 
       <div className="layout">
         {mode === 'simple' ? (
-          <SimpleLibraryPanel items={simpleEffectLibrary} onAdd={addSimpleEffect} />
+          <SimpleLibraryPanel
+            items={simpleEffectLibrary}
+            onAdd={addSimpleEffect}
+            onAddParallel={addSimpleParallelEffect}
+            onDeletePersonal={onDeletePersonalUnit}
+          />
         ) : (
           <ProjectSidebar
           project={project}
@@ -1229,6 +1502,10 @@ export function EditorWorkspace({
           onSelectRoute={selectRoute}
           routeSources={routeSources}
           routeTargets={routeTargets}
+          selectedInstanceIds={selectedInstanceIds}
+          onToggleBatchInstance={instanceId => setSelectedInstanceIds(current => (
+            current.includes(instanceId) ? current.filter(id => id !== instanceId) : [...current, instanceId]
+          ))}
           />
         )}
 
@@ -1271,12 +1548,17 @@ export function EditorWorkspace({
 
         {mode === 'simple' ? (
           <SimpleInspector
+            onApplyPreset={applyPreset}
+            onDeletePreset={onDeletePreset}
             onDuplicate={duplicateProjectNode}
             onOpenPro={() => {
               onModeChange('pro');
               if (selectedId) openContractGraph(selectedId);
             }}
             onRemove={removeProjectNode}
+            onSavePreset={savePreset}
+            onSaveToLibrary={saveSelectedUnitToLibrary}
+            presets={selectedUnitPresets}
             selectedNode={selectedNode}
           />
         ) : (
@@ -1330,6 +1612,21 @@ export function EditorWorkspace({
           </Profiler>
         )}
       </div>
+      <BatchActionBar
+        count={mode === 'pro' ? selectedInstanceIds.length : 0}
+        liveReady={Boolean(liveBypassController)}
+        onBypass={batchBypass}
+        onClear={() => setSelectedInstanceIds([])}
+        onRemove={removeSelectedInstances}
+      />
+      <SceneBar
+        activeScene={activeScene}
+        onApply={applyScene}
+        onDelete={deleteScene}
+        onRename={renameScene}
+        onSave={saveScene}
+        scenes={project.scenes}
+      />
       {mode === 'simple' && graphEditError ? <p className="simple-edit-error" role="alert">{graphEditError}</p> : null}
     </div>
     <GuidedTour

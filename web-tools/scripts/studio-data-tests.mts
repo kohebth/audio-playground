@@ -9,6 +9,7 @@ import {
   validateApgProjectPackage,
 } from '../src/lib/projectPackage.ts';
 import { createEmptyProjectPackage } from '../src/lib/projectTemplates.ts';
+import { evaluateWorkspaceReadiness } from '../src/lib/projectReadiness.ts';
 import {
   BUILT_IN_UNIT_PRESETS,
   PERSONAL_UNIT_SCHEMA,
@@ -26,6 +27,9 @@ assert.equal(empty.manifest.lastMode, 'simple');
 assert.equal(empty.workspace.files.length, 1);
 assert.match(empty.workspace.files[0].content, /units: \[\]/);
 assert.match(empty.workspace.files[0].content, /from: system\.input\n      to: system\.output/);
+const emptyReadiness = evaluateWorkspaceReadiness(empty.workspace);
+assert.equal(emptyReadiness.validation, 'ready');
+assert.equal(emptyReadiness.targets.wasm_realtime, 'ready');
 
 const audio = createMonoAudioAsset({
   id: 'audio-1',

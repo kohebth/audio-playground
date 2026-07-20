@@ -36,6 +36,7 @@ const unit = json('test/golden/v2-inspect-unit-simple_gain.json');
 const render = json('test/golden/v2-render-project-guitar-pedalboard.json');
 
 const app = read('web-tools/src/App.tsx');
+const studioApp = read('web-tools/src/StudioApp.tsx');
 const appStyles = read('web-tools/src/App.css');
 const main = read('web-tools/src/main.tsx');
 const appLogo = read('web-tools/src/components/AppLogo.tsx');
@@ -141,7 +142,10 @@ assert(
     !project.nodes.some(node => node.id === 'blend1'),
   'pedalboard route graph fixture changed',
 );
-assert((backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length, 'workspace bundle must include all referenced unit files');
+assert(
+  (backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length + 1,
+  'workspace bundle must include all referenced unit files plus the guided wet/dry mixer',
+);
 includesContent(app, 'apg.unit-editor.workspace.v2', 'versioned workspace autosave key is missing');
 includesContent(app, 'apg.unit-editor.workspace.v1', 'legacy workspace migration key is missing');
 includesContent(workspacePersistence, "WORKSPACE_SCHEMA = 'apg.ui.workspace.v2'", 'workspace export schema is missing');
@@ -153,7 +157,7 @@ includesContent(
   'createWorkspacePayload(entryProject, workspaceFiles)',
   'workspace persistence should include the entry project and every tracked file',
 );
-includesContent(app, 'setEntryProject(payload.entryProject)', 'workspace import must restore the persisted entry project');
+includesContent(studioApp, 'parseApgProjectPackage(text)', '.apg import must validate and restore the packaged workspace');
 includesContent(workspacePersistence, "candidate.role !== 'project'", 'workspace import must validate file roles');
 includesContent(workspacePersistence, 'normalizedPath', 'workspace import must confine file paths');
 includesContent(projectTopbar, 'Unsaved edits', 'dirty workspace state must be visible');

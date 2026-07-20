@@ -5,11 +5,15 @@ export type EffectLibraryItem = {
   title: string;
   category: string;
   description: string;
+  scope: 'built-in' | 'personal';
+  recordId?: string;
 };
 
 type Props = {
   items: EffectLibraryItem[];
   onAdd: (item: EffectLibraryItem) => void;
+  onAddParallel: (item: EffectLibraryItem) => void;
+  onDeletePersonal: (recordId: string) => void;
 };
 
 const categoryColor: Record<string, string> = {
@@ -21,7 +25,7 @@ const categoryColor: Record<string, string> = {
   reverb: 'cyan',
 };
 
-export function SimpleLibraryPanel({ items, onAdd }: Props) {
+export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePersonal }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const categories = useMemo(() => ['All', ...new Set(items.map(item => item.category))], [items]);
@@ -49,13 +53,22 @@ export function SimpleLibraryPanel({ items, onAdd }: Props) {
       </div>
       <div className="simple-library__list">
         {filtered.map(item => (
-          <button className="effect-library-card" key={item.id} onClick={() => onAdd(item)} type="button">
+          <article className="effect-library-card" key={`${item.scope}-${item.id}`}>
             <i className={`effect-library-card__icon effect-library-card__icon--${categoryColor[item.category] ?? 'blue'}`}>
               <span />
             </i>
-            <span><strong>{item.title}</strong><small>{item.description}</small></span>
-            <em>+</em>
-          </button>
+            <span>
+              <strong>{item.title}{item.scope === 'personal' ? <b>Yours</b> : null}</strong>
+              <small>{item.description}</small>
+            </span>
+            <div className="effect-library-card__actions">
+              <button aria-label={`Add ${item.title}`} onClick={() => onAdd(item)} title="Add in series" type="button">+</button>
+              <button aria-label={`Add ${item.title} in parallel`} onClick={() => onAddParallel(item)} title="Add as a wet/dry parallel path" type="button">∥</button>
+              {item.scope === 'personal' && item.recordId ? (
+                <button aria-label={`Delete ${item.title} from personal library`} onClick={() => onDeletePersonal(item.recordId!)} title="Remove from personal library" type="button">×</button>
+              ) : null}
+            </div>
+          </article>
         ))}
         {filtered.length === 0 ? <p className="simple-library__empty">No effects match that search.</p> : null}
       </div>

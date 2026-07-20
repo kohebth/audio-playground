@@ -33,6 +33,13 @@ import {
   type ConfiguredAudioContext,
 } from '../lib/audioIo';
 import type { ParamOverride } from '../lib/projectParams';
+import {
+  createMonoAudioAsset,
+  decodeBytesBase64,
+  type ApgAudioAsset,
+  type ProjectReadinessSnapshot,
+  type StudioMode,
+} from '../lib/projectPackage';
 import { markPerfSpan, recordRuntimeSnapshot } from '../lib/perfTelemetry';
 
 type InputMode = 'file' | 'microphone';
@@ -44,6 +51,10 @@ type Props = {
   compact?: boolean;
   onRuntimeReady?: () => void;
   onSaveWorkspace?: () => void;
+  studioMode: StudioMode;
+  packagedAudio: ApgAudioAsset[];
+  onAudioAssetChange?: (asset: ApgAudioAsset | null) => void;
+  onReadinessUpdate?: (update: Partial<ProjectReadinessSnapshot>) => void;
 };
 
 const emptyMeter: MeterSnapshot = {
@@ -91,6 +102,10 @@ export function PreviewPanel({
   compact = false,
   onRuntimeReady,
   onSaveWorkspace,
+  studioMode,
+  packagedAudio,
+  onAudioAssetChange,
+  onReadinessUpdate,
 }: Props) {
   const { setController } = useLiveBypass();
   const [backend, setBackend] = useState<WasmBackend | null>(null);
@@ -114,7 +129,7 @@ export function PreviewPanel({
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
-  const [inputMode, setInputMode] = useState<InputMode>('file');
+  const [inputMode, setInputMode] = useState<InputMode>(() => studioMode === 'simple' ? 'microphone' : 'file');
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [audioFileName, setAudioFileName] = useState('No audio file selected');
   const revisionRef = useRef(0);
@@ -167,7 +182,14 @@ export function PreviewPanel({
     setBackendDiagnostic(detail);
     setPhase('error');
     setDiagnostic(detail.message || detail.code);
-  }, [refreshBackendState]);
+    if (errorPhase === 'initialize' || errorPhase === 'compile' || errorPhase === 'synchronize') {
+      onReadinessUpdate?.({
+        checkedAt: new Date().toISOString(),
+        preview: 'blocked',
+        diagnostics: [{ code: detail.code, path: detail.path, message: detail.message || detail.code }],
+      });
+    }
+  }, [onReadinessUpdate, refreshBackendState]);
 
   const createBackendSession = useCallback(async (preference: AudioIoPreference) => {
     const configured = await createConfiguredAudioContext(preference);
@@ -271,6 +293,25 @@ export function PreviewPanel({
   }, [createBackendSession, onRuntimeReady, refreshAudioDevices, refreshRuntimeSettings, reportError]);
 
   useEffect(() => {
+    if (!backend || !contextRef.current || studioMode !== 'pro' || packagedAudio.length === 0) return;
+    const asset = packagedAudio[0];
+    if (audioFileName === asset.name) return;
+    let cancelled = false;
+    const bytes = decodeBytesBase64(asset.data);
+    const encoded = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    void contextRef.current.decodeAudioData(encoded).then(decoded => {
+      if (cancelled) return;
+      if (decoded.numberOfChannels !== 1) throw new Error('Packaged audio must be mono.');
+      setAudioBuffer(decoded);
+      setAudioFileName(asset.name);
+      setDiagnostic(`${asset.name} restored from this project.`);
+    }).catch(error => {
+      if (!cancelled) reportError(error, 'decode');
+    });
+    return () => { cancelled = true; };
+  }, [audioFileName, backend, packagedAudio, reportError, studioMode]);
+
+  useEffect(() => {
     const mediaDevices = navigator.mediaDevices;
     if (!mediaDevices?.addEventListener) return;
     const onDeviceChange = () => void refreshAudioDevices();
@@ -304,8 +345,19 @@ export function PreviewPanel({
           setBackendDiagnostic(validation.diagnostic);
           setDiagnostic(validation.diagnostic.message || validation.diagnostic.code);
         }
+        onReadinessUpdate?.({
+          checkedAt: new Date().toISOString(),
+          validation: 'blocked',
+          preview: 'blocked',
+          diagnostics: [{
+            code: validation.diagnostic.code,
+            path: validation.diagnostic.path,
+            message: validation.diagnostic.message || validation.diagnostic.code,
+          }],
+        });
         return false;
       }
+      onReadinessUpdate?.({ checkedAt: new Date().toISOString(), validation: 'ready' });
       validRevisionRef.current = revision;
       validatedBackendRevisionsRef.current.set(instance, revision);
       if (announce) setDiagnostic('Project validated.');
@@ -323,13 +375,14 @@ export function PreviewPanel({
       }
       if (revision !== revisionRef.current) return false;
       if (announce) setDiagnostic('Project prepared for live audio.');
+      onReadinessUpdate?.({ checkedAt: new Date().toISOString(), preview: 'ready' });
     }
     if (announce) {
       const prepared = instance.getState().preparedRevision === revision;
       setPhase(runningRef.current || commit ? 'running' : prepare || prepared ? 'ready' : 'idle');
     }
     return true;
-  }, [entryProject, workspaceFiles]);
+  }, [entryProject, onReadinessUpdate, workspaceFiles]);
 
   const syncWorkspace = useCallback(
     (prepare: boolean) => {
@@ -486,6 +539,12 @@ export function PreviewPanel({
     refreshRuntimeSettings(null);
     setMeasuredLatencyMs(null);
   }, [refreshBackendState, refreshRuntimeSettings]);
+
+  useEffect(() => {
+    if (studioMode !== 'simple' || inputMode === 'microphone') return;
+    if (runningRef.current) void stopPlayback().finally(() => setInputMode('microphone'));
+    else setInputMode('microphone');
+  }, [inputMode, stopPlayback, studioMode]);
 
   const destroyCurrentSession = useCallback(async () => {
     const instance = backendRef.current;
@@ -787,15 +846,27 @@ export function PreviewPanel({
       if (runningRef.current) await stopPlayback();
       const encoded = await file.arrayBuffer();
       const decoded = await contextRef.current.decodeAudioData(encoded.slice(0));
+      if (decoded.numberOfChannels !== 1) {
+        throw new Error('Stereo and multi-channel files are not supported. Choose a mono audio file.');
+      }
       setAudioBuffer(decoded);
       setAudioFileName(file.name);
       setDiagnostic(`${file.name} ready (${decoded.duration.toFixed(2)} s).`);
+      onAudioAssetChange?.(createMonoAudioAsset({
+        id: packagedAudio[0]?.id ?? globalThis.crypto?.randomUUID?.() ?? `audio-${Date.now()}`,
+        name: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        channels: decoded.numberOfChannels,
+        sampleRate: decoded.sampleRate,
+        durationSeconds: decoded.duration,
+        bytes: new Uint8Array(encoded),
+      }));
     } catch (error) {
       setAudioBuffer(null);
       setAudioFileName('No audio file selected');
       reportError(error, 'decode');
     }
-  }, [reportError, stopPlayback]);
+  }, [onAudioAssetChange, packagedAudio, reportError, stopPlayback]);
 
   const reset = useCallback(async () => {
     if (!backend || !running) return;
@@ -1028,17 +1099,19 @@ export function PreviewPanel({
             </button>
         </div>
           <div className="transport-group preview-panel__mode" aria-label="Audio input mode" role="group">
-            <button
-              aria-pressed={inputMode === 'file'}
-              data-testid="preview-mode-file"
-              className={`source-toggle ${inputMode === 'file' ? 'active' : ''}`}
-              disabled={running}
-              onClick={() => setInputMode('file')}
-              type="button"
-            >
-              <i className="fa-solid fa-file-audio" aria-hidden="true" />
-              Audio File
-            </button>
+            {studioMode === 'pro' ? (
+              <button
+                aria-pressed={inputMode === 'file'}
+                data-testid="preview-mode-file"
+                className={`source-toggle ${inputMode === 'file' ? 'active' : ''}`}
+                disabled={running}
+                onClick={() => setInputMode('file')}
+                type="button"
+              >
+                <i className="fa-solid fa-file-audio" aria-hidden="true" />
+                Audio File
+              </button>
+            ) : null}
             <button
               aria-pressed={inputMode === 'microphone'}
               data-testid="preview-mode-mic"
@@ -1050,7 +1123,7 @@ export function PreviewPanel({
               <i className="fa-solid fa-microphone" aria-hidden="true" />
               Mic
             </button>
-            {inputMode === 'file' && (
+            {studioMode === 'pro' && inputMode === 'file' && (
               <label className="transport-file">
                 <span>{audioFileName}</span>
                 <input accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a,.aac" disabled={running} onChange={event => void chooseAudioFile(event.target.files?.[0])} type="file" />
@@ -1093,14 +1166,16 @@ export function PreviewPanel({
       )}
 
       <div className="preview-panel__mode" aria-label="Audio input mode" role="group">
-        <button
-          aria-pressed={inputMode === 'file'}
-          disabled={running}
-          onClick={() => setInputMode('file')}
-          type="button"
-        >
-          Audio file
-        </button>
+        {studioMode === 'pro' ? (
+          <button
+            aria-pressed={inputMode === 'file'}
+            disabled={running}
+            onClick={() => setInputMode('file')}
+            type="button"
+          >
+            Audio file
+          </button>
+        ) : null}
         <button
           aria-pressed={inputMode === 'microphone'}
           disabled={running}
@@ -1111,7 +1186,7 @@ export function PreviewPanel({
         </button>
       </div>
 
-      {inputMode === 'file' && (
+      {studioMode === 'pro' && inputMode === 'file' && (
         <label className="preview-panel__file">
           <span>{audioFileName}</span>
           <input
