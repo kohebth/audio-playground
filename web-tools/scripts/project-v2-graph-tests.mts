@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import {
   addProjectInstance,
   addProjectRoute,
+  addProjectUnitReference,
   applyProjectScene,
   duplicateProjectInstance,
   insertProjectInstanceOnRoute,
@@ -46,6 +47,30 @@ assert.equal(draft.nodes.length, 8);
 assert.equal(draft.routes.length, 9);
 assert.doesNotThrow(() => validateProjectRoutes(project, ports));
 assert(buildProjectGraph(projectInspect).edges.every(edge => edge.label === undefined));
+
+const emptyProject = `kind: apg.project
+schema: apg.project.v2
+name: empty
+version: 2.0.0
+units: []
+chain:
+  nodes: []
+  routes:
+    - from: system.input
+      to: system.output
+targets:
+  default: desktop_full
+`;
+const registered = parseProjectGraphDraft(addProjectUnitReference(
+  emptyProject,
+  'overdrive_unit',
+  '../units/overdrive.unit.v2.yaml',
+));
+assert.deepEqual(registered.units[0], { id: 'overdrive_unit', file: '../units/overdrive.unit.v2.yaml' });
+assert.throws(
+  () => addProjectUnitReference(project, 'overdrive_unit', '../units/other.unit.v2.yaml'),
+  /already exists/,
+);
 
 const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' }, { x: 320, y: 180 });
 assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.id, 'drive2');

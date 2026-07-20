@@ -5,11 +5,14 @@ import '@xyflow/react/dist/style.css';
 
 import { AppLogo } from './components/AppLogo';
 import { ContractGraphCanvas } from './components/ContractGraphCanvas';
+import { GuidedTour } from './components/GuidedTour';
 import { LiveLatencyBadge } from './components/LiveLatencyBadge';
 import { ProjectCanvas } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
+import { SimpleInspector } from './components/SimpleInspector';
+import { SimpleLibraryPanel, type EffectLibraryItem } from './components/SimpleLibraryPanel';
 import { backendCommands, backendSamples, initialWorkspaceFiles, type WorkspaceFile } from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData, type ProjectParamControl } from './lib/projectGraph';
 import { LiveBypassContext, type LiveBypassController } from './lib/liveBypass';
@@ -22,6 +25,7 @@ import {
 import {
   addProjectInstance,
   addProjectRoute,
+  addProjectUnitReference,
   duplicateProjectInstance,
   insertProjectInstanceOnRoute,
   moveProjectInstance,
@@ -38,6 +42,7 @@ import {
   type ProjectPortCatalog,
   type ProjectRouteDraft,
 } from './lib/projectV2Graph';
+import type { ApgProjectPackage, StudioMode } from './lib/projectPackage';
 import {
   addAtomNodeToUnit,
   connectUnitNodes,
@@ -66,6 +71,7 @@ import {
   validateWorkspacePayload,
   WORKSPACE_FORMAT_VERSION,
   WORKSPACE_SCHEMA,
+  type WorkspacePayload,
 } from './lib/workspacePersistence';
 import {
   PERFORMANCE_DEBOUNCE_MS,
@@ -128,6 +134,17 @@ function resolveWorkspacePath(baseFile: string, reference: string): string {
   return segments.join('/');
 }
 
+function relativeWorkspaceReference(baseFile: string, targetFile: string): string {
+  const base = baseFile.split('/');
+  base.pop();
+  const target = targetFile.split('/');
+  while (base.length > 0 && target.length > 0 && base[0] === target[0]) {
+    base.shift();
+    target.shift();
+  }
+  return [...base.map(() => '..'), ...target].join('/');
+}
+
 function unitRouteId(path: string): string {
   const filename = path.split('/').at(-1) ?? path;
   return filename.replace(/\.unit\.v2\.yaml$/i, '');
@@ -149,7 +166,13 @@ function workspacePathFromRoute(pathname: string, files: WorkspaceFile[]): strin
   return files.find(file => file.role === 'unit' && unitRouteId(file.path) === routeId)?.path ?? null;
 }
 
-function loadWorkspaceState(): { entryProject: string; files: WorkspaceFile[] } {
+function loadWorkspaceState(projectPackage?: ApgProjectPackage): { entryProject: string; files: WorkspaceFile[] } {
+  if (projectPackage) {
+    return {
+      entryProject: projectPackage.workspace.entryProject,
+      files: hydrateWorkspaceFiles(projectPackage.workspace, initialWorkspaceFiles),
+    };
+  }
   const fallback = { entryProject: backendSamples.project.file, files: initialWorkspaceFiles };
   if (typeof window === 'undefined') return fallback;
   try {
@@ -176,11 +199,46 @@ function loadWorkspaceState(): { entryProject: string; files: WorkspaceFile[] } 
   }
 }
 
-export default function App() {
+type EditorWorkspaceProps = {
+  projectPackage: ApgProjectPackage;
+  mode: StudioMode;
+  onModeChange: (mode: StudioMode) => void;
+  onHome: () => void;
+  onWorkspaceChange: (workspace: WorkspacePayload) => void;
+};
+
+const effectLibraryCopy: Record<string, Omit<EffectLibraryItem, 'id'>> = {
+  noise_gate: { title: 'Noise Gate', category: 'dynamics', description: 'Tames background noise between notes.' },
+  phaser: { title: 'Phaser', category: 'modulation', description: 'Adds a moving, liquid sweep.' },
+  overdrive: { title: 'Overdrive', category: 'drive', description: 'Warm saturation and extra bite.' },
+  tone_stack: { title: 'Amp & Tone', category: 'amp', description: 'Shapes gain, EQ, presence, and level.' },
+  tremolo: { title: 'Tremolo', category: 'modulation', description: 'Creates a rhythmic volume pulse.' },
+  chorus: { title: 'Chorus', category: 'modulation', description: 'Adds width and gentle movement.' },
+  delay: { title: 'Delay', category: 'delay', description: 'Repeats notes with feedback and blend.' },
+  schroeder_reverb: { title: 'Reverb', category: 'reverb', description: 'Places the sound in a smooth room.' },
+};
+
+const simpleEffectLibrary: EffectLibraryItem[] = initialWorkspaceFiles
+  .filter(file => file.role === 'unit')
+  .map(file => {
+    const id = file.path.split('/').at(-1)?.replace(/\.unit\.v2\.yaml$/i, '') ?? file.path;
+    return { id, ...(effectLibraryCopy[id] ?? { title: id.replace(/_/g, ' '), category: 'other', description: 'Custom effect.' }) };
+  });
+
+export function EditorWorkspace({
+  projectPackage,
+  mode,
+  onModeChange,
+  onHome,
+  onWorkspaceChange,
+}: EditorWorkspaceProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [runtimeReady, setRuntimeReady] = useState(false);
-  const [initialWorkspace] = useState(loadWorkspaceState);
+  const [initialWorkspace] = useState(() => loadWorkspaceState(projectPackage));
+  const [tourOpen, setTourOpen] = useState(() => (
+    mode === 'simple' && typeof window !== 'undefined' && !window.localStorage.getItem('apg.studio.tour.v1')
+  ));
   const initialRouteWorkspacePath = workspacePathFromRoute(location.pathname, initialWorkspace.files);
   const initialProjectInspect = useMemo(() => {
     try {
@@ -310,7 +368,7 @@ export default function App() {
     });
   }, [redoWorkspace]);
   const projectWorkspaceFile = workspaceFiles.find(file => file.path === entryProject) ?? workspaceFiles[0];
-  const lastValidProjectDraft = useRef(parseProjectGraphDraft(initialWorkspaceFiles[0].content));
+  const lastValidProjectDraft = useRef(initialProjectDraft ?? parseProjectGraphDraft(initialWorkspaceFiles[0].content));
   const parsedProjectDraft = useMemo(() => {
     try {
       return parseProjectGraphDraft(projectWorkspaceFile.content);
@@ -524,6 +582,7 @@ export default function App() {
           const serialized = JSON.stringify(payload);
           if (serialized !== lastSavedWorkspace.current) {
             lastSavedWorkspace.current = persistSerializedWorkspace(WORKSPACE_STORAGE_KEY, serialized, window.localStorage);
+            onWorkspaceChange(payload);
           }
         });
         setWorkspaceSaveError(null);
@@ -540,7 +599,7 @@ export default function App() {
         autosaveTimeout.current = null;
       }
     };
-  }, [entryProject, workspaceFiles]);
+  }, [entryProject, onWorkspaceChange, workspaceFiles]);
 
   const selectProjectNode = useCallback((id: string) => {
     markPerfSpan('ui.select.projectNode', () => {
@@ -676,6 +735,75 @@ export default function App() {
       setSelectedId(`unit-${result.id}`);
     });
   }, [project.nodes, projectDraft.units, projectPorts, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
+
+  const addSimpleEffect = useCallback((item: EffectLibraryItem) => {
+    markPerfSpan('graph.add.simpleEffect', () => {
+      try {
+        const source = initialWorkspaceFiles.find(file => (
+          file.role === 'unit' && file.path.endsWith(`/${item.id}.unit.v2.yaml`)
+        ));
+        if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
+        const outputRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
+        if (outputRouteIndex < 0) throw new Error('Connect the board to Output before adding another effect.');
+        const existing = projectDraft.units.find(reference => reference.id === `${item.id}_unit`
+          || reference.file.endsWith(`/${item.id}.unit.v2.yaml`));
+        const position = { x: 180 + project.nodes.length * 260, y: 220 };
+        if (existing) {
+          insertProjectNodeOnRoute(existing.id, outputRouteIndex, position);
+          return;
+        }
+
+        const unitId = `${item.id}_unit`;
+        const instanceId = uniqueInstanceId(project.nodes.map(node => node.id), unitId);
+        const targetPath = `units/${item.id}.unit.v2.yaml`;
+        const reference = relativeWorkspaceReference(projectWorkspaceFile.path, targetPath);
+        const defaults = Object.fromEntries(parseUnitGraphDraft(source.content).params.map(param => [
+          param.name,
+          param.default,
+        ]));
+        const ports = parseUnitPortNames(source.content);
+        const registered = addProjectUnitReference(projectWorkspaceFile.content, unitId, reference);
+        const result = insertProjectInstanceOnRoute(
+          registered,
+          { ...projectPorts, [unitId]: ports },
+          unitId,
+          instanceId,
+          outputRouteIndex,
+          defaults,
+          position,
+        );
+        pushHistory();
+        setWorkspaceFiles(files => {
+          const updated = files.map(file => file.path === projectWorkspaceFile.path
+            ? { ...file, content: result.content }
+            : file);
+          return updated.some(file => file.path === targetPath)
+            ? updated
+            : [...updated, { ...source, path: targetPath }];
+        });
+        const values = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [
+          paramDraftKey(instanceId, key),
+          value,
+        ]));
+        setParamDrafts(current => ({ ...current, ...values }));
+        setParamOriginals(current => ({ ...current, ...values }));
+        setSelectedId(`unit-${instanceId}`);
+        setCanvasFitRevision(revision => revision + 1);
+      } catch (caught) {
+        setGraphEditError(caught instanceof Error ? caught.message : 'Unable to add that effect.');
+      }
+    });
+  }, [
+    insertProjectNodeOnRoute,
+    project.nodes,
+    project.routes,
+    projectDraft.units,
+    projectPorts,
+    projectWorkspaceFile.content,
+    projectWorkspaceFile.path,
+    pushHistory,
+    setWorkspaceFiles,
+  ]);
 
   const duplicateProjectNode = useCallback((instanceId: string) => {
     markPerfSpan('graph.duplicate.projectNode', () => {
@@ -936,21 +1064,18 @@ export default function App() {
   const resetWorkspace = useCallback(() => {
     markPerfSpan('workspace.reset', () => {
       pushHistory();
-      setWorkspaceFiles(initialWorkspaceFiles);
-      setEntryProject(backendSamples.project.file);
-      setSelectedWorkspacePath(initialWorkspaceFiles[0].path);
-      setParamDrafts(buildParamDrafts(backendSamples.project));
-      setParamOriginals(buildParamOriginals(backendSamples.project));
-      setSelectedId('unit-drive1');
+      setWorkspaceFiles(initialWorkspace.files);
+      setEntryProject(initialWorkspace.entryProject);
+      setSelectedWorkspacePath(initialWorkspace.entryProject);
+      setParamDrafts(buildParamDrafts(initialProjectInspect));
+      setParamOriginals(buildParamOriginals(initialProjectInspect));
+      setSelectedId(initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
       setSelectedRouteIndex(null);
+      setCanvasMode('project');
       setCanvasFitRevision(revision => revision + 1);
       navigate(PROJECT_ROUTE);
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
-        window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
-      }
     });
-  }, [navigate, pushHistory, setWorkspaceFiles]);
+  }, [initialProjectInspect, initialWorkspace, navigate, pushHistory, setWorkspaceFiles]);
 
   const saveWorkspace = useCallback(() => {
     try {
@@ -958,6 +1083,7 @@ export default function App() {
         const payload = createWorkspacePayload(entryProject, workspaceFiles);
         if (typeof window === 'undefined') return;
         lastSavedWorkspace.current = persistWorkspacePayload(WORKSPACE_STORAGE_KEY, payload, window.localStorage);
+        onWorkspaceChange(payload);
         setParamOriginals(values => ({ ...values, ...paramDrafts }));
         setWorkspaceFiles(files =>
           files.map(file => (file.content === file.originalContent ? file : { ...file, originalContent: file.content })),
@@ -967,7 +1093,7 @@ export default function App() {
     } catch (error) {
       setWorkspaceSaveError(error instanceof Error ? error.message : 'Unable to persist the workspace.');
     }
-  }, [entryProject, paramDrafts, setWorkspaceFiles, workspaceFiles]);
+  }, [entryProject, onWorkspaceChange, paramDrafts, setWorkspaceFiles, workspaceFiles]);
 
   const exportWorkspace = useCallback(() => {
     markPerfSpan('workspace.export', () => {
@@ -1048,7 +1174,7 @@ export default function App() {
             </span>
           </div>
           <h1>Audio Playground <span>v2.0</span></h1>
-          <p>Interactive real-time DSP visual workbench<br />and audio routing matrix</p>
+          <p>Preparing your live audio workspace<br />and restoring the last good sound</p>
           <div className="launch-screen__progress">
             <div><span>Initializing audio engine...</span><span>Loading</span></div>
             <i><b className="launch-screen__progress-fill" /></i>
@@ -1056,7 +1182,7 @@ export default function App() {
         </div>
       </section>
     )}
-    <div className="app app--project">
+    <div className={`app app--project app--${mode}`}>
         <ProjectTopbar
           project={project}
           validation={backendSamples.validation}
@@ -1077,10 +1203,17 @@ export default function App() {
           paramOverrides={paramOverrides}
           onSaveWorkspace={saveWorkspace}
           onRuntimeReady={handleRuntimeReady}
+          mode={mode}
+          onModeChange={onModeChange}
+          onHome={onHome}
+          onTour={() => setTourOpen(true)}
         />
 
       <div className="layout">
-        <ProjectSidebar
+        {mode === 'simple' ? (
+          <SimpleLibraryPanel items={simpleEffectLibrary} onAdd={addSimpleEffect} />
+        ) : (
+          <ProjectSidebar
           project={project}
           workspaceFiles={workspaceFiles}
           selectedWorkspacePath={selectedWorkspacePath}
@@ -1096,9 +1229,10 @@ export default function App() {
           onSelectRoute={selectRoute}
           routeSources={routeSources}
           routeTargets={routeTargets}
-        />
+          />
+        )}
 
-        {canvasMode === 'contract' && selectedNode?.kind === 'unit' ? (
+        {mode === 'pro' && canvasMode === 'contract' && selectedNode?.kind === 'unit' ? (
           <Profiler id="ContractGraphCanvas" onRender={handleRenderProfile}>
             <ContractGraphCanvas
               catalog={backendSamples.atomCatalog}
@@ -1135,8 +1269,19 @@ export default function App() {
           </Profiler>
         )}
 
-        <Profiler id="ProjectInspector" onRender={handleRenderProfile}>
-          <ProjectInspector
+        {mode === 'simple' ? (
+          <SimpleInspector
+            onDuplicate={duplicateProjectNode}
+            onOpenPro={() => {
+              onModeChange('pro');
+              if (selectedId) openContractGraph(selectedId);
+            }}
+            onRemove={removeProjectNode}
+            selectedNode={selectedNode}
+          />
+        ) : (
+          <Profiler id="ProjectInspector" onRender={handleRenderProfile}>
+            <ProjectInspector
             validation={backendSamples.validation}
             render={backendSamples.render}
             commands={backendCommands}
@@ -1181,10 +1326,19 @@ export default function App() {
             onSelectAtom={setSelectedAtomId}
             onSelectedAtomChange={updateSelectedAtom}
             onWorkspaceFileChange={updateWorkspaceFile}
-          />
-        </Profiler>
+            />
+          </Profiler>
+        )}
       </div>
+      {mode === 'simple' && graphEditError ? <p className="simple-edit-error" role="alert">{graphEditError}</p> : null}
     </div>
+    <GuidedTour
+      onClose={() => {
+        window.localStorage.setItem('apg.studio.tour.v1', 'complete');
+        setTourOpen(false);
+      }}
+      open={tourOpen}
+    />
     <LiveLatencyBadge />
     </LiveBypassContext.Provider>
   );

@@ -250,6 +250,7 @@ export function PreviewPanel({
       })
       .catch(error => {
         reportError(error, 'initialize');
+        onRuntimeReady?.();
       });
     return () => {
       disposed = true;

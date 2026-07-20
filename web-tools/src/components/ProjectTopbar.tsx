@@ -3,6 +3,8 @@ import { AppLogo } from './AppLogo';
 import { PreviewPanel } from './PreviewPanel';
 import type { ParamOverride } from '../lib/projectParams';
 import type { WorkspaceFile } from '../lib/backendSamples';
+import type { StudioMode } from '../lib/projectPackage';
+import { ModeToggle } from './ModeToggle';
 
 type Props = {
   project: ProjectInspect;
@@ -24,6 +26,10 @@ type Props = {
   workspaceFiles: WorkspaceFile[];
   paramOverrides: ParamOverride[];
   onRuntimeReady: () => void;
+  mode: StudioMode;
+  onModeChange: (mode: StudioMode) => void;
+  onHome: () => void;
+  onTour: () => void;
 };
 
 export function ProjectTopbar({
@@ -46,12 +52,19 @@ export function ProjectTopbar({
   workspaceFiles,
   paramOverrides,
   onRuntimeReady,
+  mode,
+  onModeChange,
+  onHome,
+  onTour,
 }: Props) {
   const draftStateClass = workspaceSaveError ? 'status-pill--bad' : hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
 
   return (
     <header className="topbar topbar--project app-header">
       <div className="header-left">
+        <button className="topbar__home" onClick={onHome} title="All projects" type="button">
+          <i className="fa-solid fa-chevron-left" aria-hidden="true" />
+        </button>
         <div className="header-brand">
           <span className="topbar__logo" aria-hidden="true">
             <AppLogo />
@@ -63,7 +76,7 @@ export function ProjectTopbar({
           <span className="header-project-label">Active Project</span>
           <div className="header-project-name">
             <strong>{project.name}</strong>
-            <span className="tag">v2.yaml</span>
+            <span className="tag">{mode === 'simple' ? 'Pedalboard' : 'Project v2'}</span>
           </div>
         </div>
       </div>
@@ -78,6 +91,8 @@ export function ProjectTopbar({
       />
 
       <div className="header-right">
+        <ModeToggle compact mode={mode} onChange={onModeChange} />
+        <button className="topbar__help" onClick={onTour} title="Show guided tour" type="button">?</button>
         <div className="topbar__status" aria-label="Project status">
           <div className={`status-pill ${validation.ok ? 'status-pill--ok' : 'status-pill--bad'}`}>
             {validation.ok ? 'Valid' : 'Invalid'}

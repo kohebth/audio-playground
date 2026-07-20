@@ -167,6 +167,20 @@ export function parseUnitPortNames(content: string): { inputs: string[]; outputs
   return { inputs: names(doc.ports.inputs), outputs: names(doc.ports.outputs) };
 }
 
+export function addProjectUnitReference(content: string, id: string, file: string): string {
+  if (!/^[a-z][a-z0-9_]*$/.test(id)) throw new Error('Unit reference id must use lowercase snake_case.');
+  if (!file || file.startsWith('/') || file.includes('\\') || file.includes(':')) {
+    throw new Error('Unit reference file must be a confined relative path.');
+  }
+  const doc = loadDocument(content);
+  const units = (Array.isArray(doc.units) ? doc.units : []).filter(isObject);
+  if (units.some(unit => String(unit.id) === id)) throw new Error(`Project unit "${id}" already exists.`);
+  if (units.some(unit => String(unit.file) === file)) throw new Error(`Project unit file "${file}" is already referenced.`);
+  units.push({ id, file });
+  doc.units = units;
+  return dumpDocument(doc);
+}
+
 export function addProjectInstance(
   content: string,
   unit: string,
