@@ -31,6 +31,44 @@ static bool path_is_under_root(const char *root, const char *path) {
     return strcmp(root, path) == 0 || (strncmp(root, path, root_len) == 0 && path[root_len] == '/');
 }
 
+static bool relative_path_escapes_root(const char *project_dir, const char *workspace_root, const char *file) {
+    if (!path_is_under_root(workspace_root, project_dir) || !file)
+        return true;
+
+    size_t      depth    = 0u;
+    size_t      root_len = strlen(workspace_root);
+    const char *cursor   = project_dir + root_len;
+    while (*cursor) {
+        while (*cursor == '/')
+            cursor++;
+        if (!*cursor)
+            break;
+        depth++;
+        while (*cursor && *cursor != '/')
+            cursor++;
+    }
+
+    cursor = file;
+    while (*cursor) {
+        while (*cursor == '/')
+            cursor++;
+        const char *component = cursor;
+        while (*cursor && *cursor != '/')
+            cursor++;
+        size_t len = (size_t)(cursor - component);
+        if (len == 0u || (len == 1u && component[0] == '.'))
+            continue;
+        if (len == 2u && component[0] == '.' && component[1] == '.') {
+            if (depth == 0u)
+                return true;
+            depth--;
+        } else {
+            depth++;
+        }
+    }
+    return false;
+}
+
 static uc_status arena_strdup_path(uc_arena *arena, const char *path, const char **out, uc_error *err) {
     char *copy = uc_arena_strndup(arena, path, strlen(path));
     if (!copy)
@@ -73,6 +111,11 @@ static uc_status resolve_project_unit_path(
     if (path_is_absolute(file)) {
         char msg[128];
         snprintf(msg, sizeof(msg), "absolute unit file paths are not allowed: '%s'", file);
+        return set_error(err, UC_E_RANGE, msg);
+    }
+    if (relative_path_escapes_root(project_dir, workspace_root, file)) {
+        char msg[128];
+        snprintf(msg, sizeof(msg), "unit file '%s' escapes workspace root", file);
         return set_error(err, UC_E_RANGE, msg);
     }
 

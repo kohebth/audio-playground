@@ -10,6 +10,8 @@ typedef enum {
     UC_TOK_COLON,
     UC_TOK_LBRACE,
     UC_TOK_RBRACE,
+    UC_TOK_LBRACKET,
+    UC_TOK_RBRACKET,
     UC_TOK_COMMA,
     UC_TOK_SCALAR,
     UC_TOK_VARREF,

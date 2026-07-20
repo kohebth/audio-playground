@@ -75,6 +75,9 @@ static int expect_golden(json_writer_fn writer, const char *input_path, const ch
         free(expected);
         return fail("failed to read json or golden fixture");
     }
+    size_t expected_len = strlen(expected);
+    while (expected_len > 0u && (expected[expected_len - 1u] == '\n' || expected[expected_len - 1u] == '\r'))
+        expected[--expected_len] = '\0';
     int ok = strcmp(actual, expected) == 0;
     if (!ok)
         fprintf(stderr, "json mismatch for %s\nactual:   %s\nexpected: %s\n", label, actual, expected);
@@ -102,6 +105,36 @@ static int test_project_inspect_json_golden_output(void) {
         apg_v2_json_write_inspect_project, "test/fixtures/projects-v2/two-gain-chain.project.v2.yaml",
         "test/golden/v2-inspect-project-two-gain-chain.json", "project inspect"
     );
+}
+
+static int test_empty_project_and_scene_contracts(void) {
+    const char *empty_path = "test/fixtures/projects-v2/empty-passthrough.project.v2.yaml";
+    char       *validation = capture_json(apg_v2_json_write_validate_project, empty_path);
+    char       *inspect    = capture_json(apg_v2_json_write_inspect_project, empty_path);
+    char       *render     = capture_json(apg_v2_json_write_render_project, empty_path);
+    char       *scenes =
+        capture_json(apg_v2_json_write_inspect_project, "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml");
+    if (!validation || !inspect || !render || !scenes) {
+        free(validation);
+        free(inspect);
+        free(render);
+        free(scenes);
+        return fail("failed to write empty project or scene json");
+    }
+
+    int ok = strstr(validation, "\"schema\":\"apg.validation.v2\"") && strstr(validation, "\"ok\":true") &&
+             strstr(inspect, "\"units\":[]") && strstr(inspect, "\"nodes\":[]") &&
+             strstr(inspect, "\"routes\":[{\"from\":\"system.input\",\"to\":\"system.output\"}]") &&
+             strstr(inspect, "\"scenes\":[]") &&
+             strstr(inspect, "\"compiled\":{\"params\":0,\"signals\":1,\"nodes\":0,\"schedule\":0}") &&
+             strstr(render, "\"schema\":\"apg.project.render.v2\"") && strstr(render, "\"ok\":true") &&
+             strstr(scenes, "\"bypass\":{\"gain1\":false}") && strstr(scenes, "\"bypass\":{\"gain1\":true}");
+
+    free(validation);
+    free(inspect);
+    free(render);
+    free(scenes);
+    return ok ? 0 : fail("empty project or scene json contract was incomplete");
 }
 
 static int test_pedalboard_fixture_golden_outputs(void) {
@@ -222,6 +255,8 @@ int main(void) {
     if (test_validate_json_golden_outputs())
         return 1;
     if (test_project_inspect_json_golden_output())
+        return 1;
+    if (test_empty_project_and_scene_contracts())
         return 1;
     if (test_project_render_json_is_deterministic())
         return 1;

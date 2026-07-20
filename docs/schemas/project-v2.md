@@ -8,7 +8,7 @@
 - `schema`: Must be `apg.project.v2`.
 - `name`: Stable project identifier.
 - `version`: Project definition version.
-- `units`: Non-empty list of referenced unit files.
+- `units`: List of referenced unit files. It may be empty only for an empty pass-through project.
 - `chain`: Unit instances and routes.
 - `targets`: Default and export target profiles.
 
@@ -50,9 +50,11 @@ scenes:
   - name: Boost
     params:
       gain1.gain: 3.0
+    bypass:
+      gain1: false
 ```
 
-Scene names must be unique. Scene param keys use `<node>.<param>` and must reference an existing node. Param-name validation is deferred until unit resolution.
+Scene names must be unique. Scene param keys use `<node>.<param>` and must reference an existing node. Optional `bypass` entries map an instance ID to a boolean, where `true` means bypassed. Param-name validation is deferred until unit resolution.
 
 ## Targets
 
@@ -73,7 +75,7 @@ Use `apg_project_v2_load_resolved_file(...)` when the caller needs loaded unit d
 
 Use `apg_project_v2_compile(...)` to expand a resolved project into a synthetic v2 unit and compile it with the existing unit compiler. The compiler namespaces instance internals with `<node>.<name>`, preserves stable runtime params such as `gain1.gain`, applies node `params` as instance defaults, and lowers mono routes into a single runtime plan.
 
-The current compiler accepts mono audio routes from `system.input` through one or more unit instances to exactly one `system.output` route. Inter-instance routes such as `gain1.output -> gain2.input` are supported.
+The current compiler accepts mono audio routes from `system.input` through zero or more unit instances to exactly one `system.output` route. Inter-instance routes such as `gain1.output -> gain2.input` are supported. An empty project must declare `units: []`, `chain.nodes: []`, and exactly one direct `system.input -> system.output` route; it compiles to a zero-node pass-through runtime plan.
 
 ## Current Limits
 

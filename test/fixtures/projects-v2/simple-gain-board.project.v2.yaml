@@ -24,9 +24,13 @@ scenes:
   - name: Unity
     params:
       gain1.gain: 1.0
+    bypass:
+      gain1: false
   - name: Boost
     params:
       gain1.gain: 3.0
+    bypass:
+      gain1: true
 
 targets:
   default: desktop_full

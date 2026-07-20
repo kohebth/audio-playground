@@ -1,6 +1,7 @@
 #ifndef AUDIO_PLAYGROUND_APGCORE_PROJECT_V2_H
 #define AUDIO_PLAYGROUND_APGCORE_PROJECT_V2_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include <apgcore/validator/unit_v2.h>
@@ -31,9 +32,16 @@ typedef struct {
 } apg_project_v2_route_t;
 
 typedef struct {
+    const char *instance;
+    bool        bypassed;
+} apg_project_v2_scene_bypass_t;
+
+typedef struct {
     const char                      *name;
     apg_project_v2_param_override_t *params;
     size_t                           params_len;
+    apg_project_v2_scene_bypass_t   *bypass;
+    size_t                           bypass_len;
 } apg_project_v2_scene_t;
 
 typedef struct {

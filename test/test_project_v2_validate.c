@@ -40,7 +40,10 @@ static int expect_valid_fixture(void) {
         strcmp(project.routes[1].to, "system.output") != 0)
         return fail("unexpected project routes");
     if (project.scenes_len != 2u || strcmp(project.scenes[1].name, "Boost") != 0 ||
-        project.scenes[1].params_len != 1u || strcmp(project.scenes[1].params[0].key, "gain1.gain") != 0)
+        project.scenes[1].params_len != 1u || strcmp(project.scenes[1].params[0].key, "gain1.gain") != 0 ||
+        project.scenes[0].bypass_len != 1u || project.scenes[0].bypass[0].bypassed ||
+        strcmp(project.scenes[0].bypass[0].instance, "gain1") != 0 || project.scenes[1].bypass_len != 1u ||
+        !project.scenes[1].bypass[0].bypassed)
         return fail("unexpected project scenes");
     if (!project.targets.default_profile || strcmp(project.targets.default_profile, "desktop_full") != 0 ||
         project.targets.export_profiles_len != 2u || strcmp(project.targets.export_profiles[0], "wasm_realtime") != 0)
@@ -73,6 +76,33 @@ static int expect_valid_resolved_fixture(void) {
         return fail("unexpected resolved unit path");
     if (!resolved.units[0].unit.name || strcmp(resolved.units[0].unit.name, "simple_gain") != 0)
         return fail("resolved unit was not loaded");
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
+static int expect_valid_empty_fixture(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t resolved;
+    uc_error                  err    = {0};
+    uc_status                 status = apg_project_v2_load_resolved_file(
+        "test/fixtures/projects-v2/empty-passthrough.project.v2.yaml", &arena, &resolved, &err
+    );
+    if (status != UC_OK) {
+        fprintf(stderr, "empty project error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("empty pass-through fixture did not resolve");
+    }
+
+    if (resolved.units_len != 0u || resolved.project.units_len != 0u || resolved.project.nodes_len != 0u ||
+        resolved.project.routes_len != 1u || strcmp(resolved.project.routes[0].from, "system.input") != 0 ||
+        strcmp(resolved.project.routes[0].to, "system.output") != 0) {
+        uc_arena_free(&arena);
+        return fail("unexpected empty project shape");
+    }
 
     uc_arena_free(&arena);
     return 0;
@@ -151,6 +181,8 @@ int main(void) {
     if (expect_valid_fixture())
         return 1;
     if (expect_valid_resolved_fixture())
+        return 1;
+    if (expect_valid_empty_fixture())
         return 1;
     if (expect_valid_pedalboard_fixture())
         return 1;
@@ -276,6 +308,52 @@ int main(void) {
                                   "targets:\n"
                                   "  default: desktop_full\n";
     if (expect_invalid_contains(bad_scene_param, "bad scene param", "missing.gain"))
+        return 1;
+
+    const char *bad_scene_bypass_instance = "kind: apg.project\n"
+                                            "schema: apg.project.v2\n"
+                                            "name: bad\n"
+                                            "version: 2.0.0\n"
+                                            "units:\n"
+                                            "  - id: gain_unit\n"
+                                            "    file: gain.yaml\n"
+                                            "chain:\n"
+                                            "  nodes:\n"
+                                            "    - id: gain1\n"
+                                            "      unit: gain_unit\n"
+                                            "  routes:\n"
+                                            "    - from: system.input\n"
+                                            "      to: gain1.input\n"
+                                            "scenes:\n"
+                                            "  - name: Bad\n"
+                                            "    bypass:\n"
+                                            "      missing: true\n"
+                                            "targets:\n"
+                                            "  default: desktop_full\n";
+    if (expect_invalid_contains(bad_scene_bypass_instance, "bad scene bypass instance", "unknown instance"))
+        return 1;
+
+    const char *bad_scene_bypass_value = "kind: apg.project\n"
+                                         "schema: apg.project.v2\n"
+                                         "name: bad\n"
+                                         "version: 2.0.0\n"
+                                         "units:\n"
+                                         "  - id: gain_unit\n"
+                                         "    file: gain.yaml\n"
+                                         "chain:\n"
+                                         "  nodes:\n"
+                                         "    - id: gain1\n"
+                                         "      unit: gain_unit\n"
+                                         "  routes:\n"
+                                         "    - from: system.input\n"
+                                         "      to: gain1.input\n"
+                                         "scenes:\n"
+                                         "  - name: Bad\n"
+                                         "    bypass:\n"
+                                         "      gain1: maybe\n"
+                                         "targets:\n"
+                                         "  default: desktop_full\n";
+    if (expect_invalid_contains(bad_scene_bypass_value, "bad scene bypass value", "must be true or false"))
         return 1;
 
     const char *bad_target = "kind: apg.project\n"

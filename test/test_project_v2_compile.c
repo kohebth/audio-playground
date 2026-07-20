@@ -89,6 +89,58 @@ static int expect_meter_near(
     return 0;
 }
 
+static int test_empty_project_compiles_and_passes_through(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t project;
+    if (load_resolved_project("test/fixtures/projects-v2/empty-passthrough.project.v2.yaml", &arena, &project)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_project_v2_compiled_t compiled;
+    if (compile_resolved_project(&project, &arena, &compiled)) {
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    if (compiled.expanded_unit.params_len != 0u || compiled.expanded_unit.nodes_len != 0u ||
+        compiled.expanded_unit.signals_len != 1u || strcmp(compiled.expanded_unit.signals[0], "input") != 0 ||
+        compiled.plan.nodes_len != 0u || compiled.plan.schedule_len != 0u || compiled.plan.instances_len != 0u) {
+        uc_arena_free(&arena);
+        return fail("empty project did not compile to a zero-node pass-through plan");
+    }
+
+    apg_v2_runtime_t runtime;
+    uc_error         err    = {0};
+    uc_status        status = test_apg_v2_runtime_init_registry(&compiled.plan, 8u, 48000.0f, &arena, &runtime, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "empty runtime init error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("failed to initialize empty project runtime");
+    }
+
+    const float input[4]  = {0.25f, -0.5f, 1.0f, -1.0f};
+    float       output[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 4u)) {
+        fprintf(stderr, "empty runtime error: %s\n", apg_v2_measure_last_error(&runtime));
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return fail("empty project runtime processing failed");
+    }
+    if (expect_samples(output, input, 4u, "empty project pass-through")) {
+        apg_v2_runtime_destroy(&runtime);
+        uc_arena_free(&arena);
+        return 1;
+    }
+
+    apg_v2_runtime_destroy(&runtime);
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int test_simple_project_compiles_and_runs(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -508,6 +560,8 @@ static int test_compile_rejects_bad_port_route(void) {
 }
 
 int main(void) {
+    if (test_empty_project_compiles_and_passes_through())
+        return 1;
     if (test_simple_project_compiles_and_runs())
         return 1;
     if (test_two_instance_project_compiles_and_runs())

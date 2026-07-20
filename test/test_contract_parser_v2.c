@@ -115,6 +115,13 @@ static int expect_parse_only_without_semantic_checks(void) {
         return fail("semantic-invalid unit contract should still parse as raw contract");
     }
 
+    const uc_node *graph = uc_node_find(root, "graph");
+    const uc_node *nodes = uc_node_find(graph, "nodes");
+    if (!nodes || nodes->kind != UC_NODE_SEQ || nodes->seq_len != 0u) {
+        uc_arena_free(&arena);
+        return fail("empty flow sequence did not parse as an empty sequence");
+    }
+
     apg_unit_v2_t unit = {0};
     status             = apg_unit_v2_validate_root(root, &arena, &unit, &err);
     if (status == UC_OK) {

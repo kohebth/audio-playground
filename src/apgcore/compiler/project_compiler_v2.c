@@ -79,8 +79,11 @@ static const apg_project_v2_route_t *find_route_from(const apg_project_v2_resolv
 
 static const char *project_output_signal(const apg_project_v2_resolved_t *project) {
     for (size_t i = 0; i < project->project.routes_len; i++) {
-        if (project->project.routes[i].to && strcmp(project->project.routes[i].to, APG_PROJECT_SYSTEM_OUTPUT) == 0)
+        if (project->project.routes[i].to && strcmp(project->project.routes[i].to, APG_PROJECT_SYSTEM_OUTPUT) == 0) {
+            if (strcmp(project->project.routes[i].from, APG_PROJECT_SYSTEM_INPUT) == 0)
+                return &APG_PROJECT_SYSTEM_INPUT[7];
             return project->project.routes[i].from;
+        }
     }
     return NULL;
 }

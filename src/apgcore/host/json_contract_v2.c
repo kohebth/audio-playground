@@ -336,6 +336,36 @@ static void write_routes(FILE *out, const apg_project_v2_t *project) {
     fputc(']', out);
 }
 
+static void write_project_scenes(FILE *out, const apg_project_v2_t *project) {
+    fputc('[', out);
+    for (size_t i = 0; i < project->scenes_len; i++) {
+        if (i > 0u)
+            fputc(',', out);
+        fputs("{\"name\":", out);
+        write_json_string(out, project->scenes[i].name);
+        fputs(",\"params\":[", out);
+        for (size_t p = 0; p < project->scenes[i].params_len; p++) {
+            if (p > 0u)
+                fputc(',', out);
+            fputs("{\"key\":", out);
+            write_json_string(out, project->scenes[i].params[p].key);
+            fputs(",\"value\":", out);
+            write_json_string(out, project->scenes[i].params[p].value.text);
+            fputc('}', out);
+        }
+        fputs("],\"bypass\":{", out);
+        for (size_t b = 0; b < project->scenes[i].bypass_len; b++) {
+            if (b > 0u)
+                fputc(',', out);
+            write_json_string(out, project->scenes[i].bypass[b].instance);
+            fputc(':', out);
+            fputs(project->scenes[i].bypass[b].bypassed ? "true" : "false", out);
+        }
+        fputs("}}", out);
+    }
+    fputc(']', out);
+}
+
 static void write_project_inspect(
     FILE *out, const char *path, const apg_project_v2_resolved_t *project, const apg_project_v2_compiled_t *compiled
 ) {
@@ -351,6 +381,8 @@ static void write_project_inspect(
     write_project_nodes(out, &project->project);
     fputs(",\"routes\":", out);
     write_routes(out, &project->project);
+    fputs(",\"scenes\":", out);
+    write_project_scenes(out, &project->project);
     fputs(",\"targets\":{\"default\":", out);
     write_json_string(out, project->project.targets.default_profile);
     fputs(",\"export\":", out);

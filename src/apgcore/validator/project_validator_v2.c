@@ -187,11 +187,9 @@ static uc_status fill_param_overrides(
 static uc_status fill_units(const uc_node *units, uc_arena *arena, apg_project_v2_t *out, uc_error *err) {
     if (!units || units->kind != UC_NODE_SEQ)
         return set_error(err, UC_E_MISSING, "missing sequence field 'units'");
-    if (units->seq_len == 0)
-        return set_error(err, UC_E_MISSING, "units must contain at least one unit ref");
 
     apg_project_v2_unit_ref_t *items = uc_arena_alloc(arena, units->seq_len * sizeof(*items), sizeof(void *));
-    if (!items)
+    if (!items && units->seq_len > 0)
         return set_error(err, UC_E_OOM, "arena OOM");
 
     for (size_t i = 0; i < units->seq_len; i++) {
@@ -223,11 +221,9 @@ static uc_status fill_units(const uc_node *units, uc_arena *arena, apg_project_v
 static uc_status fill_nodes(const uc_node *nodes, uc_arena *arena, apg_project_v2_t *out, uc_error *err) {
     if (!nodes || nodes->kind != UC_NODE_SEQ)
         return set_error(err, UC_E_MISSING, "missing sequence field 'chain.nodes'");
-    if (nodes->seq_len == 0)
-        return set_error(err, UC_E_MISSING, "chain.nodes must contain at least one node");
 
     apg_project_v2_node_t *items = uc_arena_alloc(arena, nodes->seq_len * sizeof(*items), sizeof(void *));
-    if (!items)
+    if (!items && nodes->seq_len > 0)
         return set_error(err, UC_E_OOM, "arena OOM");
 
     for (size_t i = 0; i < nodes->seq_len; i++) {
@@ -301,6 +297,48 @@ static uc_status fill_routes(const uc_node *routes, uc_arena *arena, apg_project
     return UC_OK;
 }
 
+static uc_status fill_scene_bypass(
+    const uc_node                  *bypass,
+    const apg_project_v2_t         *project,
+    uc_arena                       *arena,
+    apg_project_v2_scene_bypass_t **out_bypass,
+    size_t                         *out_len,
+    uc_error                       *err
+) {
+    *out_bypass = NULL;
+    *out_len    = 0u;
+    if (!bypass)
+        return UC_OK;
+    if (bypass->kind != UC_NODE_MAP)
+        return set_error(err, UC_E_TYPE, "scenes[].bypass must be a map");
+
+    apg_project_v2_scene_bypass_t *items = uc_arena_alloc(arena, bypass->map_len * sizeof(*items), sizeof(void *));
+    if (!items && bypass->map_len > 0u)
+        return set_error(err, UC_E_OOM, "arena OOM");
+
+    for (size_t i = 0; i < bypass->map_len; i++) {
+        const char    *instance = bypass->map[i].key;
+        const uc_node *value    = bypass->map[i].value;
+        if (!node_exists(project, instance)) {
+            char msg[160];
+            snprintf(msg, sizeof(msg), "scene bypass references unknown instance '%s'", instance ? instance : "");
+            return set_error(err, UC_E_MISSING, msg);
+        }
+        if (!value || value->kind != UC_NODE_SCALAR ||
+            (strcmp(value->text, "true") != 0 && strcmp(value->text, "false") != 0)) {
+            char msg[160];
+            snprintf(msg, sizeof(msg), "scenes[].bypass.%s must be true or false", instance ? instance : "");
+            return set_error(err, UC_E_TYPE, msg);
+        }
+        items[i].instance = instance;
+        items[i].bypassed = strcmp(value->text, "true") == 0;
+    }
+
+    *out_bypass = items;
+    *out_len    = bypass->map_len;
+    return UC_OK;
+}
+
 static uc_status fill_scenes(const uc_node *scenes, uc_arena *arena, apg_project_v2_t *out, uc_error *err) {
     if (!scenes) {
         out->scenes     = NULL;
@@ -341,6 +379,10 @@ static uc_status fill_scenes(const uc_node *scenes, uc_arena *arena, apg_project
                 return set_error(err, UC_E_MISSING, msg);
             }
         }
+        status =
+            fill_scene_bypass(uc_node_find(scene, "bypass"), out, arena, &items[i].bypass, &items[i].bypass_len, err);
+        if (status != UC_OK)
+            return status;
     }
 
     out->scenes     = items;
@@ -510,6 +552,15 @@ validate_route_endpoint(const apg_project_v2_resolved_t *project, const char *en
 static uc_status validate_project_routes(const apg_project_v2_resolved_t *project, uc_error *err) {
     if (!project)
         return UC_OK;
+    if (project->project.nodes_len == 0u) {
+        if (project->project.units_len != 0u)
+            return set_error(err, UC_E_RANGE, "empty project must not declare unit refs");
+        if (project->project.routes_len != 1u ||
+            strcmp(project->project.routes[0].from, APG_PROJECT_SYSTEM_INPUT) != 0 ||
+            strcmp(project->project.routes[0].to, APG_PROJECT_SYSTEM_OUTPUT) != 0)
+            return set_error(err, UC_E_RANGE, "empty project requires one direct system.input to system.output route");
+        return UC_OK;
+    }
     size_t system_input_routes  = 0u;
     size_t system_output_routes = 0u;
     for (size_t i = 0; i < project->project.routes_len; i++) {
