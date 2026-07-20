@@ -39,6 +39,12 @@ export type ProjectRoute = {
   to: string;
 };
 
+export type ProjectScene = {
+  name: string;
+  params: ProjectParam[];
+  bypass: Record<string, boolean>;
+};
+
 export type ProjectInspect = {
   schema: string;
   file: string;
@@ -47,6 +53,7 @@ export type ProjectInspect = {
   units: ProjectUnit[];
   nodes: ProjectInstance[];
   routes: ProjectRoute[];
+  scenes: ProjectScene[];
   targets: {
     default: string;
     export: string[];

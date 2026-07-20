@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import {
   addProjectInstance,
   addProjectRoute,
+  applyProjectScene,
   duplicateProjectInstance,
   insertProjectInstanceOnRoute,
   moveProjectInstance,
@@ -12,9 +13,12 @@ import {
   parseProjectGraphDraft,
   removeProjectInstance,
   removeProjectRoute,
+  removeProjectScene,
   renameProjectInstance,
+  renameProjectScene,
   replaceProjectRoute,
   setProjectInstancePosition,
+  upsertProjectScene,
   validateProjectRoutes,
   type ProjectPortCatalog,
 } from '../src/lib/projectV2Graph.ts';
@@ -85,17 +89,30 @@ const duplicate = parseProjectGraphDraft(duplicated.content).nodes.find(node => 
 assert.equal(duplicate?.unit, 'overdrive_unit');
 assert.equal(duplicate?.params.drive, '2.2');
 
-const renamed = parseProjectGraphDraft(renameProjectInstance(project, 'drive1', 'drive_main'));
+const withScene = upsertProjectScene(project, 'Drive Check', { 'drive1.drive': '5.0' }, { drive1: true });
+assert.equal(parseProjectGraphDraft(withScene).scenes.at(-1)?.bypass.drive1, true);
+const appliedScene = applyProjectScene(withScene, 'Drive Check');
+assert.equal(parseProjectGraphDraft(appliedScene.content).nodes.find(node => node.id === 'drive1')?.params.drive, '5.0');
+assert.equal(appliedScene.bypass.drive1, true);
+
+const renamed = parseProjectGraphDraft(renameProjectInstance(withScene, 'drive1', 'drive_main'));
 assert(renamed.routes.some(route => route.from === 'drive_main.output'));
 assert(renamed.routes.some(route => route.to === 'drive_main.input'));
 assert.equal(renamed.scenes[0].params['drive_main.drive'], '1.4');
 assert(!('drive1.drive' in renamed.scenes[0].params));
+assert.equal(renamed.scenes.at(-1)?.bypass.drive_main, true);
 assert.throws(() => renameProjectInstance(project, 'drive1', 'tone1'), /already exists/);
 
 const removed = parseProjectGraphDraft(removeProjectInstance(project, 'delay1'));
 assert(!removed.nodes.some(node => node.id === 'delay1'));
 assert(!removed.routes.some(route => route.from.startsWith('delay1.') || route.to.startsWith('delay1.')));
 assert(!Object.keys(removed.scenes[1].params).some(path => path.startsWith('delay1.')));
+const removedSceneInstance = parseProjectGraphDraft(removeProjectInstance(withScene, 'drive1'));
+assert(!('drive1' in (removedSceneInstance.scenes.at(-1)?.bypass ?? {})));
+
+const renamedScene = renameProjectScene(withScene, 'Drive Check', 'Drive Ready');
+assert.equal(parseProjectGraphDraft(renamedScene).scenes.at(-1)?.name, 'Drive Ready');
+assert.equal(parseProjectGraphDraft(removeProjectScene(renamedScene, 'Drive Ready')).scenes.length, 2);
 
 const moved = parseProjectGraphDraft(moveProjectInstance(project, 'drive1', 4));
 assert.equal(moved.nodes[4].id, 'drive1');

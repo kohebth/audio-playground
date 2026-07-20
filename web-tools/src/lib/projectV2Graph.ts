@@ -1,12 +1,23 @@
 import yaml from 'js-yaml';
 
-import type { Compatibility, ProjectInspect, ProjectInstance, ProjectRoute, ProjectUnit } from './backendSamples';
+import type {
+  Compatibility,
+  ProjectInspect,
+  ProjectInstance,
+  ProjectRoute,
+  ProjectScene,
+  ProjectUnit,
+} from './backendSamples';
 
 export type ProjectUnitRefDraft = { id: string; file: string };
 export type GraphPosition = { x: number; y: number };
 export type ProjectInstanceDraft = { id: string; unit: string; params: Record<string, string>; ui?: { position?: GraphPosition } };
 export type ProjectRouteDraft = { from: string; to: string };
-export type ProjectSceneDraft = { name: string; params: Record<string, string> };
+export type ProjectSceneDraft = {
+  name: string;
+  params: Record<string, string>;
+  bypass: Record<string, boolean>;
+};
 
 export type ProjectGraphDraft = {
   name: string;
@@ -39,6 +50,13 @@ function dumpDocument(doc: ProjectDocument): string {
 function stringMap(value: unknown): Record<string, string> {
   if (!isObject(value)) return {};
   return Object.fromEntries(Object.entries(value).map(([key, raw]) => [key, String(raw)]));
+}
+
+function booleanMap(value: unknown): Record<string, boolean> {
+  if (!isObject(value)) return {};
+  return Object.fromEntries(Object.entries(value).flatMap(([key, raw]) => (
+    typeof raw === 'boolean' ? [[key, raw]] : []
+  )));
 }
 
 function parsePosition(value: unknown): GraphPosition | undefined {
@@ -98,6 +116,7 @@ export function parseProjectGraphDraft(content: string): ProjectGraphDraft {
     scenes: (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject).map(scene => ({
       name: String(scene.name ?? ''),
       params: stringMap(scene.params),
+      bypass: booleanMap(scene.bypass),
     })),
     targets: {
       default: String(targets.default ?? 'desktop_full'),
@@ -123,6 +142,11 @@ export function projectDraftToInspect(
     params: Object.entries(node.params).map(([key, value]) => ({ key, value })),
   }));
   const routes: ProjectRoute[] = draft.routes.map(route => ({ ...route }));
+  const scenes: ProjectScene[] = draft.scenes.map(scene => ({
+    name: scene.name,
+    params: Object.entries(scene.params).map(([key, value]) => ({ key, value })),
+    bypass: { ...scene.bypass },
+  }));
   return {
     ...baseline,
     file,
@@ -131,6 +155,7 @@ export function projectDraftToInspect(
     units,
     nodes,
     routes,
+    scenes,
     targets: draft.targets,
   };
 }
@@ -214,11 +239,18 @@ export function renameProjectInstance(content: string, instanceId: string, nextI
     }
   }
   for (const scene of (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject)) {
-    if (!isObject(scene.params)) continue;
-    scene.params = Object.fromEntries(Object.entries(scene.params).map(([path, value]) => [
-      path.startsWith(`${instanceId}.`) ? `${nextId}${path.slice(instanceId.length)}` : path,
-      value,
-    ]));
+    if (isObject(scene.params)) {
+      scene.params = Object.fromEntries(Object.entries(scene.params).map(([path, value]) => [
+        path.startsWith(`${instanceId}.`) ? `${nextId}${path.slice(instanceId.length)}` : path,
+        value,
+      ]));
+    }
+    if (isObject(scene.bypass) && instanceId in scene.bypass) {
+      scene.bypass = Object.fromEntries(Object.entries(scene.bypass).map(([id, value]) => [
+        id === instanceId ? nextId : id,
+        value,
+      ]));
+    }
   }
   return dumpDocument(doc);
 }
@@ -232,8 +264,14 @@ export function removeProjectInstance(content: string, instanceId: string): stri
   chain.routes = (chain.routes as unknown[]).filter(isObject).filter(route =>
     !String(route.from ?? '').startsWith(`${instanceId}.`) && !String(route.to ?? '').startsWith(`${instanceId}.`));
   for (const scene of (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject)) {
-    if (!isObject(scene.params)) continue;
-    scene.params = Object.fromEntries(Object.entries(scene.params).filter(([path]) => !path.startsWith(`${instanceId}.`)));
+    if (isObject(scene.params)) {
+      scene.params = Object.fromEntries(
+        Object.entries(scene.params).filter(([path]) => !path.startsWith(`${instanceId}.`)),
+      );
+    }
+    if (isObject(scene.bypass)) {
+      scene.bypass = Object.fromEntries(Object.entries(scene.bypass).filter(([id]) => id !== instanceId));
+    }
   }
   return dumpDocument(doc);
 }
@@ -260,6 +298,84 @@ export function setProjectInstancePosition(content: string, instanceId: string, 
   node.ui = { ...(isObject(node.ui) ? node.ui : {}), position };
   chain.nodes = nodes;
   return dumpDocument(doc);
+}
+
+function validateSceneSnapshot(
+  draft: ProjectGraphDraft,
+  params: Record<string, string>,
+  bypass: Record<string, boolean>,
+): void {
+  const instances = new Set(draft.nodes.map(node => node.id));
+  for (const path of Object.keys(params)) {
+    const { instance } = parseEndpoint(path);
+    if (!instances.has(instance)) throw new Error(`Scene parameter "${path}" references a missing instance.`);
+  }
+  for (const instance of Object.keys(bypass)) {
+    if (!instances.has(instance)) throw new Error(`Scene bypass references missing instance "${instance}".`);
+  }
+}
+
+export function upsertProjectScene(
+  content: string,
+  name: string,
+  params: Record<string, string>,
+  bypass: Record<string, boolean>,
+): string {
+  const sceneName = name.trim();
+  if (!sceneName) throw new Error('Scene name is required.');
+  const draft = parseProjectGraphDraft(content);
+  validateSceneSnapshot(draft, params, bypass);
+  const doc = loadDocument(content);
+  const scenes = (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject);
+  const scene = scenes.find(item => String(item.name) === sceneName);
+  const snapshot = { name: sceneName, params: { ...params }, bypass: { ...bypass } };
+  if (scene) Object.assign(scene, snapshot);
+  else scenes.push(snapshot);
+  doc.scenes = scenes;
+  return dumpDocument(doc);
+}
+
+export function renameProjectScene(content: string, name: string, nextName: string): string {
+  const sceneName = nextName.trim();
+  if (!sceneName) throw new Error('Scene name is required.');
+  const doc = loadDocument(content);
+  const scenes = (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject);
+  const scene = scenes.find(item => String(item.name) === name);
+  if (!scene) throw new Error(`Scene "${name}" was not found.`);
+  if (scenes.some(item => item !== scene && String(item.name) === sceneName)) {
+    throw new Error(`Scene "${sceneName}" already exists.`);
+  }
+  scene.name = sceneName;
+  doc.scenes = scenes;
+  return dumpDocument(doc);
+}
+
+export function removeProjectScene(content: string, name: string): string {
+  const doc = loadDocument(content);
+  const scenes = (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject);
+  if (!scenes.some(scene => String(scene.name) === name)) throw new Error(`Scene "${name}" was not found.`);
+  doc.scenes = scenes.filter(scene => String(scene.name) !== name);
+  return dumpDocument(doc);
+}
+
+export function applyProjectScene(
+  content: string,
+  name: string,
+): { content: string; bypass: Record<string, boolean> } {
+  const draft = parseProjectGraphDraft(content);
+  const scene = draft.scenes.find(item => item.name === name);
+  if (!scene) throw new Error(`Scene "${name}" was not found.`);
+  const doc = loadDocument(content);
+  const chain = ensureChain(doc);
+  const nodes = (chain.nodes as unknown[]).filter(isObject);
+  for (const [path, value] of Object.entries(scene.params)) {
+    const { instance, port: param } = parseEndpoint(path);
+    const node = nodes.find(item => String(item.id) === instance);
+    if (!node) throw new Error(`Scene parameter "${path}" references a missing instance.`);
+    node.params = { ...(isObject(node.params) ? node.params : {}), [param]: value };
+  }
+  chain.nodes = nodes;
+  return { content: dumpDocument(doc), bypass: { ...scene.bypass } };
 }
 
 function validateRoute(
