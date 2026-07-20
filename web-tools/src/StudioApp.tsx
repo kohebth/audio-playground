@@ -233,22 +233,6 @@ export default function StudioApp() {
     updateActivePackage(() => project);
   }, [activeProject, mode, updateActivePackage]);
 
-  const importIntoEditor = useCallback((file: File) => {
-    void file.text().then(text => {
-      const imported = parseApgProjectPackage(text);
-      const now = new Date().toISOString();
-      const conflict = projects.some(project => project.manifest.id === imported.manifest.id);
-      const project = conflict ? {
-        ...imported,
-        manifest: { ...imported.manifest, id: newId('import'), name: `${imported.manifest.name} Imported`, updatedAt: now },
-      } : imported;
-      return repository.saveProject(project).then(() => {
-        setProjects(current => [project, ...current.filter(item => item.manifest.id !== project.manifest.id)]);
-        openProject(project);
-      });
-    }).catch(caught => setError(caught instanceof Error ? caught.message : 'That .apg project could not be imported.'));
-  }, [openProject, projects, repository]);
-
   if (isHome) {
     return (
       <ProjectHome
@@ -285,7 +269,6 @@ export default function StudioApp() {
       onDeletePersonalUnit={deletePersonalUnit}
       onDeletePreset={deletePersonalPreset}
       onExportProject={exportActiveProject}
-      onImportProject={importIntoEditor}
       onModeChange={setMode}
       onProjectPackageChange={updateActivePackage}
       onSavePersonalUnit={savePersonalUnit}

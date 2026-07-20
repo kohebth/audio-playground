@@ -14,5 +14,13 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'graph-vendor': ['@xyflow/react'],
+          'yaml-vendor': ['js-yaml'],
+        },
+      },
+    },
   },
 })

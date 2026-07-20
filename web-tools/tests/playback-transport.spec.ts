@@ -1,13 +1,15 @@
 import { expect, type Page, test } from '@playwright/test';
 
 async function openWorkspace(page: Page) {
-  await page.goto('/');
+  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'pro'));
+  await page.goto('/#/projects');
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 15_000 });
   await expect(page.getByTestId('launch-workspace')).toHaveCount(0);
   await expect(page).toHaveURL(/#\/projects$/);
 }
 
 test('keeps project and unit views on stable hash routes', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'pro'));
   await page.goto('/#/unit/overdrive');
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 15_000 });
   await expect(page).toHaveURL(/#\/unit\/overdrive$/);

@@ -55,7 +55,11 @@ import {
   type ProjectPortCatalog,
   type ProjectRouteDraft,
 } from './lib/projectV2Graph';
-import type { ApgProjectPackage, StudioMode } from './lib/projectPackage';
+import {
+  parseApgProjectPackage,
+  type ApgProjectPackage,
+  type StudioMode,
+} from './lib/projectPackage';
 import {
   createPersonalPreset,
   listPresetsForUnit,
@@ -228,7 +232,6 @@ type EditorWorkspaceProps = {
   onDeletePersonalUnit: (id: string) => void;
   onDeletePreset: (id: string) => void;
   onExportProject: (workspace: WorkspacePayload) => void;
-  onImportProject: (file: File) => void;
   onProjectPackageChange: (update: (project: ApgProjectPackage) => ApgProjectPackage) => void;
   onSavePersonalUnit: (unit: PersonalUnitRecord) => void;
   onSavePreset: (preset: UnitPreset) => void;
@@ -279,7 +282,6 @@ export function EditorWorkspace({
   onDeletePersonalUnit,
   onDeletePreset,
   onExportProject,
-  onImportProject,
   onProjectPackageChange,
   onSavePersonalUnit,
   onSavePreset,
@@ -325,6 +327,13 @@ export function EditorWorkspace({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
   const [liveBypassController, setLiveBypassController] = useState<LiveBypassController | null>(null);
+  const liveBypassControllerRef = useRef<LiveBypassController | null>(liveBypassController);
+  liveBypassControllerRef.current = liveBypassController;
+  const setProjectNodeBypass = useCallback(async (instanceId: string, enabled: boolean) => {
+    await liveBypassControllerRef.current?.setBypass(instanceId, enabled);
+  }, []);
+  const nodeBypassByInstance = liveBypassController?.bypassByInstance;
+  const nodeBypassAvailable = liveBypassController !== null;
   const liveBypassContextValue = useMemo(
     () => ({ controller: liveBypassController, setController: setLiveBypassController }),
     [liveBypassController],
@@ -587,13 +596,24 @@ export function EditorWorkspace({
           let storedPosition: ProjectGraphPosition | undefined;
           if (node.data.kind === 'unit') {
             const unitData = node.data;
-            data = { ...unitData, paramControls: projectParamControls[unitData.unit.id] ?? [], onParamChange: updateParamDraft };
+            data = {
+              ...unitData,
+              paramControls: projectParamControls[unitData.unit.id] ?? [],
+              onParamChange: updateParamDraft,
+              bypassed: nodeBypassByInstance?.[unitData.instance.id] ?? false,
+              bypassAvailable: nodeBypassAvailable,
+              onBypassChange: setProjectNodeBypass,
+            };
             storedPosition = projectDraft.nodes.find(item => item.id === unitData.instance.id)?.ui?.position;
           }
           const position = storedPosition ?? (replaceWorkspaceLayout ? undefined : existing?.position) ?? node.position;
+          const callbacksMatch = existing?.data.kind !== 'unit' || data.kind !== 'unit'
+            || (existing.data.onParamChange === data.onParamChange
+              && existing.data.onBypassChange === data.onBypassChange);
           if (existing
             && existing.position.x === position.x
             && existing.position.y === position.y
+            && callbacksMatch
             && JSON.stringify(existing.data) === JSON.stringify(data)) {
             return existing;
           }
@@ -618,6 +638,9 @@ export function EditorWorkspace({
             unit,
             paramControls: projectParamControls[unit.id] ?? [],
             onParamChange: updateParamDraft,
+            bypassed: nodeBypassByInstance?.[instance.id] ?? false,
+            bypassAvailable: nodeBypassAvailable,
+            onBypassChange: setProjectNodeBypass,
           };
           const previous = JSON.stringify({
             instance: node.data.instance,
@@ -625,14 +648,18 @@ export function EditorWorkspace({
             controls: node.data.paramControls,
           });
           const candidate = JSON.stringify({ instance, unit, controls: data.paramControls });
-          if (previous === candidate) return node;
+          if (previous === candidate
+            && node.data.bypassed === data.bypassed
+            && node.data.bypassAvailable === data.bypassAvailable
+            && node.data.onParamChange === data.onParamChange
+            && node.data.onBypassChange === data.onBypassChange) return node;
           changed = true;
           return { ...node, data };
         });
         return changed ? next : current;
       });
     });
-  }, [canvasFitRevision, graphTopologySignature, project, projectDraft, projectParamControls, setEdges, setNodes, updateParamDraft]);
+  }, [canvasFitRevision, graphTopologySignature, nodeBypassAvailable, nodeBypassByInstance, project, projectDraft, projectParamControls, setEdges, setNodes, setProjectNodeBypass, updateParamDraft]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1374,8 +1401,51 @@ export function EditorWorkspace({
   }, [entryProject, onExportProject, workspaceFiles]);
 
   const importWorkspace = useCallback((file: File) => {
-    markPerfSpan('workspace.import', () => onImportProject(file));
-  }, [onImportProject]);
+    void markPerfSpan('workspace.import', async () => {
+      try {
+        const importedPackage = parseApgProjectPackage(await file.text());
+        const importedFiles = hydrateWorkspaceFiles(importedPackage.workspace, initialWorkspaceFiles);
+        const importedProject = importedFiles.find(item => item.path === importedPackage.workspace.entryProject);
+        if (!importedProject) throw new Error('The imported package has no entry project.');
+        const importedDraft = parseProjectGraphDraft(importedProject.content);
+        const importedInspect = projectDraftToInspect(
+          importedDraft,
+          backendSamples.project,
+          importedPackage.workspace.entryProject,
+        );
+
+        pushHistory();
+        setWorkspaceFiles(importedFiles);
+        setEntryProject(importedPackage.workspace.entryProject);
+        setSelectedWorkspacePath(importedPackage.workspace.entryProject);
+        setParamDrafts(buildParamDrafts(importedInspect));
+        setParamOriginals(buildParamOriginals(importedInspect));
+        setSelectedId(null);
+        setSelectedInstanceIds([]);
+        setSelectedRouteIndex(null);
+        setSelectedAtomId(null);
+        setCanvasMode('project');
+        setInspectorView('project');
+        setCanvasFitRevision(revision => revision + 1);
+        setGraphEditError(null);
+        navigate(PROJECT_ROUTE);
+
+        const now = new Date().toISOString();
+        onProjectPackageChange(current => ({
+          ...importedPackage,
+          manifest: {
+            ...importedPackage.manifest,
+            id: current.manifest.id,
+            createdAt: current.manifest.createdAt,
+            updatedAt: now,
+            lastMode: mode,
+          },
+        }));
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Project import failed.');
+      }
+    });
+  }, [mode, navigate, onProjectPackageChange, pushHistory, setWorkspaceFiles]);
 
   const updateReadiness = useCallback((update: Partial<ApgProjectPackage['readiness']>) => {
     onProjectPackageChange(current => {

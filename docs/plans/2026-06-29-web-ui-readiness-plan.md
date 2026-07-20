@@ -14,6 +14,15 @@
 - The backend now exposes stable JSON data contracts for validation, atom inspection, unit inspection, project inspection, and deterministic project rendering. Runtime product controls, meters, product unit fixtures, representative pedalboard fixture, pedalboard sample outputs, unit inspect golden, and atom catalog manifest are implemented; benchmark tooling is deferred in `problem.md`.
 - `web-tools/` exists as a separate package, but backend readiness should come before UI work to reduce frontend churn.
 
+## 2026-07-20 Visual-First Delivery
+
+The follow-on web implementation is complete. The browser now opens on a local project home, stores versioned `.apg`
+packages in IndexedDB, and offers a global Simple/Pro mode. Simple mode centers the pedalboard, live mono input, scenes,
+presets, personal units, guided serial/parallel routing, and onboarding. Pro mode adds batch tools, mono file preview,
+readiness, and structured unit identity/compatibility/parameter/port/atom editing. Raw YAML is retained internally as the
+stable engine contract but is no longer an active editor surface. Empty projects compile as direct pass-through, scene
+bypass is persisted, and the adaptive workflow is covered on desktop and phone viewports.
+
 ---
 
 ## Approaches Considered
@@ -143,4 +152,6 @@
 
 ## Next Action
 
-Start Phase Z by auditing `web-tools/`, then wire the frozen backend samples into the first project-level pedalboard UI workflow.
+Continue production hardening from `core-design.md`, then validate STM32H7/M7 export and production WASM AudioWorklet
+delivery. Future web work should preserve the visual-first Simple/Pro contract and add capabilities through structured
+forms rather than exposing raw YAML.

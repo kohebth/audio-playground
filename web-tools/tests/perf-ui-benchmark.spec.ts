@@ -273,12 +273,64 @@ function buildAtomRetentionPayloads(profilePath: string, addedAtoms: number): { 
 }
 
 async function importWorkspacePayload(page: Page, payload: string, expectedNodes: number): Promise<void> {
-  await page.getByTestId('topbar-import-input').setInputFiles({
-    name: 'perf-workspace.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(payload),
+  const workspace = JSON.parse(payload) as PerfFixturePayload;
+  const now = new Date().toISOString();
+  const packaged = JSON.stringify({
+    schema: 'apg.project.package.v1',
+    version: 1,
+    manifest: {
+      id: `perf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name: 'Performance Fixture',
+      description: 'Browser performance fixture.',
+      createdAt: now,
+      updatedAt: now,
+      lastMode: 'pro',
+    },
+    workspace,
+    audio: [],
+    readiness: { checkedAt: null, validation: 'unknown', preview: 'unknown', targets: {}, diagnostics: [] },
   });
-  await expect.poll(() => countProjectNodes(page), { timeout: 20_000 }).toBe(expectedNodes);
+  await page.evaluate(expected => {
+    const selector = '.project-node:not(.project-node--system)[data-testid^="project-node-"]';
+    type ImportReadyHost = typeof window & {
+      __apgProjectNodeImportReady?: Promise<void>;
+      __apgProjectNodeImportStarted?: boolean;
+      __apgCheckProjectNodeImport?: () => void;
+    };
+    const host = window as ImportReadyHost;
+    host.__apgProjectNodeImportStarted = false;
+    host.__apgProjectNodeImportReady = new Promise((resolve, reject) => {
+      const check = () => {
+        if (!host.__apgProjectNodeImportStarted) return;
+        if (document.querySelectorAll(selector).length !== expected) return;
+        observer.disconnect();
+        window.clearTimeout(timeout);
+        resolve();
+      };
+      host.__apgCheckProjectNodeImport = check;
+      const observer = new MutationObserver(check);
+      const timeout = window.setTimeout(() => {
+        observer.disconnect();
+        reject(new Error(`Timed out waiting for ${expected} imported project nodes.`));
+      }, 20_000);
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  }, expectedNodes);
+  await page.getByTestId('topbar-import-input').setInputFiles({
+    name: 'perf-workspace.apg',
+    mimeType: 'application/json',
+    buffer: Buffer.from(packaged),
+  });
+  await page.evaluate(() => {
+    const host = window as typeof window & {
+      __apgProjectNodeImportReady?: Promise<void>;
+      __apgProjectNodeImportStarted?: boolean;
+      __apgCheckProjectNodeImport?: () => void;
+    };
+    host.__apgProjectNodeImportStarted = true;
+    host.__apgCheckProjectNodeImport?.();
+    return host.__apgProjectNodeImportReady;
+  });
 }
 
 async function importPerfWorkspaceFixture(page: Page, profilePath: string, expectedNodes: number): Promise<number> {
@@ -501,7 +553,8 @@ async function dispatchProjectEdgeDrop(page: Page, edgeId: string, unitId: strin
 }
 
 async function launchWorkspace(page: Page) {
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'pro'));
+  await page.goto('/#/projects', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 180_000 });
   await expect(page.getByTestId('launch-workspace')).toHaveCount(0);
 
@@ -1577,21 +1630,16 @@ test.describe('Contract graph atom scalability', () => {
     testInfo.annotations.push({ type: 'atom-rename-ms', description: renameMs.toFixed(2) });
   });
 
-  test('raw YAML metadata edit does not rerender contract nodes or edges', async ({ page }) => {
+  test('structured metadata edit does not rerender contract nodes or edges', async ({ page }) => {
     await page.getByTestId('project-node-drive1').dblclick();
     await expect(page.getByTestId('contract-canvas')).toBeVisible();
-    const diagnostics = page.locator('details.developer-diagnostics');
-    await diagnostics.locator(':scope > summary').click();
-    const editor = page.getByLabel(/^Workspace file .*overdrive\.unit\.v2\.yaml$/);
+    const editor = page.getByLabel('Unit description');
     const original = await editor.inputValue();
-    const updated = original.replace(
-      'description: Boosts mono guitar input, soft clips it, shapes tone, and applies output level.',
-      'description: Boosts mono guitar input, soft clips it, shapes tone, and applies output level efficiently.',
-    );
-    expect(updated).not.toBe(original);
+    const updated = `${original} Efficiently.`;
 
     await clearPerfSpans(page);
     await editor.fill(updated);
+    await editor.press('Tab');
     await waitForSpanCount(page, 'workspace.update.raw', 1);
     await page.waitForTimeout(400);
 

@@ -1,7 +1,5 @@
 import { expect, type Page, type TestInfo, test } from '@playwright/test';
 
-const pagesPath = '/audio-playground/';
-
 type NetworkAudit = {
   badResponses: string[];
   failedRequests: string[];
@@ -17,6 +15,11 @@ function baseUrl(testInfo: TestInfo): string {
   const value = testInfo.project.use.baseURL;
   if (typeof value !== 'string') throw new Error('Pages smoke baseURL is not configured');
   return value;
+}
+
+function deployedBasePath(testInfo: TestInfo): string {
+  const path = new URL(baseUrl(testInfo)).pathname;
+  return path.endsWith('/') ? path : `${path}/`;
 }
 
 function monitorNetwork(page: Page, configuredBaseUrl: string): NetworkAudit {
@@ -41,16 +44,17 @@ function monitorNetwork(page: Page, configuredBaseUrl: string): NetworkAudit {
 }
 
 async function openWorkspace(page: Page, testInfo: TestInfo, route = '/projects') {
+  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'pro'));
   const url = new URL(`#${route}`, baseUrl(testInfo));
   await page.goto(url.href);
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
 }
 
-function expectHealthyNetwork(audit: NetworkAudit) {
+function expectHealthyNetwork(audit: NetworkAudit, expectedBasePath: string) {
   expect(audit.failedRequests).toEqual([]);
   expect(audit.badResponses).toEqual([]);
   expect(audit.sameOriginPaths.length).toBeGreaterThan(0);
-  for (const path of audit.sameOriginPaths) expect(path.startsWith(pagesPath)).toBe(true);
+  for (const path of audit.sameOriginPaths) expect(path.startsWith(expectedBasePath)).toBe(true);
 }
 
 test('serves base-safe project and unit routes with release diagnostics', async ({ page }, testInfo) => {
@@ -59,7 +63,7 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   page.on('pageerror', error => pageErrors.push(error.message));
 
   await openWorkspace(page, testInfo);
-  await expect(page).toHaveURL(/\/audio-playground\/#\/projects$/);
+  await expect(page).toHaveURL(/#\/projects$/);
   await expect(page.getByTestId('project-canvas')).toBeVisible();
   const gateNode = page.getByTestId('project-node-gate1');
   await expect(gateNode).toBeVisible();
@@ -136,7 +140,7 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await page.getByTestId('inspector-tab-contract').click();
   const diagnostics = page.locator('details.developer-diagnostics');
   await diagnostics.locator(':scope > summary').click();
-  await expect(page.getByTestId('build-base-path')).toHaveText(pagesPath);
+  await expect(page.getByTestId('build-base-path')).toHaveText(deployedBasePath(testInfo));
   const expectedCommit = process.env.APG_EXPECTED_COMMIT_SHA;
   if (expectedCommit) await expect(page.getByTestId('build-commit-sha')).toHaveText(expectedCommit);
 
@@ -145,12 +149,12 @@ test('serves base-safe project and unit routes with release diagnostics', async 
     return { ok: response.ok, text: await response.text(), url: response.url };
   });
   expect(example.ok).toBe(true);
-  expect(new URL(example.url).pathname).toBe(`${pagesPath}units/overdrive.unit.v2.yaml`);
+  expect(new URL(example.url).pathname).toBe(`${deployedBasePath(testInfo)}units/overdrive.unit.v2.yaml`);
   expect(example.text).toContain('schema: apg.unit.v2');
   expect(example.text).toContain('wasm_realtime: true');
 
   await openWorkspace(page, testInfo, '/unit/tone_stack');
-  await expect(page).toHaveURL(/\/audio-playground\/#\/unit\/tone_stack$/);
+  await expect(page).toHaveURL(/#\/unit\/tone_stack$/);
   const contractCanvas = page.getByTestId('contract-canvas');
   await expect(contractCanvas).toBeVisible();
   await expect(contractCanvas).toHaveAttribute('data-atom-count', '21');
@@ -158,12 +162,14 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await expect(page.getByTestId('contract-node-mid_bandpass')).toContainText('filter_biquad');
   await expect(page.getByRole('button', { name: 'preamp_saturation amplitude_clip_soft' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'power_saturation amplitude_clip_soft' })).toHaveCount(1);
-  const contractParamNames = page.locator('.contract-param-order__identity code');
-  await expect(contractParamNames).toHaveText(['gain', 'bass', 'mid', 'treble', 'presence', 'volume']);
+  const contractParamNames = page.locator('.structured-param input[aria-label$=" name"]');
+  await expect.poll(() => contractParamNames.evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)))
+    .toEqual(['gain', 'bass', 'mid', 'treble', 'presence', 'volume']);
   await page.getByTestId('contract-param-volume-up').click();
-  await expect(contractParamNames).toHaveText(['gain', 'bass', 'mid', 'treble', 'volume', 'presence']);
+  await expect.poll(() => contractParamNames.evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)))
+    .toEqual(['gain', 'bass', 'mid', 'treble', 'volume', 'presence']);
   await page.getByRole('button', { name: 'Project graph' }).click();
-  await expect(page).toHaveURL(/\/audio-playground\/#\/projects$/);
+  await expect(page).toHaveURL(/#\/projects$/);
   await expect(toneKnobLabels).toHaveText([
     'Preamp Gain',
     'Bass',
@@ -176,7 +182,7 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   // Keep the boundary-node sizing check on a compact graph: the larger tone
   // stack intentionally virtualizes its far-edge nodes at the minimum zoom.
   await openWorkspace(page, testInfo, '/unit/overdrive');
-  await expect(page).toHaveURL(/\/audio-playground\/#\/unit\/overdrive$/);
+  await expect(page).toHaveURL(/#\/unit\/overdrive$/);
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
   const inputBoundary = page.getByTestId('unit-boundary-input');
@@ -201,7 +207,7 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await expect(page.getByTestId('atom-palette-item-freq_fft')).toHaveCount(0);
 
   expect(pageErrors).toEqual([]);
-  expectHealthyNetwork(audit);
+  expectHealthyNetwork(audit, deployedBasePath(testInfo));
 });
 
 test('persists drag-and-drop edits and exports the workspace', async ({ page }, testInfo) => {
@@ -222,7 +228,7 @@ test('persists drag-and-drop edits and exports the workspace', async ({ page }, 
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('topbar-export').click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('audio-playground-workspace.json');
+  expect(download.suggestedFilename()).toMatch(/\.apg$/);
 });
 
 test('registers the AudioWorklet and releases repeated audio resources', async ({ page }, testInfo) => {
@@ -264,22 +270,23 @@ test('registers the AudioWorklet and releases repeated audio resources', async (
   expect(lifecycle.workletDisconnects).toBe(4);
   expect(lifecycle.mediaTrackStops).toBeGreaterThanOrEqual(2);
   expect(pageErrors).toEqual([]);
-  expectHealthyNetwork(audit);
+  expectHealthyNetwork(audit, deployedBasePath(testInfo));
 });
 
 test('shows microphone permission failure without crashing the editor', async ({ page }, testInfo) => {
-  await openWorkspace(page, testInfo);
-  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 20_000 });
-  await page.getByTestId('preview-compile').click();
-  await expect(page.locator('.transport-state')).toHaveText('ready', { timeout: 20_000 });
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
       configurable: true,
       value: () => Promise.reject(new DOMException('Injected microphone permission denial', 'NotAllowedError')),
     });
   });
+  await openWorkspace(page, testInfo);
+  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 20_000 });
+  await page.getByTestId('preview-compile').click();
+  await expect(page.locator('.transport-state')).toHaveText('ready', { timeout: 20_000 });
 
   await page.getByTestId('preview-mode-mic').click();
+  await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
   await page.getByTestId('preview-start-stop').click();
   await expect(page.locator('.transport-state')).toHaveText('error');
   await expect(page.locator('.transport-state')).toHaveAttribute(
@@ -289,23 +296,19 @@ test('shows microphone permission failure without crashing the editor', async ({
   await expect(page.getByTestId('project-canvas')).toBeVisible();
 });
 
-test('contains and recovers from an invalid DSP edit', async ({ page }, testInfo) => {
+test('contains and recovers from an invalid structured unit edit', async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
   await openWorkspace(page, testInfo, '/unit/overdrive');
-  const diagnostics = page.locator('details.developer-diagnostics');
-  await diagnostics.locator(':scope > summary').click();
-  const editor = page.getByLabel(/^Workspace file .*overdrive\.unit\.v2\.yaml$/);
-  const original = await editor.inputValue();
-  const invalid = original.replace('atom: generation_dc', 'atom: missing_browser_atom');
-  expect(invalid).not.toBe(original);
-
-  await editor.fill(invalid);
-  await expect(page.locator('.transport-state')).toHaveText('error', { timeout: 20_000 });
+  const version = page.getByLabel('Unit version');
+  await version.fill('not-a-version');
+  await version.press('Tab');
+  await expect(page.getByRole('alert')).toContainText('semantic versioning');
   await expect(page.getByTestId('contract-canvas')).toBeVisible();
 
-  await editor.fill(original);
-  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 20_000 });
+  await version.fill('2.0.1');
+  await version.press('Tab');
+  await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByTestId('contract-canvas')).toBeVisible();
   expect(pageErrors).toEqual([]);
 });

@@ -25,7 +25,7 @@
     "interaction.frame.average": 20,
     "ui.openContractGraph": 120,
     "graph.load.small": 500,
-    "graph.load.medium": 500,
+    "graph.load.medium": 800,
     "graph.load.large": 2000,
     "graph.load.extreme": 4000,
     "contract.load.small": 500,

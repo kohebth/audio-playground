@@ -13,9 +13,34 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 - The `apg-v2` CLI emits structured validation JSON, inspect JSON for atoms/units/projects, deterministic project render/benchmark JSON, and export surfaces for `wasm_realtime` and `m7_static`. Validation, unit inspect, project inspect, render, and atom catalog sample contracts are frozen under `test/golden/`.
 - `schema/atoms/atoms.json` now generates the C atom ABI/registry contracts, TypeScript atom catalog, and atom-binding JSON Schema together; a CTest stale-output gate prevents frontend and backend field drift.
 
+## Visual-First Web Studio Status
+
+The primary web workflow is now visual and local-first. YAML remains the canonical engine and persistence contract, but
+it is not exposed as the normal editing interface.
+
+- A project home screen creates, opens, duplicates, imports, exports, and deletes browser-local projects backed by
+  IndexedDB. The portable `.apg` package contains the versioned workspace, manifest, optional mono audio, and readiness
+  snapshot; topbar import replaces the open project's contents in place, while home import creates a separate project.
+- A global Simple/Pro switch serves both musicians and DSP authors. Simple mode provides an effect library, pedal-style
+  controls, serial insertion, guided non-nested parallel routing through a real wet/dry mixer, microphone-only preview,
+  presets, scenes, and a guided tour. Pro mode adds project structure, batch operations, file preview, readiness details,
+  and unit-internals editing.
+- Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
+  selected pedal, and structured units can be saved to a personal browser library.
+- Pro unit editing uses structured identity, compatibility, parameter, port, and atom-graph controls. Raw YAML text is
+  no longer mounted in the active editor; transformer and backend validation errors remain visible without replacing the
+  last valid runtime.
+- Simple mode accepts live mono input only. Pro mode additionally accepts packaged or selected audio files and rejects
+  stereo/multichannel content with a clear error. Cloud sync, URL imports, browser recording, stereo projects, and browser
+  deployment bundles remain outside this scope.
+- The studio adapts to phone-sized viewports, preserves a direct pass-through empty project, and keeps common project
+  terminology user-facing while retaining the existing v2 file contracts internally.
+
 ## Readiness Declaration
 
-The APGCore v2 backend and web MVP surfaces are ready for production hardening. Final MVP backend verification passed with `./build-and-test.sh` across all 20 CTest targets. Web verification passed with `npm run test`, `npm run build`, and `npm run lint` inside `web-tools/`.
+The APGCore v2 backend and visual web MVP surfaces are ready for production hardening. The release gate covers the C
+suite, web contracts and transformers, TypeScript, lint, production build and artifact policy, focused studio/browser
+workflows, repeated AudioWorklet lifecycle behavior, and the medium UI performance profile.
 
 This is not a hardware readiness declaration. STM32H7/M7 production deployment is not ready yet: the `m7_static` path is a bounded C11 export surface for compatible/simple projects, not proof that the full guitar-pedalboard project runs on target hardware. The generic browser runtime now lives in `wasm-tools/`; the older project-specific `wasm_realtime` export remains a compatibility scaffold.
 
@@ -25,13 +50,13 @@ project, and reports structured diagnostics and schedule summaries. Emscripten b
 browser dependencies from entering APGCore. The control module now emits a checksummed pointer-free registry image;
 the processor hydrates it into an inactive runtime, commits matching revisions at block boundaries, crossfades runtime
 replacements, processes mono audio, applies indexed controls, and reads real output meters. Worker/AudioWorklet and
-typed frontend integration are implemented through a versioned TypeScript facade. The editor debounces YAML workspace
+typed frontend integration are implemented through a versioned TypeScript facade. The editor debounces internal workspace
 revisions, validates and prepares them in a Worker, stages valid images in an AudioWorklet, keeps failed edits away from
 the active runtime, and routes stable parameter/bypass names plus meter snapshots through the facade. Runtime image
 hydration and commit are separate Worklet messages; a newly announced editor revision invalidates stale preparation
-before commit, while failure state retains the affected revision and diagnostic. Uploaded files
-decode through WebAudio and feed the real processor Worklet; microphone capture remains a separate selectable input
-using the same runtime.
+before commit, while failure state retains the affected revision and diagnostic. In Pro mode, mono files decode through
+WebAudio and feed the real processor Worklet; microphone capture remains a separate selectable input using the same
+runtime. Simple mode keeps that choice focused on live microphone/audio-interface input.
 
 The compact transport keeps one WASM backend alive across parent UI renders, starts and stops both decoded files and
 microphone streams, and suppresses stale meter failures while a Worklet is being disposed. Browser regression coverage
@@ -108,8 +133,8 @@ Bypass and mute use indexed Worklet controls. The facade retains per-instance by
 them to a newly hydrated runtime before commit, and therefore preserves live control state across structural swaps.
 The preview exposes both controls while running. Each pedal card uses its full-width footer as the on/off target and
 fades to 50% opacity while bypassed, making inactive stages visible at a glance. Project routes omit repetitive
-`output -> input` edge labels while retaining their selectable paths. The current project schema has no persisted bypass
-or mute field, so these controls do not invent non-schema YAML properties.
+`output -> input` edge labels while retaining their selectable paths. Live bypass and mute remain runtime controls rather
+than instance properties; scene snapshots persist supported per-instance bypass values alongside their parameter values.
 
 Unit Atom CRUD is backed by structured YAML transforms and executable transformer tests. The editor can create a valid
 unit scaffold, add catalog-derived atoms, rename nodes, edit bindings/configuration, and remove unreferenced atoms.
@@ -134,12 +159,13 @@ Removal cleans dependent routes and scene values. Direction, port, occupied-targ
 synchronization. A broken chain can validate structurally but fails preparation, leaving the previous active revision in
 the Worklet until a complete route is restored.
 
-Browser persistence uses the versioned `apg.ui.workspace.v2` envelope. Autosave, import, and export retain the entry
-project plus every project/unit file as path, role, and YAML content; baseline-only editor fields are not serialized.
-Restore validates the format version, confined relative paths, unique files, roles, and entry project before mounting
-the Worker/AudioWorklet integration. Legacy array-only local storage migrates once to v2. Invalid imports report the
-error without replacing the active workspace, while valid restored drafts proceed through normal WASM validation and
-revision preparation.
+The internal workspace still uses the versioned `apg.ui.workspace.v2` envelope. Browser persistence wraps that workspace
+in `apg.project.package.v1`, stores projects in IndexedDB, and exports/imports the same JSON-based `.apg` package. The
+package retains every project/unit file as path, role, and YAML content plus manifest, optional mono audio, and readiness
+data; baseline-only editor fields are not serialized. Restore validates format versions, confined relative paths, unique
+files, roles, entry project, audio shape, and readiness data before mounting the Worker/AudioWorklet integration. Legacy
+local storage migrates once. Invalid imports report the error without replacing the active workspace, while valid
+imports proceed through normal WASM validation and revision preparation.
 
 ## Ready To Start Web UI When
 
@@ -257,13 +283,16 @@ The UI needs a way to drive live or offline preview:
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute, and peak/RMS meter snapshots.
 - **Phase X:** Representative unit fixture metadata, the guitar pedalboard project fixture metadata, deterministic render proof, and compatibility/output capture are complete.
 - **Phase Y:** Web handoff package freezes sample contracts, documents exact fixture commands, refreshes repo guidance, and declares backend readiness. Complete.
+- **Visual-first studio follow-on:** Project home, IndexedDB/`.apg` persistence, Simple/Pro workflows, scenes, presets,
+  parallel routing, adaptive layout, structured Pro editing, and browser release/performance gates are complete.
 
-## First Web UI Scope After Gate
+## Delivered Web UI Scope
 
-Start with the actual product workflow, not a landing page:
+The first product workflow is delivered:
 
-- project browser using committed sample projects
-- pedalboard canvas for unit instances and routes
-- inspector for validation errors and compatibility
-- parameter panel from unit metadata
-- atom-level unit editor after project-level workflow is usable
+- [x] Local project browser and portable `.apg` packages
+- [x] Pedalboard canvas for unit instances, serial routes, and guided parallel wet/dry routes
+- [x] Simple musician workflow with pedals, live input, scenes, presets, and tour
+- [x] Pro workflow with diagnostics, compatibility, batch actions, file preview, and readiness
+- [x] Parameter controls generated from unit metadata
+- [x] Structured atom-level unit editor after the project-level workflow

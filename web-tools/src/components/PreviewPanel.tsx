@@ -488,7 +488,7 @@ export function PreviewPanel({
               );
             }
           } catch (error) {
-            reportError(error, 'control');
+            if (runningRef.current) reportError(error, 'control');
           } finally {
             entry.draining = false;
             if (entry.pendingValue === null) paramControlQueueRef.current.delete(command.path);

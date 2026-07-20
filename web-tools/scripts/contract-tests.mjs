@@ -242,7 +242,8 @@ includesContent(previewPanel, 'backend.setBypass', 'live bypass controls must us
 includesContent(previewPanel, 'bypassByInstance', 'bypass UI state must be tracked per project instance');
 includesContent(projectNode, 'node-pedal-footer', 'the full unit-card footer must expose the bypass control');
 includesContent(projectNode, 'project-node--bypassed', 'bypassed unit cards must expose a visible state class');
-includesContent(projectNode, 'controller?.setBypass(data.instance.id, !bypassed)', 'unit-card bypass must target the live instance');
+includesContent(projectNode, 'data.onBypassChange?.(data.instance.id, !bypassed)', 'unit-card bypass must target the live instance');
+includesContent(app, 'liveBypassControllerRef.current?.setBypass(instanceId, enabled)', 'unit-card bypass must use the current live controller without coupling every card to its full state');
 assert(!projectGraph.includes('labelStyle:'), 'project routes must not render repetitive endpoint labels');
 includesContent(previewPanel, '.pollMeters()', 'preview meters must use throttled Worklet polling');
 includesContent(previewPanel, 'outputLatencyMs', 'live preview must calculate browser-reported output latency');

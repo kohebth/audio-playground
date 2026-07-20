@@ -19,6 +19,9 @@ export type ProjectNodeData =
       color: string;
       paramControls?: ProjectParamControl[];
       onParamChange?: (instanceId: string, paramKey: string, value: string) => void;
+      bypassed?: boolean;
+      bypassAvailable?: boolean;
+      onBypassChange?: (instanceId: string, enabled: boolean) => Promise<void>;
     };
 
 export type ProjectParamControl = {

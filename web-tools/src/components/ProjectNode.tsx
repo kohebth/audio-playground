@@ -1,7 +1,6 @@
 import { memo, useEffect, type CSSProperties } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import type { ProjectNodeData } from '../lib/projectGraph';
-import { useLiveBypass } from '../lib/liveBypass';
 import { ParamKnob } from './ParamKnob';
 import { markComponentRender } from '../lib/perfTelemetry';
 
@@ -22,7 +21,6 @@ function orderParamsByUnitContract(data: Extract<ProjectNodeData, { kind: 'unit'
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
   const renderId = data.kind === 'system' ? data.id : data.instance.id;
   useEffect(() => markComponentRender('ProjectNode', renderId));
-  const { controller } = useLiveBypass();
   const style = { '--node-color': data.color } as CSSProperties;
 
   if (data.kind === 'system') {
@@ -49,7 +47,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
     );
   }
 
-  const bypassed = controller?.bypassByInstance[data.instance.id] ?? false;
+  const bypassed = data.bypassed ?? false;
   const params = orderParamsByUnitContract(data);
   const controlsByKey = new Map(data.paramControls?.map(control => [control.key, control]) ?? []);
   const wide = params.length >= 3;
@@ -96,10 +94,10 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           aria-label={`Turn ${bypassed ? 'on' : 'off'} ${data.instance.id}`}
           aria-pressed={!bypassed}
           className={`node-pedal-footer ${bypassed ? 'node-pedal-footer--off' : 'node-pedal-footer--on'} nodrag nopan`}
-          disabled={!controller}
+          disabled={!data.bypassAvailable}
           onClick={event => {
             event.stopPropagation();
-            void controller?.setBypass(data.instance.id, !bypassed);
+            void data.onBypassChange?.(data.instance.id, !bypassed);
           }}
           onDoubleClick={event => event.stopPropagation()}
           onPointerDown={event => event.stopPropagation()}
