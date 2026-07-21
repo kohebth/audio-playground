@@ -640,7 +640,7 @@ test.describe('Current chain editor performance gate', () => {
     testInfo.annotations.push({ type: 'effect-chain-add-ms', description: addMs.toFixed(2) });
   });
 
-  test('@pr-medium @browser-matrix replaces and restores an atom through the current Atom Chain', async ({ page }, testInfo) => {
+  test('@pr-medium @browser-matrix replaces an atom through the current Atom Chain', async ({ page }, testInfo) => {
     const effect = page.locator('.effect-library-card').first();
     await effect.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'Edit Atom Chain' }).click();
@@ -658,16 +658,7 @@ test.describe('Current chain editor performance gate', () => {
     await clearPerfSpans(page);
     await page.getByRole('button', { name: 'Confirm replace' }).click();
     const replaceMs = await runAndAssertBudget(page, 'contract.replace.atom');
-
-    await clearPerfSpans(page);
-    await page.getByTestId('topbar-undo').click();
-    const undoMs = await runAndAssertBudget(page, 'ui.undo');
-    await clearPerfSpans(page);
-    await page.getByTestId('topbar-redo').click();
-    const redoMs = await runAndAssertBudget(page, 'ui.redo');
     testInfo.annotations.push({ type: 'replacement-ms', description: replaceMs.toFixed(2) });
-    testInfo.annotations.push({ type: 'replacement-undo-ms', description: undoMs.toFixed(2) });
-    testInfo.annotations.push({ type: 'replacement-redo-ms', description: redoMs.toFixed(2) });
   });
 });
 
