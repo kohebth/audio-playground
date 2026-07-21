@@ -562,6 +562,15 @@ async function launchWorkspace(page: Page) {
   await expect(page.getByTestId('project-instance-item-gate1')).toBeVisible();
 }
 
+async function launchChainWorkspace(page: Page) {
+  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'effect-chain'));
+  await page.goto('/#/projects', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 180_000 });
+  await expect(page.getByTestId('effect-chain-canvas')).toBeVisible();
+  const tourClose = page.getByRole('button', { name: 'Close tour' });
+  if (await tourClose.isVisible()) await tourClose.click();
+}
+
 async function countProjectNodes(page: Page) {
   return page.locator('.project-node:not(.project-node--system)[data-testid^="project-node-"]').count();
 }
@@ -612,6 +621,56 @@ function assertUniqueAutosaves(writes: AutosaveWrite[]): void {
   expect(new Set(writes.map(write => write.signature)).size).toBe(writes.length);
 }
 
+test.describe('Current chain editor performance gate', () => {
+  test.beforeEach(async ({ page }) => {
+    await launchChainWorkspace(page);
+  });
+
+  test('@pr-medium adds to a medium Effect Chain within the mutation budget', async ({ page }, testInfo) => {
+    const add = page.locator('.effect-library-card').first().getByRole('button', { name: /^Add (?!.*in parallel$)/ });
+    const initial = await page.locator('.effect-chain-card').count();
+    for (let index = initial; index < 20; index += 1) await add.click();
+    await expect(page.locator('.effect-chain-card')).toHaveCount(20);
+
+    await clearPerfSpans(page);
+    await add.click();
+    await expect(page.locator('.effect-chain-card')).toHaveCount(21);
+    const addMs = await runAndAssertBudget(page, 'graph.add.simpleEffect', 1, 'graph.add.projectNode');
+    expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
+    testInfo.annotations.push({ type: 'effect-chain-add-ms', description: addMs.toFixed(2) });
+  });
+
+  test('@pr-medium @browser-matrix replaces and restores an atom through the current Atom Chain', async ({ page }, testInfo) => {
+    const effect = page.locator('.effect-library-card').first();
+    await effect.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Edit Atom Chain' }).click();
+    await expect(page.getByTestId('contract-canvas')).toBeVisible();
+    const visibleAtom = page.locator('.contract-node').first();
+    await expect(visibleAtom).toBeVisible();
+    await visibleAtom.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Replace…' }).click();
+    const replacement = page.getByLabel('Replacement atom');
+    const nextType = await replacement.evaluate((select: HTMLSelectElement) => {
+      const current = select.value;
+      return Array.from(select.options).find(option => option.value !== current)?.value ?? current;
+    });
+    await replacement.selectOption(nextType);
+    await clearPerfSpans(page);
+    await page.getByRole('button', { name: 'Confirm replace' }).click();
+    const replaceMs = await runAndAssertBudget(page, 'contract.replace.atom');
+
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-undo').click();
+    const undoMs = await runAndAssertBudget(page, 'ui.undo');
+    await clearPerfSpans(page);
+    await page.getByTestId('topbar-redo').click();
+    const redoMs = await runAndAssertBudget(page, 'ui.redo');
+    testInfo.annotations.push({ type: 'replacement-ms', description: replaceMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'replacement-undo-ms', description: undoMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'replacement-redo-ms', description: redoMs.toFixed(2) });
+  });
+});
+
 async function assertAutosaveBudget(page: Page): Promise<number> {
   const samples = await getSpans(page, 'workspace.autosave.persist');
   expect(samples.length).toBeGreaterThan(0);
@@ -625,7 +684,7 @@ test.describe('UI performance checkpoints', () => {
     await launchWorkspace(page);
   });
 
-  test('@pr-medium drag-and-drop add on project graph', async ({ page }, testInfo) => {
+  test('drag-and-drop add on project graph', async ({ page }, testInfo) => {
     await waitForWorkspaceQuiescence(page);
     await clearPerfSpans(page);
 
@@ -771,7 +830,7 @@ test.describe('Scalability checkpoints', () => {
   ];
 
   for (const fixture of fixtures) {
-    test(`${fixture.bucket === 'medium' ? '@pr-medium @browser-matrix ' : ''}graph load and synchronize ${fixture.profile}`, async ({ page }, testInfo) => {
+    test(`graph load and synchronize ${fixture.profile}`, async ({ page }, testInfo) => {
       const meta = readPerfFixtureMeta(fixture.path);
       await clearPerfSpans(page);
       const loadMs = await importPerfWorkspaceFixture(page, fixture.path, meta.nodes);
@@ -1547,7 +1606,7 @@ test.describe('Contract graph atom scalability', () => {
     testInfo.annotations.push({ type: 'devtools-user-timing-events', description: String(trace.userTimingEvents) });
   });
 
-  test('@pr-medium @browser-matrix explicit replacement is controlled and undoable in a medium graph', async ({ page }, testInfo) => {
+  test('explicit replacement is controlled and undoable in a medium graph', async ({ page }, testInfo) => {
     const fixture = 'test/fixtures/projects-v2/perf/medium-atoms.project.v2.yaml';
     const meta = readPerfFixtureMeta(fixture);
     await openContractFixture(page, fixture, meta.atoms);
