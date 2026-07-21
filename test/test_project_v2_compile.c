@@ -310,60 +310,6 @@ static int test_two_instance_project_compiles_and_runs(void) {
     return 0;
 }
 
-static const apg_v2_compiled_instance_t *find_instance(const apg_v2_compiled_unit_t *plan, const char *id) {
-    size_t id_len = strlen(id);
-    for (size_t i = 0; plan && i < plan->instances_len; i++) {
-        if (plan->instances[i].id_len == id_len && strncmp(plan->instances[i].id, id, id_len) == 0)
-            return &plan->instances[i];
-    }
-    return NULL;
-}
-
-static int test_parallel_project_compiles_runs_and_locks_routing_bypass(void) {
-    uc_arena arena;
-    if (uc_arena_init(&arena, 2 * 1024 * 1024) != 0)
-        return fail("arena init failed");
-    apg_project_v2_resolved_t project;
-    if (load_resolved_project("test/fixtures/projects-v2/parallel-gain.project.v2.yaml", &arena, &project)) {
-        uc_arena_free(&arena);
-        return 1;
-    }
-    apg_project_v2_compiled_t compiled;
-    if (compile_resolved_project(&project, &arena, &compiled)) {
-        uc_arena_free(&arena);
-        return 1;
-    }
-
-    const apg_v2_compiled_instance_t *panner = find_instance(&compiled.plan, "parallel_pan");
-    const apg_v2_compiled_instance_t *mixer  = find_instance(&compiled.plan, "parallel_mix");
-    const apg_v2_compiled_instance_t *boost  = find_instance(&compiled.plan, "boost");
-    if (!panner || !mixer || !boost || panner->bypassable || mixer->bypassable || !boost->bypassable) {
-        uc_arena_free(&arena);
-        return fail("routing instance bypass metadata is wrong");
-    }
-
-    apg_v2_runtime_t runtime;
-    uc_error         err    = {0};
-    uc_status        status = test_apg_v2_runtime_init_registry(&compiled.plan, 8u, 48000.0f, &arena, &runtime, &err);
-    if (status != UC_OK) {
-        fprintf(stderr, "parallel runtime init error: %s\n", err.msg);
-        uc_arena_free(&arena);
-        return 1;
-    }
-    const float input[3]    = {0.25f, -0.5f, 1.0f};
-    const float expected[3] = {0.375f, -0.75f, 1.5f};
-    float       output[3]   = {0.0f, 0.0f, 0.0f};
-    if (!test_runtime_process_mono_ports(&runtime, "input", input, "output", output, 3u) ||
-        expect_samples_near(output, expected, 3u, 0.00002f, "parallel mix output")) {
-        apg_v2_runtime_destroy(&runtime);
-        uc_arena_free(&arena);
-        return 1;
-    }
-    apg_v2_runtime_destroy(&runtime);
-    uc_arena_free(&arena);
-    return 0;
-}
-
 static int test_guitar_pedalboard_project_compiles_and_runs(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -619,8 +565,6 @@ int main(void) {
     if (test_simple_project_compiles_and_runs())
         return 1;
     if (test_two_instance_project_compiles_and_runs())
-        return 1;
-    if (test_parallel_project_compiles_runs_and_locks_routing_bypass())
         return 1;
     if (test_guitar_pedalboard_project_compiles_and_runs())
         return 1;

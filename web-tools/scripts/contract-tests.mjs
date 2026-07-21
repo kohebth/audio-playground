@@ -57,11 +57,6 @@ const graphContextMenu = read('web-tools/src/components/GraphContextMenu.tsx');
 const paramKnob = read('web-tools/src/components/ParamKnob.tsx');
 const atomPalette = read('web-tools/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/src/components/ContractGraphCanvas.tsx');
-const atomContextInspector = read('web-tools/src/components/AtomContextInspector.tsx');
-const effectChainCanvas = read('web-tools/src/components/EffectChainCanvas.tsx');
-const effectChainDraft = read('web-tools/src/lib/effectChainDraft.ts');
-const graphvizWorker = read('web-tools/src/workers/graphviz.worker.ts');
-const projectPackage = read('web-tools/src/lib/projectPackage.ts');
 const previewPanel = read('web-tools/src/components/PreviewPanel.tsx');
 const liveLatencyBadge = read('web-tools/src/components/LiveLatencyBadge.tsx');
 const audioIo = read('web-tools/src/lib/audioIo.ts');
@@ -168,22 +163,15 @@ assert(
   'pedalboard route graph fixture changed',
 );
 assert(
-  (backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length + 3,
-  'workspace bundle must include referenced units, legacy migration input, and both explicit routing helpers',
+  (backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length + 1,
+  'workspace bundle must include all referenced unit files plus the guided wet/dry mixer',
 );
 includesContent(app, 'apg.unit-editor.workspace.v2', 'versioned workspace autosave key is missing');
 includesContent(app, 'apg.unit-editor.workspace.v1', 'legacy workspace migration key is missing');
 includesContent(workspacePersistence, "WORKSPACE_SCHEMA = 'apg.ui.workspace.v2'", 'workspace export schema is missing');
 includesContent(workspacePersistence, 'WORKSPACE_FORMAT_VERSION = 2', 'workspace format version is missing');
 includesContent(app, 'parseWorkspacePayload(saved)', 'autosave restore must validate versioned workspace payloads');
-includesContent(app, 'hydrateWorkspaceFiles(result.workspace, initialWorkspaceFiles)', 'workspace restore must hydrate migrated files');
-includesContent(projectCanvas, 'onEdgeContextMenu', 'project routes must expose the guided parallel action');
-includesContent(projectCanvas, 'Add in parallel', 'project route actions must name the explicit parallel transaction');
-includesContent(app, 'pathPanner2WorkspaceFile', 'parallel insertion must include the system panner helper');
-includesContent(app, 'pathMixer2WorkspaceFile', 'parallel insertion must include the system mixer helper');
-includesContent(projectNode, "control?.control === 'fader'", 'routing path levels must render as faders');
-includesContent(projectNode, 'ROUTING ON', 'routing helpers must render as always active');
-includesContent(projectV2Graph, 'Use Add in parallel to split a path', 'raw project fan-out must be rejected');
+includesContent(app, 'hydrateWorkspaceFiles(payload, initialWorkspaceFiles)', 'workspace restore must hydrate persisted files');
 includesContent(
   app,
   'createWorkspacePayload(entryProject, workspaceFiles)',
@@ -220,19 +208,17 @@ includesContent(contractCanvas, 'onConnect={connect}', 'contract handles must cr
 includesContent(contractCanvas, 'onEdgesDelete={deleteEdges}', 'contract edges must support structural disconnection');
 includesContent(contractCanvas, 'onEdgesChange={onEdgesChange}', 'controlled contract edges must apply delete and reconnect events');
 includesContent(contractCanvas, 'onReconnect={reconnect}', 'contract edges must support structural moves');
-includesContent(contractCanvas, 'onNodesChange={onNodesChange}', 'contract graph must process node position changes');
-includesContent(contractCanvas, 'onMoveAtom(node.data.id, node.position)', 'manual atom positions must persist');
+includesContent(contractCanvas, 'onNodesChange={onNodesChange}', 'contract node positions must remain UI-only state');
 includesContent(app, 'setGraphEditError', 'graph edit failures should be surfaced through workspace error feedback');
-includesContent(app, 'resolveWorkspacePath(projectWorkspaceFile.path, reference.file)', 'unit references must resolve against the project path');
+includesContent(app, 'resolveWorkspacePath(project.file, node.unit.file)', 'unit references must resolve against the project path');
 includesContent(app, 'projectDraftToInspect', 'project UI must derive its model from current YAML');
 includesContent(app, 'lastValidProjectDraft', 'invalid project YAML must retain the last valid canvas model');
-includesContent(effectChainCanvas, 'effect-chain-rail', 'Effect Chain must render fixed rails');
-includesContent(effectChainCanvas, 'onSetEndpoint(menu.sectionId!, menu.role!, false)', 'routing helpers must be removable as editable draft endpoints');
-includesContent(effectChainDraft, 'effectChainDiagnostics', 'incomplete Effect Chain drafts must expose repair diagnostics');
-includesContent(effectChainDraft, 'serializeEffectChainDraft', 'complete rails must serialize back to strict project YAML');
-includesContent(projectPackage, "apg.project.package.v2", 'editor draft state must use the v2 project package');
-includesContent(atomContextInspector, 'data-testid="atom-context-inspector"', 'Atom Chain must use an atom-only inspector');
-includesContent(graphvizWorker, "engine: fixed ? 'nop2' : 'dot'", 'Atom Chain must use Graphviz for layout and rerouting');
+includesContent(projectSidebar, 'onAddInstance(instanceUnit, instanceId)', 'project sidebar must add unit instances structurally');
+includesContent(projectSidebar, 'onAddRoute({ from: routeSource, to: routeTarget })', 'project sidebar must add routes structurally');
+includesContent(projectInspector, 'onRenameInstance', 'project inspector must expose safe instance rename');
+includesContent(projectInspector, 'onRemoveRoute', 'project inspector must expose structural route disconnection');
+includesContent(app, 'createUnitV2({ name })', 'workspace unit creation must use the structured YAML transformer');
+includesContent(projectSidebar, 'onCreateUnit(unitName)', 'workspace sidebar must expose unit creation');
 
 // AF: WASM preview facade and panel contract state machine.
 assert(render.ok && render.frames === render.output.samples.length, 'render fixture must include deterministic samples');

@@ -32,7 +32,6 @@ export type ProjectParamControl = {
   min?: string;
   max?: string;
   unit?: string;
-  control?: string;
 };
 
 export type ProjectRoutePoint = { x: number; y: number };
@@ -142,8 +141,7 @@ function createRouteEdge(route: ProjectRoute, index: number, graph: dagre.graphl
   };
 }
 
-function unitNodeDimensions(paramCount: number, routing = false): { width: number; height: number } {
-  if (routing) return { width: UNIT_NODE_WIDE_WIDTH, height: 206 };
+function unitNodeDimensions(paramCount: number): { width: number; height: number } {
   const rows = Math.ceil(paramCount / KNOBS_PER_ROW);
   return {
     width: paramCount >= KNOBS_PER_ROW ? UNIT_NODE_WIDE_WIDTH : UNIT_NODE_COMPACT_WIDTH,
@@ -190,7 +188,7 @@ export function buildProjectGraph(
     };
 
     nodes.push(node);
-    graph.setNode(node.id, unitNodeDimensions(instance.params.length, Boolean(instance.routing)));
+    graph.setNode(node.id, unitNodeDimensions(instance.params.length));
   });
 
   project.routes.forEach((route, index) => {
@@ -205,7 +203,7 @@ export function buildProjectGraph(
     const position = graph.node(node.id);
     const dimensions = node.data.kind === 'system'
       ? { width: SYSTEM_NODE_WIDTH, height: SYSTEM_NODE_HEIGHT }
-      : unitNodeDimensions(node.data.instance.params.length, Boolean(node.data.instance.routing));
+      : unitNodeDimensions(node.data.instance.params.length);
     node.position = {
       x: position.x - dimensions.width / 2,
       y: position.y - dimensions.height / 2,

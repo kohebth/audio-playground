@@ -3,12 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { EditorWorkspace } from './App';
 import { ProjectHome } from './components/ProjectHome';
-import {
-  backendSamples,
-  initialWorkspaceFiles,
-  pathMixer2WorkspaceFile,
-  pathPanner2WorkspaceFile,
-} from './lib/backendSamples';
+import { backendSamples, initialWorkspaceFiles } from './lib/backendSamples';
 import {
   apgPackageFileName,
   createApgProjectPackageFromFiles,
@@ -21,21 +16,20 @@ import { createEmptyProjectPackage } from './lib/projectTemplates';
 import { evaluateWorkspaceReadiness } from './lib/projectReadiness';
 import type { PersonalUnitRecord, UnitPreset } from './lib/presetLibrary';
 import { createStudioRepository } from './lib/studioRepository';
-import { findMigratableBrowserWorkspace, migrateApgProjectRouting } from './lib/workspaceMigrations';
+import { findMigratableBrowserWorkspace } from './lib/workspaceMigrations';
 import type { WorkspacePayload } from './lib/workspacePersistence';
 
 const MODE_STORAGE_KEY = 'apg.studio.mode.v1';
 const LAST_PROJECT_STORAGE_KEY = 'apg.studio.last-project.v1';
 const LEGACY_KEYS = ['apg.unit-editor.workspace.v2', 'apg.unit-editor.workspace.v1'];
-const ROUTING_MIGRATION_HELPERS = { panner: pathPanner2WorkspaceFile, mixer: pathMixer2WorkspaceFile };
 
 function newId(prefix = 'project'): string {
   return globalThis.crypto?.randomUUID?.() ?? `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function storedMode(): StudioMode {
-  if (typeof window === 'undefined') return 'effect-chain';
-  return window.localStorage.getItem(MODE_STORAGE_KEY) === 'atom-chain' ? 'atom-chain' : 'effect-chain';
+  if (typeof window === 'undefined') return 'simple';
+  return window.localStorage.getItem(MODE_STORAGE_KEY) === 'pro' ? 'pro' : 'simple';
 }
 
 function starterProject(now = new Date().toISOString()): ApgProjectPackage {
@@ -68,7 +62,6 @@ export default function StudioApp() {
   const [personalUnits, setPersonalUnits] = useState<PersonalUnitRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [migrationNotice, setMigrationNotice] = useState<string | null>(null);
   const [mode, setModeState] = useState<StudioMode>(storedMode);
   const isHome = location.pathname === '/' || location.pathname === '/home';
 
@@ -77,36 +70,16 @@ export default function StudioApp() {
     void (async () => {
       try {
         let stored = await repository.listProjects();
-        if (stored.length > 0) {
-          const results = stored.map(project => migrateApgProjectRouting(project, ROUTING_MIGRATION_HELPERS));
-          const migrated = results.filter(result => result.migratedSections > 0);
-          await Promise.all(migrated.map(result => repository.saveProject(result.project)));
-          stored = results.map(result => result.project);
-          const migratedCount = results.reduce((total, result) => total + result.migratedSections, 0);
-          const ambiguousCount = results.reduce((total, result) => total + result.ambiguousSections, 0);
-          if (migratedCount > 0 || ambiguousCount > 0) {
-            setMigrationNotice([
-              migratedCount > 0 ? `Updated ${migratedCount} legacy parallel ${migratedCount === 1 ? 'section' : 'sections'} to Pan 2 / Mix 2.` : '',
-              ambiguousCount > 0 ? `${ambiguousCount} ambiguous ${ambiguousCount === 1 ? 'section was' : 'sections were'} left unchanged for review.` : '',
-            ].filter(Boolean).join(' '));
-          }
-        }
         if (stored.length === 0) {
           const migrated = typeof window === 'undefined' ? null : findMigratableBrowserWorkspace(window.localStorage, {
             id: newId('recovered'),
             name: 'Recovered Project',
             mode: storedMode(),
-          }, undefined, ROUTING_MIGRATION_HELPERS);
+          });
           const initial = migrated?.project ?? starterProject();
           await repository.saveProject(initial);
           if (migrated && typeof window !== 'undefined') {
             for (const key of LEGACY_KEYS) window.localStorage.removeItem(key);
-            if (migrated.migratedSections > 0 || migrated.ambiguousSections > 0) {
-              setMigrationNotice([
-                migrated.migratedSections > 0 ? `Updated ${migrated.migratedSections} legacy parallel ${migrated.migratedSections === 1 ? 'section' : 'sections'} to Pan 2 / Mix 2.` : '',
-                migrated.ambiguousSections > 0 ? `${migrated.ambiguousSections} ambiguous ${migrated.ambiguousSections === 1 ? 'section was' : 'sections were'} left unchanged for review.` : '',
-              ].filter(Boolean).join(' '));
-            }
           }
           stored = [initial];
         }
@@ -135,11 +108,7 @@ export default function StudioApp() {
     window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
     setActiveProject(current => {
       if (!current) return current;
-      const next = {
-        ...current,
-        manifest: { ...current.manifest, lastMode: nextMode },
-        editor: { ...current.editor, activeView: nextMode },
-      };
+      const next = { ...current, manifest: { ...current.manifest, lastMode: nextMode } };
       void repository.saveProject(next);
       return next;
     });
@@ -147,8 +116,6 @@ export default function StudioApp() {
 
   const openProject = useCallback((project: ApgProjectPackage) => {
     setActiveProject(project);
-    setModeState(project.editor.activeView);
-    window.localStorage.setItem(MODE_STORAGE_KEY, project.editor.activeView);
     window.localStorage.setItem(LAST_PROJECT_STORAGE_KEY, project.manifest.id);
     navigate('/projects');
   }, [navigate]);
@@ -188,14 +155,7 @@ export default function StudioApp() {
 
   const importProject = useCallback((file: File) => {
     void file.text().then(text => {
-      const migration = migrateApgProjectRouting(parseApgProjectPackage(text), ROUTING_MIGRATION_HELPERS);
-      const imported = migration.project;
-      if (migration.migratedSections > 0 || migration.ambiguousSections > 0) {
-        setMigrationNotice([
-          migration.migratedSections > 0 ? `Updated ${migration.migratedSections} legacy parallel ${migration.migratedSections === 1 ? 'section' : 'sections'} during import.` : '',
-          migration.ambiguousSections > 0 ? `${migration.ambiguousSections} ambiguous ${migration.ambiguousSections === 1 ? 'section needs' : 'sections need'} review.` : '',
-        ].filter(Boolean).join(' '));
-      }
+      const imported = parseApgProjectPackage(text);
       const conflict = projects.some(project => project.manifest.id === imported.manifest.id);
       const now = new Date().toISOString();
       const project = conflict ? {
@@ -266,7 +226,6 @@ export default function StudioApp() {
     const project = {
       ...activeProject,
       manifest: { ...activeProject.manifest, updatedAt: new Date().toISOString(), lastMode: mode },
-      editor: { ...activeProject.editor, activeView: mode },
       workspace,
       readiness: evaluateWorkspaceReadiness(workspace, activeProject.readiness),
     };
@@ -276,27 +235,19 @@ export default function StudioApp() {
 
   if (isHome) {
     return (
-      <>
-        {migrationNotice ? (
-          <div className="studio-migration-notice" role="status">
-            <span>{migrationNotice}</span>
-            <button aria-label="Dismiss migration notice" onClick={() => setMigrationNotice(null)} type="button">×</button>
-          </div>
-        ) : null}
-        <ProjectHome
-          error={error}
-          loading={loading}
-          mode={mode}
-          onCreate={createProject}
-          onDelete={deleteProject}
-          onDuplicate={duplicateProject}
-          onExport={downloadProject}
-          onImport={importProject}
-          onModeChange={setMode}
-          onOpen={openProject}
-          projects={projects}
-        />
-      </>
+      <ProjectHome
+        error={error}
+        loading={loading}
+        mode={mode}
+        onCreate={createProject}
+        onDelete={deleteProject}
+        onDuplicate={duplicateProject}
+        onExport={downloadProject}
+        onImport={importProject}
+        onModeChange={setMode}
+        onOpen={openProject}
+        projects={projects}
+      />
     );
   }
 
@@ -311,29 +262,21 @@ export default function StudioApp() {
   }
 
   return (
-    <>
-      {migrationNotice ? (
-        <div className="studio-migration-notice" role="status">
-          <span>{migrationNotice}</span>
-          <button aria-label="Dismiss migration notice" onClick={() => setMigrationNotice(null)} type="button">×</button>
-        </div>
-      ) : null}
-      <EditorWorkspace
-        key={activeProject.manifest.id}
-        mode={mode}
-        onHome={() => navigate('/')}
-        onDeletePersonalUnit={deletePersonalUnit}
-        onDeletePreset={deletePersonalPreset}
-        onExportProject={exportActiveProject}
-        onModeChange={setMode}
-        onProjectPackageChange={updateActivePackage}
-        onSavePersonalUnit={savePersonalUnit}
-        onSavePreset={savePersonalPreset}
-        onWorkspaceChange={updateWorkspace}
-        personalPresets={personalPresets}
-        personalUnits={personalUnits}
-        projectPackage={activeProject}
-      />
-    </>
+    <EditorWorkspace
+      key={activeProject.manifest.id}
+      mode={mode}
+      onHome={() => navigate('/')}
+      onDeletePersonalUnit={deletePersonalUnit}
+      onDeletePreset={deletePersonalPreset}
+      onExportProject={exportActiveProject}
+      onModeChange={setMode}
+      onProjectPackageChange={updateActivePackage}
+      onSavePersonalUnit={savePersonalUnit}
+      onSavePreset={savePersonalPreset}
+      onWorkspaceChange={updateWorkspace}
+      personalPresets={personalPresets}
+      personalUnits={personalUnits}
+      projectPackage={activeProject}
+    />
   );
 }

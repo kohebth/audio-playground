@@ -30,15 +30,6 @@ import {
   type ProjectPortCatalog,
 } from '../src/lib/projectV2Graph.ts';
 import { buildProjectGraph } from '../src/lib/projectGraph.ts';
-import {
-  createEffectChainDraft,
-  effectChainDiagnostics,
-  findEffectChainRouteIndex,
-  findEffectLocation,
-  moveEffectDraft,
-  serializeEffectChainDraft,
-  setParallelEndpointDraft,
-} from '../src/lib/effectChainDraft.ts';
 
 const repo = resolve(import.meta.dirname, '../..');
 const project = readFileSync(resolve(repo, 'test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml'), 'utf8');
@@ -55,29 +46,6 @@ const ports: ProjectPortCatalog = {
   delay_unit: { inputs: ['input'], outputs: ['output'] },
   wet_dry_mix_unit: { inputs: ['dry', 'wet'], outputs: ['output'] },
   reverb_unit: { inputs: ['input'], outputs: ['output'] },
-  gain_unit: { inputs: ['input'], outputs: ['output'] },
-  path_panner_2_unit: {
-    inputs: ['input'],
-    outputs: ['path_1', 'path_2'],
-    routing: {
-      role: 'panner',
-      paths: [
-        { port: 'path_1', levelParam: 'path_1_db' },
-        { port: 'path_2', levelParam: 'path_2_db' },
-      ],
-    },
-  },
-  path_mixer_2_unit: {
-    inputs: ['path_1', 'path_2'],
-    outputs: ['output'],
-    routing: {
-      role: 'mixer',
-      paths: [
-        { port: 'path_1', levelParam: 'path_1_db' },
-        { port: 'path_2', levelParam: 'path_2_db' },
-      ],
-    },
-  },
 };
 
 const draft = parseProjectGraphDraft(project);
@@ -101,16 +69,11 @@ const overdriveContent = readFileSync(resolve(repo, 'test/fixtures/units-v2/over
 assert.deepEqual(parseUnitPortNames(overdriveContent), {
   inputs: ['input'],
   outputs: ['output'],
-  routing: undefined,
   userPlaceable: true,
   reason: null,
 });
 const wetDryContent = readFileSync(resolve(repo, 'test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml'), 'utf8');
 assert.equal(parseUnitPortNames(wetDryContent).userPlaceable, false);
-const pannerContent = readFileSync(resolve(repo, 'test/fixtures/units-v2/path_panner_2.unit.v2.yaml'), 'utf8');
-const mixerContent = readFileSync(resolve(repo, 'test/fixtures/units-v2/path_mixer_2.unit.v2.yaml'), 'utf8');
-assert.deepEqual(parseUnitPortNames(pannerContent).routing, ports.path_panner_2_unit.routing);
-assert.deepEqual(parseUnitPortNames(mixerContent).routing, ports.path_mixer_2_unit.routing);
 
 const legacyPositionProject = project.replace(
   '    - id: gate1\n      unit: noise_gate_unit\n',
@@ -188,18 +151,13 @@ assert.throws(
   /exactly one input and one output/,
 );
 
-const parallelPanner = addProjectUnitReference(
+const parallelSource = addProjectUnitReference(
   emptyProject,
-  'path_panner_2_unit',
-  '../units/path_panner_2.unit.v2.yaml',
-);
-const parallelMixer = addProjectUnitReference(
-  parallelPanner,
-  'path_mixer_2_unit',
-  '../units/path_mixer_2.unit.v2.yaml',
+  'wet_dry_mix_unit',
+  '../units/wet_dry_mix.unit.v2.yaml',
 );
 const parallelRegistered = addProjectUnitReference(
-  parallelMixer,
+  parallelSource,
   'overdrive_unit',
   '../units/overdrive.unit.v2.yaml',
 );
@@ -208,97 +166,21 @@ const parallel = insertProjectParallelOnRoute(
   ports,
   'overdrive_unit',
   'parallel_drive',
-  'path_panner_2_unit',
-  'parallel_pan',
-  'path_mixer_2_unit',
+  'wet_dry_mix_unit',
   'parallel_mix',
   0,
   { drive: '2.4' },
-  { path_1_db: '0', path_2_db: '-3' },
-  { path_1_db: '-6.0206', path_2_db: '-9' },
+  { mix: '0.35' },
 );
 const parallelDraft = parseProjectGraphDraft(parallel.content);
-assert.equal(parallelDraft.nodes.length, 3);
-assert.equal(parallelDraft.nodes.find(node => node.id === 'parallel_pan')?.routing?.section, 'parallel_1');
-assert.equal(parallelDraft.nodes.find(node => node.id === 'parallel_mix')?.routing?.section, 'parallel_1');
+assert.equal(parallelDraft.nodes.length, 2);
 assert.deepEqual(parallelDraft.routes, [
-  { from: 'system.input', to: 'parallel_pan.input' },
-  { from: 'parallel_pan.path_1', to: 'parallel_mix.path_1' },
-  { from: 'parallel_pan.path_2', to: 'parallel_drive.input' },
-  { from: 'parallel_drive.output', to: 'parallel_mix.path_2' },
+  { from: 'system.input', to: 'parallel_drive.input' },
+  { from: 'system.input', to: 'parallel_mix.dry' },
+  { from: 'parallel_drive.output', to: 'parallel_mix.wet' },
   { from: 'parallel_mix.output', to: 'system.output' },
 ]);
 assert.doesNotThrow(() => validateProjectRoutes(parallel.content, ports));
-
-const parallelRail = createEffectChainDraft(parallel.content, ports);
-assert.equal(parallelRail.root.items[0]?.kind, 'parallel');
-assert.equal(effectChainDiagnostics(parallelRail).length, 0);
-const withoutPanner = setParallelEndpointDraft(parallelRail, 'section:parallel_1', 'panner', false);
-assert.deepEqual(effectChainDiagnostics(withoutPanner).map(problem => problem.code), ['missing-panner']);
-assert.throws(() => serializeEffectChainDraft(parallel.content, withoutPanner, ports), /incomplete/);
-const repairedPanner = setParallelEndpointDraft(withoutPanner, 'section:parallel_1', 'panner', true);
-assert.deepEqual(
-  parseProjectGraphDraft(serializeEffectChainDraft(parallel.content, repairedPanner, ports)).routes,
-  parallelDraft.routes,
-);
-
-const linearRail = createEffectChainDraft(project, ports);
-const driveLocation = findEffectLocation(linearRail, 'drive1');
-assert(driveLocation);
-const movedDriveRail = moveEffectDraft(linearRail, 'drive1', { railId: 'root', index: driveLocation.index + 2 });
-const movedDriveProject = parseProjectGraphDraft(serializeEffectChainDraft(project, movedDriveRail, ports));
-const movedDriveInput = movedDriveProject.routes.find(route => route.to === 'drive1.input');
-const movedDriveOutput = movedDriveProject.routes.find(route => route.from === 'drive1.output');
-assert.equal(movedDriveInput?.from, 'tone1.output');
-assert.equal(movedDriveOutput?.to, 'trem1.input');
-
-assert.throws(() => duplicateProjectInstance(parallel.content, 'parallel_pan'), /Add in parallel/);
-assert.throws(() => pasteProjectInstance(parallel.content, copyProjectInstance(parallel.content, 'parallel_mix')), /unpaired/);
-assert.throws(() => removeProjectInstanceWithTopology(parallel.content, ports, 'parallel_pan'), /section|panner/i);
-assert.throws(() => removeProjectRoute(parallel.content, 1, ports), /every input|incomplete|connected/i);
-assert.throws(
-  () => upsertProjectScene(parallel.content, 'Invalid', {}, { parallel_mix: true }),
-  /always active/,
-);
-assert.throws(
-  () => validateProjectRoutes(parallel.content.replace(
-    'from: parallel_pan.path_1\n      to: parallel_mix.path_1',
-    'from: parallel_pan.path_1\n      to: parallel_mix.path_2',
-  ).replace(
-    'from: parallel_drive.output\n      to: parallel_mix.path_2',
-    'from: parallel_drive.output\n      to: parallel_mix.path_1',
-  ), ports),
-  /already connected|crossed|instead/,
-);
-const nestedParallel = readFileSync(resolve(repo, 'test/fixtures/projects-v2/nested-parallel.project.v2.yaml'), 'utf8');
-assert.doesNotThrow(() => validateProjectRoutes(nestedParallel, ports));
-const nestedRail = createEffectChainDraft(nestedParallel, ports);
-const outerParallel = nestedRail.root.items.find(item => item.kind === 'parallel');
-assert(outerParallel?.kind === 'parallel');
-assert(outerParallel.paths.some(path => path.rail.items.some(item => item.kind === 'parallel')));
-assert.equal(effectChainDiagnostics(nestedRail).length, 0);
-const nestedPath = outerParallel.paths.find(path => path.rail.items.some(item => item.kind === 'parallel'));
-assert(nestedPath);
-const nestedSlotRoute = findEffectChainRouteIndex(
-  nestedParallel,
-  nestedRail,
-  ports,
-  { railId: nestedPath.rail.id, index: 0 },
-);
-assert(nestedSlotRoute >= 0);
-const nestedInsert = insertProjectParallelOnRoute(
-  parallel.content,
-  ports,
-  'overdrive_unit',
-  'nested_drive',
-  'path_panner_2_unit',
-  'nested_pan',
-  'path_mixer_2_unit',
-  'nested_mix',
-  2,
-);
-assert.equal(parseProjectGraphDraft(nestedInsert.content).nodes.find(node => node.id === 'nested_pan')?.routing?.section, 'parallel_2');
-assert.doesNotThrow(() => validateProjectRoutes(nestedInsert.content, ports));
 
 const overdriveUnit = projectInspect.units.find((unit: { id: string }) => unit.id === 'overdrive_unit');
 assert(overdriveUnit);
@@ -306,13 +188,11 @@ const parallelInspect = {
   ...projectInspect,
   units: [
     overdriveUnit,
-    { ...overdriveUnit, id: 'path_panner_2_unit', name: 'Pan 2' },
-    { ...overdriveUnit, id: 'path_mixer_2_unit', name: 'Mix 2' },
+    { ...overdriveUnit, id: 'wet_dry_mix_unit', name: 'wet/dry mix' },
   ],
   nodes: [
-    { id: 'parallel_pan', unit: 'path_panner_2_unit', params: [], routing: { section: 'parallel_1' } },
     { id: 'parallel_drive', unit: 'overdrive_unit', params: [] },
-    { id: 'parallel_mix', unit: 'path_mixer_2_unit', params: [], routing: { section: 'parallel_1' } },
+    { id: 'parallel_mix', unit: 'wet_dry_mix_unit', params: [] },
   ],
   routes: parallelDraft.routes,
 };
@@ -384,10 +264,23 @@ const branchedProject = project.replace(
   '      to: tone1.input\n',
   '      to: tone1.input\n    - from: drive1.output\n      to: trem1.input\n',
 ).replace('    - from: tone1.output\n      to: trem1.input\n', '');
-assert.throws(
-  () => validateProjectRoutes(branchedProject, ports),
-  /Add in parallel/,
+const branchedRemoval = removeProjectInstanceWithTopology(branchedProject, ports, 'drive1');
+assert.equal(branchedRemoval.bridgedRoutes, 2);
+assert.deepEqual(
+  parseProjectGraphDraft(branchedRemoval.content).routes.filter(route => route.from === 'phaser1.output').map(route => route.to).sort(),
+  ['tone1.input', 'trem1.input'],
 );
+
+const specialRegistered = addProjectUnitReference(emptyProject, 'wet_dry_mix_unit', '../units-v2/wet_dry_mix.unit.v2.yaml');
+const specialAdded = addProjectInstance(specialRegistered, 'wet_dry_mix_unit', 'special_mix');
+const specialRouted = addProjectRoute(
+  removeProjectRoute(specialAdded.content, 0),
+  ports,
+  { from: 'special_mix.output', to: 'system.output' },
+);
+const specialRemoval = removeProjectInstanceWithTopology(specialRouted, ports, 'special_mix');
+assert.equal(specialRemoval.mode, 'disconnected');
+assert.equal(parseProjectGraphDraft(specialRemoval.content).routes.length, 0);
 
 const replacementDefaults = { bass: '0.2', mid: '0.5' };
 const replacedInstance = parseProjectGraphDraft(replaceProjectInstance(
@@ -419,11 +312,7 @@ assert.throws(
   /already connected/,
 );
 assert.throws(
-  () => addProjectRoute(
-    removeProjectRoute(removeProjectRoute(project, 4), 2),
-    ports,
-    { from: 'tone1.output', to: 'drive1.input' },
-  ),
+  () => addProjectRoute(removeProjectRoute(project, 2), ports, { from: 'tone1.output', to: 'drive1.input' }),
   /creates a cycle/,
 );
 assert.throws(
@@ -439,15 +328,15 @@ assert.throws(
     'from: phaser1.output\n      to: drive1.input',
     'from: tone1.output\n      to: drive1.input',
   ), ports),
-  /create a cycle|Add in parallel|orphaned/,
+  /create a cycle/,
 );
 
-const replaced = parseProjectGraphDraft(replaceProjectRoute(added.content, ports, 5, {
-  from: 'trem1.output',
-  to: 'drive2.input',
+const replaced = parseProjectGraphDraft(replaceProjectRoute(project, ports, 5, {
+  from: 'drive1.output',
+  to: 'chorus1.input',
 }));
-assert.equal(replaced.routes[5].from, 'trem1.output');
-assert.equal(replaced.routes[5].to, 'drive2.input');
+assert.equal(replaced.routes[5].from, 'drive1.output');
+assert.equal(replaced.routes[5].to, 'chorus1.input');
 const reorderedRoutes = parseProjectGraphDraft(moveProjectRoute(project, 8, 0));
 assert.equal(reorderedRoutes.routes[0].to, 'system.output');
 

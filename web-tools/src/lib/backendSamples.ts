@@ -4,8 +4,6 @@ import chorusUnitYaml from '../../../test/fixtures/units-v2/chorus.unit.v2.yaml?
 import delayUnitYaml from '../../../test/fixtures/units-v2/delay.unit.v2.yaml?raw';
 import noiseGateUnitYaml from '../../../test/fixtures/units-v2/noise_gate.unit.v2.yaml?raw';
 import overdriveUnitYaml from '../../../test/fixtures/units-v2/overdrive.unit.v2.yaml?raw';
-import pathMixer2UnitYaml from '../../../test/fixtures/units-v2/path_mixer_2.unit.v2.yaml?raw';
-import pathPanner2UnitYaml from '../../../test/fixtures/units-v2/path_panner_2.unit.v2.yaml?raw';
 import phaserUnitYaml from '../../../test/fixtures/units-v2/phaser.unit.v2.yaml?raw';
 import projectYaml from '../../../test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml?raw';
 import projectInspectRaw from '../../../test/golden/v2-inspect-project-guitar-pedalboard.json?raw';
@@ -19,17 +17,11 @@ import unitInspectRaw from '../../../test/golden/v2-inspect-unit-simple_gain.jso
 
 export type Compatibility = Record<string, boolean>;
 
-export type UnitRouting = {
-  role: 'panner' | 'mixer';
-  paths: Array<{ port: string; level_param: string }>;
-};
-
 export type ProjectUnit = {
   id: string;
   file: string;
   name: string;
   compatibility: Compatibility;
-  routing?: UnitRouting;
 };
 
 export type ProjectParam = {
@@ -41,7 +33,6 @@ export type ProjectInstance = {
   id: string;
   unit: string;
   params: ProjectParam[];
-  routing?: { section: string };
 };
 
 export type ProjectRoute = {
@@ -160,7 +151,6 @@ export type UnitInspect = {
     description?: string;
   };
   compatibility?: Compatibility;
-  routing?: UnitRouting;
   params: Array<{
     name: string;
     type: string;
@@ -313,18 +303,4 @@ export const wetDryMixWorkspaceFile: WorkspaceFile = {
   role: 'unit',
   content: wetDryMixUnitYaml,
   originalContent: wetDryMixUnitYaml,
-};
-
-export const pathPanner2WorkspaceFile: WorkspaceFile = {
-  path: 'test/fixtures/units-v2/path_panner_2.unit.v2.yaml',
-  role: 'unit',
-  content: pathPanner2UnitYaml,
-  originalContent: pathPanner2UnitYaml,
-};
-
-export const pathMixer2WorkspaceFile: WorkspaceFile = {
-  path: 'test/fixtures/units-v2/path_mixer_2.unit.v2.yaml',
-  role: 'unit',
-  content: pathMixer2UnitYaml,
-  originalContent: pathMixer2UnitYaml,
 };

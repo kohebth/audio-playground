@@ -14,7 +14,7 @@ const steps = [
   {
     eyebrow: 'Hear it live',
     title: 'Use your instrument input',
-    body: 'Press Play and choose the microphone or audio interface input. Effect Chain stays focused on live mono sound.',
+    body: 'Press Play and choose the microphone or audio interface input. Simple mode stays focused on live mono sound.',
   },
   {
     eyebrow: 'Shape the sound',

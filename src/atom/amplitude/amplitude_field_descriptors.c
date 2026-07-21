@@ -39,11 +39,6 @@ const atom_field_desc_t amplitude_divide_config_fields[] = {
 };
 FIELD_COUNT(amplitude_divide_config_fields);
 
-const atom_field_desc_t amplitude_gain_db_config_fields[] = {
-    {"gain_db", FIELD_FLOAT, offsetof(amplitude_gain_db_params_t, gain_db)},
-};
-FIELD_COUNT(amplitude_gain_db_config_fields);
-
 const atom_field_desc_t amplitude_normalize_config_fields[] = {
     {"target_level", FIELD_FLOAT, offsetof(amplitude_normalize_params_t, target_level)},
     {"mode", FIELD_INT, offsetof(amplitude_normalize_params_t, mode)},

@@ -5,11 +5,13 @@ import { dirname, resolve } from 'node:path';
 import type { AtomCatalog, AtomCatalogAtom } from '../src/lib/backendSamples.ts';
 import {
   addProjectInstance,
+  addProjectRoute,
   moveProjectInstance,
   moveProjectRoute,
   parseProjectGraphDraft,
   parseUnitPortNames,
   removeProjectInstance,
+  removeProjectInstanceWithTopology,
   removeProjectRoute,
   validateProjectRoutes,
 } from '../src/lib/projectV2Graph.ts';
@@ -250,7 +252,7 @@ function resolveUnitPorts(
   return ports;
 }
 
-function benchmarkProjectMutations(content: string, draft: ReturnType<typeof parseProjectGraphDraft>) {
+function benchmarkProjectMutations(content: string, draft: ReturnType<typeof parseProjectGraphDraft>, ports: ProjectPortCatalog) {
   const mutations = {
     addRemoveMs: 0,
     moveInstanceMs: 0,
@@ -265,7 +267,9 @@ function benchmarkProjectMutations(content: string, draft: ReturnType<typeof par
       for (let index = 0; index < iterations; index += 1) {
         const instanceId = `bench_mutation_${index}`;
         const added = addProjectInstance(workingContent, draft.units[0].id, instanceId);
-        workingContent = removeProjectInstance(added.content, added.id);
+        workingContent = index === 0
+          ? removeProjectInstanceWithTopology(added.content, ports, added.id).content
+          : removeProjectInstance(added.content, added.id);
       }
     });
   }
@@ -286,12 +290,15 @@ function benchmarkProjectMutations(content: string, draft: ReturnType<typeof par
   if (draft.routes.length > 0) {
     const iterations = Math.max(3, Math.min(40, draft.routes));
     mutations.routeMutationMs = measure(() => {
+      let workingContent = working.content;
+      const sample = draft.routes[0];
       for (let index = 0; index < iterations; index += 1) {
         const removeIndex = index % draft.routes;
-        let workingContent = removeProjectRoute(working.content, removeIndex);
+        workingContent = removeProjectRoute(workingContent, removeIndex);
+        workingContent = addProjectRoute(workingContent, ports, sample);
         if (draft.routes > 1) {
-          const moveFrom = Math.min(removeIndex, draft.routes - 2);
-          const moveTo = (moveFrom + 1) % (draft.routes - 1);
+          const moveFrom = removeIndex;
+          const moveTo = (removeIndex + 1) % Math.max(draft.routes, 1);
           workingContent = moveProjectRoute(workingContent, moveFrom, moveTo);
         }
       }
@@ -316,13 +323,8 @@ function benchmarkProjectFixture(file: string): ProjectBenchmarkResult {
       resolveUnitPorts(parsed.draft, path);
     });
     const ports = resolveUnitPorts(parsed.draft, path);
-    // The topology fixtures deliberately include legacy fan-wide graphs so the
-    // parser and YAML mutation costs can still be tracked. Product route-policy
-    // validation is covered by the contract suite; only the explicitly invalid
-    // fixture is validated here so this synthetic benchmark cannot weaken the
-    // single-input/single-output Effect Chain policy.
-    if (invalidExpected) validateProjectRoutes(parsed.content, ports);
-    const mutations = benchmarkProjectMutations(parsed.content, parsed.draft);
+    validateProjectRoutes(parsed.content, ports);
+    const mutations = benchmarkProjectMutations(parsed.content, parsed.draft, ports);
     const totalMs = parseMs + unitPortResolutionMs + mutations.addRemoveMs + mutations.moveInstanceMs + mutations.routeMutationMs;
 
     return {

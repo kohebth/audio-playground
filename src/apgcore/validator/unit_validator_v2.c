@@ -169,8 +169,7 @@ static uc_status validate_param_refs(const uc_node *node, const uc_node *params,
 
 static bool param_ui_control_is_valid(const char *control) {
     return !control || strcmp(control, "knob") == 0 || strcmp(control, "slider") == 0 ||
-           strcmp(control, "fader") == 0 || strcmp(control, "toggle") == 0 || strcmp(control, "number") == 0 ||
-           strcmp(control, "select") == 0;
+           strcmp(control, "toggle") == 0 || strcmp(control, "number") == 0 || strcmp(control, "select") == 0;
 }
 
 static bool param_ui_scale_is_valid(const char *scale) {
@@ -221,7 +220,7 @@ static uc_status fill_param_ui(const uc_node *param, const char *param_name, apg
         return err->status;
     if (!param_ui_control_is_valid(out->ui_control)) {
         char msg[192];
-        snprintf(msg, sizeof(msg), "%s must be one of knob, slider, fader, toggle, number, or select", path);
+        snprintf(msg, sizeof(msg), "%s must be one of knob, slider, toggle, number, or select", path);
         return set_error(err, UC_E_TYPE, msg);
     }
 
@@ -625,110 +624,6 @@ static uc_status validate_and_fill_ports(
     return fill_port_group(
         outputs, signals, signals_len, params, arena, &out->output_ports, &out->output_ports_len, err
     );
-}
-
-static const apg_unit_v2_param_t *find_materialized_param(const apg_unit_v2_t *unit, const char *name) {
-    if (!unit || !name)
-        return NULL;
-    for (size_t i = 0; i < unit->params_len; i++) {
-        if (unit->params[i].name && strcmp(unit->params[i].name, name) == 0)
-            return &unit->params[i];
-    }
-    return NULL;
-}
-
-static const apg_unit_v2_port_t *
-find_materialized_port(const apg_unit_v2_port_t *ports, size_t ports_len, const char *name) {
-    if (!ports || !name)
-        return NULL;
-    for (size_t i = 0; i < ports_len; i++) {
-        if (ports[i].name && strcmp(ports[i].name, name) == 0)
-            return &ports[i];
-    }
-    return NULL;
-}
-
-static size_t count_mono_audio_ports(const apg_unit_v2_port_t *ports, size_t ports_len) {
-    size_t count = 0u;
-    for (size_t i = 0; i < ports_len; i++) {
-        if (port_type_is_audio(ports[i].type) && ports[i].channels && strcmp(ports[i].channels, "1") == 0)
-            count++;
-    }
-    return count;
-}
-
-static uc_status validate_and_fill_routing(const uc_node *root, uc_arena *arena, apg_unit_v2_t *out, uc_error *err) {
-    const uc_node *routing = optional_map_path(root, "routing", "routing", err);
-    if (!routing)
-        return err->status == UC_OK ? UC_OK : err->status;
-
-    const char *role = required_scalar(routing, "role", err);
-    if (!role)
-        return err->status;
-    bool panner = strcmp(role, "panner") == 0;
-    bool mixer  = strcmp(role, "mixer") == 0;
-    if (!panner && !mixer)
-        return set_error(err, UC_E_TYPE, "routing.role must be 'panner' or 'mixer'");
-
-    const uc_node *paths = uc_node_find(routing, "paths");
-    if (!paths || paths->kind != UC_NODE_SEQ)
-        return set_error(err, UC_E_MISSING, "routing.paths must be a sequence");
-    if (paths->seq_len < 2u)
-        return set_error(err, UC_E_RANGE, "routing.paths must declare at least two paths");
-
-    apg_unit_v2_routing_path_t *items = uc_arena_alloc(arena, paths->seq_len * sizeof(*items), sizeof(void *));
-    if (!items)
-        return set_error(err, UC_E_OOM, "arena OOM");
-
-    const apg_unit_v2_port_t *path_ports     = panner ? out->output_ports : out->input_ports;
-    size_t                    path_ports_len = panner ? out->output_ports_len : out->input_ports_len;
-    for (size_t i = 0; i < paths->seq_len; i++) {
-        const uc_node *path = paths->seq[i];
-        if (!path || path->kind != UC_NODE_MAP)
-            return set_error(err, UC_E_TYPE, "routing.paths[] must be a map");
-        const char *port = required_scalar(path, "port", err);
-        if (!port)
-            return err->status;
-        const char *level_param = required_scalar(path, "level_param", err);
-        if (!level_param)
-            return err->status;
-        for (size_t j = 0; j < i; j++) {
-            if (strcmp(items[j].port, port) == 0)
-                return set_error(err, UC_E_RANGE, "routing.paths contains a duplicate port");
-            if (strcmp(items[j].level_param, level_param) == 0)
-                return set_error(err, UC_E_RANGE, "routing.paths contains a duplicate level_param");
-        }
-
-        const apg_unit_v2_port_t *materialized_port = find_materialized_port(path_ports, path_ports_len, port);
-        if (!materialized_port || !port_type_is_audio(materialized_port->type) || !materialized_port->channels ||
-            strcmp(materialized_port->channels, "1") != 0) {
-            char msg[192];
-            snprintf(
-                msg, sizeof(msg), "routing path port '%s' must be a mono %s port", port, panner ? "output" : "input"
-            );
-            return set_error(err, UC_E_TYPE, msg);
-        }
-        const apg_unit_v2_param_t *param = find_materialized_param(out, level_param);
-        if (!param || !param->type || strcmp(param->type, "float") != 0) {
-            char msg[192];
-            snprintf(msg, sizeof(msg), "routing level_param '%s' must reference a float param", level_param);
-            return set_error(err, UC_E_TYPE, msg);
-        }
-        items[i].port        = port;
-        items[i].level_param = level_param;
-    }
-
-    size_t input_count  = count_mono_audio_ports(out->input_ports, out->input_ports_len);
-    size_t output_count = count_mono_audio_ports(out->output_ports, out->output_ports_len);
-    if (panner && (input_count != 1u || output_count != paths->seq_len))
-        return set_error(err, UC_E_RANGE, "panner routing units require one mono input and one output per path");
-    if (mixer && (input_count != paths->seq_len || output_count != 1u))
-        return set_error(err, UC_E_RANGE, "mixer routing units require one input per path and one mono output");
-
-    out->routing.role      = role;
-    out->routing.paths     = items;
-    out->routing.paths_len = paths->seq_len;
-    return UC_OK;
 }
 
 typedef enum {
@@ -1482,10 +1377,6 @@ uc_status apg_unit_v2_validate_root(const uc_node *root, uc_arena *arena, apg_un
         return status;
 
     status = validate_and_fill_ports(ports, out->signals, out->signals_len, params, arena, out, err);
-    if (status != UC_OK)
-        return status;
-
-    status = validate_and_fill_routing(root, arena, out, err);
     if (status != UC_OK)
         return status;
 

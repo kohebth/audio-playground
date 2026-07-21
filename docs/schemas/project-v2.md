@@ -41,44 +41,6 @@ chain:
 
 `chain.routes` connects endpoints. Endpoints are `system.input`, `system.output`, or `<node>.<port>`. The validator checks that referenced node IDs exist; port-name validation is deferred until referenced units are resolved.
 
-Ordinary project effects must expose exactly one mono audio input and one mono audio output. Every route source and route
-target may be connected only once. Raw fan-out and raw merges are rejected; use an explicit routing section instead.
-
-## Explicit Split/Merge Sections
-
-A routing section pairs one panner with one mixer. Both instances declare the same `routing.section`, and their unit
-metadata must expose the same ordered paths and level params:
-
-```yaml
-chain:
-  nodes:
-    - id: parallel_pan
-      unit: path_panner_2_unit
-      routing:
-        section: parallel_1
-    - id: drive
-      unit: overdrive_unit
-    - id: parallel_mix
-      unit: path_mixer_2_unit
-      routing:
-        section: parallel_1
-  routes:
-    - from: system.input
-      to: parallel_pan.input
-    - from: parallel_pan.path_1
-      to: parallel_mix.path_1
-    - from: parallel_pan.path_2
-      to: drive.input
-    - from: drive.output
-      to: parallel_mix.path_2
-    - from: parallel_mix.output
-      to: system.output
-```
-
-Every panner path must reach the same-named input on its paired mixer exactly once. Crossed, leaking, incomplete,
-orphaned, and cyclic paths are rejected. Sections may be nested; validation treats a complete nested panner/mixer pair
-as a serial macro. The metadata shape can describe N paths, but the shipped project system currently accepts exactly two.
-
 ## Scenes
 
 `scenes` is a sequence of named snapshots:
@@ -93,9 +55,6 @@ scenes:
 ```
 
 Scene names must be unique. Scene param keys use `<node>.<param>` and must reference an existing node. Optional `bypass` entries map an instance ID to a boolean, where `true` means bypassed. Param-name validation is deferred until unit resolution.
-
-Panner and mixer instances are always active and cannot appear in scene `bypass` maps. Their per-path dB params can be
-stored in scene `params` like any other runtime parameter.
 
 ## Targets
 
@@ -116,15 +75,8 @@ Use `apg_project_v2_load_resolved_file(...)` when the caller needs loaded unit d
 
 Use `apg_project_v2_compile(...)` to expand a resolved project into a synthetic v2 unit and compile it with the existing unit compiler. The compiler namespaces instance internals with `<node>.<name>`, preserves stable runtime params such as `gain1.gain`, applies node `params` as instance defaults, and lowers mono routes into a single runtime plan.
 
-The current compiler accepts mono audio routes from `system.input` through zero or more unit instances and explicit
-routing sections to exactly one `system.output` route. Inter-instance routes such as `gain1.output -> gain2.input` are
-supported. Routing helper instances are compiled as non-bypassable. An empty project must declare `units: []`,
-`chain.nodes: []`, and exactly one direct `system.input -> system.output` route; it compiles to a zero-node pass-through
-runtime plan.
+The current compiler accepts mono audio routes from `system.input` through zero or more unit instances to exactly one `system.output` route. Inter-instance routes such as `gain1.output -> gain2.input` are supported. An empty project must declare `units: []`, `chain.nodes: []`, and exactly one direct `system.input -> system.output` route; it compiles to a zero-node pass-through runtime plan.
 
 ## Current Limits
 
-Project compilation is mono-route only. The current routing library supplies two-path panner/mixer helpers; additional
-path counts, stereo/multi-channel project routes, multiple system inputs/outputs, and non-audio project routes are later
-work. Structured diagnostics, routing-aware project inspect JSON, runtime product controls, meters, and deterministic
-project render JSON are implemented.
+Project compilation is mono-route only. Stereo/multi-channel project route compilation, multiple system inputs/outputs, non-audio project routes, and benchmark output are tracked in later phases. Structured diagnostics, project inspect JSON, runtime product controls, meters, and deterministic project render JSON are implemented.

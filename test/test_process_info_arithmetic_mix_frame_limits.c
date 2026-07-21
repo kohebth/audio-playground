@@ -60,36 +60,6 @@ int test_process_info_arithmetic_mix_frame_limits(void) {
         if (frames < 1024 && y[frames] != -99.0f)
             return fail("amplitude_divide_process wrote past info.frames");
 
-        static const float gain_db_cases[] = {0.0f, -6.0206f, -60.0f, 6.0f};
-        static const float gain_cases[]    = {1.0f, 0.5f, 0.001f, 1.9952623f};
-        float              gain_input[1024];
-        for (int i = 0; i < 1024; i++)
-            gain_input[i] = 1.0f;
-        for (size_t gain_case = 0; gain_case < sizeof(gain_db_cases) / sizeof(gain_db_cases[0]); gain_case++) {
-            for (int i = 0; i < 1024; i++)
-                y[i] = -99.0f;
-            amplitude_gain_db_out_t    gain_out    = {.signal = y};
-            amplitude_gain_db_in_t     gain_in     = {.signal = gain_input};
-            amplitude_gain_db_params_t gain_params = {.gain_db = gain_db_cases[gain_case]};
-            amplitude_gain_db_state_t  gain_state;
-            amplitude_gain_db_process(&gain_out, &gain_in, &gain_params, &gain_state, &info);
-            for (int i = 0; i < frames; i++) {
-                if (fabsf(y[i] - gain_cases[gain_case]) > 0.00001f)
-                    return fail("amplitude_gain_db_process conversion mismatch");
-            }
-            if (frames < 1024 && y[frames] != -99.0f)
-                return fail("amplitude_gain_db_process wrote past info.frames");
-        }
-
-        amplitude_gain_db_out_t    finite_out    = {.signal = y};
-        amplitude_gain_db_in_t     finite_in     = {.signal = gain_input};
-        amplitude_gain_db_params_t finite_params = {.gain_db = NAN};
-        amplitude_gain_db_state_t  finite_state;
-        gain_input[0] = NAN;
-        amplitude_gain_db_process(&finite_out, &finite_in, &finite_params, &finite_state, &info);
-        if (y[0] != 0.0f || (frames > 1 && fabsf(y[1] - 1.0f) > 0.00001f))
-            return fail("amplitude_gain_db_process did not sanitize non-finite values");
-
         for (int i = 0; i < 1024; i++)
             y[i] = -99.0f;
         mix_crossfade_out_t    cross_out    = {.signal = y};

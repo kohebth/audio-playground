@@ -31,7 +31,6 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.36.4",
     "@types/js-yaml": "^4.0.9",
-    "@viz-js/viz": "^3.28.0",
     "@xyflow/react": "^12.10.2",
     "dagre": "^0.8.5",
     "js-yaml": "^4.1.1",

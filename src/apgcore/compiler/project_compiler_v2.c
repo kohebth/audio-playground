@@ -449,21 +449,5 @@ uc_status apg_project_v2_compile(
     status = build_expanded_unit(project, arena, &out->expanded_unit, err);
     if (status != UC_OK)
         return status;
-    status = apg_v2_compile_unit(&out->expanded_unit, arena, &out->plan, err);
-    if (status != UC_OK)
-        return status;
-
-    for (size_t i = 0; i < project->project.nodes_len; i++) {
-        const apg_project_v2_node_t        *node   = &project->project.nodes[i];
-        const apg_project_v2_loaded_unit_t *loaded = find_loaded_unit(project, node->unit);
-        if (!loaded || !loaded->unit.routing.role)
-            continue;
-        size_t id_len = strlen(node->id);
-        for (size_t instance = 0; instance < out->plan.instances_len; instance++) {
-            if (out->plan.instances[instance].id_len == id_len &&
-                strncmp(out->plan.instances[instance].id, node->id, id_len) == 0)
-                out->plan.instances[instance].bypassable = false;
-        }
-    }
-    return UC_OK;
+    return apg_v2_compile_unit(&out->expanded_unit, arena, &out->plan, err);
 }

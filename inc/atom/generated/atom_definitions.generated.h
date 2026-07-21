@@ -10,7 +10,6 @@
     X(amplitude_clip_hard, amplitude, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS) \
     X(amplitude_clip_soft, amplitude, 0, 2, 0, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS) \
     X(amplitude_divide, amplitude, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS) \
-    X(amplitude_gain_db, amplitude, 0, 1, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS) \
     X(amplitude_multiply, amplitude, 0, 0, 0, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_SAFE_SCALAR, PROCESS) \
     X(amplitude_normalize, amplitude, 0, 2, 1, APG_ATOM_FLAGS_WASM, APG_ATOM_MATURITY_MUSICAL, PROCESS) \
     X(amplitude_smooth, amplitude, 0, 2, 1, APG_ATOM_FLAGS_PORTABLE, APG_ATOM_MATURITY_MUSICAL, PROCESS) \

@@ -50,14 +50,6 @@ void amplitude_divide_process(
     const apg_process_context_t *context
 );
 
-void amplitude_gain_db_process(
-    amplitude_gain_db_out_t *out,
-    const amplitude_gain_db_in_t *in,
-    const amplitude_gain_db_params_t *params,
-    amplitude_gain_db_state_t *state,
-    const apg_process_context_t *context
-);
-
 void amplitude_multiply_process(
     amplitude_multiply_out_t *out,
     const amplitude_multiply_in_t *in,

@@ -204,30 +204,6 @@ static int test_unit_inspect_json_contains_ui_contract(void) {
     return 0;
 }
 
-static int test_routing_inspect_json_contract(void) {
-    char *unit = capture_json(apg_v2_json_write_inspect_unit, "test/fixtures/units-v2/path_panner_2.unit.v2.yaml");
-    char *project =
-        capture_json(apg_v2_json_write_inspect_project, "test/fixtures/projects-v2/parallel-gain.project.v2.yaml");
-    if (!unit || !project) {
-        free(unit);
-        free(project);
-        return fail("failed to write routing inspect json");
-    }
-    int ok = strstr(
-                 unit, "\"routing\":{\"role\":\"panner\",\"paths\":[{\"port\":\"path_1\",\"level_param\":"
-                       "\"path_1_db\"},{\"port\":\"path_2\",\"level_param\":\"path_2_db\"}]}"
-             ) &&
-             strstr(unit, "\"control\":\"slider\",\"unit\":\"dB\"") &&
-             strstr(
-                 project, "\"id\":\"parallel_pan\",\"unit\":\"path_panner_2_unit\",\"routing\":{\"section\":"
-                          "\"parallel_1\"}"
-             ) &&
-             strstr(project, "\"name\":\"path_mixer_2\",\"routing\":{\"role\":\"mixer\"");
-    free(unit);
-    free(project);
-    return ok ? 0 : fail("routing inspect json lacked helper, path, section, or slider metadata");
-}
-
 static int test_invalid_validation_json_contains_diagnostic_fields(void) {
     char *json = capture_json(
         apg_v2_json_write_validate_project, "test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml"
@@ -289,8 +265,6 @@ int main(void) {
     if (test_unit_inspect_json_golden_output())
         return 1;
     if (test_unit_inspect_json_contains_ui_contract())
-        return 1;
-    if (test_routing_inspect_json_contract())
         return 1;
     if (test_invalid_validation_json_contains_diagnostic_fields())
         return 1;

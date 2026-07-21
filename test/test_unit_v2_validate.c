@@ -1,7 +1,6 @@
 #include <apgcore/validator/unit_v2.h>
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 static int fail(const char *msg) {
@@ -67,52 +66,6 @@ static int expect_valid_fixture(void) {
     return 0;
 }
 
-static char *read_fixture(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file || fseek(file, 0, SEEK_END) != 0) {
-        if (file)
-            fclose(file);
-        return NULL;
-    }
-    long size = ftell(file);
-    if (size < 0 || fseek(file, 0, SEEK_SET) != 0) {
-        fclose(file);
-        return NULL;
-    }
-    char *content = malloc((size_t)size + 1u);
-    if (!content) {
-        fclose(file);
-        return NULL;
-    }
-    size_t read_len = fread(content, 1u, (size_t)size, file);
-    fclose(file);
-    if (read_len != (size_t)size) {
-        free(content);
-        return NULL;
-    }
-    content[read_len] = '\0';
-    return content;
-}
-
-static int expect_valid_routing_fixture(void) {
-    uc_arena arena;
-    if (uc_arena_init(&arena, 1024 * 1024) != 0)
-        return fail("arena init failed");
-    apg_unit_v2_t unit;
-    uc_error      err = {0};
-    uc_status status  = apg_unit_v2_load_file("test/fixtures/units-v2/path_panner_2.unit.v2.yaml", &arena, &unit, &err);
-    if (status != UC_OK || !unit.routing.role || strcmp(unit.routing.role, "panner") != 0 ||
-        unit.routing.paths_len != 2u || strcmp(unit.routing.paths[1].port, "path_2") != 0 ||
-        strcmp(unit.routing.paths[1].level_param, "path_2_db") != 0 || !unit.params[0].ui_control ||
-        strcmp(unit.params[0].ui_control, "slider") != 0) {
-        fprintf(stderr, "routing fixture error: %s\n", err.msg);
-        uc_arena_free(&arena);
-        return fail("routing metadata was not materialized");
-    }
-    uc_arena_free(&arena);
-    return 0;
-}
-
 static int expect_invalid_contains(const char *yaml, const char *label, const char *must_contain) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -155,22 +108,6 @@ static int expect_valid(const char *yaml, const char *label) {
 
 int main(void) {
     if (expect_valid_fixture())
-        return 1;
-    if (expect_valid_routing_fixture())
-        return 1;
-
-    char *duplicate_routing_level = read_fixture("test/fixtures/units-v2/path_panner_2.unit.v2.yaml");
-    if (!duplicate_routing_level)
-        return fail("could not read routing fixture");
-    char *second_level = strstr(duplicate_routing_level, "level_param: path_2_db");
-    if (!second_level)
-        return fail("routing fixture lacks path_2 level param");
-    second_level    = strstr(second_level, "path_2_db");
-    second_level[5] = '1';
-    int duplicate_level_status =
-        expect_invalid_contains(duplicate_routing_level, "duplicate routing level", "duplicate level_param");
-    free(duplicate_routing_level);
-    if (duplicate_level_status)
         return 1;
 
     const char *bool_param = "kind: apg.unit\n"

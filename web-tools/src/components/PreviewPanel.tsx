@@ -55,7 +55,6 @@ type Props = {
   packagedAudio: ApgAudioAsset[];
   onAudioAssetChange?: (asset: ApgAudioAsset | null) => void;
   onReadinessUpdate?: (update: Partial<ProjectReadinessSnapshot>) => void;
-  editingBlocked?: string | null;
 };
 
 const emptyMeter: MeterSnapshot = {
@@ -107,7 +106,6 @@ export function PreviewPanel({
   packagedAudio,
   onAudioAssetChange,
   onReadinessUpdate,
-  editingBlocked = null,
 }: Props) {
   const { setController } = useLiveBypass();
   const [backend, setBackend] = useState<WasmBackend | null>(null);
@@ -131,7 +129,7 @@ export function PreviewPanel({
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
-  const [inputMode, setInputMode] = useState<InputMode>(() => studioMode === 'effect-chain' ? 'microphone' : 'file');
+  const [inputMode, setInputMode] = useState<InputMode>(() => studioMode === 'simple' ? 'microphone' : 'file');
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [audioFileName, setAudioFileName] = useState('No audio file selected');
   const revisionRef = useRef(0);
@@ -295,7 +293,7 @@ export function PreviewPanel({
   }, [createBackendSession, onRuntimeReady, refreshAudioDevices, refreshRuntimeSettings, reportError]);
 
   useEffect(() => {
-    if (!backend || !contextRef.current || studioMode !== 'atom-chain' || packagedAudio.length === 0) return;
+    if (!backend || !contextRef.current || studioMode !== 'pro' || packagedAudio.length === 0) return;
     const asset = packagedAudio[0];
     if (audioFileName === asset.name) return;
     let cancelled = false;
@@ -501,7 +499,7 @@ export function PreviewPanel({
   }, [backend, paramOverrides, reportError, running]);
 
   const compile = useCallback(async () => {
-    if (!backend || editingBlocked) return false;
+    if (!backend) return false;
     try {
       const prepared = await syncWorkspace(true);
       return prepared;
@@ -509,7 +507,7 @@ export function PreviewPanel({
       reportError(error, 'compile');
       return false;
     }
-  }, [backend, editingBlocked, reportError, syncWorkspace]);
+  }, [backend, reportError, syncWorkspace]);
 
   const stopPlayback = useCallback(async () => {
     audioTraceTokenRef.current += 1;
@@ -543,7 +541,7 @@ export function PreviewPanel({
   }, [refreshBackendState, refreshRuntimeSettings]);
 
   useEffect(() => {
-    if (studioMode !== 'effect-chain' || inputMode === 'microphone') return;
+    if (studioMode !== 'simple' || inputMode === 'microphone') return;
     if (runningRef.current) void stopPlayback().finally(() => setInputMode('microphone'));
     else setInputMode('microphone');
   }, [inputMode, stopPlayback, studioMode]);
@@ -1090,18 +1088,18 @@ export function PreviewPanel({
             <button
               className={`transport-btn ${running ? 'active' : ''}`}
               data-testid="preview-start-stop"
-              disabled={!backend || Boolean(editingBlocked)}
+              disabled={!backend}
               onClick={() => void togglePlayback()}
               type="button"
             >
               <i className={`fa-solid ${running ? 'fa-stop' : 'fa-play'}`} aria-hidden="true" />
             </button>
-            <button className="transport-btn" data-testid="preview-compile" disabled={!backend || Boolean(editingBlocked)} onClick={() => void compile()} title={editingBlocked ?? 'Compile'} type="button">
+            <button className="transport-btn" data-testid="preview-compile" disabled={!backend} onClick={() => void compile()} title="Compile" type="button">
               <i className="fa-solid fa-hammer" aria-hidden="true" />
             </button>
         </div>
           <div className="transport-group preview-panel__mode" aria-label="Audio input mode" role="group">
-            {studioMode === 'atom-chain' ? (
+            {studioMode === 'pro' ? (
               <button
                 aria-pressed={inputMode === 'file'}
                 data-testid="preview-mode-file"
@@ -1125,7 +1123,7 @@ export function PreviewPanel({
               <i className="fa-solid fa-microphone" aria-hidden="true" />
               Mic
             </button>
-            {studioMode === 'atom-chain' && inputMode === 'file' && (
+            {studioMode === 'pro' && inputMode === 'file' && (
               <label className="transport-file">
                 <span>{audioFileName}</span>
                 <input accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a,.aac" disabled={running} onChange={event => void chooseAudioFile(event.target.files?.[0])} type="file" />
@@ -1168,7 +1166,7 @@ export function PreviewPanel({
       )}
 
       <div className="preview-panel__mode" aria-label="Audio input mode" role="group">
-        {studioMode === 'atom-chain' ? (
+        {studioMode === 'pro' ? (
           <button
             aria-pressed={inputMode === 'file'}
             disabled={running}
@@ -1188,7 +1186,7 @@ export function PreviewPanel({
         </button>
       </div>
 
-      {studioMode === 'atom-chain' && inputMode === 'file' && (
+      {studioMode === 'pro' && inputMode === 'file' && (
         <label className="preview-panel__file">
           <span>{audioFileName}</span>
           <input
@@ -1201,13 +1199,13 @@ export function PreviewPanel({
       )}
 
       <div className="preview-panel__actions">
-        <button className="btn btn--ghost" data-testid="preview-compile" disabled={!backend || Boolean(editingBlocked)} onClick={() => void compile()} type="button">
+        <button className="btn btn--ghost" data-testid="preview-compile" disabled={!backend} onClick={() => void compile()} type="button">
           Compile
         </button>
         <button
           className="btn btn--ghost"
           data-testid="preview-start-stop"
-          disabled={!backend || Boolean(editingBlocked)}
+          disabled={!backend}
           onClick={() => void togglePlayback()}
           type="button"
         >
