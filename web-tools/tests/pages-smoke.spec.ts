@@ -242,7 +242,8 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   await page.getByTestId('project-unit-item-overdrive_unit').dragTo(page.getByTestId('project-canvas'), {
     targetPosition: { x: 480, y: 280 },
   });
-  await expect(unitNodes).toHaveCount(initialCount + 1);
+  const countAfterSerialDrop = initialCount + 1;
+  await expect(unitNodes).toHaveCount(countAfterSerialDrop);
   await expect(viewport).toHaveCSS('transform', initialTransform);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
     .not.toBe(initialStoredWorkspace);
@@ -251,7 +252,8 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   await page.getByRole('button', { name: 'Simple', exact: true }).click();
   const simpleTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
   await page.getByRole('button', { name: 'Add Chorus in parallel', exact: true }).click();
-  await expect(unitNodes).toHaveCount(initialCount + 3);
+  const expectedParallelCount = countAfterSerialDrop + 3;
+  await expect(unitNodes).toHaveCount(expectedParallelCount);
   await expect(viewport).toHaveCSS('transform', simpleTransform);
   const routePaths = await page.locator('.react-flow__edge-path').evaluateAll(paths => (
     paths.map(path => path.getAttribute('d') ?? '')
@@ -264,7 +266,7 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
 
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  await expect(unitNodes).toHaveCount(initialCount + 3);
+  await expect(unitNodes).toHaveCount(expectedParallelCount);
   await expect(page.getByTestId('topbar-import-input')).toHaveCount(1);
 
   const downloadPromise = page.waitForEvent('download');
