@@ -71,6 +71,18 @@ static const apg_atom_contract_field_t catalog_amplitude_divide_config[] = {
     {"epsilon", APG_ATOM_FIELD_FLOAT, true, "float", "1e-06", true, 1e-12, true, 0.1, NULL, "logarithmic", true, false, 0.0, false, NULL, NULL, 0u},
 };
 
+static const apg_atom_contract_field_t catalog_amplitude_gain_db_inputs[] = {
+    {"signal", APG_ATOM_FIELD_SIGNAL, true},
+};
+
+static const apg_atom_contract_field_t catalog_amplitude_gain_db_outputs[] = {
+    {"signal", APG_ATOM_FIELD_SIGNAL, true},
+};
+
+static const apg_atom_contract_field_t catalog_amplitude_gain_db_config[] = {
+    {"gain_db", APG_ATOM_FIELD_FLOAT, true, "float", "0", true, -120, true, 24, "db", NULL, true, false, 0.0, false, NULL, NULL, 0u},
+};
+
 static const apg_atom_contract_field_t catalog_amplitude_multiply_inputs[] = {
     {"signal_a", APG_ATOM_FIELD_SIGNAL, true},
     {"signal_b", APG_ATOM_FIELD_SIGNAL, true},
@@ -893,6 +905,7 @@ static const apg_catalog_contract_t catalog_contracts[] = {
     {"amplitude_clip_hard", APG_ATOM_VISIBILITY_PUBLIC, catalog_amplitude_clip_hard_inputs, FIELD_COUNT(catalog_amplitude_clip_hard_inputs), catalog_amplitude_clip_hard_outputs, FIELD_COUNT(catalog_amplitude_clip_hard_outputs), catalog_amplitude_clip_hard_config, FIELD_COUNT(catalog_amplitude_clip_hard_config)},
     {"amplitude_clip_soft", APG_ATOM_VISIBILITY_PUBLIC, catalog_amplitude_clip_soft_inputs, FIELD_COUNT(catalog_amplitude_clip_soft_inputs), catalog_amplitude_clip_soft_outputs, FIELD_COUNT(catalog_amplitude_clip_soft_outputs), catalog_amplitude_clip_soft_config, FIELD_COUNT(catalog_amplitude_clip_soft_config)},
     {"amplitude_divide", APG_ATOM_VISIBILITY_ADVANCED, catalog_amplitude_divide_inputs, FIELD_COUNT(catalog_amplitude_divide_inputs), catalog_amplitude_divide_outputs, FIELD_COUNT(catalog_amplitude_divide_outputs), catalog_amplitude_divide_config, FIELD_COUNT(catalog_amplitude_divide_config)},
+    {"amplitude_gain_db", APG_ATOM_VISIBILITY_INTERNAL, catalog_amplitude_gain_db_inputs, FIELD_COUNT(catalog_amplitude_gain_db_inputs), catalog_amplitude_gain_db_outputs, FIELD_COUNT(catalog_amplitude_gain_db_outputs), catalog_amplitude_gain_db_config, FIELD_COUNT(catalog_amplitude_gain_db_config)},
     {"amplitude_multiply", APG_ATOM_VISIBILITY_PUBLIC, catalog_amplitude_multiply_inputs, FIELD_COUNT(catalog_amplitude_multiply_inputs), catalog_amplitude_multiply_outputs, FIELD_COUNT(catalog_amplitude_multiply_outputs), NULL, 0u},
     {"amplitude_normalize", APG_ATOM_VISIBILITY_PUBLIC, catalog_amplitude_normalize_inputs, FIELD_COUNT(catalog_amplitude_normalize_inputs), catalog_amplitude_normalize_outputs, FIELD_COUNT(catalog_amplitude_normalize_outputs), catalog_amplitude_normalize_config, FIELD_COUNT(catalog_amplitude_normalize_config)},
     {"amplitude_smooth", APG_ATOM_VISIBILITY_PUBLIC, catalog_amplitude_smooth_inputs, FIELD_COUNT(catalog_amplitude_smooth_inputs), catalog_amplitude_smooth_outputs, FIELD_COUNT(catalog_amplitude_smooth_outputs), catalog_amplitude_smooth_config, FIELD_COUNT(catalog_amplitude_smooth_config)},

@@ -135,6 +135,32 @@ static int expect_valid_pedalboard_fixture(void) {
     return 0;
 }
 
+static int expect_valid_routing_fixture(const char *path, const char *label, size_t expected_nodes) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+    apg_project_v2_resolved_t resolved;
+    uc_error                  err    = {0};
+    uc_status                 status = apg_project_v2_load_resolved_file(path, &arena, &resolved, &err);
+    if (status != UC_OK) {
+        fprintf(stderr, "%s routing project error: %s\n", label, err.msg);
+        uc_arena_free(&arena);
+        return 1;
+    }
+    bool found_routing_unit = false;
+    bool found_section      = false;
+    for (size_t i = 0; i < resolved.units_len; i++)
+        found_routing_unit = found_routing_unit || resolved.units[i].unit.routing.role != NULL;
+    for (size_t i = 0; i < resolved.project.nodes_len; i++)
+        found_section = found_section || resolved.project.nodes[i].routing_section != NULL;
+    if (resolved.project.nodes_len != expected_nodes || !found_section || !found_routing_unit) {
+        uc_arena_free(&arena);
+        return fail("routing metadata was not materialized");
+    }
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int expect_invalid_resolved_file_contains(const char *path, const char *label, const char *must_contain) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -185,6 +211,23 @@ int main(void) {
     if (expect_valid_empty_fixture())
         return 1;
     if (expect_valid_pedalboard_fixture())
+        return 1;
+    if (expect_valid_routing_fixture("test/fixtures/projects-v2/parallel-gain.project.v2.yaml", "parallel", 3u))
+        return 1;
+    if (expect_valid_routing_fixture("test/fixtures/projects-v2/nested-parallel.project.v2.yaml", "nested", 4u))
+        return 1;
+    if (expect_invalid_resolved_file_contains(
+            "test/fixtures/projects-v2/invalid-raw-fanout.project.v2.yaml", "raw fan-out", "Add in parallel"
+        ))
+        return 1;
+    if (expect_invalid_resolved_file_contains(
+            "test/fixtures/projects-v2/invalid-crossed-routing.project.v2.yaml", "crossed routing", "wrong mixer"
+        ))
+        return 1;
+    if (expect_invalid_resolved_file_contains(
+            "test/fixtures/projects-v2/invalid-routing-scene-bypass.project.v2.yaml", "routing scene bypass",
+            "always-active"
+        ))
         return 1;
     if (expect_invalid_resolved_file_contains(
             "test/fixtures/projects-v2/invalid-missing-unit.project.v2.yaml", "missing unit file",

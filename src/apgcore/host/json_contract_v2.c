@@ -218,6 +218,24 @@ static void write_ports(FILE *out, const apg_unit_v2_port_t *ports, size_t ports
     fputc(']', out);
 }
 
+static void write_routing(FILE *out, const apg_unit_v2_t *unit) {
+    if (!unit || !unit->routing.role)
+        return;
+    fputs(",\"routing\":{\"role\":", out);
+    write_json_string(out, unit->routing.role);
+    fputs(",\"paths\":[", out);
+    for (size_t i = 0; i < unit->routing.paths_len; i++) {
+        if (i > 0u)
+            fputc(',', out);
+        fputs("{\"port\":", out);
+        write_json_string(out, unit->routing.paths[i].port);
+        fputs(",\"level_param\":", out);
+        write_json_string(out, unit->routing.paths[i].level_param);
+        fputc('}', out);
+    }
+    fputs("]}", out);
+}
+
 static void write_unit_nodes(FILE *out, const apg_unit_v2_t *unit) {
     fputc('[', out);
     for (size_t i = 0; i < unit->nodes_len; i++) {
@@ -248,7 +266,9 @@ static void write_unit_inspect(FILE *out, const char *path, const apg_unit_v2_t 
     write_json_string(out, unit->meta.category);
     fputs(",\"description\":", out);
     write_json_string(out, unit->meta.description);
-    fputs("},\"compatibility\":", out);
+    fputc('}', out);
+    write_routing(out, unit);
+    fputs(",\"compatibility\":", out);
     write_compatibility(out, unit);
     fputs(",\"params\":", out);
     write_unit_params(out, unit);
@@ -291,6 +311,7 @@ static void write_project_units(FILE *out, const apg_project_v2_resolved_t *proj
         write_json_string(out, project->units[i].file);
         fputs(",\"name\":", out);
         write_json_string(out, project->units[i].unit.name);
+        write_routing(out, &project->units[i].unit);
         fputs(",\"compatibility\":", out);
         write_compatibility(out, &project->units[i].unit);
         fputc('}', out);
@@ -307,6 +328,11 @@ static void write_project_nodes(FILE *out, const apg_project_v2_t *project) {
         write_json_string(out, project->nodes[i].id);
         fputs(",\"unit\":", out);
         write_json_string(out, project->nodes[i].unit);
+        if (project->nodes[i].routing_section) {
+            fputs(",\"routing\":{\"section\":", out);
+            write_json_string(out, project->nodes[i].routing_section);
+            fputc('}', out);
+        }
         fputs(",\"params\":[", out);
         for (size_t p = 0; p < project->nodes[i].params_len; p++) {
             if (p > 0u)

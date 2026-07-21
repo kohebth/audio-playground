@@ -363,6 +363,65 @@
          "additionalProperties" : false,
          "properties" : {
             "atom" : {
+               "const" : "amplitude_gain_db"
+            },
+            "config" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "gain_db" : {
+                     "default" : 0,
+                     "maximum" : 24,
+                     "minimum" : -120,
+                     "type" : "number",
+                     "x-apg-field-type" : "float",
+                     "x-apg-realtime" : true,
+                     "x-apg-structural" : false,
+                     "x-apg-unit" : "db"
+                  }
+               },
+               "required" : [
+                  "gain_db"
+               ],
+               "type" : "object"
+            },
+            "in" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            },
+            "out" : {
+               "additionalProperties" : false,
+               "properties" : {
+                  "signal" : {
+                     "type" : "string"
+                  }
+               },
+               "required" : [
+                  "signal"
+               ],
+               "type" : "object"
+            }
+         },
+         "required" : [
+            "atom"
+         ],
+         "title" : "amplitude_gain_db",
+         "type" : "object",
+         "x-apg-category" : "amplitude",
+         "x-apg-dispatch" : "process",
+         "x-apg-visibility" : "internal"
+      },
+      {
+         "additionalProperties" : false,
+         "properties" : {
+            "atom" : {
                "const" : "amplitude_multiply"
             },
             "config" : {

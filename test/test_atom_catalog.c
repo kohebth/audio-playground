@@ -153,6 +153,8 @@ int main(void) {
         return fail("generation_lfo atom is missing");
     if (!strstr(json, "\"name\":\"modulation_phaser\""))
         return fail("modulation_phaser atom is missing");
+    if (!strstr(json, "\"name\":\"amplitude_gain_db\",\"category\":\"amplitude\",\"visibility\":\"internal\""))
+        return fail("amplitude_gain_db atom is missing or public");
     if (!strstr(json, "\"name\":\"frequency\",\"type\":\"float\""))
         return fail("generation_lfo frequency contract is missing");
     if (!strstr(json, "\"name\":\"detect_threshold\""))
@@ -206,6 +208,12 @@ int main(void) {
         return fail("generation_dc metadata field count failed");
     if (expect_field("generation_dc", APG_ATOM_CONTRACT_CONFIG, "value", APG_ATOM_FIELD_SCALAR, true))
         return 1;
+    apg_atom_contract_field_t gain_db_field;
+    if (!apg_atom_contract_find_field("amplitude_gain_db", APG_ATOM_CONTRACT_CONFIG, "gain_db", &gain_db_field) ||
+        !gain_db_field.has_min || gain_db_field.min_value != -120.0 || !gain_db_field.has_max ||
+        gain_db_field.max_value != 24.0 || !gain_db_field.unit || strcmp(gain_db_field.unit, "db") != 0 ||
+        !gain_db_field.realtime || gain_db_field.structural)
+        return fail("amplitude_gain_db metadata is wrong");
     const char *context_rate_atoms[] = {
         "amplitude_smooth",      "detect_envelope",     "detect_peak",        "detect_pitch",
         "filter_biquad",         "generation_envelope", "generation_impulse", "generation_lfo",

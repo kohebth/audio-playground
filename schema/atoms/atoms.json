@@ -191,6 +191,34 @@
          "dispatch" : "PROCESS",
          "family" : "amplitude",
          "input_descriptors" : [],
+         "input_profile" : "SIGNAL",
+         "maturity" : "SAFE_SCALAR",
+         "name" : "amplitude_gain_db",
+         "output_profile" : "SIGNAL",
+         "params" : [
+            {
+               "c_type" : "float",
+               "descriptor" : {
+                  "field_type" : "FIELD_FLOAT"
+               },
+               "name" : "gain_db",
+               "ownership" : "value"
+            }
+         ],
+         "state" : [
+            {
+               "c_type" : "uint8_t",
+               "name" : "_reserved",
+               "ownership" : "value"
+            }
+         ]
+      },
+      {
+         "capability" : "PORTABLE",
+         "category" : "amplitude",
+         "dispatch" : "PROCESS",
+         "family" : "amplitude",
+         "input_descriptors" : [],
          "input_profile" : "SIGNAL_PAIR",
          "maturity" : "SAFE_SCALAR",
          "name" : "amplitude_multiply",
@@ -3419,6 +3447,7 @@
       "amplitude_clip_soft.curve" : { "default" : 0, "options" : [ "cubic", "tanh" ], "realtime" : true, "structural" : false, "type" : "enum" },
       "amplitude_clip_soft.threshold" : { "default" : 1.0, "max" : 4.0, "min" : 0.001, "realtime" : true, "scale" : "logarithmic", "structural" : false, "unit" : "ratio" },
       "amplitude_divide.epsilon" : { "default" : 0.000001, "max" : 0.1, "min" : 0.000000000001, "realtime" : true, "scale" : "logarithmic", "structural" : false },
+      "amplitude_gain_db.gain_db" : { "default" : 0.0, "max" : 24.0, "min" : -120.0, "realtime" : true, "structural" : false, "unit" : "db" },
       "amplitude_latch.threshold" : { "default" : 0.5, "max" : 1.0, "min" : -1.0, "realtime" : true, "structural" : false, "unit" : "ratio" },
       "amplitude_normalize.mode" : { "default" : 0, "options" : [ "peak", "rms" ], "realtime" : true, "structural" : false, "type" : "enum" },
       "amplitude_normalize.target_level" : { "default" : 1.0, "max" : 1.0, "min" : 0.001, "realtime" : true, "scale" : "logarithmic", "structural" : false, "unit" : "ratio" },
@@ -3537,6 +3566,7 @@
       ],
       "internal" : [
          "amplitude_accumulate",
+         "amplitude_gain_db",
          "delay_tap_feedback",
          "delay_tap_feedforward",
          "detect_slope",
