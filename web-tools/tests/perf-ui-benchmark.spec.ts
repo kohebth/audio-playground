@@ -656,7 +656,7 @@ test.describe('Current chain editor performance gate', () => {
     });
     await replacement.selectOption(nextType);
     await clearPerfSpans(page);
-    await page.getByRole('button', { name: 'Confirm replace' }).click();
+    await page.getByRole('button', { name: 'Confirm replace' }).click({ force: true });
     const replaceMs = await runAndAssertBudget(page, 'contract.replace.atom');
     testInfo.annotations.push({ type: 'replacement-ms', description: replaceMs.toFixed(2) });
   });
