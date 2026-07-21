@@ -50,6 +50,22 @@ async function openWorkspace(page: Page, testInfo: TestInfo, route = '/projects'
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
 }
 
+async function expectProjectNodeLocked(page: Page, testId: string) {
+  const node = page.getByTestId(testId);
+  const before = await node.boundingBox();
+  expect(before).not.toBeNull();
+  await node.click({ position: { x: 12, y: 12 } });
+  await page.keyboard.press('ArrowRight');
+  await page.mouse.move(before!.x + 12, before!.y + 12);
+  await page.mouse.down();
+  await page.mouse.move(before!.x + 112, before!.y + 72, { steps: 8 });
+  await page.mouse.up();
+  const after = await node.boundingBox();
+  expect(after).not.toBeNull();
+  expect(after!.x).toBeCloseTo(before!.x, 1);
+  expect(after!.y).toBeCloseTo(before!.y, 1);
+}
+
 function expectHealthyNetwork(audit: NetworkAudit, expectedBasePath: string) {
   expect(audit.failedRequests).toEqual([]);
   expect(audit.badResponses).toEqual([]);
@@ -67,6 +83,12 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await expect(page.getByTestId('project-canvas')).toBeVisible();
   const gateNode = page.getByTestId('project-node-gate1');
   await expect(gateNode).toBeVisible();
+  await expectProjectNodeLocked(page, 'project-node-gate1');
+  await page.getByRole('button', { name: 'Simple', exact: true }).click();
+  await expect(page.locator('.app')).toHaveClass(/app--simple/);
+  await expectProjectNodeLocked(page, 'project-node-gate1');
+  await page.getByRole('button', { name: 'Pro', exact: true }).click();
+  await expect(page.locator('.app')).toHaveClass(/app--pro/);
   const gateBypass = gateNode.getByTestId('project-node-bypass-gate1');
   await expect(gateBypass).toBeEnabled();
   await expect(gateBypass).toHaveClass(/node-pedal-footer/);
@@ -210,19 +232,39 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   expectHealthyNetwork(audit, deployedBasePath(testInfo));
 });
 
-test('persists drag-and-drop edits and exports the workspace', async ({ page }, testInfo) => {
+test('persists locked-layout edits and exports the workspace', async ({ page }, testInfo) => {
   await openWorkspace(page, testInfo);
   const unitNodes = page.locator('.react-flow__node[data-id^="unit-"]');
   const initialCount = await unitNodes.count();
+  const viewport = page.locator('.react-flow__viewport');
+  const initialTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
+  const initialStoredWorkspace = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
   await page.getByTestId('project-unit-item-overdrive_unit').dragTo(page.getByTestId('project-canvas'), {
     targetPosition: { x: 480, y: 280 },
   });
   await expect(unitNodes).toHaveCount(initialCount + 1);
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'))).not.toBeNull();
+  await expect(viewport).toHaveCSS('transform', initialTransform);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
+    .not.toBe(initialStoredWorkspace);
+  const storedAfterDrop = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
+
+  await page.getByRole('button', { name: 'Simple', exact: true }).click();
+  const simpleTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
+  await page.getByRole('button', { name: 'Add Chorus in parallel', exact: true }).click();
+  await expect(unitNodes).toHaveCount(initialCount + 3);
+  await expect(viewport).toHaveCSS('transform', simpleTransform);
+  const routePaths = await page.locator('.react-flow__edge-path').evaluateAll(paths => (
+    paths.map(path => path.getAttribute('d') ?? '')
+  ));
+  expect(routePaths.some(path => path.includes('Q'))).toBe(true);
+  expect(routePaths.some(path => !path.includes('Q'))).toBe(true);
+  expect(routePaths.every(path => !path.includes('C'))).toBe(true);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
+    .not.toBe(storedAfterDrop);
 
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  await expect(unitNodes).toHaveCount(initialCount + 1);
+  await expect(unitNodes).toHaveCount(initialCount + 3);
   await expect(page.getByTestId('topbar-import-input')).toHaveCount(1);
 
   const downloadPromise = page.waitForEvent('download');

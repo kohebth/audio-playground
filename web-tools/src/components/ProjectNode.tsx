@@ -29,7 +29,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
     return (
       <div
         data-testid={`project-node-${data.id}`}
-        className={`project-node node-card project-node--system ${selected ? 'project-node--selected selected' : ''}`}
+        className={`project-node node-card nopan project-node--system ${selected ? 'project-node--selected selected' : ''}`}
         style={style}
       >
         {!isInput && <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />}
@@ -55,7 +55,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   return (
     <div
       data-testid={`project-node-${data.instance.id}`}
-      className={`project-node node-card ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
+      className={`project-node node-card nopan ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
       style={style}
     >
       <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />

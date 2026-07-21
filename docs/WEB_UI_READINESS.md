@@ -84,8 +84,10 @@ unit's parameter metadata, including label, range, and unit; the inspector retai
 Dragging a card knob uses the same clamped YAML update and live parameter synchronization path as other parameter edits.
 Cards grow by parameter-row count and wrap at three knobs per row for every unit. Knob order follows the referenced unit
 YAML parameter mapping exactly, and the Contract inspector can move parameters up or down through a structured YAML edit.
-Scalar updates preserve the existing React Flow nodes, edges, and viewport; only topology changes rebuild the Dagre
-layout, preventing control drags from flashing the canvas.
+Project cards are fixed in both Simple and Pro modes. Topology changes rebuild a deterministic left-to-right Dagre layout
+without consuming or writing project `ui.position` values, while scalar updates preserve the existing React Flow nodes,
+edges, and viewport. Linear routes stay straight; split and merge routes use Dagre's obstacle lanes rendered as rounded
+orthogonal elbows. Automatic layout never changes the current pan or zoom after the initial mount.
 
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
@@ -284,7 +286,8 @@ The UI needs a way to drive live or offline preview:
 - **Phase X:** Representative unit fixture metadata, the guitar pedalboard project fixture metadata, deterministic render proof, and compatibility/output capture are complete.
 - **Phase Y:** Web handoff package freezes sample contracts, documents exact fixture commands, refreshes repo guidance, and declares backend readiness. Complete.
 - **Visual-first studio follow-on:** Project home, IndexedDB/`.apg` persistence, Simple/Pro workflows, scenes, presets,
-  parallel routing, adaptive layout, structured Pro editing, and browser release/performance gates are complete.
+  parallel routing, locked deterministic project layout, structured Pro editing, and browser release/performance gates
+  are complete.
 
 ## Delivered Web UI Scope
 

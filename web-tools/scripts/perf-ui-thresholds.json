@@ -5,7 +5,6 @@
     "ui.drop.projectNode": 100,
     "graph.add.projectNode": 100,
     "graph.remove.projectNode": 100,
-    "graph.move.projectNode": 100,
     "graph.sync.project": 100,
     "ui.select.projectNode": 100,
     "ui.change.inspectorView": 100,

@@ -1,7 +1,6 @@
 import type { Edge, Node } from '@xyflow/react';
 import dagre from 'dagre';
 import type { ProjectInspect, ProjectInstance, ProjectRoute, ProjectUnit } from './backendSamples';
-import type { ProjectGraphDraft } from './projectV2Graph';
 
 export type ProjectNodeData =
   | {
@@ -33,6 +32,14 @@ export type ProjectParamControl = {
   unit?: string;
 };
 
+export type ProjectRoutePoint = { x: number; y: number };
+
+export type ProjectRouteEdgeData = {
+  points: ProjectRoutePoint[];
+};
+
+export type ProjectRouteEdge = Edge<ProjectRouteEdgeData, 'projectRoute'>;
+
 const UNIT_NODE_COMPACT_WIDTH = 140;
 const UNIT_NODE_WIDE_WIDTH = 190;
 const UNIT_NODE_EMPTY_HEIGHT = 132;
@@ -49,6 +56,10 @@ function endpointNodeId(endpoint: string): string {
   return `unit-${endpoint.split('.')[0]}`;
 }
 
+function routeEdgeId(index: number, source: string, target: string): string {
+  return `route-${index}-${source}-${target}`;
+}
+
 function createSystemNode(id: string, label: string, detail: string, color: string): Node<ProjectNodeData> {
   return {
     id,
@@ -58,16 +69,72 @@ function createSystemNode(id: string, label: string, detail: string, color: stri
   };
 }
 
-function createRouteEdge(route: ProjectRoute, index: number): Edge {
+function appendPoint(points: ProjectRoutePoint[], point: ProjectRoutePoint): void {
+  const previous = points.at(-1);
+  if (previous?.x === point.x && previous.y === point.y) return;
+  points.push(point);
+}
+
+function removeCollinearPoints(points: ProjectRoutePoint[]): ProjectRoutePoint[] {
+  return points.filter((point, index) => {
+    if (index === 0 || index === points.length - 1) return true;
+    const previous = points[index - 1];
+    const next = points[index + 1];
+    return !((previous.x === point.x && point.x === next.x)
+      || (previous.y === point.y && point.y === next.y));
+  });
+}
+
+function orthogonalRoutePoints(
+  layoutPoints: ProjectRoutePoint[],
+  source: ProjectRoutePoint,
+  target: ProjectRoutePoint,
+): ProjectRoutePoint[] {
+  const points: ProjectRoutePoint[] = [source];
+  const hints = layoutPoints.slice(1, -1);
+
+  if (hints.length === 0 && source.x !== target.x && source.y !== target.y) {
+    const midpointX = source.x + (target.x - source.x) / 2;
+    hints.push({ x: midpointX, y: source.y }, { x: midpointX, y: target.y });
+  }
+
+  for (const hint of hints) {
+    const previous = points.at(-1)!;
+    if (previous.x !== hint.x && previous.y !== hint.y) {
+      appendPoint(points, { x: hint.x, y: previous.y });
+    }
+    appendPoint(points, hint);
+  }
+
+  const previous = points.at(-1)!;
+  if (previous.x !== target.x && previous.y !== target.y) {
+    appendPoint(points, { x: previous.x, y: target.y });
+  }
+  appendPoint(points, target);
+  return removeCollinearPoints(points);
+}
+
+function createRouteEdge(route: ProjectRoute, index: number, graph: dagre.graphlib.Graph): ProjectRouteEdge {
   const source = endpointNodeId(route.from);
   const target = endpointNodeId(route.to);
+  const id = routeEdgeId(index, source, target);
+  const sourceLayout = graph.node(source);
+  const targetLayout = graph.node(target);
+  const layoutPoints = graph.edge({ v: source, w: target, name: id })?.points ?? [];
+  const points = orthogonalRoutePoints(
+    layoutPoints,
+    { x: sourceLayout.x + sourceLayout.width / 2, y: sourceLayout.y },
+    { x: targetLayout.x - targetLayout.width / 2, y: targetLayout.y },
+  );
 
   return {
-    id: `route-${index}-${source}-${target}`,
+    id,
+    type: 'projectRoute',
     source,
     target,
     sourceHandle: 'out',
     targetHandle: 'in',
+    data: { points },
     style: { stroke: '#64748b', strokeWidth: 1.6 },
   };
 }
@@ -82,13 +149,9 @@ function unitNodeDimensions(paramCount: number): { width: number; height: number
   };
 }
 
-export function buildProjectGraph(
-  project: ProjectInspect,
-  draft?: ProjectGraphDraft,
-): { nodes: Node<ProjectNodeData>[]; edges: Edge[] } {
+export function buildProjectGraph(project: ProjectInspect): { nodes: Node<ProjectNodeData>[]; edges: ProjectRouteEdge[] } {
   const unitsById = new Map(project.units.map(unit => [unit.id, unit]));
-  const positionByInstance = new Map((draft?.nodes ?? []).map(node => [node.id, node.ui?.position]));
-  const graph = new dagre.graphlib.Graph();
+  const graph = new dagre.graphlib.Graph({ multigraph: true });
   const nodes: Node<ProjectNodeData>[] = [
     createSystemNode('system-input', 'Input', 'system.input', '#0891b2'),
     createSystemNode('system-output', 'Output', 'system.output', '#65a30d'),
@@ -108,7 +171,7 @@ export function buildProjectGraph(
     const node: Node<ProjectNodeData> = {
       id: `unit-${instance.id}`,
       type: 'projectNode',
-      position: positionByInstance.get(instance.id) ?? { x: 0, y: 0 },
+      position: { x: 0, y: 0 },
       data: {
         kind: 'unit',
         instance,
@@ -122,16 +185,15 @@ export function buildProjectGraph(
     graph.setNode(node.id, unitNodeDimensions(instance.params.length));
   });
 
-  const edges = project.routes.map(createRouteEdge);
-
-  for (const edge of edges) {
-    graph.setEdge(edge.source, edge.target);
-  }
+  project.routes.forEach((route, index) => {
+    const source = endpointNodeId(route.from);
+    const target = endpointNodeId(route.to);
+    graph.setEdge(source, target, {}, routeEdgeId(index, source, target));
+  });
 
   dagre.layout(graph);
 
   for (const node of nodes) {
-    if (node.data.kind === 'unit' && positionByInstance.get(node.data.instance.id)) continue;
     const position = graph.node(node.id);
     const dimensions = node.data.kind === 'system'
       ? { width: SYSTEM_NODE_WIDTH, height: SYSTEM_NODE_HEIGHT }
@@ -142,5 +204,6 @@ export function buildProjectGraph(
     };
   }
 
+  const edges = project.routes.map((route, index) => createRouteEdge(route, index, graph));
   return { nodes, edges };
 }

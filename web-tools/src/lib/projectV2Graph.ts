@@ -186,7 +186,6 @@ export function addProjectInstance(
   unit: string,
   requestedId: string,
   params: Record<string, string> = {},
-  position?: GraphPosition,
 ): { content: string; id: string } {
   const doc = loadDocument(content);
   const draft = parseProjectGraphDraft(content);
@@ -195,7 +194,6 @@ export function addProjectInstance(
   if (draft.nodes.some(node => node.id === requestedId)) throw new Error(`Project instance "${requestedId}" already exists.`);
   const chain = ensureChain(doc);
   const node: Record<string, unknown> = { id: requestedId, unit, params: { ...params } };
-  if (position) node.ui = { position };
   (chain.nodes as unknown[]).push(node);
   return { content: dumpDocument(doc), id: requestedId };
 }
@@ -207,7 +205,6 @@ export function insertProjectInstanceOnRoute(
   requestedId: string,
   routeIndex: number,
   params: Record<string, string> = {},
-  position?: GraphPosition,
 ): { content: string; id: string } {
   const draft = parseProjectGraphDraft(content);
   const route = draft.routes[routeIndex];
@@ -216,7 +213,7 @@ export function insertProjectInstanceOnRoute(
   if (!unitPorts || unitPorts.inputs.length !== 1 || unitPorts.outputs.length !== 1) {
     throw new Error(`Project unit "${unit}" must have exactly one input and one output for route insertion.`);
   }
-  const added = addProjectInstance(content, unit, requestedId, params, position);
+  const added = addProjectInstance(content, unit, requestedId, params);
   const doc = loadDocument(added.content);
   const chain = ensureChain(doc);
   const routes = (chain.routes as unknown[]).filter(isObject);
@@ -239,7 +236,6 @@ export function insertProjectParallelOnRoute(
   routeIndex: number,
   effectParams: Record<string, string> = {},
   mixerParams: Record<string, string> = { mix: '0.5' },
-  positions?: { effect?: GraphPosition; mixer?: GraphPosition },
 ): { content: string; effectId: string; mixerId: string } {
   const draft = parseProjectGraphDraft(content);
   const route = draft.routes[routeIndex];
@@ -257,8 +253,8 @@ export function insertProjectParallelOnRoute(
     throw new Error(`Parallel mixer "${mixerUnit}" must expose dry and wet inputs and one output.`);
   }
 
-  const effect = addProjectInstance(content, effectUnit, effectId, effectParams, positions?.effect);
-  const mixer = addProjectInstance(effect.content, mixerUnit, mixerId, mixerParams, positions?.mixer);
+  const effect = addProjectInstance(content, effectUnit, effectId, effectParams);
+  const mixer = addProjectInstance(effect.content, mixerUnit, mixerId, mixerParams);
   const doc = loadDocument(mixer.content);
   const chain = ensureChain(doc);
   const routes = (chain.routes as unknown[]).filter(isObject);
@@ -343,17 +339,6 @@ export function moveProjectInstance(content: string, instanceId: string, nextInd
   const bounded = Math.max(0, Math.min(nodes.length - 1, nextIndex));
   const [node] = nodes.splice(index, 1);
   nodes.splice(bounded, 0, node);
-  chain.nodes = nodes;
-  return dumpDocument(doc);
-}
-
-export function setProjectInstancePosition(content: string, instanceId: string, position: GraphPosition): string {
-  const doc = loadDocument(content);
-  const chain = ensureChain(doc);
-  const nodes = (chain.nodes as unknown[]).filter(isObject);
-  const node = nodes.find(item => String(item.id) === instanceId);
-  if (!node) throw new Error(`Project instance "${instanceId}" was not found.`);
-  node.ui = { ...(isObject(node.ui) ? node.ui : {}), position };
   chain.nodes = nodes;
   return dumpDocument(doc);
 }

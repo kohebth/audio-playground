@@ -49,9 +49,7 @@ import {
   renameProjectInstance,
   renameProjectScene,
   replaceProjectRoute,
-  setProjectInstancePosition,
   upsertProjectScene,
-  type GraphPosition as ProjectGraphPosition,
   type ProjectPortCatalog,
   type ProjectRouteDraft,
 } from './lib/projectV2Graph';
@@ -323,7 +321,7 @@ export function EditorWorkspace({
       return undefined;
     }
   }, [initialWorkspace]);
-  const initialGraph = useMemo(() => buildProjectGraph(initialProjectInspect, initialProjectDraft), [initialProjectDraft, initialProjectInspect]);
+  const initialGraph = useMemo(() => buildProjectGraph(initialProjectInspect), [initialProjectInspect]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
   const [liveBypassController, setLiveBypassController] = useState<LiveBypassController | null>(null);
@@ -352,7 +350,6 @@ export function EditorWorkspace({
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
-  const [canvasFitRevision, setCanvasFitRevision] = useState(0);
   const [inspectorView, setInspectorView] = useState<InspectorView>(initialRouteWorkspacePath ? 'contract' : 'project');
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(initialRouteNode ? 'contract' : 'project');
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
@@ -573,27 +570,23 @@ export function EditorWorkspace({
 
   const graphTopologySignature = useMemo(
     () => JSON.stringify({
-      nodes: projectDraft.nodes.map(node => [node.id, node.unit, node.ui?.position?.x ?? null, node.ui?.position?.y ?? null]),
+      nodes: projectDraft.nodes.map(node => [node.id, node.unit]),
       routes: project.routes.map(route => [route.from, route.to]),
     }),
     [project.routes, projectDraft.nodes],
   );
   const graphTopologyRef = useRef('');
-  const graphLayoutRevisionRef = useRef(0);
 
   useEffect(() => {
     markPerfSpan('graph.sync.project', () => {
       const topologyChanged = graphTopologyRef.current !== graphTopologySignature;
-      const replaceWorkspaceLayout = graphLayoutRevisionRef.current !== canvasFitRevision;
       graphTopologyRef.current = graphTopologySignature;
-      graphLayoutRevisionRef.current = canvasFitRevision;
 
-      if (topologyChanged || replaceWorkspaceLayout) {
-        const next = buildProjectGraph(project, projectDraft);
+      if (topologyChanged) {
+        const next = buildProjectGraph(project);
         setNodes(current => next.nodes.map(node => {
           const existing = current.find(item => item.id === node.id);
           let data = node.data;
-          let storedPosition: ProjectGraphPosition | undefined;
           if (node.data.kind === 'unit') {
             const unitData = node.data;
             data = {
@@ -604,20 +597,18 @@ export function EditorWorkspace({
               bypassAvailable: nodeBypassAvailable,
               onBypassChange: setProjectNodeBypass,
             };
-            storedPosition = projectDraft.nodes.find(item => item.id === unitData.instance.id)?.ui?.position;
           }
-          const position = storedPosition ?? (replaceWorkspaceLayout ? undefined : existing?.position) ?? node.position;
           const callbacksMatch = existing?.data.kind !== 'unit' || data.kind !== 'unit'
             || (existing.data.onParamChange === data.onParamChange
               && existing.data.onBypassChange === data.onBypassChange);
           if (existing
-            && existing.position.x === position.x
-            && existing.position.y === position.y
+            && existing.position.x === node.position.x
+            && existing.position.y === node.position.y
             && callbacksMatch
             && JSON.stringify(existing.data) === JSON.stringify(data)) {
             return existing;
           }
-          return { ...node, data, position };
+          return { ...node, data, selected: existing?.selected };
         }));
         setEdges(next.edges);
         return;
@@ -659,7 +650,7 @@ export function EditorWorkspace({
         return changed ? next : current;
       });
     });
-  }, [canvasFitRevision, graphTopologySignature, nodeBypassAvailable, nodeBypassByInstance, project, projectDraft, projectParamControls, setEdges, setNodes, setProjectNodeBypass, updateParamDraft]);
+  }, [graphTopologySignature, nodeBypassAvailable, nodeBypassByInstance, project, projectParamControls, setEdges, setNodes, setProjectNodeBypass, updateParamDraft]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -783,7 +774,7 @@ export function EditorWorkspace({
     });
   }, [projectWorkspaceFile.content, projectWorkspaceFile.path, pushHistory, setWorkspaceFiles]);
 
-  const addProjectNode = useCallback((unitId: string, instanceId: string, position?: ProjectGraphPosition) => {
+  const addProjectNode = useCallback((unitId: string, instanceId: string) => {
     markPerfSpan('graph.add.projectNode', () => {
       const reference = projectDraft.units.find(unit => unit.id === unitId);
       if (!reference) return;
@@ -792,7 +783,7 @@ export function EditorWorkspace({
       const defaults = unitFile?.role === 'unit'
         ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
         : {};
-      const result = addProjectInstance(projectWorkspaceFile.content, unitId, instanceId, defaults, position);
+      const result = addProjectInstance(projectWorkspaceFile.content, unitId, instanceId, defaults);
       if (!updateProjectFile(() => result.content)) return;
       setParamDrafts(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
       setParamOriginals(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
@@ -800,16 +791,15 @@ export function EditorWorkspace({
     });
   }, [projectDraft.units, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
 
-  const addProjectNodeFromLibrary = useCallback((unitId: string, position?: ProjectGraphPosition) => {
+  const addProjectNodeFromLibrary = useCallback((unitId: string) => {
     markPerfSpan('graph.add.projectNodeFromLibrary', () => {
-      addProjectNode(unitId, uniqueInstanceId(project.nodes.map(node => node.id), unitId), position);
+      addProjectNode(unitId, uniqueInstanceId(project.nodes.map(node => node.id), unitId));
     });
   }, [addProjectNode, project.nodes]);
 
   const insertProjectNodeOnRoute = useCallback((
     unitId: string,
     routeIndex: number,
-    position: ProjectGraphPosition,
   ) => {
     markPerfSpan('graph.insert.projectNode', () => {
       const reference = projectDraft.units.find(unit => unit.id === unitId);
@@ -827,7 +817,6 @@ export function EditorWorkspace({
         instanceId,
         routeIndex,
         defaults,
-        position,
       );
       if (!updateProjectFile(() => result.content)) return;
       const values = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value]));
@@ -846,9 +835,8 @@ export function EditorWorkspace({
         if (outputRouteIndex < 0) throw new Error('Connect the board to Output before adding another effect.');
         const existing = projectDraft.units.find(reference => reference.id === `${item.id}_unit`
           || reference.file.endsWith(`/${item.id}.unit.v2.yaml`));
-        const position = { x: 180 + project.nodes.length * 260, y: 220 };
         if (existing) {
-          insertProjectNodeOnRoute(existing.id, outputRouteIndex, position);
+          insertProjectNodeOnRoute(existing.id, outputRouteIndex);
           return;
         }
 
@@ -871,7 +859,6 @@ export function EditorWorkspace({
           instanceId,
           outputRouteIndex,
           defaults,
-          position,
         );
         pushHistory();
         setWorkspaceFiles(files => {
@@ -889,7 +876,6 @@ export function EditorWorkspace({
         setParamDrafts(current => ({ ...current, ...values }));
         setParamOriginals(current => ({ ...current, ...values }));
         setSelectedId(`unit-${instanceId}`);
-        setCanvasFitRevision(revision => revision + 1);
       } catch (caught) {
         setGraphEditError(caught instanceof Error ? caught.message : 'Unable to add that effect.');
       }
@@ -947,7 +933,6 @@ export function EditorWorkspace({
         const mixerDefaults = Object.fromEntries(parseUnitGraphDraft(wetDryMixWorkspaceFile.content).params.map(param => [param.name, param.default]));
         const effectId = uniqueInstanceId(project.nodes.map(node => node.id), effectReference.id);
         const mixerId = uniqueInstanceId([...project.nodes.map(node => node.id), effectId], 'wet_dry_mix_unit');
-        const positionX = 180 + project.nodes.length * 260;
         const result = insertProjectParallelOnRoute(
           content,
           nextPorts,
@@ -958,7 +943,6 @@ export function EditorWorkspace({
           outputRouteIndex,
           effectDefaults,
           mixerDefaults,
-          { effect: { x: positionX, y: 100 }, mixer: { x: positionX + 230, y: 260 } },
         );
         pushHistory();
         setWorkspaceFiles(files => {
@@ -974,7 +958,6 @@ export function EditorWorkspace({
         setParamDrafts(current => ({ ...current, ...values }));
         setParamOriginals(current => ({ ...current, ...values }));
         setSelectedId(`unit-${effectId}`);
-        setCanvasFitRevision(revision => revision + 1);
       } catch (caught) {
         setGraphEditError(caught instanceof Error ? caught.message : 'Unable to build that parallel path.');
       }
@@ -1147,12 +1130,6 @@ export function EditorWorkspace({
   const reorderProjectNode = useCallback((instanceId: string, nextIndex: number) => {
     markPerfSpan('graph.reorder.projectNode', () => {
       updateProjectFile(content => moveProjectInstance(content, instanceId, nextIndex));
-    });
-  }, [updateProjectFile]);
-
-  const moveProjectNode = useCallback((instanceId: string, position: ProjectGraphPosition) => {
-    markPerfSpan('graph.move.projectNode', () => {
-      updateProjectFile(content => setProjectInstancePosition(content, instanceId, position));
     });
   }, [updateProjectFile]);
 
@@ -1370,7 +1347,6 @@ export function EditorWorkspace({
       setSelectedId(initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
       setSelectedRouteIndex(null);
       setCanvasMode('project');
-      setCanvasFitRevision(revision => revision + 1);
       navigate(PROJECT_ROUTE);
     });
   }, [initialProjectInspect, initialWorkspace, navigate, pushHistory, setWorkspaceFiles]);
@@ -1426,7 +1402,6 @@ export function EditorWorkspace({
         setSelectedAtomId(null);
         setCanvasMode('project');
         setInspectorView('project');
-        setCanvasFitRevision(revision => revision + 1);
         setGraphEditError(null);
         navigate(PROJECT_ROUTE);
 
@@ -1602,16 +1577,14 @@ export function EditorWorkspace({
             <ProjectCanvas
               nodes={nodes}
               edges={edges}
-              fitViewRevision={canvasFitRevision}
               selectedRouteIndex={selectedRouteIndex}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onSelectNode={selectProjectNode}
               onOpenContractGraph={openContractGraph}
               onSelectRoute={selectRoute}
-              onAddUnitAt={addProjectNodeFromLibrary}
+              onAddUnit={addProjectNodeFromLibrary}
               onInsertUnitAtRoute={insertProjectNodeOnRoute}
-              onMoveUnit={moveProjectNode}
             />
           </Profiler>
         )}

@@ -106,9 +106,14 @@ includesContent(contractCanvas, "markComponentRender('ContractEdge'", 'unit grap
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
 includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
-includesContent(projectCanvas, 'onAddUnitAt(unitId', 'project canvas must create dropped units at a pointer position');
+includesContent(projectCanvas, 'onAddUnit(unitId', 'project canvas must retain unit drag-and-drop creation');
 includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops must use the atomic route insertion transaction');
-includesContent(projectCanvas, 'onNodeDragStop', 'project canvas must persist unit moves');
+includesContent(projectCanvas, 'nodesDraggable={false}', 'project units must be fixed in Simple and Pro modes');
+assert(!projectCanvas.includes('onNodeDragStop'), 'project canvas must not expose a unit-move interaction');
+includesContent(projectCanvas, 'ROUTE_CORNER_RADIUS = 10', 'project route elbows must use the fixed rounded corner radius');
+includesContent(projectCanvas, '<BaseEdge', 'project routes must render their planned orthogonal geometry');
+includesContent(projectGraph, 'new dagre.graphlib.Graph({ multigraph: true })', 'project layout must retain per-route Dagre geometry');
+includesContent(projectGraph, "type: 'projectRoute'", 'project graph routes must use the orthogonal edge renderer');
 includesContent(projectCanvas, 'flow-shell--drop-${dropState}', 'project canvas must expose valid/reject drop feedback');
 includesContent(projectInspector, 'atom-type-lock', 'selected atom type must render as read-only');
 assert(!projectInspector.includes('onSelectedAtomChange({ ...selectedAtom, atom:'), 'atom inspector must not directly mutate atom type');
@@ -120,7 +125,7 @@ includesContent(app, 'replaceAtomNodeInUnit', 'atom replacement must apply throu
 includesContent(app, 'undoStack', 'workspace graph edits must track undo history');
 includesContent(app, 'redoStack', 'workspace graph edits must track redo history');
 includesContent(app, 'setAtomNodePosition', 'atom moves must use a YAML-backed transaction');
-includesContent(app, 'setProjectInstancePosition', 'unit moves must use a YAML-backed transaction');
+assert(!app.includes('setProjectInstancePosition'), 'project unit positions must not be written to YAML');
 includesContent(app, 'persistWorkspacePayload', 'workspace writes must use the testable persistence boundary');
 includesContent(projectTopbar, 'workspace-save-status', 'workspace persistence failures must be visible');
 includesContent(projectTopbar, 'title="Undo"', 'topbar must expose undo control');

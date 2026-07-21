@@ -13,13 +13,13 @@ import {
   moveProjectInstance,
   moveProjectRoute,
   parseProjectGraphDraft,
+  projectDraftToInspect,
   removeProjectInstance,
   removeProjectRoute,
   removeProjectScene,
   renameProjectInstance,
   renameProjectScene,
   replaceProjectRoute,
-  setProjectInstancePosition,
   upsertProjectScene,
   validateProjectRoutes,
   type ProjectPortCatalog,
@@ -47,7 +47,30 @@ const draft = parseProjectGraphDraft(project);
 assert.equal(draft.nodes.length, 8);
 assert.equal(draft.routes.length, 9);
 assert.doesNotThrow(() => validateProjectRoutes(project, ports));
-assert(buildProjectGraph(projectInspect).edges.every(edge => edge.label === undefined));
+const linearLayout = buildProjectGraph(projectInspect);
+assert(linearLayout.edges.every(edge => edge.label === undefined));
+assert(linearLayout.edges.every(edge => edge.type === 'projectRoute'));
+assert(linearLayout.edges.every(edge => edge.data.points.every((point, index, points) => (
+  index === 0 || point.x === points[index - 1].x || point.y === points[index - 1].y
+))));
+assert.equal(new Set(linearLayout.edges.flatMap(edge => [edge.data.points[0].y, edge.data.points.at(-1)!.y])).size, 1);
+assert.deepEqual(buildProjectGraph(projectInspect), linearLayout);
+
+const legacyPositionProject = project.replace(
+  '    - id: gate1\n      unit: noise_gate_unit\n',
+  '    - id: gate1\n      unit: noise_gate_unit\n      ui:\n        position:\n          x: 999\n          y: -400\n',
+);
+const legacyPositionDraft = parseProjectGraphDraft(legacyPositionProject);
+assert.deepEqual(legacyPositionDraft.nodes[0].ui?.position, { x: 999, y: -400 });
+assert.deepEqual(
+  buildProjectGraph(projectDraftToInspect(legacyPositionDraft, projectInspect)).nodes.map(node => node.position),
+  linearLayout.nodes.map(node => node.position),
+);
+const legacyPositionEdited = addProjectInstance(legacyPositionProject, 'overdrive_unit', 'legacy_added');
+assert.deepEqual(
+  parseProjectGraphDraft(legacyPositionEdited.content).nodes.find(node => node.id === 'gate1')?.ui?.position,
+  { x: 999, y: -400 },
+);
 
 const emptyProject = `kind: apg.project
 schema: apg.project.v2
@@ -73,9 +96,9 @@ assert.throws(
   /already exists/,
 );
 
-const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' }, { x: 320, y: 180 });
+const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' });
 assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.id, 'drive2');
-assert.deepEqual(parseProjectGraphDraft(added.content).nodes.at(-1)?.ui?.position, { x: 320, y: 180 });
+assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.ui, undefined);
 assert.throws(() => addProjectInstance(project, 'missing_unit', 'missing1'), /was not found/);
 assert.throws(() => addProjectInstance(project, 'overdrive_unit', 'drive1'), /already exists/);
 
@@ -86,11 +109,10 @@ const inserted = insertProjectInstanceOnRoute(
   'tone_inserted',
   3,
   { bass: '1.0' },
-  { x: 400, y: 200 },
 );
 const insertedDraft = parseProjectGraphDraft(inserted.content);
 assert.equal(insertedDraft.nodes.find(node => node.id === inserted.id)?.unit, 'tone_stack_unit');
-assert.deepEqual(insertedDraft.nodes.find(node => node.id === inserted.id)?.ui?.position, { x: 400, y: 200 });
+assert.equal(insertedDraft.nodes.find(node => node.id === inserted.id)?.ui, undefined);
 assert.deepEqual(insertedDraft.routes.slice(3, 5), [
   { from: 'drive1.output', to: 'tone_inserted.input' },
   { from: 'tone_inserted.output', to: 'tone1.input' },
@@ -141,6 +163,46 @@ assert.deepEqual(parallelDraft.routes, [
 ]);
 assert.doesNotThrow(() => validateProjectRoutes(parallel.content, ports));
 
+const overdriveUnit = projectInspect.units.find((unit: { id: string }) => unit.id === 'overdrive_unit');
+assert(overdriveUnit);
+const parallelInspect = {
+  ...projectInspect,
+  units: [
+    overdriveUnit,
+    { ...overdriveUnit, id: 'wet_dry_mix_unit', name: 'wet/dry mix' },
+  ],
+  nodes: [
+    { id: 'parallel_drive', unit: 'overdrive_unit', params: [] },
+    { id: 'parallel_mix', unit: 'wet_dry_mix_unit', params: [] },
+  ],
+  routes: parallelDraft.routes,
+};
+const parallelLayout = buildProjectGraph(parallelInspect);
+const dryRoute = parallelLayout.edges[1];
+const branchNode = parallelLayout.nodes.find(node => node.id === 'unit-parallel_drive');
+assert(branchNode);
+assert(dryRoute.data.points.length > 2);
+assert(dryRoute.data.points.every((point, index, points) => (
+  index === 0 || point.x === points[index - 1].x || point.y === points[index - 1].y
+)));
+const branchRect = {
+  left: branchNode.position.x,
+  right: branchNode.position.x + 140,
+  top: branchNode.position.y,
+  bottom: branchNode.position.y + 132,
+};
+for (let index = 1; index < dryRoute.data.points.length; index += 1) {
+  const start = dryRoute.data.points[index - 1];
+  const end = dryRoute.data.points[index];
+  const crossesHorizontal = start.y === end.y
+    && start.y > branchRect.top && start.y < branchRect.bottom
+    && Math.max(start.x, end.x) > branchRect.left && Math.min(start.x, end.x) < branchRect.right;
+  const crossesVertical = start.x === end.x
+    && start.x > branchRect.left && start.x < branchRect.right
+    && Math.max(start.y, end.y) > branchRect.top && Math.min(start.y, end.y) < branchRect.bottom;
+  assert(!crossesHorizontal && !crossesVertical, 'parallel dry route must avoid the branch card');
+}
+
 const duplicated = duplicateProjectInstance(project, 'drive1');
 const duplicate = parseProjectGraphDraft(duplicated.content).nodes.find(node => node.id === duplicated.id);
 assert.equal(duplicate?.unit, 'overdrive_unit');
@@ -173,8 +235,6 @@ assert.equal(parseProjectGraphDraft(removeProjectScene(renamedScene, 'Drive Read
 
 const moved = parseProjectGraphDraft(moveProjectInstance(project, 'drive1', 4));
 assert.equal(moved.nodes[4].id, 'drive1');
-const positioned = parseProjectGraphDraft(setProjectInstancePosition(project, 'drive1', { x: 42, y: 84 }));
-assert.deepEqual(positioned.nodes.find(node => node.id === 'drive1')?.ui?.position, { x: 42, y: 84 });
 
 const disconnected = removeProjectRoute(project, 3);
 assert.equal(parseProjectGraphDraft(disconnected).routes.length, 8);

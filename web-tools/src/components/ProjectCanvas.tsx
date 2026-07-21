@@ -1,43 +1,139 @@
 import {
+  BaseEdge,
   Controls,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
   type Edge,
+  type EdgeProps,
+  type EdgeTypes,
   type Node,
   type OnEdgesChange,
   type OnNodesChange,
   type NodeTypes,
-  useNodesInitialized,
-  useReactFlow,
 } from '@xyflow/react';
-import { useEffect, useRef, useState, type DragEvent } from 'react';
+import { memo, useState, type DragEvent } from 'react';
 
 import { ProjectNode } from './ProjectNode';
 import { UNIT_DRAG_TYPE } from './ProjectSidebar';
-import type { ProjectNodeData } from '../lib/projectGraph';
-import type { GraphPosition } from '../lib/projectV2Graph';
+import type {
+  ProjectNodeData,
+  ProjectRouteEdge,
+  ProjectRoutePoint,
+} from '../lib/projectGraph';
 import { markPerfSpan } from '../lib/perfTelemetry';
 
 const nodeTypes = { projectNode: ProjectNode } satisfies NodeTypes;
+const ROUTE_CORNER_RADIUS = 10;
+
+function pointToward(origin: ProjectRoutePoint, target: ProjectRoutePoint, distance: number): ProjectRoutePoint {
+  const length = Math.hypot(target.x - origin.x, target.y - origin.y);
+  if (length === 0) return origin;
+  const ratio = distance / length;
+  return {
+    x: origin.x + (target.x - origin.x) * ratio,
+    y: origin.y + (target.y - origin.y) * ratio,
+  };
+}
+
+function coordinate(value: number): number {
+  return Number(value.toFixed(2));
+}
+
+function routePath(points: ProjectRoutePoint[]): string {
+  if (points.length === 0) return '';
+  const path = [`M ${coordinate(points[0].x)} ${coordinate(points[0].y)}`];
+
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const previous = points[index - 1];
+    const corner = points[index];
+    const next = points[index + 1];
+    const radius = Math.min(
+      ROUTE_CORNER_RADIUS,
+      Math.hypot(corner.x - previous.x, corner.y - previous.y) / 2,
+      Math.hypot(next.x - corner.x, next.y - corner.y) / 2,
+    );
+    const entry = pointToward(corner, previous, radius);
+    const exit = pointToward(corner, next, radius);
+    path.push(`L ${coordinate(entry.x)} ${coordinate(entry.y)}`);
+    if (radius > 0) {
+      path.push(
+        `Q ${coordinate(corner.x)} ${coordinate(corner.y)} ${coordinate(exit.x)} ${coordinate(exit.y)}`,
+      );
+    }
+  }
+
+  const last = points.at(-1)!;
+  path.push(`L ${coordinate(last.x)} ${coordinate(last.y)}`);
+  return path.join(' ');
+}
+
+function renderPoints(
+  planned: ProjectRoutePoint[] | undefined,
+  source: ProjectRoutePoint,
+  target: ProjectRoutePoint,
+): ProjectRoutePoint[] {
+  if (!planned || planned.length < 2) return [source, target];
+  const points = planned.map(point => ({ ...point }));
+  const plannedSource = points[0];
+  const plannedTarget = points.at(-1)!;
+  points[0] = source;
+  points[points.length - 1] = target;
+
+  if (points.length > 2) {
+    if (plannedSource.y === points[1].y) points[1].y = source.y;
+    else if (plannedSource.x === points[1].x) points[1].x = source.x;
+    const beforeTarget = points[points.length - 2];
+    if (beforeTarget.y === plannedTarget.y) beforeTarget.y = target.y;
+    else if (beforeTarget.x === plannedTarget.x) beforeTarget.x = target.x;
+  }
+
+  return points.filter((point, index) => (
+    index === 0 || point.x !== points[index - 1].x || point.y !== points[index - 1].y
+  ));
+}
+
+const ProjectRoute = memo(({
+  data,
+  id,
+  interactionWidth,
+  markerEnd,
+  markerStart,
+  sourceX,
+  sourceY,
+  style,
+  targetX,
+  targetY,
+}: EdgeProps<ProjectRouteEdge>) => (
+  <BaseEdge
+    id={id}
+    interactionWidth={interactionWidth ?? 24}
+    markerEnd={markerEnd}
+    markerStart={markerStart}
+    path={routePath(renderPoints(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }))}
+    style={style}
+  />
+));
+
+ProjectRoute.displayName = 'ProjectRoute';
+
+const edgeTypes = { projectRoute: ProjectRoute } satisfies EdgeTypes;
 
 type Props = {
   nodes: Node<ProjectNodeData>[];
-  edges: Edge[];
+  edges: ProjectRouteEdge[];
   selectedRouteIndex: number | null;
-  fitViewRevision: number;
   onNodesChange: OnNodesChange<Node<ProjectNodeData>>;
-  onEdgesChange: OnEdgesChange;
+  onEdgesChange: OnEdgesChange<ProjectRouteEdge>;
   onSelectNode: (id: string, additive?: boolean) => void;
   onOpenContractGraph: (id: string) => void;
   onSelectRoute: (index: number) => void;
-  onAddUnitAt: (unitId: string, position: GraphPosition) => void;
-  onInsertUnitAtRoute: (unitId: string, routeIndex: number, position: GraphPosition) => void;
-  onMoveUnit: (instanceId: string, position: GraphPosition) => void;
+  onAddUnit: (unitId: string) => void;
+  onInsertUnitAtRoute: (unitId: string, routeIndex: number) => void;
 };
 
 type ProjectFlowProps = Props & {
-  displayedEdges: Edge[];
+  displayedEdges: ProjectRouteEdge[];
 };
 
 function routeIndexFromEdge(edge: Edge): number | null {
@@ -53,21 +149,10 @@ function ProjectFlow({
   onSelectNode,
   onOpenContractGraph,
   onSelectRoute,
-  onAddUnitAt,
+  onAddUnit,
   onInsertUnitAtRoute,
-  onMoveUnit,
-  fitViewRevision,
 }: ProjectFlowProps) {
-  const reactFlow = useReactFlow();
-  const nodesInitialized = useNodesInitialized();
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
-  const dragStartAtByNode = useRef<Record<string, number>>({});
-
-  useEffect(() => {
-    if (fitViewRevision === 0 || !nodesInitialized) return;
-    const frame = requestAnimationFrame(() => void reactFlow.fitView({ padding: 0.16 }));
-    return () => cancelAnimationFrame(frame);
-  }, [fitViewRevision, nodesInitialized, reactFlow]);
 
   const dragState = (event: DragEvent) => event.dataTransfer.types.includes(UNIT_DRAG_TYPE) ? 'valid' : 'reject';
   const dragOver = (event: DragEvent) => {
@@ -84,12 +169,11 @@ function ProjectFlow({
       const unitId = event.dataTransfer.getData(UNIT_DRAG_TYPE);
       setDropState('idle');
       if (!unitId) return;
-      const position = reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const edgeElement = event.target instanceof Element ? event.target.closest<SVGGElement>('.react-flow__edge') : null;
       const edge = edgeElement ? displayedEdges.find(item => item.id === edgeElement.dataset.id) : null;
       const routeIndex = edge ? routeIndexFromEdge(edge) : null;
-      if (routeIndex !== null) onInsertUnitAtRoute(unitId, routeIndex, position);
-      else onAddUnitAt(unitId, position);
+      if (routeIndex !== null) onInsertUnitAtRoute(unitId, routeIndex);
+      else onAddUnit(unitId);
     }, { valid: event.dataTransfer.types.includes(UNIT_DRAG_TYPE) });
   };
 
@@ -105,29 +189,12 @@ function ProjectFlow({
       <ReactFlow
         nodes={nodes}
         edges={displayedEdges}
+        edgeTypes={edgeTypes}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={(event, node) => onSelectNode(node.id, event.shiftKey)}
         onNodeDoubleClick={(_, node) => onOpenContractGraph(node.id)}
-        onNodeDragStart={(_, node) => {
-          dragStartAtByNode.current[node.id] = performance.now();
-          markPerfSpan('ui.drag.projectNode.start', () => undefined, { nodeId: node.id });
-        }}
-        onNodeDrag={(_, node) => {
-          markPerfSpan('ui.drag.projectNode', () => undefined, { nodeId: node.id });
-        }}
-        onNodeDragStop={(_, node) => {
-          const startedAt = dragStartAtByNode.current[node.id];
-          delete dragStartAtByNode.current[node.id];
-          const data = node.data as ProjectNodeData;
-          if (data.kind === 'unit') {
-            const durationMs = startedAt ? performance.now() - startedAt : 0;
-            const meta = { nodeId: data.instance.id, durationMs };
-            markPerfSpan('ui.drag.projectNode.stop', () => undefined, meta);
-            onMoveUnit(data.instance.id, node.position);
-          }
-        }}
         onEdgeClick={(_, edge) => {
           const routeIndex = routeIndexFromEdge(edge);
           if (routeIndex !== null) onSelectRoute(routeIndex);
@@ -137,6 +204,7 @@ function ProjectFlow({
         minZoom={0.35}
         maxZoom={1.5}
         multiSelectionKeyCode="Shift"
+        nodesDraggable={false}
         selectionOnDrag
       >
         <Controls />

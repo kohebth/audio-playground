@@ -12,7 +12,6 @@ import {
   parseUnitPortNames,
   removeProjectInstance,
   removeProjectRoute,
-  setProjectInstancePosition,
   validateProjectRoutes,
 } from '../src/lib/projectV2Graph.ts';
 import {
@@ -280,7 +279,6 @@ function benchmarkProjectMutations(content: string, draft: ReturnType<typeof par
         const source = draft.nodes[index % draft.nodes].id;
         const targetIndex = (nextIndex + 1) % draft.nodes;
         workingContent = moveProjectInstance(workingContent, source, targetIndex);
-        workingContent = setProjectInstancePosition(workingContent, source, { x: index * 2, y: index });
       }
     });
   }

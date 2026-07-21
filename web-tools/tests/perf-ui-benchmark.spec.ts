@@ -640,12 +640,16 @@ test.describe('UI performance checkpoints', () => {
     const dragOverMs = await runAndAssertBudget(page, 'ui.dragOver.projectNode');
     const dropMs = await runAndAssertBudget(page, 'ui.drop.projectNode');
     const addMs = await runAndAssertBudget(page, 'graph.add.projectNode');
+    const syncMs = await runAndAssertBudget(page, 'graph.sync.project');
     expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
-    expect(Object.keys(await getComponentRenders(page, 'ProjectNode'))).toEqual(['ProjectNode:overdrive']);
+    const renderedNodes = Object.keys(await getComponentRenders(page, 'ProjectNode'));
+    expect(renderedNodes).toContain('ProjectNode:overdrive');
+    expect(renderedNodes.length).toBeLessThanOrEqual(before + 3);
     testInfo.annotations.push({ type: 'drag-start-ms', description: dragStartMs.toFixed(2) });
     testInfo.annotations.push({ type: 'drag-over-ms', description: dragOverMs.toFixed(2) });
     testInfo.annotations.push({ type: 'drop-commit-ms', description: dropMs.toFixed(2) });
     testInfo.annotations.push({ type: 'graph-add-ms', description: addMs.toFixed(2) });
+    testInfo.annotations.push({ type: 'graph-sync-ms', description: syncMs.toFixed(2) });
   });
 
   test('inspector switching and parameter edit', async ({ page }) => {
@@ -945,7 +949,7 @@ test.describe('Scalability checkpoints', () => {
     testInfo.annotations.push({ type: 'parameter-burst-edits', description: '120 over 30 seconds' });
   });
 
-  test('drag and routing bursts avoid redundant autosaves', async ({ page }, testInfo) => {
+  test('locked layout and routing bursts avoid redundant autosaves', async ({ page }, testInfo) => {
     test.skip(process.env.APG_PERF_SCHEDULED !== '1', 'The drag and routing autosave gate runs in scheduled performance CI.');
     await waitForWorkspaceQuiescence(page);
     await installAutosaveProbe(page);
@@ -959,9 +963,13 @@ test.describe('Scalability checkpoints', () => {
     await page.mouse.down();
     await page.mouse.move(dragStart.x + 120, dragStart.y + 60, { steps: 80 });
     await page.mouse.up();
-    await waitForSpanCount(page, 'workspace.autosave.persist', 1);
-    await runAndAssertBudget(page, 'graph.move.projectNode', 1);
-    expect(await readAutosaveProbe(page)).toHaveLength(1);
+    const lockedBox = await drive.boundingBox();
+    expect(lockedBox).not.toBeNull();
+    expect(lockedBox!.x).toBeCloseTo(driveBox!.x, 1);
+    expect(lockedBox!.y).toBeCloseTo(driveBox!.y, 1);
+    await page.waitForTimeout(450);
+    expect(await readAutosaveProbe(page)).toHaveLength(0);
+    expect(await getSpans(page, 'graph.move.projectNode')).toHaveLength(0);
 
     await clearPerfSpans(page);
     await page.getByTestId('project-instance-unit').selectOption('tone_stack_unit');
