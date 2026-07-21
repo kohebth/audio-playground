@@ -7,13 +7,16 @@ import {
   type Edge,
   type EdgeProps,
   type EdgeTypes,
+  type Connection,
   type Node,
+  type NodeMouseHandler,
   type OnEdgesChange,
   type OnNodesChange,
   type NodeTypes,
 } from '@xyflow/react';
-import { memo, useState, type DragEvent } from 'react';
+import { memo, useCallback, useEffect, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
+import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
 import { ProjectNode } from './ProjectNode';
 import { UNIT_DRAG_TYPE } from './ProjectSidebar';
 import type {
@@ -130,15 +133,45 @@ type Props = {
   onSelectRoute: (index: number) => void;
   onAddUnit: (unitId: string) => void;
   onInsertUnitAtRoute: (unitId: string, routeIndex: number) => void;
+  onConnectUnits: (route: { from: string; to: string }) => void;
+  onCopyUnit: (instanceId: string) => void;
+  onCutUnit: (instanceId: string) => void;
+  onPasteUnit: () => void;
+  onRemoveUnit: (instanceId: string) => void;
+  onReplaceUnit: (instanceId: string, unitId: string) => void;
+  canPasteUnit: boolean;
+  replacementOptions: ProjectReplacementOption[];
 };
 
-type ProjectFlowProps = Props & {
+export type ProjectReplacementOption = {
+  id: string;
+  label: string;
+  paramCount: number;
+};
+
+type ProjectFlowProps = Omit<Props,
+  'canPasteUnit'
+  | 'onCopyUnit'
+  | 'onCutUnit'
+  | 'onPasteUnit'
+  | 'onRemoveUnit'
+  | 'onReplaceUnit'
+  | 'replacementOptions'> & {
   displayedEdges: ProjectRouteEdge[];
+  onNodeContextMenu: NodeMouseHandler<Node<ProjectNodeData>>;
 };
 
 function routeIndexFromEdge(edge: Edge): number | null {
   const match = edge.id.match(/^route-(\d+)-/);
   return match ? Number(match[1]) : null;
+}
+
+function projectEndpoint(nodeId: string | null, handleId: string | null, direction: 'source' | 'target'): string | null {
+  if (!nodeId || !handleId) return null;
+  if (nodeId === 'system-input' && direction === 'source') return 'system.input';
+  if (nodeId === 'system-output' && direction === 'target') return 'system.output';
+  if (!nodeId.startsWith('unit-')) return null;
+  return `${nodeId.slice('unit-'.length)}.${handleId}`;
 }
 
 function ProjectFlow({
@@ -151,8 +184,20 @@ function ProjectFlow({
   onSelectRoute,
   onAddUnit,
   onInsertUnitAtRoute,
+  onConnectUnits,
+  onNodeContextMenu,
 }: ProjectFlowProps) {
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
+  const [connectionArmed, setConnectionArmed] = useState(false);
+
+  useEffect(() => {
+    if (!connectionArmed) return;
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setConnectionArmed(false);
+    };
+    window.addEventListener('keydown', cancel);
+    return () => window.removeEventListener('keydown', cancel);
+  }, [connectionArmed]);
 
   const dragState = (event: DragEvent) => event.dataTransfer.types.includes(UNIT_DRAG_TYPE) ? 'valid' : 'reject';
   const dragOver = (event: DragEvent) => {
@@ -179,7 +224,7 @@ function ProjectFlow({
 
   return (
     <div
-      className={`flow-shell flow-shell--drop-${dropState}`}
+      className={`flow-shell flow-shell--drop-${dropState}${connectionArmed ? ' flow-shell--connecting' : ''}`}
       data-testid="project-canvas"
       onDragLeave={() => setDropState('idle')}
       onDragOver={dragOver}
@@ -193,15 +238,28 @@ function ProjectFlow({
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        connectOnClick
+        onConnect={(connection: Connection) => {
+          const from = projectEndpoint(connection.source, connection.sourceHandle, 'source');
+          const to = projectEndpoint(connection.target, connection.targetHandle, 'target');
+          setConnectionArmed(false);
+          if (from && to) onConnectUnits({ from, to });
+        }}
+        onConnectStart={() => setConnectionArmed(true)}
+        onConnectEnd={() => setConnectionArmed(false)}
+        onClickConnectStart={() => setConnectionArmed(true)}
+        onClickConnectEnd={() => setConnectionArmed(false)}
         onNodeClick={(event, node) => onSelectNode(node.id, event.shiftKey)}
+        onNodeContextMenu={onNodeContextMenu}
         onNodeDoubleClick={(_, node) => onOpenContractGraph(node.id)}
         onEdgeClick={(_, edge) => {
           const routeIndex = routeIndexFromEdge(edge);
           if (routeIndex !== null) onSelectRoute(routeIndex);
         }}
+        onPaneClick={() => setConnectionArmed(false)}
         fitView
         fitViewOptions={{ padding: 0.16 }}
-        minZoom={0.35}
+        minZoom={0.2}
         maxZoom={1.5}
         multiSelectionKeyCode="Shift"
         nodesDraggable={false}
@@ -212,7 +270,7 @@ function ProjectFlow({
           nodeColor={node => (node.data as ProjectNodeData).color}
           pannable
           zoomable
-          style={{ background: '#0c1220' }}
+          style={{ background: 'var(--bg-canvas)' }}
         />
       </ReactFlow>
     </div>
@@ -221,9 +279,48 @@ function ProjectFlow({
 
 export function ProjectCanvas({
   edges,
+  nodes,
   selectedRouteIndex,
+  onCopyUnit,
+  onCutUnit,
+  onPasteUnit,
+  onRemoveUnit,
+  onReplaceUnit,
+  canPasteUnit,
+  replacementOptions,
   ...props
 }: Props) {
+  const [contextMenu, setContextMenu] = useState<(ContextMenuPoint & { nodeId: string }) | null>(null);
+  const [replacementOpen, setReplacementOpen] = useState(false);
+  const [replacementUnit, setReplacementUnit] = useState('');
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+    setReplacementOpen(false);
+  }, []);
+  const contextNode = contextMenu ? nodes.find(node => node.id === contextMenu.nodeId) : null;
+  const unitData = contextNode?.data.kind === 'unit' ? contextNode.data : null;
+  const availableReplacements = unitData
+    ? replacementOptions.filter(option => option.id !== unitData.instance.unit)
+    : [];
+  const chosenReplacement = availableReplacements.find(option => option.id === replacementUnit)
+    ?? availableReplacements[0];
+  const canReplace = Boolean(unitData?.ports?.userPlaceable ?? (
+    unitData?.ports?.inputs.length === 1 && unitData?.ports?.outputs.length === 1
+  ));
+  const incidentRoutes = contextNode
+    ? edges.filter(edge => edge.source === contextNode.id || edge.target === contextNode.id).length
+    : 0;
+
+  const openKeyboardMenu = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
+    const nodeElement = (event.target as Element).closest<HTMLElement>('.react-flow__node[data-id^="unit-"]');
+    const nodeId = nodeElement?.dataset.id;
+    if (!nodeElement || !nodeId) return;
+    event.preventDefault();
+    const bounds = nodeElement.getBoundingClientRect();
+    setContextMenu({ nodeId, x: bounds.left + 24, y: bounds.top + 24 });
+    setReplacementOpen(false);
+  };
   const displayedEdges = edges.map(edge => {
     const selected = routeIndexFromEdge(edge) === selectedRouteIndex;
     return {
@@ -238,10 +335,88 @@ export function ProjectCanvas({
   });
 
   return (
-    <main className="canvas canvas--project canvas-area">
+    <main className="canvas canvas--project canvas-area" onKeyDownCapture={openKeyboardMenu}>
       <ReactFlowProvider>
-        <ProjectFlow {...props} edges={edges} selectedRouteIndex={selectedRouteIndex} displayedEdges={displayedEdges} />
+        <ProjectFlow
+          {...props}
+          nodes={nodes}
+          edges={edges}
+          selectedRouteIndex={selectedRouteIndex}
+          displayedEdges={displayedEdges}
+          onNodeContextMenu={(event, node) => {
+            if (node.data.kind !== 'unit') return;
+            event.preventDefault();
+            props.onSelectNode(node.id);
+            setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
+            setReplacementOpen(false);
+          }}
+        />
       </ReactFlowProvider>
+      {contextMenu && unitData ? (
+        <GraphContextMenu
+          label={`${unitData.instance.id} actions`}
+          onClose={closeContextMenu}
+          point={contextMenu}
+        >
+          <div className="graph-context-menu__title">
+            <strong>{unitData.instance.id}</strong>
+            <span>{unitData.unit.name}</span>
+          </div>
+          <GraphMenuButton
+            disabled={!unitData.bypassAvailable}
+            icon="fa-power-off"
+            onClick={() => {
+              void unitData.onBypassChange?.(unitData.instance.id, !unitData.bypassed);
+              closeContextMenu();
+            }}
+            title={unitData.bypassAvailable ? undefined : 'Start audio preview to toggle this unit.'}
+          >
+            {unitData.bypassed ? 'Turn on' : 'Turn off'}
+          </GraphMenuButton>
+          <GraphMenuButton
+            disabled={!canReplace || availableReplacements.length === 0}
+            icon="fa-repeat"
+            onClick={() => {
+              setReplacementOpen(open => !open);
+              setReplacementUnit(chosenReplacement?.id ?? '');
+            }}
+            title={canReplace ? undefined : 'Routing helpers with multiple ports cannot be replaced in place.'}
+          >Replace…</GraphMenuButton>
+          {replacementOpen && chosenReplacement ? (
+            <div className="graph-context-menu__replace" role="group" aria-label="Replacement preview">
+              <label>
+                <span>Replace with</span>
+                <select
+                  aria-label="Replacement unit"
+                  onChange={event => setReplacementUnit(event.target.value)}
+                  value={chosenReplacement.id}
+                >
+                  {availableReplacements.map(option => (
+                    <option key={option.id} value={option.id}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <p>
+                Keeps the instance ID and {incidentRoutes} {incidentRoutes === 1 ? 'route' : 'routes'}.
+                Resets controls and scene values to {chosenReplacement.paramCount} defaults.
+              </p>
+              <button
+                className="graph-context-menu__confirm"
+                onClick={() => {
+                  onReplaceUnit(unitData.instance.id, chosenReplacement.id);
+                  closeContextMenu();
+                }}
+                type="button"
+              >Confirm replace</button>
+            </div>
+          ) : null}
+          <div className="graph-context-menu__separator" role="separator" />
+          <GraphMenuButton icon="fa-scissors" onClick={() => { onCutUnit(unitData.instance.id); closeContextMenu(); }}>Cut</GraphMenuButton>
+          <GraphMenuButton icon="fa-copy" onClick={() => { onCopyUnit(unitData.instance.id); closeContextMenu(); }}>Copy</GraphMenuButton>
+          <GraphMenuButton disabled={!canPasteUnit} icon="fa-paste" onClick={() => { onPasteUnit(); closeContextMenu(); }}>Paste</GraphMenuButton>
+          <GraphMenuButton danger icon="fa-trash" onClick={() => { onRemoveUnit(unitData.instance.id); closeContextMenu(); }}>Remove</GraphMenuButton>
+        </GraphContextMenu>
+      ) : null}
     </main>
   );
 }

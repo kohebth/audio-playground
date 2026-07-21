@@ -8,6 +8,7 @@ import type {
   ProjectScene,
   ProjectUnit,
 } from './backendSamples';
+import { classifyUserEffectContent } from './unitV2Graph.ts';
 
 export type ProjectUnitRefDraft = { id: string; file: string };
 export type GraphPosition = { x: number; y: number };
@@ -29,7 +30,24 @@ export type ProjectGraphDraft = {
   targets: { default: string; export: string[] };
 };
 
-export type ProjectPortCatalog = Record<string, { inputs: string[]; outputs: string[] }>;
+export type ProjectUnitPorts = {
+  inputs: string[];
+  outputs: string[];
+  userPlaceable?: boolean;
+  reason?: string | null;
+};
+export type ProjectPortCatalog = Record<string, ProjectUnitPorts>;
+
+export type ProjectInstanceClipboard = {
+  unit: string;
+  params: Record<string, string>;
+};
+
+export type ProjectRemovalResult = {
+  content: string;
+  mode: 'bridged' | 'disconnected';
+  bridgedRoutes: number;
+};
 
 type ProjectDocument = Record<string, unknown>;
 
@@ -160,11 +178,19 @@ export function projectDraftToInspect(
   };
 }
 
-export function parseUnitPortNames(content: string): { inputs: string[]; outputs: string[] } {
-  const doc = yaml.load(content);
-  if (!isObject(doc) || !isObject(doc.ports)) throw new Error('Unit ports must be a mapping.');
-  const names = (value: unknown) => (Array.isArray(value) ? value : []).filter(isObject).map(port => String(port.name ?? ''));
-  return { inputs: names(doc.ports.inputs), outputs: names(doc.ports.outputs) };
+export function parseUnitPortNames(content: string): ProjectUnitPorts {
+  const policy = classifyUserEffectContent(content);
+  return {
+    inputs: policy.audioInputs.map(port => port.name),
+    outputs: policy.audioOutputs.map(port => port.name),
+    userPlaceable: policy.userPlaceable,
+    reason: policy.reason,
+  };
+}
+
+function isUserPlaceablePorts(ports: ProjectUnitPorts | undefined): ports is ProjectUnitPorts {
+  if (!ports) return false;
+  return ports.userPlaceable ?? (ports.inputs.length === 1 && ports.outputs.length === 1);
 }
 
 export function addProjectUnitReference(content: string, id: string, file: string): string {
@@ -277,6 +303,65 @@ export function duplicateProjectInstance(content: string, instanceId: string): {
   return addProjectInstance(content, source.unit, id, source.params);
 }
 
+export function copyProjectInstance(content: string, instanceId: string): ProjectInstanceClipboard {
+  const source = parseProjectGraphDraft(content).nodes.find(node => node.id === instanceId);
+  if (!source) throw new Error(`Project instance "${instanceId}" was not found.`);
+  return { unit: source.unit, params: { ...source.params } };
+}
+
+export function pasteProjectInstance(
+  content: string,
+  clipboard: ProjectInstanceClipboard,
+): { content: string; id: string } {
+  const draft = parseProjectGraphDraft(content);
+  const id = uniqueId(new Set(draft.nodes.map(node => node.id)), `${clipboard.unit.replace(/_unit$/, '')}_copy`);
+  return addProjectInstance(content, clipboard.unit, id, clipboard.params);
+}
+
+export function replaceProjectInstance(
+  content: string,
+  ports: ProjectPortCatalog,
+  instanceId: string,
+  nextUnit: string,
+  defaults: Record<string, string>,
+): string {
+  const draft = parseProjectGraphDraft(content);
+  const current = draft.nodes.find(node => node.id === instanceId);
+  if (!current) throw new Error(`Project instance "${instanceId}" was not found.`);
+  if (!draft.units.some(unit => unit.id === nextUnit)) throw new Error(`Project unit "${nextUnit}" was not found.`);
+  const currentPorts = ports[current.unit];
+  const nextPorts = ports[nextUnit];
+  if (!isUserPlaceablePorts(currentPorts)) throw new Error('Only single-input, single-output effects can be replaced in place.');
+  if (!isUserPlaceablePorts(nextPorts)) throw new Error('Replacement must have one mono audio input and one mono audio output.');
+
+  const doc = loadDocument(content);
+  const chain = ensureChain(doc);
+  const node = (chain.nodes as unknown[]).filter(isObject).find(item => String(item.id) === instanceId);
+  if (!node) throw new Error(`Project instance "${instanceId}" was not found.`);
+  node.unit = nextUnit;
+  node.params = { ...defaults };
+  for (const route of (chain.routes as unknown[]).filter(isObject)) {
+    if (String(route.from) === `${instanceId}.${currentPorts.outputs[0]}`) {
+      route.from = `${instanceId}.${nextPorts.outputs[0]}`;
+    }
+    if (String(route.to) === `${instanceId}.${currentPorts.inputs[0]}`) {
+      route.to = `${instanceId}.${nextPorts.inputs[0]}`;
+    }
+  }
+  for (const scene of (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject)) {
+    const retained = isObject(scene.params)
+      ? Object.entries(scene.params).filter(([path]) => !path.startsWith(`${instanceId}.`))
+      : [];
+    scene.params = Object.fromEntries([
+      ...retained,
+      ...Object.entries(defaults).map(([key, value]) => [`${instanceId}.${key}`, value] as const),
+    ]);
+  }
+  const next = dumpDocument(doc);
+  validateProjectRoutes(next, ports);
+  return next;
+}
+
 export function renameProjectInstance(content: string, instanceId: string, nextId: string): string {
   if (!/^[a-z][a-z0-9_]*$/.test(nextId)) throw new Error('Instance id must use lowercase snake_case.');
   const doc = loadDocument(content);
@@ -328,6 +413,42 @@ export function removeProjectInstance(content: string, instanceId: string): stri
     }
   }
   return dumpDocument(doc);
+}
+
+export function removeProjectInstanceWithTopology(
+  content: string,
+  ports: ProjectPortCatalog,
+  instanceId: string,
+): ProjectRemovalResult {
+  const draft = parseProjectGraphDraft(content);
+  const instance = draft.nodes.find(node => node.id === instanceId);
+  if (!instance) throw new Error(`Project instance "${instanceId}" was not found.`);
+  const instancePorts = ports[instance.unit];
+  const canBridge = isUserPlaceablePorts(instancePorts);
+  const inputEndpoint = canBridge ? `${instanceId}.${instancePorts.inputs[0]}` : '';
+  const outputEndpoint = canBridge ? `${instanceId}.${instancePorts.outputs[0]}` : '';
+  const incoming = canBridge ? draft.routes.filter(route => route.to === inputEndpoint) : [];
+  const outgoing = canBridge ? draft.routes.filter(route => route.from === outputEndpoint) : [];
+  const bridgeSource = incoming.length === 1 ? incoming[0].from : null;
+
+  const doc = loadDocument(removeProjectInstance(content, instanceId));
+  const chain = ensureChain(doc);
+  let bridgedRoutes = 0;
+  if (bridgeSource) {
+    const routes = (chain.routes as unknown[]).filter(isObject);
+    const existing = new Set(routes.map(route => `${String(route.from)}\u0000${String(route.to)}`));
+    for (const route of outgoing) {
+      const key = `${bridgeSource}\u0000${route.to}`;
+      if (existing.has(key)) continue;
+      routes.push({ from: bridgeSource, to: route.to });
+      existing.add(key);
+      bridgedRoutes += 1;
+    }
+    chain.routes = routes;
+  }
+  const next = dumpDocument(doc);
+  validateProjectRoutes(next, ports);
+  return { content: next, mode: bridgedRoutes > 0 ? 'bridged' : 'disconnected', bridgedRoutes };
 }
 
 export function moveProjectInstance(content: string, instanceId: string, nextIndex: number): string {
@@ -472,7 +593,52 @@ function validateRoute(
 
 export function validateProjectRoutes(content: string, ports: ProjectPortCatalog): void {
   const draft = parseProjectGraphDraft(content);
-  draft.routes.forEach((route, index) => validateRoute(draft, ports, route, index));
+  const nodesById = new Map(draft.nodes.map(node => [node.id, node]));
+  const occupiedTargets = new Set<string>();
+  const adjacency = new Map<string, Set<string>>();
+  const indegree = new Map(draft.nodes.map(node => [node.id, 0]));
+
+  for (const route of draft.routes) {
+    const source = parseEndpoint(route.from);
+    const target = parseEndpoint(route.to);
+    if (source.instance === 'system') {
+      if (source.port !== 'input') throw new Error('Only system.input can be a route source.');
+    } else {
+      const node = nodesById.get(source.instance);
+      if (!node) throw new Error(`Route source instance "${source.instance}" was not found.`);
+      if (!ports[node.unit]?.outputs.includes(source.port)) throw new Error(`"${route.from}" is not a unit output.`);
+    }
+    if (target.instance === 'system') {
+      if (target.port !== 'output') throw new Error('Only system.output can be a route target.');
+    } else {
+      const node = nodesById.get(target.instance);
+      if (!node) throw new Error(`Route target instance "${target.instance}" was not found.`);
+      if (!ports[node.unit]?.inputs.includes(target.port)) throw new Error(`"${route.to}" is not a unit input.`);
+    }
+    if (occupiedTargets.has(route.to)) throw new Error(`Route target "${route.to}" is already connected.`);
+    occupiedTargets.add(route.to);
+
+    if (source.instance === 'system' || target.instance === 'system') continue;
+    const targets = adjacency.get(source.instance) ?? new Set<string>();
+    if (!targets.has(target.instance)) {
+      targets.add(target.instance);
+      adjacency.set(source.instance, targets);
+      indegree.set(target.instance, (indegree.get(target.instance) ?? 0) + 1);
+    }
+  }
+
+  const ready = [...indegree.entries()].flatMap(([nodeId, count]) => count === 0 ? [nodeId] : []);
+  let visited = 0;
+  while (ready.length > 0) {
+    const nodeId = ready.pop()!;
+    visited += 1;
+    for (const target of adjacency.get(nodeId) ?? []) {
+      const next = (indegree.get(target) ?? 0) - 1;
+      indegree.set(target, next);
+      if (next === 0) ready.push(target);
+    }
+  }
+  if (visited !== draft.nodes.length) throw new Error('Project routes create a cycle.');
 }
 
 export function addProjectRoute(

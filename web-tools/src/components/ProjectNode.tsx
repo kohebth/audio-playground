@@ -32,7 +32,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
         className={`project-node node-card nopan project-node--system ${selected ? 'project-node--selected selected' : ''}`}
         style={style}
       >
-        {!isInput && <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />}
+        {!isInput && <Handle type="target" position={Position.Left} id="output" className="project-node__handle" />}
         <div className="node-system">
           <span className="node-sys-label">System</span>
           <span className="node-sys-title">{data.label}</span>
@@ -42,7 +42,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           />
           <span className="node-sys-port">{data.detail}</span>
         </div>
-        {isInput && <Handle type="source" position={Position.Right} id="out" className="project-node__handle" />}
+        {isInput && <Handle type="source" position={Position.Right} id="input" className="project-node__handle" />}
       </div>
     );
   }
@@ -51,6 +51,8 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   const params = orderParamsByUnitContract(data);
   const controlsByKey = new Map(data.paramControls?.map(control => [control.key, control]) ?? []);
   const wide = params.length >= 3;
+  const inputPorts = data.ports?.inputs.length ? data.ports.inputs : ['input'];
+  const outputPorts = data.ports?.outputs.length ? data.ports.outputs : ['output'];
 
   return (
     <div
@@ -58,7 +60,18 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
       className={`project-node node-card nopan ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
       style={style}
     >
-      <Handle type="target" position={Position.Left} id="in" className="project-node__handle" />
+      {inputPorts.map((port, index) => (
+        <Handle
+          aria-label={`${data.instance.id} ${port} input`}
+          className="project-node__handle project-node__handle--input"
+          id={port}
+          key={port}
+          position={Position.Left}
+          style={{ top: `${((index + 1) * 100) / (inputPorts.length + 1)}%` }}
+          title={port}
+          type="target"
+        />
+      ))}
       <div className={`node-pedal${wide ? ' wide' : ''}`}>
         <div className="node-pedal-header">
           <span className="pedal-type-name">{data.unit.name}</span>
@@ -108,7 +121,18 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           <span>{bypassed ? 'OFF' : 'ON'}</span>
         </button>
       </div>
-      <Handle type="source" position={Position.Right} id="out" className="project-node__handle" />
+      {outputPorts.map((port, index) => (
+        <Handle
+          aria-label={`${data.instance.id} ${port} output`}
+          className="project-node__handle project-node__handle--output"
+          id={port}
+          key={port}
+          position={Position.Right}
+          style={{ top: `${((index + 1) * 100) / (outputPorts.length + 1)}%` }}
+          title={port}
+          type="source"
+        />
+      ))}
     </div>
   );
 });

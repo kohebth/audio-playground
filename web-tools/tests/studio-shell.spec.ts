@@ -70,6 +70,7 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
 
   await page.getByRole('button', { name: 'Pro', exact: true }).click();
   await expect(page.getByTestId('preview-mode-file')).toBeVisible();
+  await expect(page.getByTestId('project-unit-item-wet_dry_mix_unit')).toBeDisabled();
   await page.getByRole('button', { name: 'Select gate1 for batch editing' }).click();
   await expect(page.getByTestId('batch-action-bar')).toContainText('2 effects selected');
   await page.locator('.topbar__status .status-pill').first().click();
@@ -114,4 +115,80 @@ test('edits a unit through structured Pro controls without exposing raw source',
   await page.getByRole('button', { name: /Save this unit to Personal Library/ }).click();
   await page.getByRole('button', { name: 'Simple', exact: true }).click();
   await expect(page.locator('.effect-library-card').filter({ hasText: 'Yours' })).toBeVisible();
+});
+
+test('connects units by click and exposes undoable unit context actions', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const skipTour = page.getByRole('button', { name: 'Skip tour' });
+  await expect(skipTour).toBeVisible();
+  await skipTour.click();
+  await page.getByRole('button', { name: 'Pro', exact: true }).click();
+
+  const drive = page.getByTestId('project-node-drive1');
+  await drive.click({ button: 'right' });
+  const menu = page.getByRole('menu', { name: 'drive1 actions' });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem')).toContainText(['Turn off', 'Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
+  await menu.getByRole('menuitem', { name: 'Copy' }).click();
+
+  await drive.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Paste' }).click();
+  const pasted = page.getByTestId('project-node-overdrive_copy');
+  await expect(pasted).toBeVisible();
+  await expect(page.getByTestId('route-item-9')).toHaveCount(0);
+
+  await drive.locator('.project-node__handle--output').click({ force: true });
+  await expect(page.getByTestId('project-canvas')).toHaveClass(/flow-shell--connecting/);
+  await pasted.locator('.project-node__handle--input').click({ force: true });
+  await expect(page.getByTestId('route-item-9')).toContainText('drive1.output');
+  await expect(page.getByTestId('route-item-9')).toContainText('overdrive_copy.input');
+
+  await pasted.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'overdrive_copy actions' }).getByRole('menuitem', { name: 'Remove' }).click();
+  await expect(pasted).toHaveCount(0);
+  await page.getByTestId('topbar-undo').click();
+  await expect(page.getByTestId('project-node-overdrive_copy')).toBeVisible();
+  const restoredFlowNode = page.locator('.react-flow__node[data-id="unit-overdrive_copy"]');
+  await restoredFlowNode.focus();
+  await restoredFlowNode.press('Shift+F10');
+  await expect(page.getByRole('menu', { name: 'overdrive_copy actions' })).toBeVisible();
+  await page.keyboard.press('Escape');
+});
+
+test('offers atom replace preview and disconnected clipboard actions', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const skipTour = page.getByRole('button', { name: 'Skip tour' });
+  await expect(skipTour).toBeVisible();
+  await skipTour.click();
+  await page.getByRole('button', { name: 'Pro', exact: true }).click();
+  await page.getByTestId('project-instance-item-drive1').dblclick();
+
+  const clip = page.getByTestId('contract-node-clip_drive');
+  await clip.click({ button: 'right' });
+  const menu = page.getByRole('menu', { name: 'clip_drive actions' });
+  await expect(menu.getByRole('menuitem')).toContainText(['Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
+  await menu.getByRole('menuitem', { name: 'Replace…' }).click();
+  await expect(menu.getByRole('group', { name: 'Atom replacement preview' })).toContainText(/Keeps .* bindings/);
+  await menu.getByRole('menuitem', { name: 'Copy' }).click();
+
+  await clip.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'clip_drive actions' }).getByRole('menuitem', { name: 'Paste' }).click();
+  const pasted = page.getByTestId('contract-node-clip_drive_copy');
+  await expect(pasted).toBeVisible();
+  await expect(page.locator('.react-flow__edge[data-id*="contract-clip_drive_copy"]')).toHaveCount(0);
+
+  await clip.locator('.contract-node__handle--out').click({ force: true });
+  await expect(page.getByTestId('contract-canvas')).toHaveClass(/flow-shell--connecting/);
+  await pasted.locator('.contract-node__handle--in').click({ force: true });
+  await expect(page.locator('.react-flow__edge[data-id*="contract-clip_drive-contract-clip_drive_copy"]')).toHaveCount(1);
+
+  await clip.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'clip_drive actions' }).getByRole('menuitem', { name: 'Remove' }).click();
+  await expect(clip).toHaveCount(0);
+  await page.getByTestId('topbar-undo').click();
+  await expect(page.getByTestId('contract-node-clip_drive')).toBeVisible();
 });

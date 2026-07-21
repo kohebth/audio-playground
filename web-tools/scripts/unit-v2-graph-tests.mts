@@ -6,17 +6,21 @@ import type { AtomCatalog } from '../src/lib/backendSamples.ts';
 import {
   addAtomNodeToUnit,
   addUnitPort,
+  assertUserPlaceableUnit,
+  classifyUserEffectContent,
   connectUnitNodes,
   createUnitV2,
   disconnectUnitInput,
   insertAtomNodeOnConnection,
   moveUnitConnection,
   moveUnitParam,
+  pasteAtomNodeIntoUnit,
   parseUnitGraphDraft,
   parseUnitPortsDraft,
   previewAtomReplacement,
   reconnectUnitConnection,
   removeAtomNodeFromUnit,
+  removeAtomNodeWithTopology,
   removeUnitParam,
   replaceAtomNodeInUnit,
   replaceUnitConnection,
@@ -40,6 +44,8 @@ assert.deepEqual(createdPorts.inputs, [{ name: 'input', type: 'audio', channels:
 assert.deepEqual(createdPorts.outputs, [{ name: 'output', type: 'audio', channels: 1, signals: [] }]);
 assert.deepEqual(createdGraph.nodes.map(node => node.id), ['gain_value', 'apply_gain']);
 assert.throws(() => createUnitV2({ name: 'Not Valid' }), /lowercase snake_case/);
+assert.equal(classifyUserEffectContent(created).userPlaceable, true);
+assert.doesNotThrow(() => assertUserPlaceableUnit(created));
 
 const described = parseUnitGraphDraft(updateUnitDefinition(created, {
   title: 'Studio Gain',
@@ -70,8 +76,24 @@ assert.throws(() => removeUnitParam(created, 'gain'), /still used by an atom/);
 const renamedInput = updateUnitPort(created, 'inputs', 0, { ...createdPorts.inputs[0], name: 'source' });
 assert.equal(parseUnitPortsDraft(renamedInput).inputs[0].name, 'source');
 assert.equal(parseUnitGraphDraft(renamedInput).nodes.find(node => node.id === 'apply_gain')?.in.signal_a, 'source');
-const withSidechain = addUnitPort(created, 'inputs', { name: 'sidechain', type: 'audio', channels: 1, signals: [] });
+assert.throws(
+  () => addUnitPort(created, 'inputs', { name: 'sidechain', type: 'audio', channels: 1, signals: [] }),
+  /single audio input/,
+);
+const withSidechain = addUnitPort(created, 'inputs', { name: 'sidechain', type: 'control', signals: [] });
 assert.equal(parseUnitPortsDraft(withSidechain).inputs.at(-1)?.name, 'sidechain');
+assert.equal(classifyUserEffectContent(withSidechain).userPlaceable, true);
+
+assert.throws(
+  () => updateUnitPort(created, 'outputs', 0, { ...createdPorts.outputs[0], channels: 2 }),
+  /must each be mono/,
+);
+const stereoOutput = created.replace(
+  '  outputs:\n    - name: output\n      type: audio\n      channels: 1',
+  '  outputs:\n    - name: output\n      type: audio\n      channels: 2',
+);
+assert.equal(classifyUserEffectContent(stereoOutput).userPlaceable, false);
+assert.throws(() => assertUserPlaceableUnit(stereoOutput), /must each be mono/);
 
 const toneStack = readFileSync(resolve(repo, 'test/fixtures/units-v2/tone_stack.unit.v2.yaml'), 'utf8');
 assert.deepEqual(
@@ -136,6 +158,52 @@ assert(!normalizedMalformed.includes('fn: amplitude_clip_soft'));
 const removedAdded = parseUnitGraphDraft(removeAtomNodeFromUnit(added.content, added.id));
 assert(!removedAdded.nodes.some(node => node.id === added.id));
 assert(!removedAdded.signals.some(signal => signal.startsWith(`${added.id}_`)));
+
+const pastedAdded = pasteAtomNodeIntoUnit(added.content, addedNode);
+const pastedNode = parseUnitGraphDraft(pastedAdded.content).nodes.find(node => node.id === pastedAdded.id);
+assert(pastedNode);
+assert.deepEqual(pastedNode.in, { signal: '' });
+assert.notEqual(pastedNode.out.signal, addedNode.out.signal);
+assert.deepEqual(pastedNode.ui?.position, { x: 152, y: 272 });
+
+const bridgeUnit = `kind: apg.unit
+schema: apg.unit.v2
+name: bridge_unit
+version: 1.0.0
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+graph:
+  signals: [input, clipped, output]
+  nodes:
+    - id: first
+      atom: amplitude_clip_hard
+      in: { signal: input }
+      out: { signal: clipped }
+      config: { threshold: 1 }
+    - id: second
+      atom: amplitude_clip_soft
+      in: { signal: clipped }
+      out: { signal: output }
+      config: { threshold: 1, curve: 0 }
+`;
+const bridgedAtom = removeAtomNodeWithTopology(bridgeUnit, catalog, 'first');
+assert.equal(bridgedAtom.mode, 'bridged');
+assert.equal(bridgedAtom.bridgedConnections, 1);
+assert.equal(parseUnitGraphDraft(bridgedAtom.content).nodes[0].in.signal, 'input');
+const bridgedPublicOutput = removeAtomNodeWithTopology(bridgeUnit, catalog, 'second');
+assert.equal(bridgedPublicOutput.mode, 'bridged');
+assert.deepEqual(parseUnitPortsDraft(bridgedPublicOutput.content).outputs[0].signals, ['clipped']);
+
+const disconnectedSpecial = removeAtomNodeWithTopology(created, catalog, 'apply_gain');
+assert.equal(disconnectedSpecial.mode, 'disconnected');
+assert.deepEqual(parseUnitGraphDraft(disconnectedSpecial.content).nodes.map(node => node.id), ['gain_value']);
 
 const replacementPreview = previewAtomReplacement(added.content, catalog, added.id, 'amplitude_clip_soft');
 assert.deepEqual(replacementPreview.preservedInputs, ['signal']);

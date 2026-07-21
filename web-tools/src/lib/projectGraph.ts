@@ -1,6 +1,7 @@
 import type { Edge, Node } from '@xyflow/react';
 import dagre from 'dagre';
 import type { ProjectInspect, ProjectInstance, ProjectRoute, ProjectUnit } from './backendSamples';
+import type { ProjectPortCatalog, ProjectUnitPorts } from './projectV2Graph';
 
 export type ProjectNodeData =
   | {
@@ -21,6 +22,7 @@ export type ProjectNodeData =
       bypassed?: boolean;
       bypassAvailable?: boolean;
       onBypassChange?: (instanceId: string, enabled: boolean) => Promise<void>;
+      ports?: ProjectUnitPorts;
     };
 
 export type ProjectParamControl = {
@@ -132,8 +134,8 @@ function createRouteEdge(route: ProjectRoute, index: number, graph: dagre.graphl
     type: 'projectRoute',
     source,
     target,
-    sourceHandle: 'out',
-    targetHandle: 'in',
+    sourceHandle: route.from.split('.').at(-1),
+    targetHandle: route.to.split('.').at(-1),
     data: { points },
     style: { stroke: '#64748b', strokeWidth: 1.6 },
   };
@@ -149,7 +151,10 @@ function unitNodeDimensions(paramCount: number): { width: number; height: number
   };
 }
 
-export function buildProjectGraph(project: ProjectInspect): { nodes: Node<ProjectNodeData>[]; edges: ProjectRouteEdge[] } {
+export function buildProjectGraph(
+  project: ProjectInspect,
+  ports: ProjectPortCatalog = {},
+): { nodes: Node<ProjectNodeData>[]; edges: ProjectRouteEdge[] } {
   const unitsById = new Map(project.units.map(unit => [unit.id, unit]));
   const graph = new dagre.graphlib.Graph({ multigraph: true });
   const nodes: Node<ProjectNodeData>[] = [
@@ -178,6 +183,7 @@ export function buildProjectGraph(project: ProjectInspect): { nodes: Node<Projec
         unit,
         index,
         color: UNIT_COLORS[index % UNIT_COLORS.length],
+        ports: ports[instance.unit],
       },
     };
 

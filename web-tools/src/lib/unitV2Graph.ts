@@ -39,6 +39,19 @@ export type UnitPortsDraft = {
   outputs: UnitPortDraft[];
 };
 
+export type UserEffectPortPolicy = {
+  userPlaceable: boolean;
+  audioInputs: UnitPortDraft[];
+  audioOutputs: UnitPortDraft[];
+  reason: string | null;
+};
+
+export type AtomRemovalResult = {
+  content: string;
+  mode: 'bridged' | 'disconnected';
+  bridgedConnections: number;
+};
+
 export type UnitGraphDraft = {
   name: string;
   version: string;
@@ -527,6 +540,31 @@ export function parseUnitPortsDraft(content: string): UnitPortsDraft {
   return parsePortsFromDocument(loadDocument(content));
 }
 
+export function classifyUserEffectPorts(ports: UnitPortsDraft): UserEffectPortPolicy {
+  const audioInputs = ports.inputs.filter(port => port.type === 'audio');
+  const audioOutputs = ports.outputs.filter(port => port.type === 'audio');
+  const mono = (port: UnitPortDraft) => port.channels === 1 && port.signals.length <= 1;
+  let reason: string | null = null;
+
+  if (audioInputs.length !== 1 || audioOutputs.length !== 1) {
+    reason = 'Effects must expose exactly one audio input and one audio output.';
+  } else if (!mono(audioInputs[0]) || !mono(audioOutputs[0])) {
+    reason = 'Effect audio input and output must each be mono.';
+  }
+
+  return { userPlaceable: reason === null, audioInputs, audioOutputs, reason };
+}
+
+export function classifyUserEffectContent(content: string): UserEffectPortPolicy {
+  return classifyUserEffectPorts(parseUnitPortsDraft(content));
+}
+
+export function assertUserPlaceableUnit(content: string): UserEffectPortPolicy {
+  const policy = classifyUserEffectContent(content);
+  if (!policy.userPlaceable) throw new Error(policy.reason ?? 'This unit cannot be placed as an effect.');
+  return policy;
+}
+
 function editorScalar(raw: string | undefined): unknown {
   if (raw === undefined || raw.trim() === '') return undefined;
   const numeric = Number(raw);
@@ -643,6 +681,7 @@ export function updateUnitPort(
   const name = port.name.trim();
   if (!/^[a-z][a-z0-9_]*$/.test(name)) throw new Error('Port name must use lowercase snake_case.');
   const doc = loadDocument(content);
+  const currentPolicy = classifyUserEffectPorts(parsePortsFromDocument(doc));
   const ports = isObject(doc.ports) ? doc.ports : {};
   const list = Array.isArray(ports[direction]) ? [...ports[direction] as unknown[]] : [];
   const current = list[index];
@@ -661,6 +700,10 @@ export function updateUnitPort(
   };
   ports[direction] = list;
   doc.ports = ports;
+  if (currentPolicy.userPlaceable) {
+    const nextPolicy = classifyUserEffectPorts(parsePortsFromDocument(doc));
+    if (!nextPolicy.userPlaceable) throw new Error(nextPolicy.reason ?? 'Effects must keep one mono audio input and output.');
+  }
   const replacements = Object.fromEntries(previousSignals.flatMap((signal, signalIndex) => (
     nextSignals[signalIndex] && nextSignals[signalIndex] !== signal ? [[signal, nextSignals[signalIndex]]] : []
   )));
@@ -676,9 +719,13 @@ export function addUnitPort(
   port: UnitPortDraft,
 ): string {
   const doc = loadDocument(content);
+  const currentPolicy = classifyUserEffectPorts(parsePortsFromDocument(doc));
   const ports = isObject(doc.ports) ? doc.ports : {};
   const list = Array.isArray(ports[direction]) ? ports[direction] as unknown[] : [];
   if (list.some(item => isObject(item) && String(item.name) === port.name)) throw new Error(`Port "${port.name}" already exists.`);
+  if (currentPolicy.userPlaceable && port.type === 'audio') {
+    throw new Error(`Effects already have their single audio ${direction === 'inputs' ? 'input' : 'output'}. Add a control port instead.`);
+  }
   ports[direction] = [...list, {
     name: port.name,
     type: port.type,
@@ -907,7 +954,84 @@ export function removeAtomNodeFromUnit(content: string, nodeId: string): string 
   return dumpDocument(doc);
 }
 
-export function pasteAtomNodeIntoUnit(content: string, source: UnitGraphNode): { content: string; id: string } {
+function isSimpleSignalAtom(atom: AtomCatalogAtom): boolean {
+  return atom.inputs.length === 1
+    && atom.outputs.length === 1
+    && atom.inputs[0].type === 'signal'
+    && atom.outputs[0].type === 'signal';
+}
+
+function replacePublicOutputSignal(doc: UnitDocument, from: string, to: string): number {
+  if (!Array.isArray(doc.ports?.outputs)) return 0;
+  let replaced = 0;
+  doc.ports.outputs = doc.ports.outputs.map(value => {
+    if (!isObject(value) || !portSignals(value).includes(from)) return value;
+    const signals = portSignals(value).map(signal => {
+      if (signal !== from) return signal;
+      replaced += 1;
+      return to;
+    });
+    return { ...value, signals };
+  });
+  return replaced;
+}
+
+export function removeAtomNodeWithTopology(
+  content: string,
+  catalog: AtomCatalog,
+  nodeId: string,
+): AtomRemovalResult {
+  const doc = loadDocument(content);
+  const graph = ensureGraph(doc);
+  const draft = parseGraphFromDocument(doc);
+  const node = draft.nodes.find(item => item.id === nodeId);
+  if (!node) throw new Error(`Atom node "${nodeId}" was not found.`);
+  const atom = catalogNode(catalog, node);
+  const outputSignals = new Set(Object.values(node.out).filter(Boolean));
+  const simple = isSimpleSignalAtom(atom);
+  const inputSignal = simple ? node.in[atom.inputs[0].name] ?? '' : '';
+  const outputSignal = simple ? node.out[atom.outputs[0].name] ?? '' : '';
+  const canBridge = Boolean(inputSignal && outputSignal);
+  let bridgedConnections = 0;
+
+  const nextNodes = draft.nodes.filter(item => item.id !== nodeId).map(item => ({
+    ...item,
+    in: Object.fromEntries(Object.entries(item.in).map(([field, signal]) => {
+      if (!outputSignals.has(signal)) return [field, signal];
+      if (canBridge && signal === outputSignal) {
+        bridgedConnections += 1;
+        return [field, inputSignal];
+      }
+      return [field, ''];
+    })),
+  }));
+  if (canBridge) bridgedConnections += replacePublicOutputSignal(doc, outputSignal, inputSignal);
+
+  graph.nodes = nextNodes.map(nodeToYaml);
+  const publicSignals = new Set([
+    ...(doc.ports?.inputs ?? []).flatMap(portSignals),
+    ...(doc.ports?.outputs ?? []).flatMap(portSignals),
+  ]);
+  const remainingReferences = new Set([
+    ...nextNodes.flatMap(item => [...Object.values(item.in), ...Object.values(item.out)]).filter(Boolean),
+    ...publicSignals,
+  ]);
+  graph.signals = (graph.signals ?? []).filter(signal => (
+    typeof signal !== 'string' || !outputSignals.has(signal) || remainingReferences.has(signal)
+  ));
+
+  return {
+    content: dumpDocument(doc),
+    mode: canBridge ? 'bridged' : 'disconnected',
+    bridgedConnections,
+  };
+}
+
+export function pasteAtomNodeIntoUnit(
+  content: string,
+  source: UnitGraphNode,
+  position?: GraphPosition,
+): { content: string; id: string } {
   const doc = loadDocument(content);
   const graph = ensureGraph(doc);
   const draft = parseGraphFromDocument(doc);
@@ -918,7 +1042,16 @@ export function pasteAtomNodeIntoUnit(content: string, source: UnitGraphNode): {
     if (!signal) return [key, ''];
     return [key, uniqueName(existingSignals, `${id}_${key}`)];
   }));
-  const node: UnitGraphNode = { ...source, id, out };
+  const nextPosition = position ?? (source.ui?.position
+    ? { x: source.ui.position.x + 32, y: source.ui.position.y + 32 }
+    : undefined);
+  const node: UnitGraphNode = {
+    ...source,
+    id,
+    in: Object.fromEntries(Object.keys(source.in).map(field => [field, ''])),
+    out,
+    ui: nextPosition ? { ...(source.ui ?? {}), position: nextPosition } : undefined,
+  };
 
   graph.signals = Array.from(existingSignals);
   graph.nodes = [...(graph.nodes?.filter(isObject) ?? []), nodeToYaml(node)];

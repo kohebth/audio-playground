@@ -7,6 +7,7 @@ export type EffectLibraryItem = {
   description: string;
   scope: 'built-in' | 'personal';
   recordId?: string;
+  placementError?: string;
 };
 
 type Props = {
@@ -62,8 +63,20 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
               <small>{item.description}</small>
             </span>
             <div className="effect-library-card__actions">
-              <button aria-label={`Add ${item.title}`} onClick={() => onAdd(item)} title="Add in series" type="button">+</button>
-              <button aria-label={`Add ${item.title} in parallel`} onClick={() => onAddParallel(item)} title="Add as a wet/dry parallel path" type="button">∥</button>
+              <button
+                aria-label={`Add ${item.title}`}
+                disabled={Boolean(item.placementError)}
+                onClick={() => onAdd(item)}
+                title={item.placementError ?? 'Add in series'}
+                type="button"
+              >+</button>
+              <button
+                aria-label={`Add ${item.title} in parallel`}
+                disabled={Boolean(item.placementError)}
+                onClick={() => onAddParallel(item)}
+                title={item.placementError ?? 'Add as a wet/dry parallel path'}
+                type="button"
+              >∥</button>
               {item.scope === 'personal' && item.recordId ? (
                 <button aria-label={`Delete ${item.title} from personal library`} onClick={() => onDeletePersonal(item.recordId!)} title="Remove from personal library" type="button">×</button>
               ) : null}

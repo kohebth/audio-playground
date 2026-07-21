@@ -7,18 +7,23 @@ import {
   addProjectRoute,
   addProjectUnitReference,
   applyProjectScene,
+  copyProjectInstance,
   duplicateProjectInstance,
   insertProjectParallelOnRoute,
   insertProjectInstanceOnRoute,
   moveProjectInstance,
   moveProjectRoute,
   parseProjectGraphDraft,
+  parseUnitPortNames,
+  pasteProjectInstance,
   projectDraftToInspect,
   removeProjectInstance,
+  removeProjectInstanceWithTopology,
   removeProjectRoute,
   removeProjectScene,
   renameProjectInstance,
   renameProjectScene,
+  replaceProjectInstance,
   replaceProjectRoute,
   upsertProjectScene,
   validateProjectRoutes,
@@ -50,11 +55,25 @@ assert.doesNotThrow(() => validateProjectRoutes(project, ports));
 const linearLayout = buildProjectGraph(projectInspect);
 assert(linearLayout.edges.every(edge => edge.label === undefined));
 assert(linearLayout.edges.every(edge => edge.type === 'projectRoute'));
+assert.equal(linearLayout.edges[0].sourceHandle, 'input');
+assert.equal(linearLayout.edges[0].targetHandle, 'input');
+assert.equal(linearLayout.edges[3].sourceHandle, 'output');
+assert.equal(linearLayout.edges[3].targetHandle, 'input');
 assert(linearLayout.edges.every(edge => edge.data.points.every((point, index, points) => (
   index === 0 || point.x === points[index - 1].x || point.y === points[index - 1].y
 ))));
 assert.equal(new Set(linearLayout.edges.flatMap(edge => [edge.data.points[0].y, edge.data.points.at(-1)!.y])).size, 1);
 assert.deepEqual(buildProjectGraph(projectInspect), linearLayout);
+
+const overdriveContent = readFileSync(resolve(repo, 'test/fixtures/units-v2/overdrive.unit.v2.yaml'), 'utf8');
+assert.deepEqual(parseUnitPortNames(overdriveContent), {
+  inputs: ['input'],
+  outputs: ['output'],
+  userPlaceable: true,
+  reason: null,
+});
+const wetDryContent = readFileSync(resolve(repo, 'test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml'), 'utf8');
+assert.equal(parseUnitPortNames(wetDryContent).userPlaceable, false);
 
 const legacyPositionProject = project.replace(
   '    - id: gate1\n      unit: noise_gate_unit\n',
@@ -207,6 +226,11 @@ const duplicated = duplicateProjectInstance(project, 'drive1');
 const duplicate = parseProjectGraphDraft(duplicated.content).nodes.find(node => node.id === duplicated.id);
 assert.equal(duplicate?.unit, 'overdrive_unit');
 assert.equal(duplicate?.params.drive, '2.2');
+const clipboard = copyProjectInstance(project, 'drive1');
+const pasted = pasteProjectInstance(project, clipboard);
+const pastedDraft = parseProjectGraphDraft(pasted.content);
+assert.equal(pastedDraft.nodes.find(node => node.id === pasted.id)?.unit, 'overdrive_unit');
+assert(!pastedDraft.routes.some(route => route.from.startsWith(`${pasted.id}.`) || route.to.startsWith(`${pasted.id}.`)));
 
 const withScene = upsertProjectScene(project, 'Drive Check', { 'drive1.drive': '5.0' }, { drive1: true });
 assert.equal(parseProjectGraphDraft(withScene).scenes.at(-1)?.bypass.drive1, true);
@@ -228,6 +252,49 @@ assert(!removed.routes.some(route => route.from.startsWith('delay1.') || route.t
 assert(!Object.keys(removed.scenes[1].params).some(path => path.startsWith('delay1.')));
 const removedSceneInstance = parseProjectGraphDraft(removeProjectInstance(withScene, 'drive1'));
 assert(!('drive1' in (removedSceneInstance.scenes.at(-1)?.bypass ?? {})));
+
+const topologyRemoved = removeProjectInstanceWithTopology(project, ports, 'drive1');
+assert.equal(topologyRemoved.mode, 'bridged');
+assert.equal(topologyRemoved.bridgedRoutes, 1);
+assert(parseProjectGraphDraft(topologyRemoved.content).routes.some(route => (
+  route.from === 'phaser1.output' && route.to === 'tone1.input'
+)));
+
+const branchedProject = project.replace(
+  '      to: tone1.input\n',
+  '      to: tone1.input\n    - from: drive1.output\n      to: trem1.input\n',
+).replace('    - from: tone1.output\n      to: trem1.input\n', '');
+const branchedRemoval = removeProjectInstanceWithTopology(branchedProject, ports, 'drive1');
+assert.equal(branchedRemoval.bridgedRoutes, 2);
+assert.deepEqual(
+  parseProjectGraphDraft(branchedRemoval.content).routes.filter(route => route.from === 'phaser1.output').map(route => route.to).sort(),
+  ['tone1.input', 'trem1.input'],
+);
+
+const specialRegistered = addProjectUnitReference(emptyProject, 'wet_dry_mix_unit', '../units-v2/wet_dry_mix.unit.v2.yaml');
+const specialAdded = addProjectInstance(specialRegistered, 'wet_dry_mix_unit', 'special_mix');
+const specialRouted = addProjectRoute(
+  removeProjectRoute(specialAdded.content, 0),
+  ports,
+  { from: 'special_mix.output', to: 'system.output' },
+);
+const specialRemoval = removeProjectInstanceWithTopology(specialRouted, ports, 'special_mix');
+assert.equal(specialRemoval.mode, 'disconnected');
+assert.equal(parseProjectGraphDraft(specialRemoval.content).routes.length, 0);
+
+const replacementDefaults = { bass: '0.2', mid: '0.5' };
+const replacedInstance = parseProjectGraphDraft(replaceProjectInstance(
+  withScene,
+  ports,
+  'drive1',
+  'tone_stack_unit',
+  replacementDefaults,
+));
+assert.equal(replacedInstance.nodes.find(node => node.id === 'drive1')?.unit, 'tone_stack_unit');
+assert.deepEqual(replacedInstance.nodes.find(node => node.id === 'drive1')?.params, replacementDefaults);
+assert(replacedInstance.routes.some(route => route.from === 'drive1.output'));
+assert.deepEqual(replacedInstance.scenes.at(-1)?.params['drive1.bass'], '0.2');
+assert(!('drive1.drive' in (replacedInstance.scenes.at(-1)?.params ?? {})));
 
 const renamedScene = renameProjectScene(withScene, 'Drive Check', 'Drive Ready');
 assert.equal(parseProjectGraphDraft(renamedScene).scenes.at(-1)?.name, 'Drive Ready');
@@ -255,6 +322,13 @@ assert.throws(
 assert.throws(
   () => validateProjectRoutes(project.replace('to: drive1.input', 'to: drive1.not_a_port'), ports),
   /not a unit input/,
+);
+assert.throws(
+  () => validateProjectRoutes(project.replace(
+    'from: phaser1.output\n      to: drive1.input',
+    'from: tone1.output\n      to: drive1.input',
+  ), ports),
+  /create a cycle/,
 );
 
 const replaced = parseProjectGraphDraft(replaceProjectRoute(project, ports, 5, {

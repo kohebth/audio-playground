@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import type { ProjectInspect, WorkspaceFile } from '../lib/backendSamples';
 import { markPerfSpan } from '../lib/perfTelemetry';
@@ -21,6 +21,7 @@ type Props = {
   onSelectRoute: (index: number) => void;
   selectedInstanceIds: string[];
   onToggleBatchInstance: (instanceId: string) => void;
+  unitPlacement: Record<string, { allowed: boolean; reason: string | null }>;
 };
 
 export const UNIT_DRAG_TYPE = 'application/x-apg-unit';
@@ -52,10 +53,12 @@ export function ProjectSidebar({
   routeTargets,
   selectedInstanceIds,
   onToggleBatchInstance,
+  unitPlacement,
 }: Props) {
   const [unitName, setUnitName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
-  const [instanceUnit, setInstanceUnit] = useState(project.units[0]?.id ?? '');
+  const placeableUnits = project.units.filter(unit => unitPlacement[unit.id]?.allowed);
+  const [instanceUnit, setInstanceUnit] = useState(placeableUnits[0]?.id ?? '');
   const [instanceId, setInstanceId] = useState('');
   const [instanceError, setInstanceError] = useState<string | null>(null);
   const [routeSource, setRouteSource] = useState('system.input');
@@ -67,6 +70,10 @@ export function ProjectSidebar({
     routes: false,
     drafts: false,
   });
+
+  useEffect(() => {
+    if (!placeableUnits.some(unit => unit.id === instanceUnit)) setInstanceUnit(placeableUnits[0]?.id ?? '');
+  }, [instanceUnit, placeableUnits]);
 
   const toggleSection = (section: SidebarSection) => {
     setCollapsedSections(current => ({ ...current, [section]: !current[section] }));
@@ -150,7 +157,8 @@ export function ProjectSidebar({
           <button
             key={unit.id}
             className="unit-library__item"
-            draggable
+            disabled={!unitPlacement[unit.id]?.allowed}
+            draggable={unitPlacement[unit.id]?.allowed}
             data-testid={`project-unit-item-${unit.id}`}
             onClick={() => onAddUnitFromLibrary(unit.id)}
             onDragStart={event => {
@@ -159,6 +167,7 @@ export function ProjectSidebar({
                 event.dataTransfer.effectAllowed = 'copy';
               }, { unit: unit.id });
             }}
+            title={unitPlacement[unit.id]?.allowed ? 'Add effect' : unitPlacement[unit.id]?.reason ?? 'Routing helper'}
             type="button"
           >
             <span>{unit.name}</span>
@@ -173,7 +182,7 @@ export function ProjectSidebar({
           onChange={event => setInstanceUnit(event.target.value)}
           value={instanceUnit}
         >
-          {project.units.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
+          {placeableUnits.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
         </select>
         <input
           aria-label="New instance id"

@@ -9,6 +9,7 @@ import { BatchActionBar } from './components/BatchActionBar';
 import { GuidedTour } from './components/GuidedTour';
 import { LiveLatencyBadge } from './components/LiveLatencyBadge';
 import { ProjectCanvas } from './components/ProjectCanvas';
+import type { ProjectReplacementOption } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
@@ -35,6 +36,7 @@ import {
   addProjectRoute,
   addProjectUnitReference,
   applyProjectScene,
+  copyProjectInstance,
   duplicateProjectInstance,
   insertProjectParallelOnRoute,
   insertProjectInstanceOnRoute,
@@ -42,15 +44,18 @@ import {
   moveProjectRoute,
   parseProjectGraphDraft,
   parseUnitPortNames,
+  pasteProjectInstance,
   projectDraftToInspect,
-  removeProjectInstance,
+  removeProjectInstanceWithTopology,
   removeProjectRoute,
   removeProjectScene,
   renameProjectInstance,
   renameProjectScene,
   replaceProjectRoute,
+  replaceProjectInstance,
   upsertProjectScene,
   type ProjectPortCatalog,
+  type ProjectInstanceClipboard,
   type ProjectRouteDraft,
 } from './lib/projectV2Graph';
 import {
@@ -66,6 +71,8 @@ import {
 } from './lib/presetLibrary';
 import {
   addAtomNodeToUnit,
+  assertUserPlaceableUnit,
+  classifyUserEffectContent,
   connectUnitNodes,
   createUnitV2,
   disconnectUnitInput,
@@ -73,7 +80,7 @@ import {
   moveUnitParam,
   pasteAtomNodeIntoUnit,
   parseUnitGraphDraft,
-  removeAtomNodeFromUnit,
+  removeAtomNodeWithTopology,
   replaceAtomNodeInUnit,
   reconnectUnitConnection,
   serializeUnitGraphNodeUpdate,
@@ -121,6 +128,10 @@ function uniqueInstanceId(existing: string[], unitId: string): string {
   const used = new Set(existing);
   while (used.has(candidate)) candidate = `${base}_${++suffix}`;
   return candidate;
+}
+
+function withoutInstanceValues(values: Record<string, string>, instanceId: string): Record<string, string> {
+  return Object.fromEntries(Object.entries(values).filter(([key]) => !key.startsWith(`${instanceId}.`)));
 }
 
 type InspectorView = 'project' | 'atom' | 'contract';
@@ -292,17 +303,29 @@ export function EditorWorkspace({
   const [tourOpen, setTourOpen] = useState(() => (
     mode === 'simple' && typeof window !== 'undefined' && !window.localStorage.getItem('apg.studio.tour.v1')
   ));
-  const simpleEffectLibrary = useMemo<EffectLibraryItem[]>(() => [
-    ...builtInSimpleEffectLibrary,
-    ...personalUnits.map(unit => ({
-      id: unit.name,
-      title: unit.title,
-      category: unit.category,
-      description: unit.description,
-      scope: 'personal' as const,
-      recordId: unit.id,
-    })),
-  ], [personalUnits]);
+  const simpleEffectLibrary = useMemo<EffectLibraryItem[]>(() => {
+    const items: EffectLibraryItem[] = [
+      ...builtInSimpleEffectLibrary,
+      ...personalUnits.map(unit => ({
+        id: unit.name,
+        title: unit.title,
+        category: unit.category,
+        description: unit.description,
+        scope: 'personal' as const,
+        recordId: unit.id,
+      })),
+    ];
+    return items.map(item => {
+      const source = libraryWorkspaceSource(item, personalUnits);
+      if (!source) return { ...item, placementError: 'Unit source is unavailable.' };
+      try {
+        const policy = classifyUserEffectContent(source.content);
+        return policy.userPlaceable ? item : { ...item, placementError: policy.reason ?? 'Not a mono effect.' };
+      } catch {
+        return { ...item, placementError: 'Unit ports are invalid.' };
+      }
+    });
+  }, [personalUnits]);
   const initialRouteWorkspacePath = workspacePathFromRoute(location.pathname, initialWorkspace.files);
   const initialProjectInspect = useMemo(() => {
     try {
@@ -354,6 +377,7 @@ export function EditorWorkspace({
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(initialRouteNode ? 'contract' : 'project');
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
   const [atomClipboard, setAtomClipboard] = useState<UnitGraphNode | null>(null);
+  const [unitClipboard, setUnitClipboard] = useState<ProjectInstanceClipboard | null>(null);
   const [graphEditError, setGraphEditError] = useState<string | null>(null);
   const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(initialProjectInspect));
   const [paramOriginals, setParamOriginals] = useState(() => buildParamOriginals(initialProjectInspect));
@@ -529,6 +553,13 @@ export function EditorWorkspace({
       return [reference.id, { inputs: [], outputs: [] }];
     }
   })), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
+  const projectUnitPlacement = useMemo(() => Object.fromEntries(projectDraft.units.map(reference => [
+    reference.id,
+    {
+      allowed: projectPorts[reference.id]?.userPlaceable ?? false,
+      reason: projectPorts[reference.id]?.reason ?? 'Unit metadata is unavailable.',
+    },
+  ])), [projectDraft.units, projectPorts]);
 
   const projectParamControls = useMemo<Record<string, ProjectParamControl[]>>(() => Object.fromEntries(
     projectDraft.units.map(reference => {
@@ -549,6 +580,11 @@ export function EditorWorkspace({
       }
     }),
   ), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
+  const projectReplacementOptions = useMemo<ProjectReplacementOption[]>(() => project.units.flatMap(unit => {
+    if (!projectUnitPlacement[unit.id]?.allowed) return [];
+    return [{ id: unit.id, label: unit.name, paramCount: projectParamControls[unit.id]?.length ?? 0 }];
+  }), [project.units, projectParamControls, projectUnitPlacement]);
+  const canPasteUnit = Boolean(unitClipboard && projectUnitPlacement[unitClipboard.unit]?.allowed);
 
   const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
     markPerfSpan('param.update', () => {
@@ -572,8 +608,9 @@ export function EditorWorkspace({
     () => JSON.stringify({
       nodes: projectDraft.nodes.map(node => [node.id, node.unit]),
       routes: project.routes.map(route => [route.from, route.to]),
+      ports: projectPorts,
     }),
-    [project.routes, projectDraft.nodes],
+    [project.routes, projectDraft.nodes, projectPorts],
   );
   const graphTopologyRef = useRef('');
 
@@ -583,7 +620,7 @@ export function EditorWorkspace({
       graphTopologyRef.current = graphTopologySignature;
 
       if (topologyChanged) {
-        const next = buildProjectGraph(project);
+        const next = buildProjectGraph(project, projectPorts);
         setNodes(current => next.nodes.map(node => {
           const existing = current.find(item => item.id === node.id);
           let data = node.data;
@@ -591,6 +628,7 @@ export function EditorWorkspace({
             const unitData = node.data;
             data = {
               ...unitData,
+              ports: projectPorts[unitData.unit.id],
               paramControls: projectParamControls[unitData.unit.id] ?? [],
               onParamChange: updateParamDraft,
               bypassed: nodeBypassByInstance?.[unitData.instance.id] ?? false,
@@ -627,6 +665,7 @@ export function EditorWorkspace({
             ...node.data,
             instance,
             unit,
+            ports: projectPorts[unit.id],
             paramControls: projectParamControls[unit.id] ?? [],
             onParamChange: updateParamDraft,
             bypassed: nodeBypassByInstance?.[instance.id] ?? false,
@@ -650,7 +689,7 @@ export function EditorWorkspace({
         return changed ? next : current;
       });
     });
-  }, [graphTopologySignature, nodeBypassAvailable, nodeBypassByInstance, project, projectParamControls, setEdges, setNodes, setProjectNodeBypass, updateParamDraft]);
+  }, [graphTopologySignature, nodeBypassAvailable, nodeBypassByInstance, project, projectParamControls, projectPorts, setEdges, setNodes, setProjectNodeBypass, updateParamDraft]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -780,6 +819,8 @@ export function EditorWorkspace({
       if (!reference) return;
       const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
       const unitFile = workspaceFiles.find(file => file.path === unitPath);
+      if (unitFile?.role !== 'unit') throw new Error(`Unit source for "${unitId}" is unavailable.`);
+      assertUserPlaceableUnit(unitFile.content);
       const defaults = unitFile?.role === 'unit'
         ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
         : {};
@@ -806,6 +847,8 @@ export function EditorWorkspace({
       if (!reference) return;
       const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
       const unitFile = workspaceFiles.find(file => file.path === unitPath);
+      if (unitFile?.role !== 'unit') throw new Error(`Unit source for "${unitId}" is unavailable.`);
+      assertUserPlaceableUnit(unitFile.content);
       const defaults = unitFile?.role === 'unit'
         ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
         : {};
@@ -831,6 +874,7 @@ export function EditorWorkspace({
       try {
         const source = libraryWorkspaceSource(item, personalUnits);
         if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
+        assertUserPlaceableUnit(source.content);
         const outputRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
         if (outputRouteIndex < 0) throw new Error('Connect the board to Output before adding another effect.');
         const existing = projectDraft.units.find(reference => reference.id === `${item.id}_unit`
@@ -898,6 +942,7 @@ export function EditorWorkspace({
       try {
         const source = libraryWorkspaceSource(item, personalUnits);
         if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
+        assertUserPlaceableUnit(source.content);
         const outputRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
         if (outputRouteIndex < 0) throw new Error('Connect the board to Output before adding a parallel effect.');
 
@@ -979,6 +1024,9 @@ export function EditorWorkspace({
       try {
         const result = duplicateProjectInstance(projectWorkspaceFile.content, instanceId);
         const source = project.nodes.find(node => node.id === instanceId);
+        if (source && !projectUnitPlacement[source.unit]?.allowed) {
+          throw new Error(projectUnitPlacement[source.unit]?.reason ?? 'Only mono effects can be duplicated.');
+        }
         if (!source || !updateProjectFile(() => result.content)) return;
         const values = Object.fromEntries(source.params.map(param => [paramDraftKey(result.id, param.key), param.value]));
         setParamDrafts(current => ({ ...current, ...values }));
@@ -988,7 +1036,7 @@ export function EditorWorkspace({
         setGraphEditError(error instanceof Error ? error.message : String(error));
       }
     });
-  }, [project.nodes, projectWorkspaceFile.content, updateProjectFile]);
+  }, [project.nodes, projectUnitPlacement, projectWorkspaceFile.content, updateProjectFile]);
 
   const renameProjectNode = useCallback((instanceId: string, nextId: string) => {
     markPerfSpan('graph.rename.projectNode', () => {
@@ -1005,15 +1053,90 @@ export function EditorWorkspace({
 
   const removeProjectNode = useCallback((instanceId: string) => {
     markPerfSpan('graph.remove.projectNode', () => {
-      if (!updateProjectFile(content => removeProjectInstance(content, instanceId))) return;
-      const removeValues = (values: Record<string, string>) => Object.fromEntries(
-        Object.entries(values).filter(([key]) => !key.startsWith(`${instanceId}.`)),
-      );
-      setParamDrafts(removeValues);
-      setParamOriginals(removeValues);
+      if (!updateProjectFile(content => removeProjectInstanceWithTopology(content, projectPorts, instanceId).content)) return;
+      setParamDrafts(values => withoutInstanceValues(values, instanceId));
+      setParamOriginals(values => withoutInstanceValues(values, instanceId));
       setSelectedId(null);
     });
-  }, [updateProjectFile]);
+  }, [projectPorts, updateProjectFile]);
+
+  const copyProjectNode = useCallback((instanceId: string) => {
+    try {
+      setUnitClipboard(copyProjectInstance(projectWorkspaceFile.content, instanceId));
+      setGraphEditError(null);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to copy unit.');
+    }
+  }, [projectWorkspaceFile.content]);
+
+  const cutProjectNode = useCallback((instanceId: string) => {
+    markPerfSpan('graph.cut.projectNode', () => {
+      try {
+        const clipboard = copyProjectInstance(projectWorkspaceFile.content, instanceId);
+        const result = removeProjectInstanceWithTopology(projectWorkspaceFile.content, projectPorts, instanceId);
+        if (!updateProjectFile(() => result.content)) return;
+        setUnitClipboard(clipboard);
+        setParamDrafts(values => withoutInstanceValues(values, instanceId));
+        setParamOriginals(values => withoutInstanceValues(values, instanceId));
+        setSelectedId(null);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to cut unit.');
+      }
+    });
+  }, [projectPorts, projectWorkspaceFile.content, updateProjectFile]);
+
+  const pasteProjectNode = useCallback(() => {
+    if (!unitClipboard) return;
+    markPerfSpan('graph.paste.projectNode', () => {
+      try {
+        if (!projectUnitPlacement[unitClipboard.unit]?.allowed) {
+          throw new Error(projectUnitPlacement[unitClipboard.unit]?.reason ?? 'Only mono effects can be pasted.');
+        }
+        const result = pasteProjectInstance(projectWorkspaceFile.content, unitClipboard);
+        if (!updateProjectFile(() => result.content)) return;
+        const values = Object.fromEntries(Object.entries(unitClipboard.params).map(([key, value]) => [
+          paramDraftKey(result.id, key),
+          value,
+        ]));
+        setParamDrafts(current => ({ ...current, ...values }));
+        setParamOriginals(current => ({ ...current, ...values }));
+        setSelectedId(`unit-${result.id}`);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to paste unit.');
+      }
+    });
+  }, [projectUnitPlacement, projectWorkspaceFile.content, unitClipboard, updateProjectFile]);
+
+  const replaceProjectNode = useCallback((instanceId: string, nextUnitId: string) => {
+    markPerfSpan('graph.replace.projectNode', () => {
+      try {
+        const reference = projectDraft.units.find(unit => unit.id === nextUnitId);
+        if (!reference) throw new Error(`Project unit "${nextUnitId}" was not found.`);
+        const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
+        const file = workspaceFiles.find(item => item.path === path);
+        if (file?.role !== 'unit') throw new Error(`Unit source for "${nextUnitId}" is unavailable.`);
+        assertUserPlaceableUnit(file.content);
+        const defaults = Object.fromEntries(parseUnitGraphDraft(file.content).params.map(param => [param.name, param.default]));
+        const content = replaceProjectInstance(
+          projectWorkspaceFile.content,
+          projectPorts,
+          instanceId,
+          nextUnitId,
+          defaults,
+        );
+        if (!updateProjectFile(() => content)) return;
+        const resetValues = (values: Record<string, string>) => ({
+          ...withoutInstanceValues(values, instanceId),
+          ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(instanceId, key), value])),
+        });
+        setParamDrafts(resetValues);
+        setParamOriginals(resetValues);
+        setSelectedId(`unit-${instanceId}`);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to replace unit.');
+      }
+    });
+  }, [projectDraft.units, projectPorts, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
 
   const saveScene = useCallback((name: string) => {
     const params = Object.fromEntries(project.nodes.flatMap(node => (
@@ -1092,6 +1215,12 @@ export function EditorWorkspace({
 
   const saveSelectedUnitToLibrary = useCallback(() => {
     if (!selectedNode || selectedNode.kind !== 'unit' || !selectedUnitName || selectedUnitWorkspaceFile.role !== 'unit') return;
+    try {
+      assertUserPlaceableUnit(selectedUnitWorkspaceFile.content);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Only mono effects can be saved to the library.');
+      return;
+    }
     const now = new Date().toISOString();
     onSavePersonalUnit({
       schema: 'apg.personal-unit.v1',
@@ -1115,7 +1244,7 @@ export function EditorWorkspace({
     if (selectedInstanceIds.length < 2) return;
     const removed = new Set(selectedInstanceIds);
     if (!updateProjectFile(content => selectedInstanceIds.reduce(
-      (current, instanceId) => removeProjectInstance(current, instanceId),
+      (current, instanceId) => removeProjectInstanceWithTopology(current, projectPorts, instanceId).content,
       content,
     ))) return;
     const removeValues = (values: Record<string, string>) => Object.fromEntries(
@@ -1125,7 +1254,7 @@ export function EditorWorkspace({
     setParamOriginals(removeValues);
     setSelectedInstanceIds([]);
     setSelectedId(null);
-  }, [selectedInstanceIds, updateProjectFile]);
+  }, [projectPorts, selectedInstanceIds, updateProjectFile]);
 
   const reorderProjectNode = useCallback((instanceId: string, nextIndex: number) => {
     markPerfSpan('graph.reorder.projectNode', () => {
@@ -1194,7 +1323,7 @@ export function EditorWorkspace({
   }, [navigate, pushHistory, setWorkspaceFiles, workspaceFiles]);
 
   const updateSelectedUnitFile = useCallback((update: (content: string) => string, nextAtomId?: string | null) => {
-    markPerfSpan('graph.update.unitFile', () => {
+    return markPerfSpan('graph.update.unitFile', () => {
       setGraphEditError(null);
       try {
         const content = update(selectedUnitWorkspaceFile.content);
@@ -1203,8 +1332,10 @@ export function EditorWorkspace({
           files.map(file => (file.path === selectedUnitWorkspaceFile.path ? { ...file, content } : file)),
         );
         if (nextAtomId !== undefined) setSelectedAtomId(nextAtomId);
+        return content;
       } catch (error) {
         setGraphEditError(error instanceof Error ? error.message : 'Unable to update unit graph.');
+        return null;
       }
     });
   }, [pushHistory, selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path, setWorkspaceFiles]);
@@ -1253,12 +1384,16 @@ export function EditorWorkspace({
     });
   }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
 
-  const removeSelectedAtom = useCallback(() => {
-    if (!selectedAtom) return;
+  const removeSelectedAtom = useCallback((nodeId?: string) => {
+    const targetId = nodeId ?? selectedAtom?.id;
+    if (!targetId) return;
     markPerfSpan('contract.remove.atom', () => {
-      updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
+      updateSelectedUnitFile(
+        content => removeAtomNodeWithTopology(content, backendSamples.atomCatalog, targetId).content,
+        null,
+      );
     });
-  }, [selectedAtom, updateSelectedUnitFile]);
+  }, [selectedAtom?.id, updateSelectedUnitFile]);
 
   const replaceSelectedAtom = useCallback((nodeId: string, nextAtomName: string, preserveId: boolean) => {
     markPerfSpan('contract.replace.atom', () => {
@@ -1300,17 +1435,27 @@ export function EditorWorkspace({
     });
   }, [updateSelectedUnitFile]);
 
-  const copySelectedAtom = useCallback(() => {
-    if (selectedAtom) setAtomClipboard(selectedAtom);
-  }, [selectedAtom]);
+  const copySelectedAtom = useCallback((nodeId?: string) => {
+    const atom = selectedUnitGraph?.nodes.find(node => node.id === (nodeId ?? selectedAtom?.id));
+    if (atom) setAtomClipboard(atom);
+  }, [selectedAtom?.id, selectedUnitGraph?.nodes]);
 
-  const cutSelectedAtom = useCallback(() => {
-    if (!selectedAtom) return;
+  const cutSelectedAtom = useCallback((nodeId?: string) => {
+    const atom = selectedUnitGraph?.nodes.find(node => node.id === (nodeId ?? selectedAtom?.id));
+    if (!atom) return;
     markPerfSpan('contract.cut.atom', () => {
-      setAtomClipboard(selectedAtom);
-      updateSelectedUnitFile(content => removeAtomNodeFromUnit(content, selectedAtom.id), null);
+      try {
+        const result = removeAtomNodeWithTopology(
+          selectedUnitWorkspaceFile.content,
+          backendSamples.atomCatalog,
+          atom.id,
+        );
+        if (updateSelectedUnitFile(() => result.content, null)) setAtomClipboard(atom);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to cut atom.');
+      }
     });
-  }, [selectedAtom, updateSelectedUnitFile]);
+  }, [selectedAtom?.id, selectedUnitGraph?.nodes, selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
 
   const pasteAtom = useCallback(() => {
     if (!atomClipboard) return;
@@ -1548,6 +1693,7 @@ export function EditorWorkspace({
           routeSources={routeSources}
           routeTargets={routeTargets}
           selectedInstanceIds={selectedInstanceIds}
+          unitPlacement={projectUnitPlacement}
           onToggleBatchInstance={instanceId => setSelectedInstanceIds(current => (
             current.includes(instanceId) ? current.filter(id => id !== instanceId) : [...current, instanceId]
           ))}
@@ -1565,6 +1711,12 @@ export function EditorWorkspace({
               onAddAtomAt={addAtom}
               onInsertAtomAtEdge={insertAtomOnConnection}
               onMoveAtom={moveAtom}
+              atomClipboardReady={Boolean(atomClipboard)}
+              onCopyAtom={copySelectedAtom}
+              onCutAtom={cutSelectedAtom}
+              onPasteAtom={pasteAtom}
+              onRemoveAtom={removeSelectedAtom}
+              onReplaceAtom={replaceSelectedAtom}
               onConnectAtoms={connectAtoms}
               onDisconnectAtom={disconnectAtom}
               onOpenAtomInspector={openAtomInspector}
@@ -1585,6 +1737,14 @@ export function EditorWorkspace({
               onSelectRoute={selectRoute}
               onAddUnit={addProjectNodeFromLibrary}
               onInsertUnitAtRoute={insertProjectNodeOnRoute}
+              onConnectUnits={createProjectRoute}
+              onCopyUnit={copyProjectNode}
+              onCutUnit={cutProjectNode}
+              onPasteUnit={pasteProjectNode}
+              onRemoveUnit={removeProjectNode}
+              onReplaceUnit={replaceProjectNode}
+              canPasteUnit={canPasteUnit}
+              replacementOptions={projectReplacementOptions}
             />
           </Profiler>
         )}

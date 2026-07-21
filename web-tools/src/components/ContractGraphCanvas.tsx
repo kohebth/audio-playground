@@ -1,4 +1,14 @@
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
 import {
   BezierEdge,
   Controls,
@@ -22,9 +32,11 @@ import dagre from 'dagre';
 
 import type { AtomCatalog, WorkspaceFile } from '../lib/backendSamples';
 import { ATOM_DRAG_TYPE } from './AtomCatalogPanel';
+import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
 import {
   parseUnitGraphDraft,
   parseUnitPortsDraft,
+  previewAtomReplacement,
   type GraphPosition,
   type UnitConnectionEndpoint,
   type UnitGraphDraft,
@@ -72,6 +84,12 @@ type Props = {
   onAddAtomAt: (atomName: string, position: GraphPosition) => void;
   onInsertAtomAtEdge: (atomName: string, target: UnitConnectionEndpoint, position: GraphPosition) => void;
   onMoveAtom: (nodeId: string, position: GraphPosition) => void;
+  atomClipboardReady: boolean;
+  onCopyAtom: (nodeId: string) => void;
+  onCutAtom: (nodeId: string) => void;
+  onPasteAtom: () => void;
+  onRemoveAtom: (nodeId: string) => void;
+  onReplaceAtom: (nodeId: string, nextAtomName: string, preserveId: boolean) => void;
 };
 
 function endpoint(nodeId: string | null, handle: string | null, direction: 'in' | 'out'): UnitConnectionEndpoint | null {
@@ -435,6 +453,12 @@ export function ContractGraphCanvas({
   onAddAtomAt,
   onInsertAtomAtEdge,
   onMoveAtom,
+  atomClipboardReady,
+  onCopyAtom,
+  onCutAtom,
+  onPasteAtom,
+  onRemoveAtom,
+  onReplaceAtom,
 }: Props) {
   const parsed = useMemo<ParsedContractGraph>(() => {
     try {
@@ -452,9 +476,29 @@ export function ContractGraphCanvas({
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<ContractFlowNode>(parsed.flow.nodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(parsed.flow.edges);
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
+  const [connectionArmed, setConnectionArmed] = useState(false);
+  const [contextMenu, setContextMenu] = useState<(ContextMenuPoint & { atomId: string }) | null>(null);
+  const [replacementOpen, setReplacementOpen] = useState(false);
+  const [replacementAtom, setReplacementAtom] = useState('');
   const reactFlowRef = useRef<ReactFlowInstance<ContractFlowNode, Edge> | null>(null);
   const dragStartAtByNode = useRef<Record<string, number>>({});
   const atomCount = parsed.unit?.nodes.length ?? 0;
+  const contextAtom = contextMenu ? parsed.unit?.nodes.find(node => node.id === contextMenu.atomId) ?? null : null;
+  const replacementOptions = contextAtom
+    ? catalog.atoms.filter(atom => atom.visibility !== 'internal' && atom.name !== contextAtom.atom)
+    : [];
+  const chosenReplacement = replacementOptions.find(atom => atom.name === replacementAtom) ?? replacementOptions[0];
+  const replacementPreview = contextAtom && chosenReplacement ? (() => {
+    try {
+      return previewAtomReplacement(workspaceFile.content, catalog, contextAtom.id, chosenReplacement.name);
+    } catch {
+      return null;
+    }
+  })() : null;
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+    setReplacementOpen(false);
+  }, []);
 
   useEffect(() => {
     if (dropState === 'idle') return;
@@ -464,6 +508,15 @@ export function ContractGraphCanvas({
     window.addEventListener('keydown', cancelDrop);
     return () => window.removeEventListener('keydown', cancelDrop);
   }, [dropState]);
+
+  useEffect(() => {
+    if (!connectionArmed) return;
+    const cancelConnection = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setConnectionArmed(false);
+    };
+    window.addEventListener('keydown', cancelConnection);
+    return () => window.removeEventListener('keydown', cancelConnection);
+  }, [connectionArmed]);
 
   useEffect(() => {
     setFlowNodes(current => {
@@ -517,7 +570,21 @@ export function ContractGraphCanvas({
   const connect = (connection: Connection) => {
     const source = endpoint(connection.source, connection.sourceHandle, 'out');
     const target = endpoint(connection.target, connection.targetHandle, 'in');
+    setConnectionArmed(false);
     if (source && target) onConnectAtoms(source, target);
+  };
+
+  const openKeyboardMenu = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
+    const nodeElement = (event.target as Element).closest<HTMLElement>('.react-flow__node[data-id^="contract-"]');
+    const flowNodeId = nodeElement?.dataset.id;
+    if (!nodeElement || !flowNodeId || flowNodeId.startsWith('contract-unit-')) return;
+    event.preventDefault();
+    const atomId = flowNodeId.replace(/^contract-/, '');
+    const bounds = nodeElement.getBoundingClientRect();
+    onSelectAtom(atomId);
+    setContextMenu({ atomId, x: bounds.left + 24, y: bounds.top + 24 });
+    setReplacementOpen(false);
   };
 
   const reconnect = (edge: Edge, connection: Connection) => {
@@ -561,7 +628,7 @@ export function ContractGraphCanvas({
   };
 
   return (
-    <main className="canvas canvas--contract canvas-area">
+    <main className="canvas canvas--contract canvas-area" onKeyDownCapture={openKeyboardMenu}>
       <div className="canvas-modebar">
         <button className="btn btn--ghost" onClick={onBackToProject} type="button">
           Project graph
@@ -580,7 +647,7 @@ export function ContractGraphCanvas({
         </div>
       ) : (
         <div
-          className={`flow-shell flow-shell--contract flow-shell--drop-${dropState}`}
+          className={`flow-shell flow-shell--contract flow-shell--drop-${dropState}${connectionArmed ? ' flow-shell--connecting' : ''}`}
           data-atom-count={atomCount}
           data-boundary-count="2"
           data-testid="contract-canvas"
@@ -596,10 +663,22 @@ export function ContractGraphCanvas({
               edgeTypes={edgeTypes}
               nodeTypes={nodeTypes}
               onConnect={connect}
+              connectOnClick
+              onConnectStart={() => setConnectionArmed(true)}
+              onConnectEnd={() => setConnectionArmed(false)}
+              onClickConnectStart={() => setConnectionArmed(true)}
+              onClickConnectEnd={() => setConnectionArmed(false)}
               onEdgesDelete={deleteEdges}
               onEdgesChange={onEdgesChange}
               onNodeClick={(_, node) => {
                 if (node.type === 'contractNode') onSelectAtom(node.data.id);
+              }}
+              onNodeContextMenu={(event, node) => {
+                if (node.type !== 'contractNode') return;
+                event.preventDefault();
+                onSelectAtom(node.data.id);
+                setContextMenu({ atomId: node.data.id, x: event.clientX, y: event.clientY });
+                setReplacementOpen(false);
               }}
               onNodeDoubleClick={(_, node) => {
                 if (node.type === 'contractNode') onOpenAtomInspector(node.data.id);
@@ -622,6 +701,7 @@ export function ContractGraphCanvas({
                 }, startedAt ? { nodeId: node.id, durationMs: performance.now() - startedAt } : { nodeId: node.id });
               }}
               onNodesChange={onNodesChange}
+              onPaneClick={() => setConnectionArmed(false)}
               onInit={instance => {
                 reactFlowRef.current = instance;
               }}
@@ -641,13 +721,66 @@ export function ContractGraphCanvas({
                   nodeColor={node => (node.data as ContractNodeData | UnitBoundaryNodeData).color}
                   pannable
                   zoomable
-                  style={{ background: '#111827' }}
+                  style={{ background: 'var(--bg-canvas)' }}
                 />
               ) : null}
             </ReactFlow>
           </ReactFlowProvider>
         </div>
       )}
+      {contextMenu && contextAtom ? (
+        <GraphContextMenu label={`${contextAtom.id} actions`} onClose={closeContextMenu} point={contextMenu}>
+          <div className="graph-context-menu__title">
+            <strong>{contextAtom.id}</strong>
+            <span>{contextAtom.atom}</span>
+          </div>
+          <GraphMenuButton
+            disabled={replacementOptions.length === 0}
+            icon="fa-repeat"
+            onClick={() => {
+              setReplacementOpen(open => !open);
+              setReplacementAtom(chosenReplacement?.name ?? '');
+            }}
+          >Replace…</GraphMenuButton>
+          {replacementOpen && chosenReplacement ? (
+            <div className="graph-context-menu__replace" role="group" aria-label="Atom replacement preview">
+              <label>
+                <span>Replace with</span>
+                <select
+                  aria-label="Replacement atom"
+                  onChange={event => setReplacementAtom(event.target.value)}
+                  value={chosenReplacement.name}
+                >
+                  {replacementOptions.map(atom => (
+                    <option key={atom.name} value={atom.name}>{atom.name}</option>
+                  ))}
+                </select>
+              </label>
+              {replacementPreview ? (
+                <p>
+                  Keeps {replacementPreview.preservedInputs.length + replacementPreview.preservedOutputs.length} bindings;
+                  disconnects {replacementPreview.removedInputs.length + replacementPreview.removedOutputs.length};
+                  adds {replacementPreview.addedInputs.length + replacementPreview.addedOutputs.length}.
+                </p>
+              ) : <p>Replacement preview is unavailable.</p>}
+              <button
+                className="graph-context-menu__confirm"
+                disabled={!replacementPreview}
+                onClick={() => {
+                  onReplaceAtom(contextAtom.id, chosenReplacement.name, true);
+                  closeContextMenu();
+                }}
+                type="button"
+              >Confirm replace</button>
+            </div>
+          ) : null}
+          <div className="graph-context-menu__separator" role="separator" />
+          <GraphMenuButton icon="fa-scissors" onClick={() => { onCutAtom(contextAtom.id); closeContextMenu(); }}>Cut</GraphMenuButton>
+          <GraphMenuButton icon="fa-copy" onClick={() => { onCopyAtom(contextAtom.id); closeContextMenu(); }}>Copy</GraphMenuButton>
+          <GraphMenuButton disabled={!atomClipboardReady} icon="fa-paste" onClick={() => { onPasteAtom(); closeContextMenu(); }}>Paste</GraphMenuButton>
+          <GraphMenuButton danger icon="fa-trash" onClick={() => { onRemoveAtom(contextAtom.id); closeContextMenu(); }}>Remove</GraphMenuButton>
+        </GraphContextMenu>
+      ) : null}
     </main>
   );
 }

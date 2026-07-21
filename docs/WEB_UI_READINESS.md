@@ -27,7 +27,9 @@ it is not exposed as the normal editing interface.
   and unit-internals editing.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
   selected pedal, and structured units can be saved to a personal browser library.
-- Pro unit editing uses structured identity, compatibility, parameter, port, and atom-graph controls. Raw YAML text is
+- Pro unit editing uses structured identity, compatibility, parameter, port, and atom-graph controls. User-placeable
+  effects are constrained to one mono audio input and one mono audio output; optional control ports remain available,
+  while loaded multi-port mixers and routing helpers stay supported as internal project infrastructure. Raw YAML text is
   no longer mounted in the active editor; transformer and backend validation errors remain visible without replacing the
   last valid runtime.
 - Simple mode accepts live mono input only. Pro mode additionally accepts packaged or selected audio files and rejects
@@ -139,13 +141,17 @@ fades to 50% opacity while bypassed, making inactive stages visible at a glance.
 than instance properties; scene snapshots persist supported per-instance bypass values alongside their parameter values.
 
 Unit Atom CRUD is backed by structured YAML transforms and executable transformer tests. The editor can create a valid
-unit scaffold, add catalog-derived atoms, rename nodes, edit bindings/configuration, and remove unreferenced atoms.
-Removal is blocked while another node or a public output port references the atom output. The control Worker validates
+unit scaffold, add catalog-derived atoms, rename nodes, edit bindings/configuration, and remove atoms. Removing or cutting
+a one-signal-input/one-signal-output atom bridges its upstream signal to every compatible consumer and public output;
+removing a mixer or other special atom clears incident bindings and leaves explicit disconnected endpoints. The control
+Worker validates
 and compiles every unit draft in a snapshot, including units not yet referenced by the entry project, so incomplete
 forms return file-specific diagnostics without replacing the active runtime.
 
-Unit connections use structured output/input endpoints. React Flow connect, reconnect, and edge-delete actions transform
-YAML bindings and pass through the common validation/swap pipeline. The transformer rejects unknown nodes or fields,
+Unit connections use structured output/input endpoints. Clicking an output handle arms a connection and clicking an input
+commits it; Escape or a canvas click cancels the armed state. React Flow connect, reconnect, and edge-delete actions
+transform YAML bindings and pass through the common validation/swap pipeline. The transformer rejects unknown nodes or
+fields,
 incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates UI-only position state
 and does not change DSP YAML or announce a workspace revision.
 
@@ -156,8 +162,12 @@ atom counts and unit YAML, and cannot be selected, dragged, deleted, reconnected
 
 Project chain editing is driven from the current project YAML rather than the frozen inspect sample. Users can add,
 duplicate, remove, rename, and reorder instances; add, replace, disconnect, and reorder routes; and select endpoints from
-resolved unit port metadata. Rename updates route endpoints, parameter-control identities, and scene paths atomically.
-Removal cleans dependent routes and scene values. Direction, port, occupied-target, and cycle checks run before snapshot
+resolved unit port metadata. Project and atom cards expose keyboard-accessible right-click menus for replace, cut, copy,
+paste, and remove; unit menus additionally expose live on/off. Paste creates a disconnected sibling. Replacement previews
+its impact, keeps the project instance ID and routes, and resets replacement parameters and scene values to defaults.
+Rename updates route endpoints, parameter-control identities, and scene paths atomically. Removing or cutting a normal
+effect bridges its upstream route to every downstream branch; special routing units drop incident routes and remain an
+explicit repair task. Direction, port, occupied-target, and cycle checks run before snapshot
 synchronization. A broken chain can validate structurally but fails preparation, leaving the previous active revision in
 the Worklet until a complete route is restored.
 
@@ -299,3 +309,6 @@ The first product workflow is delivered:
 - [x] Pro workflow with diagnostics, compatibility, batch actions, file preview, and readiness
 - [x] Parameter controls generated from unit metadata
 - [x] Structured atom-level unit editor after the project-level workflow
+- [x] One-click project/atom connections with named handles and cancel state
+- [x] Mono user-effect placement policy with internal multi-port routing exemptions
+- [x] Unit/atom context menus, replacement previews, disconnected paste, topology-aware removal, and Undo

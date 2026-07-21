@@ -51,6 +51,9 @@ const structuredUnitEditor = read('web-tools/src/components/StructuredUnitEditor
 const projectCanvas = read('web-tools/src/components/ProjectCanvas.tsx');
 const projectNode = read('web-tools/src/components/ProjectNode.tsx');
 const projectGraph = read('web-tools/src/lib/projectGraph.ts');
+const projectV2Graph = read('web-tools/src/lib/projectV2Graph.ts');
+const unitV2Graph = read('web-tools/src/lib/unitV2Graph.ts');
+const graphContextMenu = read('web-tools/src/components/GraphContextMenu.tsx');
 const paramKnob = read('web-tools/src/components/ParamKnob.tsx');
 const atomPalette = read('web-tools/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/src/components/ContractGraphCanvas.tsx');
@@ -115,6 +118,17 @@ includesContent(projectCanvas, '<BaseEdge', 'project routes must render their pl
 includesContent(projectGraph, 'new dagre.graphlib.Graph({ multigraph: true })', 'project layout must retain per-route Dagre geometry');
 includesContent(projectGraph, "type: 'projectRoute'", 'project graph routes must use the orthogonal edge renderer');
 includesContent(projectCanvas, 'flow-shell--drop-${dropState}', 'project canvas must expose valid/reject drop feedback');
+includesContent(projectCanvas, 'connectOnClick', 'project handles must support one-click connection start/end');
+includesContent(contractCanvas, 'connectOnClick', 'atom handles must support one-click connection start/end');
+includesContent(projectCanvas, 'onNodeContextMenu', 'project units must expose pointer context actions');
+includesContent(contractCanvas, 'onNodeContextMenu', 'atoms must expose pointer context actions');
+includesContent(projectCanvas, "event.shiftKey && event.key === 'F10'", 'context menus must expose a keyboard entry path');
+includesContent(graphContextMenu, "role=\"menu\"", 'graph actions must render as an accessible menu');
+includesContent(projectV2Graph, 'removeProjectInstanceWithTopology', 'project removal must use a topology-aware transaction');
+includesContent(unitV2Graph, 'removeAtomNodeWithTopology', 'atom removal must use a topology-aware transaction');
+includesContent(unitV2Graph, 'assertUserPlaceableUnit', 'unit placement must enforce the mono effect policy');
+includesContent(structuredUnitEditor, 'One mono audio input and output', 'structured unit editing must explain the port policy');
+includesContent(appStyles, '--bg-canvas: #151813', 'canvas surface must use the approved brighter token');
 includesContent(projectInspector, 'atom-type-lock', 'selected atom type must render as read-only');
 assert(!projectInspector.includes('onSelectedAtomChange({ ...selectedAtom, atom:'), 'atom inspector must not directly mutate atom type');
 includesContent(projectInspector, 'Replace atom...', 'atom type changes must route through explicit replacement workflow');

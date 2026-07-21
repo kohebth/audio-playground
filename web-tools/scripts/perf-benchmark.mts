@@ -11,6 +11,7 @@ import {
   parseProjectGraphDraft,
   parseUnitPortNames,
   removeProjectInstance,
+  removeProjectInstanceWithTopology,
   removeProjectRoute,
   validateProjectRoutes,
 } from '../src/lib/projectV2Graph.ts';
@@ -21,6 +22,7 @@ import {
   moveUnitConnection,
   parseUnitGraphDraft,
   removeAtomNodeFromUnit,
+  removeAtomNodeWithTopology,
   replaceAtomNodeInUnit,
   setAtomNodePosition,
 } from '../src/lib/unitV2Graph.ts';
@@ -265,7 +267,9 @@ function benchmarkProjectMutations(content: string, draft: ReturnType<typeof par
       for (let index = 0; index < iterations; index += 1) {
         const instanceId = `bench_mutation_${index}`;
         const added = addProjectInstance(workingContent, draft.units[0].id, instanceId);
-        workingContent = removeProjectInstance(added.content, added.id);
+        workingContent = index === 0
+          ? removeProjectInstanceWithTopology(added.content, ports, added.id).content
+          : removeProjectInstance(added.content, added.id);
       }
     });
   }
@@ -453,8 +457,8 @@ function benchmarkUnitFixture(file: string, catalog: AtomCatalog): UnitBenchmark
     const addedA = addAtomNodeToUnit(content, catalog, sourceAtom.name, { x: 100, y: 100 });
     const addedB = addAtomNodeToUnit(addedA.content, catalog, sourceAtom.name, { x: 120, y: 120 });
     let working = addedB.content;
-    working = removeAtomNodeFromUnit(working, addedB.id);
-    removeAtomNodeFromUnit(working, addedA.id);
+    working = removeAtomNodeWithTopology(working, catalog, addedB.id).content;
+    removeAtomNodeWithTopology(working, catalog, addedA.id);
   });
 
   const totalMs = Number((parseMs + addMs + replaceMs + moveMs + connectMs + removeMs).toFixed(3));

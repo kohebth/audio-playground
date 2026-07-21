@@ -187,7 +187,8 @@ export function StructuredUnitEditor({ file, unit, ports, onChange, onReorderPar
       </section>
 
       <section className="structured-card">
-        <header><span>Audio ports</span><strong>Mono signal boundaries</strong></header>
+        <header><span>Unit ports</span><strong>One mono audio input and output</strong></header>
+        <p className="structured-card__hint">Effect audio boundaries stay fixed at one mono input and one mono output. Optional control ports do not change audio routing.</p>
         {(['inputs', 'outputs'] as const).map(direction => (
           <div className="structured-ports" key={direction}>
             <div className="structured-ports__title">
@@ -196,20 +197,18 @@ export function StructuredUnitEditor({ file, unit, ports, onChange, onReorderPar
                 onClick={() => {
                   const names = ports[direction].map(port => port.name);
                   const name = nextName(names, direction === 'inputs' ? 'input' : 'output');
-                  apply(content => addUnitPort(content, direction, { name, type: 'audio', channels: 1, signals: [] }));
+                  apply(content => addUnitPort(content, direction, { name, type: 'control', signals: [] }));
                 }}
                 type="button"
-              >+ Add</button>
+              >+ Add port</button>
             </div>
             {ports[direction].map((port, index) => (
               <div className="structured-port" key={`${direction}-${index}`}>
                 <Field label="Name"><DraftField ariaLabel={`${direction} ${index + 1} name`} onCommit={name => apply(content => updateUnitPort(content, direction, index, { ...port, name }))} value={port.name} /></Field>
                 <Field label="Type">
-                  <select aria-label={`${direction} ${index + 1} type`} onChange={event => apply(content => updateUnitPort(content, direction, index, { ...port, type: event.target.value }))} value={port.type}>
-                    <option value="audio">audio</option><option value="control">control</option>
-                  </select>
+                  <input aria-label={`${direction} ${index + 1} type`} disabled value={port.type} />
                 </Field>
-                <Field label="Channels"><DraftField ariaLabel={`${direction} ${index + 1} channels`} onCommit={value => apply(content => updateUnitPort(content, direction, index, { ...port, channels: Number(value) || 1 }))} value={String(port.channels ?? 1)} /></Field>
+                <Field label="Channels"><input aria-label={`${direction} ${index + 1} channels`} disabled value={port.type === 'audio' ? '1 (mono)' : 'control'} /></Field>
               </div>
             ))}
           </div>
