@@ -163,15 +163,22 @@ assert(
   'pedalboard route graph fixture changed',
 );
 assert(
-  (backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length + 1,
-  'workspace bundle must include all referenced unit files plus the guided wet/dry mixer',
+  (backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length + 3,
+  'workspace bundle must include referenced units, legacy migration input, and both explicit routing helpers',
 );
 includesContent(app, 'apg.unit-editor.workspace.v2', 'versioned workspace autosave key is missing');
 includesContent(app, 'apg.unit-editor.workspace.v1', 'legacy workspace migration key is missing');
 includesContent(workspacePersistence, "WORKSPACE_SCHEMA = 'apg.ui.workspace.v2'", 'workspace export schema is missing');
 includesContent(workspacePersistence, 'WORKSPACE_FORMAT_VERSION = 2', 'workspace format version is missing');
 includesContent(app, 'parseWorkspacePayload(saved)', 'autosave restore must validate versioned workspace payloads');
-includesContent(app, 'hydrateWorkspaceFiles(payload, initialWorkspaceFiles)', 'workspace restore must hydrate persisted files');
+includesContent(app, 'hydrateWorkspaceFiles(result.workspace, initialWorkspaceFiles)', 'workspace restore must hydrate migrated files');
+includesContent(projectCanvas, 'onEdgeContextMenu', 'project routes must expose the guided parallel action');
+includesContent(projectCanvas, 'Add in parallel', 'project route actions must name the explicit parallel transaction');
+includesContent(app, 'pathPanner2WorkspaceFile', 'parallel insertion must include the system panner helper');
+includesContent(app, 'pathMixer2WorkspaceFile', 'parallel insertion must include the system mixer helper');
+includesContent(projectNode, "control?.control === 'fader'", 'routing path levels must render as faders');
+includesContent(projectNode, 'ROUTING ON', 'routing helpers must render as always active');
+includesContent(projectV2Graph, 'Use Add in parallel to split a path', 'raw project fan-out must be rejected');
 includesContent(
   app,
   'createWorkspacePayload(entryProject, workspaceFiles)',

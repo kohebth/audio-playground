@@ -16,6 +16,7 @@
 Optional top-level metadata:
 
 - `meta`: Map with optional scalar `title`, `category`, and `description` fields.
+- `routing`: Declares an always-active project routing helper. See **Routing Helpers** below.
 - `ui`: Optional map reserved for unit-level layout hints. It is validated as a map when present, but specific layout fields are not interpreted yet.
 
 ## Params
@@ -31,7 +32,7 @@ Params are keyed by name. Names must be unique.
 Supported param `ui` fields are scalar values:
 
 - `label`: Display label.
-- `control`: One of `knob`, `slider`, `toggle`, `number`, or `select`.
+- `control`: One of `knob`, `slider`, `fader`, `toggle`, `number`, or `select`.
 - `unit`: Display unit such as `x`, `dB`, `Hz`, or `%`.
 - `scale`: One of `linear`, `log`, or `exp`.
 - `display_precision`: Non-negative integer decimal precision.
@@ -62,6 +63,27 @@ Ports are grouped under `ports.inputs` and `ports.outputs`. Names must be unique
 - `control` ports do not require `channels` or graph signals.
 - `control` ports route only to params. Omit a target for same-name param routing, use legacy `target_param: <param>`, or prefer `target: { kind: param, name: <param> }`.
 - Unsupported `target.kind` values such as graph-signal, multi-param, typed-buffer, and smoothing-lane routing are rejected until those modes are designed and implemented.
+
+## Routing Helpers
+
+Project-level splits and merges must use units with explicit routing metadata. A panner has one mono input and one mono
+output per path; a mixer has one mono input per path and one mono output. Every path names its public port and its own
+float dB level parameter:
+
+```yaml
+routing:
+  role: panner
+  paths:
+    - port: path_1
+      level_param: path_1_db
+    - port: path_2
+      level_param: path_2_db
+```
+
+Routing paths must be unique, reference mono audio ports on the routed side, and reference distinct float params. The
+schema accepts two or more paths so future 3/4/N-way helpers do not require a metadata redesign. The current project
+validator and Studio transaction intentionally support exactly two paths, supplied by `path_panner_2` and
+`path_mixer_2`. Each helper exposes one `fader` per path with a public `-60..+6 dB` range and 10 ms smoothing.
 
 ## Graph
 
@@ -103,6 +125,7 @@ The compiler currently validates required keys for these MVP atoms:
 - `generation_dc`: `out.signal`, `config.value`
 - `generation_lfo`: `out.signal`, `config.frequency`, `config.waveform`, `config.phase_offset`
 - `amplitude_multiply`, `amplitude_add`, `amplitude_subtract`: `in.signal_a`, `in.signal_b`, `out.signal`
+- `amplitude_gain_db`: `in.signal`, `out.signal`, `config.gain_db`
 - `amplitude_clip_hard`: `in.signal`, `out.signal`, `config.threshold`
 - `amplitude_clip_soft`: `in.signal`, `out.signal`, `config.threshold`, `config.curve`
 - `delay_unit`: `in.signal`, `out.signal`

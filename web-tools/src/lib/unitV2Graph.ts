@@ -39,6 +39,11 @@ export type UnitPortsDraft = {
   outputs: UnitPortDraft[];
 };
 
+export type UnitRoutingDraft = {
+  role: 'panner' | 'mixer';
+  paths: Array<{ port: string; levelParam: string }>;
+};
+
 export type UserEffectPortPolicy = {
   userPlaceable: boolean;
   audioInputs: UnitPortDraft[];
@@ -61,6 +66,7 @@ export type UnitGraphDraft = {
     description: string;
   };
   compatibility: Record<string, boolean>;
+  routing?: UnitRoutingDraft;
   params: UnitParamDraft[];
   signals: string[];
   nodes: UnitGraphNode[];
@@ -101,6 +107,7 @@ type UnitDocument = Record<string, unknown> & {
     inputs?: unknown[];
     outputs?: unknown[];
   };
+  routing?: unknown;
 };
 
 export type CreateUnitOptions = {
@@ -204,6 +211,15 @@ function parseGraphFromDocument(doc: UnitDocument): UnitGraphDraft {
       typeof enabled === 'boolean' ? [[target, enabled]] : []
     )))
     : {};
+  const rawRouting = isObject(doc.routing) ? doc.routing : null;
+  const role = rawRouting?.role === 'panner' || rawRouting?.role === 'mixer' ? rawRouting.role : null;
+  const routing: UnitRoutingDraft | undefined = role && Array.isArray(rawRouting?.paths) ? {
+    role,
+    paths: rawRouting.paths.filter(isObject).map(path => ({
+      port: String(path.port ?? ''),
+      levelParam: String(path.level_param ?? ''),
+    })),
+  } : undefined;
 
   return {
     name: String(doc.name ?? 'unnamed_unit'),
@@ -214,6 +230,7 @@ function parseGraphFromDocument(doc: UnitDocument): UnitGraphDraft {
       description: String(meta.description ?? ''),
     },
     compatibility,
+    routing,
     params,
     signals,
     nodes,

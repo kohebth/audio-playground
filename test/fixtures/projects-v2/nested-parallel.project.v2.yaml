@@ -1,0 +1,47 @@
+kind: apg.project
+schema: apg.project.v2
+name: nested-parallel
+version: 2.0.0
+
+units:
+  - id: path_panner_2_unit
+    file: ../units-v2/path_panner_2.unit.v2.yaml
+  - id: path_mixer_2_unit
+    file: ../units-v2/path_mixer_2.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: outer_pan
+      unit: path_panner_2_unit
+      routing:
+        section: outer
+    - id: inner_pan
+      unit: path_panner_2_unit
+      routing:
+        section: inner
+    - id: inner_mix
+      unit: path_mixer_2_unit
+      routing:
+        section: inner
+    - id: outer_mix
+      unit: path_mixer_2_unit
+      routing:
+        section: outer
+  routes:
+    - from: system.input
+      to: outer_pan.input
+    - from: outer_pan.path_1
+      to: outer_mix.path_1
+    - from: outer_pan.path_2
+      to: inner_pan.input
+    - from: inner_pan.path_1
+      to: inner_mix.path_1
+    - from: inner_pan.path_2
+      to: inner_mix.path_2
+    - from: inner_mix.output
+      to: outer_mix.path_2
+    - from: outer_mix.output
+      to: system.output
+
+targets:
+  default: desktop_full

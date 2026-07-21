@@ -12,6 +12,7 @@
     X(amplitude_clip_hard, SIGNAL, SIGNAL, { float threshold; }, { uint8_t _reserved; }) \
     X(amplitude_clip_soft, SIGNAL, SIGNAL, { float threshold; int curve; }, { uint8_t _reserved; }) \
     X(amplitude_divide, SIGNAL, DIVISION, { float epsilon; }, { uint8_t _reserved; }) \
+    X(amplitude_gain_db, SIGNAL, SIGNAL, { float gain_db; }, { uint8_t _reserved; }) \
     X(amplitude_multiply, SIGNAL, SIGNAL_PAIR, { uint8_t _reserved; }, { uint8_t _reserved; }) \
     X(amplitude_normalize, SIGNAL, SIGNAL, { float target_level; int mode; }, { float running_peak; }) \
     X(amplitude_smooth, SIGNAL, SIGNAL, { float attack; float release; }, { float prev_value; }) \

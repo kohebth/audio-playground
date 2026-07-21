@@ -22,6 +22,7 @@ typedef struct {
 typedef struct {
     const char                      *id;
     const char                      *unit;
+    const char                      *routing_section;
     apg_project_v2_param_override_t *params;
     size_t                           params_len;
 } apg_project_v2_node_t;

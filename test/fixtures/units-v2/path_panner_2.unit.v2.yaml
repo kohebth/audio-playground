@@ -1,0 +1,85 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: path_panner_2
+version: 2.0.0
+
+meta:
+  title: Pan 2
+  category: routing
+  description: Splits one mono signal into two independently levelled paths.
+
+routing:
+  role: panner
+  paths:
+    - port: path_1
+      level_param: path_1_db
+    - port: path_2
+      level_param: path_2_db
+
+params:
+  path_1_db:
+    type: float
+    default: 0.0
+    min: -60.0
+    max: 6.0
+    smoothing_ms: 10
+    ui:
+      label: Path 1
+      control: fader
+      unit: dB
+      scale: linear
+      display_precision: 1
+  path_2_db:
+    type: float
+    default: 0.0
+    min: -60.0
+    max: 6.0
+    smoothing_ms: 10
+    ui:
+      label: Path 2
+      control: fader
+      unit: dB
+      scale: linear
+      display_precision: 1
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: path_1
+      type: audio
+      channels: 1
+    - name: path_2
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - path_1
+    - path_2
+  nodes:
+    - id: level_path_1
+      atom: amplitude_gain_db
+      in:
+        signal: input
+      out:
+        signal: path_1
+      config:
+        gain_db: ${params.path_1_db}
+    - id: level_path_2
+      atom: amplitude_gain_db
+      in:
+        signal: input
+      out:
+        signal: path_2
+      config:
+        gain_db: ${params.path_2_db}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

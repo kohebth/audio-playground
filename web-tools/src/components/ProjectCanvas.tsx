@@ -5,6 +5,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   type Edge,
+  type EdgeMouseHandler,
   type EdgeProps,
   type EdgeTypes,
   type Connection,
@@ -25,6 +26,7 @@ import type {
   ProjectRoutePoint,
 } from '../lib/projectGraph';
 import { markPerfSpan } from '../lib/perfTelemetry';
+import type { ProjectRoutingContract } from '../lib/projectV2Graph';
 
 const nodeTypes = { projectNode: ProjectNode } satisfies NodeTypes;
 const ROUTE_CORNER_RADIUS = 10;
@@ -139,14 +141,24 @@ type Props = {
   onPasteUnit: () => void;
   onRemoveUnit: (instanceId: string) => void;
   onReplaceUnit: (instanceId: string, unitId: string) => void;
+  onAddParallelAtRoute: (unitId: string, routeIndex: number) => void;
   canPasteUnit: boolean;
   replacementOptions: ProjectReplacementOption[];
+  parallelOptions: ProjectParallelOption[];
 };
 
 export type ProjectReplacementOption = {
   id: string;
   label: string;
   paramCount: number;
+  routing?: ProjectRoutingContract;
+};
+
+export type ProjectParallelOption = {
+  id: string;
+  label: string;
+  disabled?: boolean;
+  reason?: string;
 };
 
 type ProjectFlowProps = Omit<Props,
@@ -156,9 +168,12 @@ type ProjectFlowProps = Omit<Props,
   | 'onPasteUnit'
   | 'onRemoveUnit'
   | 'onReplaceUnit'
-  | 'replacementOptions'> & {
+  | 'replacementOptions'
+  | 'onAddParallelAtRoute'
+  | 'parallelOptions'> & {
   displayedEdges: ProjectRouteEdge[];
   onNodeContextMenu: NodeMouseHandler<Node<ProjectNodeData>>;
+  onEdgeContextMenu: EdgeMouseHandler<ProjectRouteEdge>;
 };
 
 function routeIndexFromEdge(edge: Edge): number | null {
@@ -186,6 +201,7 @@ function ProjectFlow({
   onInsertUnitAtRoute,
   onConnectUnits,
   onNodeContextMenu,
+  onEdgeContextMenu,
 }: ProjectFlowProps) {
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
   const [connectionArmed, setConnectionArmed] = useState(false);
@@ -251,6 +267,7 @@ function ProjectFlow({
         onClickConnectEnd={() => setConnectionArmed(false)}
         onNodeClick={(event, node) => onSelectNode(node.id, event.shiftKey)}
         onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
         onNodeDoubleClick={(_, node) => onOpenContractGraph(node.id)}
         onEdgeClick={(_, edge) => {
           const routeIndex = routeIndexFromEdge(edge);
@@ -286,27 +303,42 @@ export function ProjectCanvas({
   onPasteUnit,
   onRemoveUnit,
   onReplaceUnit,
+  onAddParallelAtRoute,
   canPasteUnit,
   replacementOptions,
+  parallelOptions,
   ...props
 }: Props) {
   const [contextMenu, setContextMenu] = useState<(ContextMenuPoint & { nodeId: string }) | null>(null);
+  const [routeMenu, setRouteMenu] = useState<(ContextMenuPoint & { routeIndex: number }) | null>(null);
   const [replacementOpen, setReplacementOpen] = useState(false);
   const [replacementUnit, setReplacementUnit] = useState('');
+  const [parallelUnit, setParallelUnit] = useState('');
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
+    setRouteMenu(null);
     setReplacementOpen(false);
   }, []);
   const contextNode = contextMenu ? nodes.find(node => node.id === contextMenu.nodeId) : null;
   const unitData = contextNode?.data.kind === 'unit' ? contextNode.data : null;
+  const currentRouting = unitData?.ports?.routing;
   const availableReplacements = unitData
-    ? replacementOptions.filter(option => option.id !== unitData.instance.unit)
+    ? replacementOptions.filter(option => {
+      if (option.id === unitData.instance.unit) return false;
+      if (!currentRouting) return !option.routing;
+      return option.routing?.role === currentRouting.role
+        && option.routing.paths.length === currentRouting.paths.length
+        && option.routing.paths.every((path, index) => (
+          path.port === currentRouting.paths[index]?.port
+          && path.levelParam === currentRouting.paths[index]?.levelParam
+        ));
+    })
     : [];
   const chosenReplacement = availableReplacements.find(option => option.id === replacementUnit)
     ?? availableReplacements[0];
-  const canReplace = Boolean(unitData?.ports?.userPlaceable ?? (
+  const canReplace = Boolean(currentRouting || (unitData?.ports?.userPlaceable ?? (
     unitData?.ports?.inputs.length === 1 && unitData?.ports?.outputs.length === 1
-  ));
+  )));
   const incidentRoutes = contextNode
     ? edges.filter(edge => edge.source === contextNode.id || edge.target === contextNode.id).length
     : 0;
@@ -319,6 +351,7 @@ export function ProjectCanvas({
     event.preventDefault();
     const bounds = nodeElement.getBoundingClientRect();
     setContextMenu({ nodeId, x: bounds.left + 24, y: bounds.top + 24 });
+    setRouteMenu(null);
     setReplacementOpen(false);
   };
   const displayedEdges = edges.map(edge => {
@@ -333,6 +366,8 @@ export function ProjectCanvas({
       },
     };
   });
+  const enabledParallelOptions = parallelOptions.filter(option => !option.disabled);
+  const chosenParallel = enabledParallelOptions.find(option => option.id === parallelUnit) ?? enabledParallelOptions[0];
 
   return (
     <main className="canvas canvas--project canvas-area" onKeyDownCapture={openKeyboardMenu}>
@@ -348,7 +383,17 @@ export function ProjectCanvas({
             event.preventDefault();
             props.onSelectNode(node.id);
             setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
+            setRouteMenu(null);
             setReplacementOpen(false);
+          }}
+          onEdgeContextMenu={(event, edge) => {
+            const routeIndex = routeIndexFromEdge(edge);
+            if (routeIndex === null) return;
+            event.preventDefault();
+            props.onSelectRoute(routeIndex);
+            setContextMenu(null);
+            setRouteMenu({ routeIndex, x: event.clientX, y: event.clientY });
+            setParallelUnit(chosenParallel?.id ?? '');
           }}
         />
       </ReactFlowProvider>
@@ -369,7 +414,9 @@ export function ProjectCanvas({
               void unitData.onBypassChange?.(unitData.instance.id, !unitData.bypassed);
               closeContextMenu();
             }}
-            title={unitData.bypassAvailable ? undefined : 'Start audio preview to toggle this unit.'}
+            title={unitData.instance.routing
+              ? 'Routing helpers are always active.'
+              : unitData.bypassAvailable ? undefined : 'Start audio preview to toggle this unit.'}
           >
             {unitData.bypassed ? 'Turn on' : 'Turn off'}
           </GraphMenuButton>
@@ -380,7 +427,7 @@ export function ProjectCanvas({
               setReplacementOpen(open => !open);
               setReplacementUnit(chosenReplacement?.id ?? '');
             }}
-            title={canReplace ? undefined : 'Routing helpers with multiple ports cannot be replaced in place.'}
+            title={canReplace ? undefined : 'This unit does not have a replaceable effect contract.'}
           >Replace…</GraphMenuButton>
           {replacementOpen && chosenReplacement ? (
             <div className="graph-context-menu__replace" role="group" aria-label="Replacement preview">
@@ -415,6 +462,46 @@ export function ProjectCanvas({
           <GraphMenuButton icon="fa-copy" onClick={() => { onCopyUnit(unitData.instance.id); closeContextMenu(); }}>Copy</GraphMenuButton>
           <GraphMenuButton disabled={!canPasteUnit} icon="fa-paste" onClick={() => { onPasteUnit(); closeContextMenu(); }}>Paste</GraphMenuButton>
           <GraphMenuButton danger icon="fa-trash" onClick={() => { onRemoveUnit(unitData.instance.id); closeContextMenu(); }}>Remove</GraphMenuButton>
+        </GraphContextMenu>
+      ) : null}
+      {routeMenu ? (
+        <GraphContextMenu
+          label={`Route ${routeMenu.routeIndex + 1} actions`}
+          onClose={closeContextMenu}
+          point={routeMenu}
+        >
+          <div className="graph-context-menu__title">
+            <strong>Add in parallel</strong>
+            <span>Pan 2 → effect → Mix 2</span>
+          </div>
+          {parallelOptions.length > 0 ? (
+            <div className="graph-context-menu__replace" role="group" aria-label="Parallel effect">
+              <label>
+                <span>Effect</span>
+                <select
+                  aria-label="Parallel effect"
+                  onChange={event => setParallelUnit(event.target.value)}
+                  value={chosenParallel?.id ?? ''}
+                >
+                  {parallelOptions.map(option => (
+                    <option disabled={option.disabled} key={option.id} value={option.id}>
+                      {option.label}{option.disabled ? ' — unavailable' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {chosenParallel ? (
+                <button
+                  className="graph-context-menu__confirm"
+                  onClick={() => {
+                    onAddParallelAtRoute(chosenParallel.id, routeMenu.routeIndex);
+                    closeContextMenu();
+                  }}
+                  type="button"
+                >Create parallel path</button>
+              ) : <p>No mono effects are available for this route.</p>}
+            </div>
+          ) : <p className="graph-context-menu__empty">No effects are available.</p>}
         </GraphContextMenu>
       ) : null}
     </main>

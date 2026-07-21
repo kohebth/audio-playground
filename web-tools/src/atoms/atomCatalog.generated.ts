@@ -85,6 +85,15 @@ export const ATOM_CATALOG: AtomDef[] = [
     config: [{ name: "epsilon", type: "float", required: true, default: 1e-06, min: 1e-12, max: 0.1, scale: "logarithmic", realtime: true, structural: false }],
   },
   {
+    name: 'amplitude_gain_db',
+    category: 'amplitude',
+    visibility: 'internal',
+    dispatch: 'process',
+    ins: ["signal"],
+    outs: ["signal"],
+    config: [{ name: "gain_db", type: "float", required: true, default: 0, min: -120, max: 24, unit: "db", realtime: true, structural: false }],
+  },
+  {
     name: 'amplitude_multiply',
     category: 'amplitude',
     visibility: 'public',

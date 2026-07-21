@@ -41,6 +41,17 @@ typedef struct {
 } apg_unit_v2_port_t;
 
 typedef struct {
+    const char *port;
+    const char *level_param;
+} apg_unit_v2_routing_path_t;
+
+typedef struct {
+    const char                 *role;
+    apg_unit_v2_routing_path_t *paths;
+    size_t                      paths_len;
+} apg_unit_v2_routing_t;
+
+typedef struct {
     const char    *key;
     apg_v2_value_t value;
     const uc_node *node;
@@ -66,6 +77,7 @@ typedef struct {
     const char                  *name;
     const char                  *version;
     apg_unit_v2_meta_t           meta;
+    apg_unit_v2_routing_t        routing;
     apg_unit_v2_param_t         *params;
     size_t                       params_len;
     apg_unit_v2_port_t          *input_ports;

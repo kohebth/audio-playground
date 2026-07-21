@@ -4,9 +4,9 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 
 ## Current Backend Status
 
-- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, validate/inspect JSON contracts, and runtime product controls for params, bypass, mute, and meters are implemented. Solo remains a host/UI routing concern until a real routing contract exists.
+- APGCore v2 loader, compiler, scheduler, runtime MVP, fixtures, host bridge, control-to-param routing, atom catalog export, project schema validation, resolved project unit loading, mono project compilation, explicit panner/mixer sections, validate/inspect JSON contracts, and runtime product controls for params, bypass, mute, and meters are implemented. Solo remains a host/UI concern.
 - `unit.v2.yaml` is executable and tested, and optional unit/param UI metadata is parsed and validated.
-- Reusable test metadata fixtures exist in `test/fixtures/units-v2/`, including representative overdrive, phaser, tremolo, chorus, feedback delay, tone stack, noise gate, and wet/dry mix graphs.
+- Reusable test metadata fixtures exist in `test/fixtures/units-v2/`, including representative overdrive, phaser, tremolo, chorus, feedback delay, tone stack, noise gate, legacy wet/dry mix, and the always-active `path_panner_2` / `path_mixer_2` routing helpers.
 - Project/session schema, deterministic test metadata fixtures, referenced-unit resolution, mono project compilation, and `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml` exist. Its serial chain now places a six-stage all-pass phaser before overdrive and a cubic-delay chorus after tremolo, then uses the delay unit's own feedback and wet/dry controls instead of a redundant project-level blend. The final Schroeder reverb is exercised for tail continuity by native and Emscripten/WASM tests; the complete project supports desktop, WASM real-time, and offline render, but not M7 static export.
 - The default `tone_stack` fixture is an audible Plexi-inspired amp stage rather than a scalar placeholder: preamp gain drives soft saturation; normalized bass and treble crossfades surround a 700 Hz `filter_biquad` band-pass mid branch; master volume drives a second saturation stage; and presence, cabinet roll-off, and a safety limiter shape the output. The stage is covered by native response/control tests and exposes six project knobs.
 - The default `noise_gate` fixture uses full-wave envelope detection before thresholding, then smooths the gate gain with user-facing Attack and Release controls. This avoids closing on negative waveform halves and replaces abrupt switching with portable desktop/WASM/M7/offline ballistics; its three controls retain YAML order on one project-card row.
@@ -22,9 +22,9 @@ it is not exposed as the normal editing interface.
   IndexedDB. The portable `.apg` package contains the versioned workspace, manifest, optional mono audio, and readiness
   snapshot; topbar import replaces the open project's contents in place, while home import creates a separate project.
 - A global Simple/Pro switch serves both musicians and DSP authors. Simple mode provides an effect library, pedal-style
-  controls, serial insertion, guided non-nested parallel routing through a real wet/dry mixer, microphone-only preview,
-  presets, scenes, and a guided tour. Pro mode adds project structure, batch operations, file preview, readiness details,
-  and unit-internals editing.
+  controls, serial insertion, guided nested parallel routing through explicit Pan 2 / Mix 2 helpers, microphone-only
+  preview, presets, scenes, and a guided tour. Pro mode adds project structure, batch operations, file preview, readiness
+  details, unit-internals editing, and the same route-context parallel action.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
   selected pedal, and structured units can be saved to a personal browser library.
 - Pro unit editing uses structured identity, compatibility, parameter, port, and atom-graph controls. User-placeable
@@ -86,6 +86,8 @@ unit's parameter metadata, including label, range, and unit; the inspector retai
 Dragging a card knob uses the same clamped YAML update and live parameter synchronization path as other parameter edits.
 Cards grow by parameter-row count and wrap at three knobs per row for every unit. Knob order follows the referenced unit
 YAML parameter mapping exactly, and the Contract inspector can move parameters up or down through a structured YAML edit.
+Routing helpers render their ordered path levels as vertical keyboard-accessible dB faders and show a fixed `ROUTING ON`
+footer instead of a bypass control.
 Project cards are fixed in both Simple and Pro modes. Topology changes rebuild a deterministic left-to-right Dagre layout
 without consuming or writing project `ui.position` values, while scalar updates preserve the existing React Flow nodes,
 edges, and viewport. Linear routes stay straight; split and merge routes use Dagre's obstacle lanes rendered as rounded
@@ -139,6 +141,8 @@ The preview exposes both controls while running. Each pedal card uses its full-w
 fades to 50% opacity while bypassed, making inactive stages visible at a glance. Project routes omit repetitive
 `output -> input` edge labels while retaining their selectable paths. Live bypass and mute remain runtime controls rather
 than instance properties; scene snapshots persist supported per-instance bypass values alongside their parameter values.
+Routing panners and mixers are compiled and presented as always active, and scene, batch, and card bypass paths exclude
+them.
 
 Unit Atom CRUD is backed by structured YAML transforms and executable transformer tests. The editor can create a valid
 unit scaffold, add catalog-derived atoms, rename nodes, edit bindings/configuration, and remove atoms. Removing or cutting
@@ -166,18 +170,22 @@ resolved unit port metadata. Project and atom cards expose keyboard-accessible r
 paste, and remove; unit menus additionally expose live on/off. Paste creates a disconnected sibling. Replacement previews
 its impact, keeps the project instance ID and routes, and resets replacement parameters and scene values to defaults.
 Rename updates route endpoints, parameter-control identities, and scene paths atomically. Removing or cutting a normal
-effect bridges its upstream route to every downstream branch; special routing units drop incident routes and remain an
-explicit repair task. Direction, port, occupied-target, and cycle checks run before snapshot
-synchronization. A broken chain can validate structurally but fails preparation, leaving the previous active revision in
-the Worklet until a complete route is restored.
+effect bridges its upstream route to its downstream route. Raw source fan-out and raw merges are rejected with an
+`Add in parallel` diagnostic. Right-clicking a route in either mode applies one atomic panner/effect/mixer transaction;
+nested sections are traced recursively. Cutting, removing, pasting, or replacing a routing helper is rejected unless the
+completed topology still has one matching panner/mixer pair with identical ordered paths. Direction, port, occupied-target,
+section, orphan, and cycle checks run before snapshot synchronization. Invalid edits leave the previous active revision in
+the Worklet.
 
 The internal workspace still uses the versioned `apg.ui.workspace.v2` envelope. Browser persistence wraps that workspace
 in `apg.project.package.v1`, stores projects in IndexedDB, and exports/imports the same JSON-based `.apg` package. The
 package retains every project/unit file as path, role, and YAML content plus manifest, optional mono audio, and readiness
 data; baseline-only editor fields are not serialized. Restore validates format versions, confined relative paths, unique
 files, roles, entry project, audio shape, and readiness data before mounting the Worker/AudioWorklet integration. Legacy
-local storage migrates once. Invalid imports report the error without replacing the active workspace, while valid
-imports proceed through normal WASM validation and revision preparation.
+local storage migrates once. Recognizable raw-fanout plus `wet_dry_mix` sections are upgraded idempotently to explicit
+Pan 2 / Mix 2 sections, preserving the mixer ID and translating node/scene ratios to independent dB levels. Ambiguous
+legacy graphs remain unchanged and surface a review notice. Invalid imports report the error without replacing the active
+workspace, while valid imports proceed through normal WASM validation and revision preparation.
 
 ## Ready To Start Web UI When
 
@@ -239,7 +247,7 @@ The generated TypeScript catalog and backend inspect contract provide a structur
 - supported target profiles
 - constraints such as fixed-size or stateful behavior
 
-The current generated catalog contains 72 atoms: 27 public, 26 advanced, and 19 internal. The default palette shows
+The current generated catalog contains 73 atoms: 27 public, 26 advanced, and 20 internal. The default palette shows
 the public subset, advanced mode adds the advanced subset, and internal compatibility/infrastructure atoms remain
 loadable without being addable from the palette.
 

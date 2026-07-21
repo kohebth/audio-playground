@@ -18,6 +18,40 @@ function orderParamsByUnitContract(data: Extract<ProjectNodeData, { kind: 'unit'
   ];
 }
 
+function ProjectFader({
+  instanceId,
+  paramKey,
+  value,
+  control,
+  onChange,
+}: {
+  instanceId: string;
+  paramKey: string;
+  value: string;
+  control: NonNullable<Extract<ProjectNodeData, { kind: 'unit' }>['paramControls']>[number];
+  onChange?: (instanceId: string, paramKey: string, value: string) => void;
+}) {
+  const min = Number(control.min ?? -60);
+  const max = Number(control.max ?? 6);
+  const numeric = Number(value);
+  const resolved = Number.isFinite(numeric) ? Math.max(min, Math.min(max, numeric)) : min;
+  return (
+    <label className="project-fader nodrag nopan">
+      <span>{control.label}</span>
+      <input
+        aria-label={`${instanceId} ${control.label}`}
+        max={max}
+        min={min}
+        onChange={event => onChange?.(instanceId, paramKey, event.target.value)}
+        step="0.1"
+        type="range"
+        value={resolved}
+      />
+      <output>{resolved.toFixed(1)} {control.unit ?? ''}</output>
+    </label>
+  );
+}
+
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
   const renderId = data.kind === 'system' ? data.id : data.instance.id;
   useEffect(() => markComponentRender('ProjectNode', renderId));
@@ -50,7 +84,9 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   const bypassed = data.bypassed ?? false;
   const params = orderParamsByUnitContract(data);
   const controlsByKey = new Map(data.paramControls?.map(control => [control.key, control]) ?? []);
-  const wide = params.length >= 3;
+  const routing = Boolean(data.instance.routing || data.ports?.routing);
+  const hasFaders = params.some(param => controlsByKey.get(param.key)?.control === 'fader');
+  const wide = params.length >= 3 || hasFaders;
   const inputPorts = data.ports?.inputs.length ? data.ports.inputs : ['input'];
   const outputPorts = data.ports?.outputs.length ? data.ports.outputs : ['output'];
 
@@ -75,6 +111,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
       <div className={`node-pedal${wide ? ' wide' : ''}`}>
         <div className="node-pedal-header">
           <span className="pedal-type-name">{data.unit.name}</span>
+          {routing ? <span className="project-node__routing-badge">Always active</span> : null}
         </div>
         <div className="node-pedal-body">
           <span className="pedal-instance">{data.instance.id}</span>
@@ -82,6 +119,18 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
             <div className="project-node__knobs knobs-row" aria-label={`${data.instance.id} controls`}>
               {params.map(param => {
                 const control = controlsByKey.get(param.key);
+                if (control?.control === 'fader') {
+                  return (
+                    <ProjectFader
+                      control={control}
+                      instanceId={data.instance.id}
+                      key={param.key}
+                      onChange={data.onParamChange}
+                      paramKey={param.key}
+                      value={param.value}
+                    />
+                  );
+                }
                 return (
                   <ParamKnob
                     key={param.key}
@@ -102,24 +151,31 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
             <span className="project-node__empty">No exposed controls</span>
           )}
         </div>
-        <button
-          data-testid={`project-node-bypass-${data.instance.id}`}
-          aria-label={`Turn ${bypassed ? 'on' : 'off'} ${data.instance.id}`}
-          aria-pressed={!bypassed}
-          className={`node-pedal-footer ${bypassed ? 'node-pedal-footer--off' : 'node-pedal-footer--on'} nodrag nopan`}
-          disabled={!data.bypassAvailable}
-          onClick={event => {
-            event.stopPropagation();
-            void data.onBypassChange?.(data.instance.id, !bypassed);
-          }}
-          onDoubleClick={event => event.stopPropagation()}
-          onPointerDown={event => event.stopPropagation()}
-          title={bypassed ? 'Turn on' : 'Turn off'}
-          type="button"
-        >
-          <span className="node-pedal-footer__indicator" aria-hidden="true" />
-          <span>{bypassed ? 'OFF' : 'ON'}</span>
-        </button>
+        {routing ? (
+          <div className="node-pedal-footer node-pedal-footer--always-on" title="Routing helpers are always active">
+            <span className="node-pedal-footer__indicator" aria-hidden="true" />
+            <span>ROUTING ON</span>
+          </div>
+        ) : (
+          <button
+            data-testid={`project-node-bypass-${data.instance.id}`}
+            aria-label={`Turn ${bypassed ? 'on' : 'off'} ${data.instance.id}`}
+            aria-pressed={!bypassed}
+            className={`node-pedal-footer ${bypassed ? 'node-pedal-footer--off' : 'node-pedal-footer--on'} nodrag nopan`}
+            disabled={!data.bypassAvailable}
+            onClick={event => {
+              event.stopPropagation();
+              void data.onBypassChange?.(data.instance.id, !bypassed);
+            }}
+            onDoubleClick={event => event.stopPropagation()}
+            onPointerDown={event => event.stopPropagation()}
+            title={bypassed ? 'Turn on' : 'Turn off'}
+            type="button"
+          >
+            <span className="node-pedal-footer__indicator" aria-hidden="true" />
+            <span>{bypassed ? 'OFF' : 'ON'}</span>
+          </button>
+        )}
       </div>
       {outputPorts.map((port, index) => (
         <Handle

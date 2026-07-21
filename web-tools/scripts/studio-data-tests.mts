@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import {
   createApgProjectPackage,
@@ -18,8 +20,14 @@ import {
   listPresetsForUnit,
 } from '../src/lib/presetLibrary.ts';
 import { MemoryStudioRepository } from '../src/lib/studioRepository.ts';
-import { findMigratableBrowserWorkspace, migrateWorkspaceValue } from '../src/lib/workspaceMigrations.ts';
+import {
+  findMigratableBrowserWorkspace,
+  migrateApgProjectRouting,
+  migrateLegacyWetDryWorkspace,
+  migrateWorkspaceValue,
+} from '../src/lib/workspaceMigrations.ts';
 import { createWorkspacePayload } from '../src/lib/workspacePersistence.ts';
+import { parseProjectGraphDraft } from '../src/lib/projectV2Graph.ts';
 
 const createdAt = '2026-07-20T08:00:00.000Z';
 const empty = createEmptyProjectPackage({ id: 'empty-1', name: 'First Board', now: createdAt });
@@ -117,5 +125,116 @@ const browserMigration = findMigratableBrowserWorkspace({
 }, { id: 'browser-migration', name: 'Recovered Project', now: createdAt });
 assert.equal(browserMigration?.sourceKey, 'apg.unit-editor.workspace.v2');
 assert.equal(browserMigration?.project.manifest.name, 'Recovered Project');
+
+const repo = resolve(import.meta.dirname, '../..');
+const routingHelpers = {
+  panner: { content: readFileSync(resolve(repo, 'test/fixtures/units-v2/path_panner_2.unit.v2.yaml'), 'utf8') },
+  mixer: { content: readFileSync(resolve(repo, 'test/fixtures/units-v2/path_mixer_2.unit.v2.yaml'), 'utf8') },
+};
+const legacyParallelProject = `kind: apg.project
+schema: apg.project.v2
+name: legacy-parallel
+version: 2.0.0
+units:
+  - id: overdrive_unit
+    file: ../units/overdrive.unit.v2.yaml
+  - id: wet_dry_mix_unit
+    file: ../units/wet_dry_mix.unit.v2.yaml
+chain:
+  nodes:
+    - id: drive1
+      unit: overdrive_unit
+      params: { drive: 2.2 }
+    - id: blend
+      unit: wet_dry_mix_unit
+      params: { mix: 0.25 }
+  routes:
+    - from: system.input
+      to: blend.dry
+    - from: system.input
+      to: drive1.input
+    - from: drive1.output
+      to: blend.wet
+    - from: blend.output
+      to: system.output
+scenes:
+  - name: Wider
+    params: { blend.mix: 0.75 }
+    bypass: { blend: true, drive1: false }
+targets:
+  default: desktop_full
+`;
+const legacyWorkspace = createWorkspacePayload('projects/legacy.project.v2.yaml', [
+  {
+    path: 'projects/legacy.project.v2.yaml',
+    role: 'project',
+    content: legacyParallelProject,
+    originalContent: legacyParallelProject,
+  },
+  {
+    path: 'units/overdrive.unit.v2.yaml',
+    role: 'unit',
+    content: readFileSync(resolve(repo, 'test/fixtures/units-v2/overdrive.unit.v2.yaml'), 'utf8'),
+    originalContent: '',
+  },
+  {
+    path: 'units/wet_dry_mix.unit.v2.yaml',
+    role: 'unit',
+    content: readFileSync(resolve(repo, 'test/fixtures/units-v2/wet_dry_mix.unit.v2.yaml'), 'utf8'),
+    originalContent: '',
+  },
+]);
+const routingMigration = migrateLegacyWetDryWorkspace(legacyWorkspace, routingHelpers);
+assert.equal(routingMigration.migratedSections, 1);
+assert.equal(routingMigration.ambiguousSections, 0);
+assert(routingMigration.workspace.files.some(file => file.path === 'units/path_panner_2.unit.v2.yaml'));
+assert(routingMigration.workspace.files.some(file => file.path === 'units/path_mixer_2.unit.v2.yaml'));
+const migratedProjectFile = routingMigration.workspace.files.find(file => file.path === legacyWorkspace.entryProject);
+assert(migratedProjectFile);
+const migratedDraft = parseProjectGraphDraft(migratedProjectFile.content);
+const panner = migratedDraft.nodes.find(node => node.id === 'blend_pan');
+const mixer = migratedDraft.nodes.find(node => node.id === 'blend');
+assert.equal(panner?.routing?.section, 'parallel_1');
+assert.equal(mixer?.routing?.section, 'parallel_1');
+assert.equal(mixer?.params.path_1_db, '-2.4988');
+assert.equal(mixer?.params.path_2_db, '-12.0412');
+assert.deepEqual(migratedDraft.routes, [
+  { from: 'system.input', to: 'blend_pan.input' },
+  { from: 'blend_pan.path_1', to: 'blend.path_1' },
+  { from: 'blend_pan.path_2', to: 'drive1.input' },
+  { from: 'drive1.output', to: 'blend.path_2' },
+  { from: 'blend.output', to: 'system.output' },
+]);
+assert.equal(migratedDraft.scenes[0].params['blend.path_1_db'], '-12.0412');
+assert.equal(migratedDraft.scenes[0].params['blend.path_2_db'], '-2.4988');
+assert(!('blend' in migratedDraft.scenes[0].bypass));
+const repeatedMigration = migrateLegacyWetDryWorkspace(routingMigration.workspace, routingHelpers);
+assert.equal(repeatedMigration.migratedSections, 0);
+assert.deepEqual(repeatedMigration.workspace, routingMigration.workspace);
+
+const ambiguousProject = legacyParallelProject.replace(
+  '    - from: drive1.output\n      to: blend.wet\n',
+  '    - from: drive1.output\n      to: system.output\n',
+);
+const ambiguousWorkspace = createWorkspacePayload(legacyWorkspace.entryProject, legacyWorkspace.files.map(file => ({
+  ...file,
+  content: file.role === 'project' ? ambiguousProject : file.content,
+  originalContent: '',
+})));
+const ambiguousMigration = migrateLegacyWetDryWorkspace(ambiguousWorkspace, routingHelpers);
+assert.equal(ambiguousMigration.migratedSections, 0);
+assert.equal(ambiguousMigration.ambiguousSections, 1);
+assert.deepEqual(ambiguousMigration.workspace, ambiguousWorkspace);
+
+const legacyPackage = createApgProjectPackage(legacyWorkspace, {
+  id: 'legacy-package',
+  name: 'Legacy Package',
+  createdAt,
+  updatedAt: createdAt,
+});
+const migratedPackage = migrateApgProjectRouting(legacyPackage, routingHelpers);
+assert.equal(migratedPackage.migratedSections, 1);
+assert.equal(migratedPackage.project.manifest.id, legacyPackage.manifest.id);
+assert.equal(migratedPackage.project.workspace.files.length, legacyWorkspace.files.length + 2);
 
 console.log('studio data tests passed');

@@ -1,0 +1,94 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: path_mixer_2
+version: 2.0.0
+
+meta:
+  title: Mix 2
+  category: routing
+  description: Sums two mono paths with an independent level for each input.
+
+routing:
+  role: mixer
+  paths:
+    - port: path_1
+      level_param: path_1_db
+    - port: path_2
+      level_param: path_2_db
+
+params:
+  path_1_db:
+    type: float
+    default: -6.0206
+    min: -60.0
+    max: 6.0
+    smoothing_ms: 10
+    ui:
+      label: Path 1
+      control: fader
+      unit: dB
+      scale: linear
+      display_precision: 1
+  path_2_db:
+    type: float
+    default: -6.0206
+    min: -60.0
+    max: 6.0
+    smoothing_ms: 10
+    ui:
+      label: Path 2
+      control: fader
+      unit: dB
+      scale: linear
+      display_precision: 1
+
+ports:
+  inputs:
+    - name: path_1
+      type: audio
+      channels: 1
+    - name: path_2
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - path_1
+    - path_2
+    - path_1_scaled
+    - path_2_scaled
+    - output
+  nodes:
+    - id: level_path_1
+      atom: amplitude_gain_db
+      in:
+        signal: path_1
+      out:
+        signal: path_1_scaled
+      config:
+        gain_db: ${params.path_1_db}
+    - id: level_path_2
+      atom: amplitude_gain_db
+      in:
+        signal: path_2
+      out:
+        signal: path_2_scaled
+      config:
+        gain_db: ${params.path_2_db}
+    - id: sum_paths
+      atom: amplitude_add
+      in:
+        signal_a: path_1_scaled
+        signal_b: path_2_scaled
+      out:
+        signal: output
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true
