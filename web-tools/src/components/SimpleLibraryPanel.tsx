@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
+
+export const EFFECT_LIBRARY_DRAG_TYPE = 'application/x-apg-effect-library';
 
 export type EffectLibraryItem = {
   id: string;
@@ -10,11 +13,14 @@ export type EffectLibraryItem = {
   placementError?: string;
 };
 
+export type EffectLibraryDragPayload = Pick<EffectLibraryItem, 'id' | 'scope' | 'recordId' | 'title'>;
+
 type Props = {
   items: EffectLibraryItem[];
   onAdd: (item: EffectLibraryItem) => void;
   onAddParallel: (item: EffectLibraryItem) => void;
   onDeletePersonal: (recordId: string) => void;
+  onEditDefinition: (item: EffectLibraryItem) => void;
 };
 
 const categoryColor: Record<string, string> = {
@@ -26,7 +32,7 @@ const categoryColor: Record<string, string> = {
   reverb: 'cyan',
 };
 
-export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePersonal }: Props) {
+export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePersonal, onEditDefinition }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const categories = useMemo(() => ['All', ...new Set(items.map(item => item.category))], [items]);
@@ -34,6 +40,7 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
     (category === 'All' || item.category === category)
     && `${item.title} ${item.description}`.toLowerCase().includes(query.toLowerCase())
   )), [category, items, query]);
+  const [menu, setMenu] = useState<(ContextMenuPoint & { item: EffectLibraryItem }) | null>(null);
 
   return (
     <aside className="simple-library" data-tour="library">
@@ -54,7 +61,29 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
       </div>
       <div className="simple-library__list">
         {filtered.map(item => (
-          <article className="effect-library-card" key={`${item.scope}-${item.id}`}>
+          <article
+            className="effect-library-card"
+            draggable={!item.placementError}
+            key={`${item.scope}-${item.id}`}
+            onContextMenu={event => {
+              event.preventDefault();
+              setMenu({ item, x: event.clientX, y: event.clientY });
+            }}
+            onDragStart={event => {
+              if (item.placementError) {
+                event.preventDefault();
+                return;
+              }
+              const payload: EffectLibraryDragPayload = {
+                id: item.id,
+                scope: item.scope,
+                recordId: item.recordId,
+                title: item.title,
+              };
+              event.dataTransfer.setData(EFFECT_LIBRARY_DRAG_TYPE, JSON.stringify(payload));
+              event.dataTransfer.effectAllowed = 'copy';
+            }}
+          >
             <i className={`effect-library-card__icon effect-library-card__icon--${categoryColor[item.category] ?? 'blue'}`}>
               <span />
             </i>
@@ -85,6 +114,24 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
         ))}
         {filtered.length === 0 ? <p className="simple-library__empty">No effects match that search.</p> : null}
       </div>
+      {menu ? (
+        <GraphContextMenu label={`${menu.item.title} library actions`} onClose={() => setMenu(null)} point={menu}>
+          <div className="graph-context-menu__title">
+            <strong>{menu.item.title}</strong>
+            <span>{menu.item.scope === 'personal' ? 'Personal effect' : 'Built-in effect'}</span>
+          </div>
+          <GraphMenuButton icon="fa-diagram-project" onClick={() => {
+            onEditDefinition(menu.item);
+            setMenu(null);
+          }}>Edit Atom Chain</GraphMenuButton>
+          {menu.item.scope === 'personal' && menu.item.recordId ? (
+            <GraphMenuButton danger icon="fa-trash" onClick={() => {
+              onDeletePersonal(menu.item.recordId!);
+              setMenu(null);
+            }}>Remove from library</GraphMenuButton>
+          ) : null}
+        </GraphContextMenu>
+      ) : null}
     </aside>
   );
 }

@@ -217,7 +217,7 @@ static int test_routing_inspect_json_contract(void) {
                  unit, "\"routing\":{\"role\":\"panner\",\"paths\":[{\"port\":\"path_1\",\"level_param\":"
                        "\"path_1_db\"},{\"port\":\"path_2\",\"level_param\":\"path_2_db\"}]}"
              ) &&
-             strstr(unit, "\"control\":\"fader\",\"unit\":\"dB\"") &&
+             strstr(unit, "\"control\":\"slider\",\"unit\":\"dB\"") &&
              strstr(
                  project, "\"id\":\"parallel_pan\",\"unit\":\"path_panner_2_unit\",\"routing\":{\"section\":"
                           "\"parallel_1\"}"
@@ -225,7 +225,7 @@ static int test_routing_inspect_json_contract(void) {
              strstr(project, "\"name\":\"path_mixer_2\",\"routing\":{\"role\":\"mixer\"");
     free(unit);
     free(project);
-    return ok ? 0 : fail("routing inspect json lacked helper, path, section, or fader metadata");
+    return ok ? 0 : fail("routing inspect json lacked helper, path, section, or slider metadata");
 }
 
 static int test_invalid_validation_json_contains_diagnostic_fields(void) {

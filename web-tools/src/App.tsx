@@ -1,23 +1,22 @@
 import { Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
+import { useNodesState, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { AppLogo } from './components/AppLogo';
+import { AtomCatalogPanel } from './components/AtomCatalogPanel';
+import { AtomContextInspector } from './components/AtomContextInspector';
 import { ContractGraphCanvas } from './components/ContractGraphCanvas';
-import { BatchActionBar } from './components/BatchActionBar';
 import { GuidedTour } from './components/GuidedTour';
 import { LiveLatencyBadge } from './components/LiveLatencyBadge';
-import { ProjectCanvas } from './components/ProjectCanvas';
-import type { ProjectParallelOption, ProjectReplacementOption } from './components/ProjectCanvas';
-import { ProjectInspector } from './components/ProjectInspector';
-import { ProjectSidebar } from './components/ProjectSidebar';
+import { EffectChainCanvas } from './components/EffectChainCanvas';
+import type { ProjectReplacementOption } from './components/ProjectCanvas';
 import { ProjectTopbar } from './components/ProjectTopbar';
 import { SceneBar } from './components/SceneBar';
 import { SimpleInspector } from './components/SimpleInspector';
-import { SimpleLibraryPanel, type EffectLibraryItem } from './components/SimpleLibraryPanel';
+import { SimpleLibraryPanel, type EffectLibraryDragPayload, type EffectLibraryItem } from './components/SimpleLibraryPanel';
+import { UnitSettingsDrawer } from './components/UnitSettingsDrawer';
 import {
-  backendCommands,
   backendSamples,
   initialWorkspaceFiles,
   pathMixer2WorkspaceFile,
@@ -34,36 +33,40 @@ import {
 } from './lib/projectParams';
 import {
   addProjectInstance,
-  addProjectRoute,
   addProjectUnitReference,
   applyProjectScene,
   copyProjectInstance,
-  duplicateProjectInstance,
   insertProjectParallelOnRoute,
   insertProjectInstanceOnRoute,
-  moveProjectInstance,
-  moveProjectRoute,
   parseProjectGraphDraft,
   parseUnitPortNames,
   pasteProjectInstance,
   projectDraftToInspect,
-  removeProjectInstanceWithTopology,
-  removeProjectRoute,
   removeProjectScene,
-  renameProjectInstance,
   renameProjectScene,
-  replaceProjectRoute,
   replaceProjectInstance,
   upsertProjectScene,
   type ProjectPortCatalog,
   type ProjectInstanceClipboard,
-  type ProjectRouteDraft,
 } from './lib/projectV2Graph';
 import {
   parseApgProjectPackage,
   type ApgProjectPackage,
+  type EffectChainEditorDraft,
   type StudioMode,
 } from './lib/projectPackage';
+import {
+  createEffectChainDraft,
+  effectChainDiagnostics,
+  findEffectLocation,
+  findEffectChainRouteIndex,
+  insertEffectDraft,
+  moveEffectDraft,
+  removeEffectDraft,
+  serializeEffectChainDraft,
+  setParallelEndpointDraft,
+  type EffectChainLocation,
+} from './lib/effectChainDraft';
 import { migrateApgProjectRouting, migrateLegacyWetDryWorkspace } from './lib/workspaceMigrations';
 import {
   createPersonalPreset,
@@ -76,7 +79,6 @@ import {
   assertUserPlaceableUnit,
   classifyUserEffectContent,
   connectUnitNodes,
-  createUnitV2,
   disconnectUnitInput,
   insertAtomNodeOnConnection,
   moveUnitParam,
@@ -87,6 +89,7 @@ import {
   reconnectUnitConnection,
   serializeUnitGraphNodeUpdate,
   setAtomNodePosition,
+  setAtomNodePositions,
   updateProjectInstanceParam,
   type GraphPosition as UnitGraphPosition,
   type UnitGraphNode,
@@ -108,8 +111,6 @@ import {
   incrementPerfCounter,
   markPerfSpan,
   markRenderPerfSpan,
-  readPerfRenderSpans,
-  readPerfSpans,
 } from './lib/perfTelemetry';
 import './App.css';
 
@@ -147,6 +148,8 @@ type WorkspaceHistoryEntry = {
   selectedAtomId: string | null;
   canvasMode: CanvasMode;
   inspectorView: InspectorView;
+  effectChainDraft: EffectChainEditorDraft | null;
+  activeLibraryUnit: PersonalUnitRecord | null;
 };
 
 const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v2';
@@ -309,8 +312,12 @@ export function EditorWorkspace({
   const [runtimeReady, setRuntimeReady] = useState(false);
   const [initialWorkspace] = useState(() => loadWorkspaceState(projectPackage));
   const [tourOpen, setTourOpen] = useState(() => (
-    mode === 'simple' && typeof window !== 'undefined' && !window.localStorage.getItem('apg.studio.tour.v1')
+    mode === 'effect-chain' && typeof window !== 'undefined' && !window.localStorage.getItem('apg.studio.tour.v1')
   ));
+  const [activeLibraryUnit, setActiveLibraryUnit] = useState<PersonalUnitRecord | null>(() => (
+    personalUnits.find(unit => unit.id === projectPackage.editor.activeLibraryUnitId) ?? null
+  ));
+  const [unitSettingsOpen, setUnitSettingsOpen] = useState(false);
   const simpleEffectLibrary = useMemo<EffectLibraryItem[]>(() => {
     const items: EffectLibraryItem[] = [
       ...builtInSimpleEffectLibrary,
@@ -334,6 +341,49 @@ export function EditorWorkspace({
       }
     });
   }, [personalUnits]);
+  useEffect(() => {
+    if (!projectPackage.editor.activeLibraryUnitId) return;
+    const latest = personalUnits.find(unit => unit.id === projectPackage.editor.activeLibraryUnitId);
+    if (latest && latest.updatedAt !== activeLibraryUnit?.updatedAt) setActiveLibraryUnit(latest);
+  }, [activeLibraryUnit?.updatedAt, personalUnits, projectPackage.editor.activeLibraryUnitId]);
+
+  const editLibraryDefinition = useCallback((item: EffectLibraryItem) => {
+    let record = item.recordId ? personalUnits.find(unit => unit.id === item.recordId) ?? null : null;
+    if (!record) {
+      const source = libraryWorkspaceSource(item, personalUnits);
+      if (!source) {
+        setGraphEditError(`Effect "${item.title}" is unavailable.`);
+        return;
+      }
+      const existingNames = new Set(personalUnits.map(unit => unit.name));
+      let name = `${item.id}_copy`;
+      let suffix = 1;
+      while (existingNames.has(name)) name = `${item.id}_copy_${++suffix}`;
+      const now = new Date().toISOString();
+      record = {
+        schema: 'apg.personal-unit.v1',
+        version: 1,
+        id: globalThis.crypto?.randomUUID?.() ?? `unit-${Date.now()}`,
+        name,
+        title: `${item.title} Copy`,
+        category: item.category,
+        description: `Editable copy of ${item.title}.`,
+        content: source.content,
+        createdAt: now,
+        updatedAt: now,
+      };
+      onSavePersonalUnit(record);
+    }
+    setActiveLibraryUnit(record);
+    setSelectedAtomId(null);
+    setUnitSettingsOpen(false);
+    onProjectPackageChange(current => ({
+      ...current,
+      editor: { ...current.editor, activeView: 'atom-chain', activeLibraryUnitId: record!.id },
+      manifest: { ...current.manifest, lastMode: 'atom-chain' },
+    }));
+    onModeChange('atom-chain');
+  }, [onModeChange, onProjectPackageChange, onSavePersonalUnit, personalUnits]);
   const initialRouteWorkspacePath = workspacePathFromRoute(location.pathname, initialWorkspace.files);
   const initialProjectInspect = useMemo(() => {
     try {
@@ -353,8 +403,7 @@ export function EditorWorkspace({
     }
   }, [initialWorkspace]);
   const initialGraph = useMemo(() => buildProjectGraph(initialProjectInspect), [initialProjectInspect]);
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
+  const [nodes, setNodes] = useNodesState<Node<ProjectNodeData>>(initialGraph.nodes);
   const [liveBypassController, setLiveBypassController] = useState<LiveBypassController | null>(null);
   const liveBypassControllerRef = useRef<LiveBypassController | null>(liveBypassController);
   liveBypassControllerRef.current = liveBypassController;
@@ -378,7 +427,6 @@ export function EditorWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(() => initialRouteNode
     ? `unit-${initialRouteNode.id}`
     : initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
-  const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
   const [inspectorView, setInspectorView] = useState<InspectorView>(initialRouteWorkspacePath ? 'contract' : 'project');
@@ -387,6 +435,9 @@ export function EditorWorkspace({
   const [atomClipboard, setAtomClipboard] = useState<UnitGraphNode | null>(null);
   const [unitClipboard, setUnitClipboard] = useState<ProjectInstanceClipboard | null>(null);
   const [graphEditError, setGraphEditError] = useState<string | null>(null);
+  const [effectChainDraft, setEffectChainDraft] = useState<EffectChainEditorDraft | null>(
+    () => projectPackage.editor.effectChain,
+  );
   const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(initialProjectInspect));
   const [paramOriginals, setParamOriginals] = useState(() => buildParamOriginals(initialProjectInspect));
   const [entryProject, setEntryProject] = useState(initialWorkspace.entryProject);
@@ -414,7 +465,9 @@ export function EditorWorkspace({
     selectedAtomId,
     canvasMode,
     inspectorView,
-  }), [canvasMode, entryProject, inspectorView, selectedAtomId, selectedId, selectedRouteIndex, selectedWorkspacePath, workspaceFiles]);
+    effectChainDraft,
+    activeLibraryUnit,
+  }), [activeLibraryUnit, canvasMode, effectChainDraft, entryProject, inspectorView, selectedAtomId, selectedId, selectedRouteIndex, selectedWorkspacePath, workspaceFiles]);
   const restoreHistoryEntry = useCallback((entry: WorkspaceHistoryEntry) => {
     setEntryProject(entry.entryProject);
     setWorkspaceFiles(entry.files);
@@ -424,6 +477,13 @@ export function EditorWorkspace({
     setSelectedAtomId(entry.selectedAtomId);
     setCanvasMode(entry.canvasMode);
     setInspectorView(entry.inspectorView);
+    setEffectChainDraft(entry.effectChainDraft);
+    setActiveLibraryUnit(entry.activeLibraryUnit);
+    if (entry.activeLibraryUnit) onSavePersonalUnit(entry.activeLibraryUnit);
+    onProjectPackageChange(project => ({
+      ...project,
+      editor: { ...project.editor, effectChain: entry.effectChainDraft },
+    }));
     navigate(entry.files.find(file => file.path === entry.selectedWorkspacePath)?.role === 'unit'
       ? unitRoute(entry.selectedWorkspacePath)
       : PROJECT_ROUTE);
@@ -438,7 +498,7 @@ export function EditorWorkspace({
       setParamDrafts(buildParamDrafts(backendSamples.project));
       setParamOriginals(buildParamOriginals(backendSamples.project));
     }
-  }, [navigate, setWorkspaceFiles]);
+  }, [navigate, onProjectPackageChange, onSavePersonalUnit, setWorkspaceFiles]);
   const pushHistory = useCallback(() => {
     undoStack.current = [...undoStack.current.slice(-49), currentHistoryEntry()];
     redoStack.current = [];
@@ -487,7 +547,6 @@ export function EditorWorkspace({
     [projectDraft, projectWorkspaceFile.path],
   );
   const selectedNode = findUnitNode(nodes, selectedId);
-  const selectedRoute = selectedRouteIndex === null ? null : project.routes[selectedRouteIndex] ?? null;
   const paramOverrides = useMemo(
     () => buildParamOverridesFromOriginals(project, paramDrafts, paramOriginals),
     [paramDrafts, paramOriginals, project],
@@ -503,14 +562,20 @@ export function EditorWorkspace({
     const path = resolveWorkspacePath(project.file, selectedNode.unit.file);
     return workspaceFiles.find(file => file.path === path) ?? selectedWorkspaceFile;
   }, [project.file, selectedNode, selectedWorkspaceFile, workspaceFiles]);
+  const atomEditorWorkspaceFile = useMemo<WorkspaceFile>(() => mode === 'atom-chain' && activeLibraryUnit ? {
+    path: `personal/${activeLibraryUnit.name}.unit.v2.yaml`,
+    role: 'unit',
+    content: activeLibraryUnit.content,
+    originalContent: activeLibraryUnit.content,
+  } : selectedUnitWorkspaceFile, [activeLibraryUnit, mode, selectedUnitWorkspaceFile]);
   const selectedUnitGraph = useMemo(() => {
     try {
-      if (selectedUnitWorkspaceFile.role !== 'unit') return null;
-      return parseUnitGraphDraft(selectedUnitWorkspaceFile.content);
+      if (atomEditorWorkspaceFile.role !== 'unit') return null;
+      return parseUnitGraphDraft(atomEditorWorkspaceFile.content);
     } catch {
       return null;
     }
-  }, [selectedUnitWorkspaceFile]);
+  }, [atomEditorWorkspaceFile]);
   const selectedAtom =
     selectedUnitGraph?.nodes.find(node => node.id === selectedAtomId) ?? selectedUnitGraph?.nodes[0] ?? null;
 
@@ -546,11 +611,6 @@ export function EditorWorkspace({
     setInspectorView('contract');
   }, [entryProject, location.pathname, navigate, project.file, project.nodes, project.units, workspaceFiles]);
 
-  const selectWorkspaceFile = useCallback((path: string) => {
-    const file = workspaceFiles.find(item => item.path === path);
-    navigate(file?.role === 'unit' ? unitRoute(path) : PROJECT_ROUTE);
-  }, [navigate, workspaceFiles]);
-
   const projectPorts = useMemo<ProjectPortCatalog>(() => Object.fromEntries(projectDraft.units.map(reference => {
     const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
     const file = workspaceFiles.find(item => item.path === path);
@@ -561,6 +621,22 @@ export function EditorWorkspace({
       return [reference.id, { inputs: [], outputs: [] }];
     }
   })), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
+  useEffect(() => {
+    if (effectChainDraft) return;
+    try {
+      const next = createEffectChainDraft(projectWorkspaceFile.content, projectPorts);
+      setEffectChainDraft(next);
+      onProjectPackageChange(current => ({
+        ...current,
+        editor: { ...current.editor, effectChain: next },
+      }));
+      setGraphEditError(null);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to build the Effect Chain rails.');
+    }
+  }, [effectChainDraft, onProjectPackageChange, projectPorts, projectWorkspaceFile.content]);
+  const effectChainProblems = useMemo(() => effectChainDiagnostics(effectChainDraft), [effectChainDraft]);
+  const effectChainBlocked = effectChainProblems.length > 0;
   const projectUnitPlacement = useMemo(() => Object.fromEntries(projectDraft.units.map(reference => [
     reference.id,
     {
@@ -599,12 +675,6 @@ export function EditorWorkspace({
       routing: contract.routing,
     }];
   }), [project.units, projectParamControls, projectPorts]);
-  const projectParallelOptions = useMemo<ProjectParallelOption[]>(() => simpleEffectLibrary.map(item => ({
-    id: item.id,
-    label: item.title,
-    disabled: Boolean(item.placementError),
-    reason: item.placementError,
-  })), [simpleEffectLibrary]);
   const canPasteUnit = Boolean(unitClipboard);
 
   const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
@@ -669,7 +739,6 @@ export function EditorWorkspace({
           }
           return { ...node, data, selected: existing?.selected };
         }));
-        setEdges(next.edges);
         return;
       }
 
@@ -710,7 +779,7 @@ export function EditorWorkspace({
         return changed ? next : current;
       });
     });
-  }, [graphTopologySignature, nodeBypassAvailable, nodeBypassByInstance, project, projectParamControls, projectPorts, setEdges, setNodes, setProjectNodeBypass, updateParamDraft]);
+  }, [graphTopologySignature, nodeBypassAvailable, nodeBypassByInstance, project, projectParamControls, projectPorts, setNodes, setProjectNodeBypass, updateParamDraft]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -745,17 +814,9 @@ export function EditorWorkspace({
     };
   }, [entryProject, onWorkspaceChange, workspaceFiles]);
 
-  const selectProjectNode = useCallback((id: string, additive = false) => {
+  const selectProjectNode = useCallback((id: string) => {
     markPerfSpan('ui.select.projectNode', () => {
       setSelectedId(id);
-      if (id.startsWith('unit-')) {
-        const instanceId = id.slice('unit-'.length);
-        setSelectedInstanceIds(current => additive
-          ? current.includes(instanceId) ? current.filter(item => item !== instanceId) : [...current, instanceId]
-          : [instanceId]);
-      } else {
-        setSelectedInstanceIds([]);
-      }
       setSelectedRouteIndex(null);
       setSelectedAtomId(null);
       if (id.startsWith('unit-')) {
@@ -764,100 +825,27 @@ export function EditorWorkspace({
     });
   }, []);
 
-  const openContractGraph = useCallback((id: string) => {
-    const node = nodes.find(item => item.id === id)?.data;
-    if (!node || node.kind !== 'unit') return;
-
-    const path = resolveWorkspacePath(project.file, node.unit.file);
-    markPerfSpan('ui.openContractGraph', () => {
-      setSelectedId(id);
-      setSelectedRouteIndex(null);
-      setSelectedWorkspacePath(path);
-      setCanvasMode('contract');
-      setInspectorView('contract');
-      setSelectedAtomId(null);
-      navigate(unitRoute(path));
-    });
-  }, [navigate, nodes, project.file]);
-
-  const selectRoute = useCallback((index: number) => {
-    markPerfSpan('ui.select.route', () => {
-      setSelectedRouteIndex(index);
-      setSelectedId(null);
-      setCanvasMode('project');
-      setSelectedAtomId(null);
-    });
-  }, []);
-
-  const resetUnitParamDrafts = useCallback((instanceId: string) => {
-    const instance = project.nodes.find(node => node.id === instanceId);
-    if (!instance) return;
-
-    setParamDrafts(drafts => {
-      const next = { ...drafts };
-
-      for (const param of instance.params) {
-        const key = paramDraftKey(instance.id, param.key);
-        next[key] = paramOriginals[key] ?? param.value;
-      }
-
-      return next;
-    });
-    setWorkspaceFiles(files =>
-      files.map(file => {
-        if (file.role !== 'project') return file;
-        const content = instance.params.reduce(
-          (draft, param) => {
-            const key = paramDraftKey(instance.id, param.key);
-            return updateProjectInstanceParam(draft, instance.id, param.key, paramOriginals[key] ?? param.value);
-          },
-          file.content,
-        );
-        return { ...file, content };
-      }),
-    );
-  }, [paramOriginals, project.nodes, setWorkspaceFiles]);
-
   const updateProjectFile = useCallback((update: (content: string) => string) => {
     return markPerfSpan('graph.update.project', () => {
       setGraphEditError(null);
       try {
         const content = update(projectWorkspaceFile.content);
+        const nextEffectChain = createEffectChainDraft(content, projectPorts);
         pushHistory();
         setWorkspaceFiles(files => files.map(file =>
           file.path === projectWorkspaceFile.path ? { ...file, content } : file));
+        setEffectChainDraft(nextEffectChain);
+        onProjectPackageChange(current => ({
+          ...current,
+          editor: { ...current.editor, effectChain: nextEffectChain },
+        }));
         return content;
       } catch (error) {
         setGraphEditError(error instanceof Error ? error.message : String(error));
         return null;
       }
     });
-  }, [projectWorkspaceFile.content, projectWorkspaceFile.path, pushHistory, setWorkspaceFiles]);
-
-  const addProjectNode = useCallback((unitId: string, instanceId: string) => {
-    markPerfSpan('graph.add.projectNode', () => {
-      const reference = projectDraft.units.find(unit => unit.id === unitId);
-      if (!reference) return;
-      const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
-      const unitFile = workspaceFiles.find(file => file.path === unitPath);
-      if (unitFile?.role !== 'unit') throw new Error(`Unit source for "${unitId}" is unavailable.`);
-      assertUserPlaceableUnit(unitFile.content);
-      const defaults = unitFile?.role === 'unit'
-        ? Object.fromEntries(parseUnitGraphDraft(unitFile.content).params.map(param => [param.name, param.default]))
-        : {};
-      const result = addProjectInstance(projectWorkspaceFile.content, unitId, instanceId, defaults);
-      if (!updateProjectFile(() => result.content)) return;
-      setParamDrafts(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
-      setParamOriginals(values => ({ ...values, ...Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(result.id, key), value])) }));
-      setSelectedId(`unit-${result.id}`);
-    });
-  }, [projectDraft.units, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
-
-  const addProjectNodeFromLibrary = useCallback((unitId: string) => {
-    markPerfSpan('graph.add.projectNodeFromLibrary', () => {
-      addProjectNode(unitId, uniqueInstanceId(project.nodes.map(node => node.id), unitId));
-    });
-  }, [addProjectNode, project.nodes]);
+  }, [onProjectPackageChange, projectPorts, projectWorkspaceFile.content, projectWorkspaceFile.path, pushHistory, setWorkspaceFiles]);
 
   const insertProjectNodeOnRoute = useCallback((
     unitId: string,
@@ -925,6 +913,7 @@ export function EditorWorkspace({
           outputRouteIndex,
           defaults,
         );
+        const nextEffectChain = createEffectChainDraft(result.content, { ...projectPorts, [unitId]: ports });
         pushHistory();
         setWorkspaceFiles(files => {
           const updated = files.map(file => file.path === projectWorkspaceFile.path
@@ -940,6 +929,11 @@ export function EditorWorkspace({
         ]));
         setParamDrafts(current => ({ ...current, ...values }));
         setParamOriginals(current => ({ ...current, ...values }));
+        setEffectChainDraft(nextEffectChain);
+        onProjectPackageChange(current => ({
+          ...current,
+          editor: { ...current.editor, effectChain: nextEffectChain },
+        }));
         setSelectedId(`unit-${instanceId}`);
       } catch (caught) {
         setGraphEditError(caught instanceof Error ? caught.message : 'Unable to add that effect.');
@@ -954,6 +948,7 @@ export function EditorWorkspace({
     projectWorkspaceFile.content,
     projectWorkspaceFile.path,
     personalUnits,
+    onProjectPackageChange,
     pushHistory,
     setWorkspaceFiles,
   ]);
@@ -1039,6 +1034,7 @@ export function EditorWorkspace({
           pannerDefaults,
           mixerDefaults,
         );
+        const nextEffectChain = createEffectChainDraft(result.content, nextPorts);
         pushHistory();
         setWorkspaceFiles(files => {
           const updated = files.map(file => file.path === projectWorkspaceFile.path ? { ...file, content: result.content } : file);
@@ -1053,6 +1049,11 @@ export function EditorWorkspace({
         ]);
         setParamDrafts(current => ({ ...current, ...values }));
         setParamOriginals(current => ({ ...current, ...values }));
+        setEffectChainDraft(nextEffectChain);
+        onProjectPackageChange(current => ({
+          ...current,
+          editor: { ...current.editor, effectChain: nextEffectChain },
+        }));
         setSelectedId(`unit-${effectId}`);
       } catch (caught) {
         setGraphEditError(caught instanceof Error ? caught.message : 'Unable to build that parallel path.');
@@ -1060,6 +1061,7 @@ export function EditorWorkspace({
     });
   }, [
     personalUnits,
+    onProjectPackageChange,
     project.nodes,
     project.routes,
     projectDraft.units,
@@ -1071,24 +1073,193 @@ export function EditorWorkspace({
     setWorkspaceFiles,
   ]);
 
-  const addParallelEffectAtRoute = useCallback((unitId: string, routeIndex: number) => {
-    const item = simpleEffectLibrary.find(candidate => candidate.id === unitId);
+  const persistEffectChainDraft = useCallback((next: EffectChainEditorDraft) => {
+    setEffectChainDraft(next);
+    onProjectPackageChange(current => ({
+      ...current,
+      editor: { ...current.editor, effectChain: next },
+    }));
+  }, [onProjectPackageChange]);
+
+  const addParallelToRail = useCallback((payload: EffectLibraryDragPayload, location: EffectChainLocation) => {
+    if (!effectChainDraft) return;
+    const item = simpleEffectLibrary.find(candidate => (
+      candidate.id === payload.id && candidate.scope === payload.scope && candidate.recordId === payload.recordId
+    ));
     if (!item) {
-      setGraphEditError(`Effect "${unitId}" is unavailable.`);
+      setGraphEditError(`Effect "${payload.title}" is unavailable.`);
       return;
     }
-    addSimpleParallelEffect(item, routeIndex);
-  }, [addSimpleParallelEffect, simpleEffectLibrary]);
+    try {
+      const routeIndex = findEffectChainRouteIndex(
+        projectWorkspaceFile.content,
+        effectChainDraft,
+        projectPorts,
+        location,
+      );
+      addSimpleParallelEffect(item, routeIndex);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to add a parallel section at that slot.');
+    }
+  }, [addSimpleParallelEffect, effectChainDraft, projectPorts, projectWorkspaceFile.content, simpleEffectLibrary]);
+
+  const commitRailDraft = useCallback((next: EffectChainEditorDraft, content?: string) => {
+    pushHistory();
+    if (content !== undefined) {
+      setWorkspaceFiles(files => files.map(file => (
+        file.path === projectWorkspaceFile.path ? { ...file, content } : file
+      )));
+    }
+    persistEffectChainDraft(next);
+    setGraphEditError(null);
+  }, [persistEffectChainDraft, projectWorkspaceFile.path, pushHistory, setWorkspaceFiles]);
+
+  const moveRailEffect = useCallback((instanceId: string, location: EffectChainLocation) => {
+    if (!effectChainDraft) return;
+    try {
+      const next = moveEffectDraft(effectChainDraft, instanceId, location);
+      const content = effectChainDiagnostics(next).length === 0
+        ? serializeEffectChainDraft(projectWorkspaceFile.content, next, projectPorts)
+        : undefined;
+      commitRailDraft(next, content);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to move that effect.');
+    }
+  }, [commitRailDraft, effectChainDraft, projectPorts, projectWorkspaceFile.content]);
+
+  const removeRailEffect = useCallback((instanceId: string) => {
+    if (!effectChainDraft) return;
+    try {
+      const next = removeEffectDraft(effectChainDraft, instanceId);
+      const content = effectChainDiagnostics(next).length === 0
+        ? serializeEffectChainDraft(projectWorkspaceFile.content, next, projectPorts, [instanceId])
+        : undefined;
+      commitRailDraft(next, content);
+      setParamDrafts(values => withoutInstanceValues(values, instanceId));
+      setParamOriginals(values => withoutInstanceValues(values, instanceId));
+      setSelectedId(null);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to remove that effect.');
+    }
+  }, [commitRailDraft, effectChainDraft, projectPorts, projectWorkspaceFile.content]);
+
+  const setRailEndpoint = useCallback((sectionId: string, role: 'panner' | 'mixer', connected: boolean) => {
+    if (!effectChainDraft) return;
+    try {
+      const next = setParallelEndpointDraft(effectChainDraft, sectionId, role, connected);
+      const content = effectChainDiagnostics(next).length === 0
+        ? serializeEffectChainDraft(projectWorkspaceFile.content, next, projectPorts)
+        : undefined;
+      commitRailDraft(next, content);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : `Unable to ${connected ? 'restore' : 'remove'} that helper.`);
+    }
+  }, [commitRailDraft, effectChainDraft, projectPorts, projectWorkspaceFile.content]);
+
+  const addLibraryEffectToRail = useCallback((
+    payload: { id: string; scope: 'built-in' | 'personal'; recordId?: string; title: string },
+    location: EffectChainLocation,
+  ) => {
+    if (!effectChainDraft) return;
+    const item = simpleEffectLibrary.find(candidate => (
+      candidate.id === payload.id && candidate.scope === payload.scope && candidate.recordId === payload.recordId
+    ));
+    if (!item) {
+      setGraphEditError(`Effect "${payload.title}" is unavailable.`);
+      return;
+    }
+    try {
+      const source = libraryWorkspaceSource(item, personalUnits);
+      if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
+      assertUserPlaceableUnit(source.content);
+      let content = projectWorkspaceFile.content;
+      let reference = projectDraft.units.find(candidate => (
+        candidate.id === `${item.id}_unit` || candidate.file.endsWith(`/${item.id}.unit.v2.yaml`)
+      ));
+      const filesToAdd: WorkspaceFile[] = [];
+      const nextPorts = { ...projectPorts };
+      if (!reference) {
+        const unitId = `${item.id}_unit`;
+        const targetPath = item.scope === 'personal' ? `personal/${item.id}.unit.v2.yaml` : `units/${item.id}.unit.v2.yaml`;
+        const relative = relativeWorkspaceReference(projectWorkspaceFile.path, targetPath);
+        content = addProjectUnitReference(content, unitId, relative);
+        reference = { id: unitId, file: relative };
+        nextPorts[unitId] = parseUnitPortNames(source.content);
+        filesToAdd.push({ ...source, path: targetPath });
+      }
+      const defaults = Object.fromEntries(parseUnitGraphDraft(source.content).params.map(param => [param.name, param.default]));
+      const instanceId = uniqueInstanceId(project.nodes.map(node => node.id), reference.id);
+      content = addProjectInstance(content, reference.id, instanceId, defaults).content;
+      const next = insertEffectDraft(effectChainDraft, instanceId, location);
+      if (effectChainDiagnostics(next).length === 0) content = serializeEffectChainDraft(content, next, nextPorts);
+      pushHistory();
+      setWorkspaceFiles(files => {
+        const updated = files.map(file => file.path === projectWorkspaceFile.path ? { ...file, content } : file);
+        return filesToAdd.reduce((current, file) => (
+          current.some(candidate => candidate.path === file.path) ? current : [...current, file]
+        ), updated);
+      });
+      persistEffectChainDraft(next);
+      const values = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [paramDraftKey(instanceId, key), value]));
+      setParamDrafts(current => ({ ...current, ...values }));
+      setParamOriginals(current => ({ ...current, ...values }));
+      setSelectedId(`unit-${instanceId}`);
+      setGraphEditError(null);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to add that effect to the rail.');
+    }
+  }, [
+    effectChainDraft,
+    persistEffectChainDraft,
+    personalUnits,
+    project.nodes,
+    projectDraft.units,
+    projectPorts,
+    projectWorkspaceFile.content,
+    projectWorkspaceFile.path,
+    pushHistory,
+    setWorkspaceFiles,
+    simpleEffectLibrary,
+  ]);
+
+  const pasteRailEffect = useCallback((location: EffectChainLocation) => {
+    if (!effectChainDraft || !unitClipboard) return;
+    try {
+      if (!projectUnitPlacement[unitClipboard.unit]?.allowed) {
+        throw new Error(projectUnitPlacement[unitClipboard.unit]?.reason ?? 'Only one-input/one-output effects can be pasted.');
+      }
+      const added = pasteProjectInstance(projectWorkspaceFile.content, unitClipboard);
+      const next = insertEffectDraft(effectChainDraft, added.id, location);
+      const content = effectChainDiagnostics(next).length === 0
+        ? serializeEffectChainDraft(added.content, next, projectPorts)
+        : added.content;
+      commitRailDraft(next, content);
+      const values = Object.fromEntries(Object.entries(unitClipboard.params).map(([key, value]) => [
+        paramDraftKey(added.id, key), value,
+      ]));
+      setParamDrafts(current => ({ ...current, ...values }));
+      setParamOriginals(current => ({ ...current, ...values }));
+      setSelectedId(`unit-${added.id}`);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to paste that effect.');
+    }
+  }, [commitRailDraft, effectChainDraft, projectPorts, projectUnitPlacement, projectWorkspaceFile.content, unitClipboard]);
 
   const duplicateProjectNode = useCallback((instanceId: string) => {
     markPerfSpan('graph.duplicate.projectNode', () => {
       try {
-        const result = duplicateProjectInstance(projectWorkspaceFile.content, instanceId);
         const source = project.nodes.find(node => node.id === instanceId);
         if (source && !projectUnitPlacement[source.unit]?.allowed) {
           throw new Error(projectUnitPlacement[source.unit]?.reason ?? 'Only mono effects can be duplicated.');
         }
-        if (!source || !updateProjectFile(() => result.content)) return;
+        if (!source || !effectChainDraft) return;
+        const location = findEffectLocation(effectChainDraft, instanceId, 1);
+        if (!location) throw new Error(`Effect "${instanceId}" is not on an Effect Chain rail.`);
+        const clipboard = copyProjectInstance(projectWorkspaceFile.content, instanceId);
+        const result = pasteProjectInstance(projectWorkspaceFile.content, clipboard);
+        const next = insertEffectDraft(effectChainDraft, result.id, location);
+        const content = serializeEffectChainDraft(result.content, next, projectPorts);
+        commitRailDraft(next, content);
         const values = Object.fromEntries(source.params.map(param => [paramDraftKey(result.id, param.key), param.value]));
         setParamDrafts(current => ({ ...current, ...values }));
         setParamOriginals(current => ({ ...current, ...values }));
@@ -1097,29 +1268,7 @@ export function EditorWorkspace({
         setGraphEditError(error instanceof Error ? error.message : String(error));
       }
     });
-  }, [project.nodes, projectUnitPlacement, projectWorkspaceFile.content, updateProjectFile]);
-
-  const renameProjectNode = useCallback((instanceId: string, nextId: string) => {
-    markPerfSpan('graph.rename.projectNode', () => {
-      if (!updateProjectFile(content => renameProjectInstance(content, instanceId, nextId))) return;
-      const migrate = (values: Record<string, string>) => Object.fromEntries(Object.entries(values).map(([key, value]) => [
-        key.startsWith(`${instanceId}.`) ? `${nextId}${key.slice(instanceId.length)}` : key,
-        value,
-      ]));
-      setParamDrafts(migrate);
-      setParamOriginals(migrate);
-      setSelectedId(`unit-${nextId}`);
-    });
-  }, [updateProjectFile]);
-
-  const removeProjectNode = useCallback((instanceId: string) => {
-    markPerfSpan('graph.remove.projectNode', () => {
-      if (!updateProjectFile(content => removeProjectInstanceWithTopology(content, projectPorts, instanceId).content)) return;
-      setParamDrafts(values => withoutInstanceValues(values, instanceId));
-      setParamOriginals(values => withoutInstanceValues(values, instanceId));
-      setSelectedId(null);
-    });
-  }, [projectPorts, updateProjectFile]);
+  }, [commitRailDraft, effectChainDraft, project.nodes, projectPorts, projectUnitPlacement, projectWorkspaceFile.content]);
 
   const copyProjectNode = useCallback((instanceId: string) => {
     try {
@@ -1130,43 +1279,14 @@ export function EditorWorkspace({
     }
   }, [projectWorkspaceFile.content]);
 
-  const cutProjectNode = useCallback((instanceId: string) => {
-    markPerfSpan('graph.cut.projectNode', () => {
-      try {
-        const clipboard = copyProjectInstance(projectWorkspaceFile.content, instanceId);
-        const result = removeProjectInstanceWithTopology(projectWorkspaceFile.content, projectPorts, instanceId);
-        if (!updateProjectFile(() => result.content)) return;
-        setUnitClipboard(clipboard);
-        setParamDrafts(values => withoutInstanceValues(values, instanceId));
-        setParamOriginals(values => withoutInstanceValues(values, instanceId));
-        setSelectedId(null);
-      } catch (error) {
-        setGraphEditError(error instanceof Error ? error.message : 'Unable to cut unit.');
-      }
-    });
-  }, [projectPorts, projectWorkspaceFile.content, updateProjectFile]);
-
-  const pasteProjectNode = useCallback(() => {
-    if (!unitClipboard) return;
-    markPerfSpan('graph.paste.projectNode', () => {
-      try {
-        if (!projectUnitPlacement[unitClipboard.unit]?.allowed) {
-          throw new Error(projectUnitPlacement[unitClipboard.unit]?.reason ?? 'Only mono effects can be pasted.');
-        }
-        const result = pasteProjectInstance(projectWorkspaceFile.content, unitClipboard);
-        if (!updateProjectFile(() => result.content)) return;
-        const values = Object.fromEntries(Object.entries(unitClipboard.params).map(([key, value]) => [
-          paramDraftKey(result.id, key),
-          value,
-        ]));
-        setParamDrafts(current => ({ ...current, ...values }));
-        setParamOriginals(current => ({ ...current, ...values }));
-        setSelectedId(`unit-${result.id}`);
-      } catch (error) {
-        setGraphEditError(error instanceof Error ? error.message : 'Unable to paste unit.');
-      }
-    });
-  }, [projectUnitPlacement, projectWorkspaceFile.content, unitClipboard, updateProjectFile]);
+  const cutRailEffect = useCallback((instanceId: string) => {
+    try {
+      setUnitClipboard(copyProjectInstance(projectWorkspaceFile.content, instanceId));
+      removeRailEffect(instanceId);
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to cut that effect.');
+    }
+  }, [projectWorkspaceFile.content, removeRailEffect]);
 
   const replaceProjectNode = useCallback((instanceId: string, nextUnitId: string) => {
     markPerfSpan('graph.replace.projectNode', () => {
@@ -1299,104 +1419,21 @@ export function EditorWorkspace({
     });
   }, [onSavePersonalUnit, projectPackage.manifest.name, selectedNode, selectedUnitName, selectedUnitWorkspaceFile]);
 
-  const batchBypass = useCallback((enabled: boolean) => {
-    const routingIds = new Set(project.nodes.filter(node => node.routing).map(node => node.id));
-    for (const instanceId of selectedInstanceIds) {
-      if (!routingIds.has(instanceId)) void liveBypassController?.setBypass(instanceId, enabled);
-    }
-  }, [liveBypassController, project.nodes, selectedInstanceIds]);
-
-  const removeSelectedInstances = useCallback(() => {
-    if (selectedInstanceIds.length < 2) return;
-    const removed = new Set(selectedInstanceIds);
-    if (!updateProjectFile(content => selectedInstanceIds.reduce(
-      (current, instanceId) => removeProjectInstanceWithTopology(current, projectPorts, instanceId).content,
-      content,
-    ))) return;
-    const removeValues = (values: Record<string, string>) => Object.fromEntries(
-      Object.entries(values).filter(([key]) => !removed.has(key.split('.')[0])),
-    );
-    setParamDrafts(removeValues);
-    setParamOriginals(removeValues);
-    setSelectedInstanceIds([]);
-    setSelectedId(null);
-  }, [projectPorts, selectedInstanceIds, updateProjectFile]);
-
-  const reorderProjectNode = useCallback((instanceId: string, nextIndex: number) => {
-    markPerfSpan('graph.reorder.projectNode', () => {
-      updateProjectFile(content => moveProjectInstance(content, instanceId, nextIndex));
-    });
-  }, [updateProjectFile]);
-
-  const updateProjectRoute = useCallback((index: number, route: ProjectRouteDraft) => {
-    markPerfSpan('graph.update.route', () => {
-      updateProjectFile(content => replaceProjectRoute(content, projectPorts, index, route));
-    });
-  }, [projectPorts, updateProjectFile]);
-
-  const createProjectRoute = useCallback((route: ProjectRouteDraft) => {
-    markPerfSpan('graph.create.route', () => {
-      updateProjectFile(content => addProjectRoute(content, projectPorts, route));
-    });
-  }, [projectPorts, updateProjectFile]);
-
-  const deleteProjectRoute = useCallback((index: number) => {
-    markPerfSpan('graph.delete.route', () => {
-      if (!updateProjectFile(content => removeProjectRoute(content, index, projectPorts))) return;
-      setSelectedRouteIndex(null);
-    });
-  }, [projectPorts, updateProjectFile]);
-
-  const reorderProjectRoute = useCallback((index: number, nextIndex: number) => {
-    markPerfSpan('graph.reorder.route', () => {
-      if (!updateProjectFile(content => moveProjectRoute(content, index, nextIndex))) return;
-      setSelectedRouteIndex(Math.max(0, Math.min(project.routes.length - 1, nextIndex)));
-    });
-  }, [project.routes.length, updateProjectFile]);
-
-  const routeSources = useMemo(() => [
-    'system.input',
-    ...project.nodes.flatMap(node => (projectPorts[node.unit]?.outputs ?? []).map(port => `${node.id}.${port}`)),
-  ], [project.nodes, projectPorts]);
-  const routeTargets = useMemo(() => [
-    ...project.nodes.flatMap(node => (projectPorts[node.unit]?.inputs ?? []).map(port => `${node.id}.${port}`)),
-    'system.output',
-  ], [project.nodes, projectPorts]);
-
-  const updateWorkspaceFile = useCallback((path: string, content: string) => {
-    markPerfSpan('workspace.update.raw', () => {
-      pushHistory();
-      setWorkspaceFiles(files => files.map(file => (file.path === path ? { ...file, content } : file)));
-    });
-  }, [pushHistory, setWorkspaceFiles]);
-
-  const createUnit = useCallback((name: string) => {
-    markPerfSpan('project.create.unitFile', () => {
-      const content = createUnitV2({ name });
-      const unitName = parseUnitGraphDraft(content).name;
-      const path = `workspace/${unitName}.unit.v2.yaml`;
-      if (workspaceFiles.some(file => file.path === path)) throw new Error(`Workspace file "${path}" already exists.`);
-      pushHistory();
-      setWorkspaceFiles(files => [...files, { path, role: 'unit', content, originalContent: '' }]);
-      setSelectedWorkspacePath(path);
-      setSelectedId(null);
-      setSelectedRouteIndex(null);
-      setSelectedAtomId(null);
-      setInspectorView('contract');
-      setCanvasMode('project');
-      navigate(unitRoute(path));
-    });
-  }, [navigate, pushHistory, setWorkspaceFiles, workspaceFiles]);
-
   const updateSelectedUnitFile = useCallback((update: (content: string) => string, nextAtomId?: string | null) => {
     return markPerfSpan('graph.update.unitFile', () => {
       setGraphEditError(null);
       try {
-        const content = update(selectedUnitWorkspaceFile.content);
+        const content = update(atomEditorWorkspaceFile.content);
         pushHistory();
-        setWorkspaceFiles(files =>
-          files.map(file => (file.path === selectedUnitWorkspaceFile.path ? { ...file, content } : file)),
-        );
+        if (mode === 'atom-chain' && activeLibraryUnit) {
+          const next = { ...activeLibraryUnit, content, updatedAt: new Date().toISOString() };
+          setActiveLibraryUnit(next);
+          onSavePersonalUnit(next);
+        } else {
+          setWorkspaceFiles(files =>
+            files.map(file => (file.path === atomEditorWorkspaceFile.path ? { ...file, content } : file)),
+          );
+        }
         if (nextAtomId !== undefined) setSelectedAtomId(nextAtomId);
         return content;
       } catch (error) {
@@ -1404,13 +1441,7 @@ export function EditorWorkspace({
         return null;
       }
     });
-  }, [pushHistory, selectedUnitWorkspaceFile.content, selectedUnitWorkspaceFile.path, setWorkspaceFiles]);
-
-  const updateSelectedAtom = useCallback((node: UnitGraphNode, originalId = node.id) => {
-    markPerfSpan('contract.edit.atom', () => {
-      updateSelectedUnitFile(content => serializeUnitGraphNodeUpdate(content, node, originalId), node.id);
-    });
-  }, [updateSelectedUnitFile]);
+  }, [activeLibraryUnit, atomEditorWorkspaceFile.content, atomEditorWorkspaceFile.path, mode, onSavePersonalUnit, pushHistory, setWorkspaceFiles]);
 
   const reorderUnitParam = useCallback((paramName: string, nextIndex: number) => {
     markPerfSpan('contract.reorder.param', () => {
@@ -1421,13 +1452,19 @@ export function EditorWorkspace({
   const addAtom = useCallback((atomName: string, position?: UnitGraphPosition) => {
     markPerfSpan('contract.add.atom', () => {
       try {
-        const result = addAtomNodeToUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, atomName, position);
+        const result = addAtomNodeToUnit(atomEditorWorkspaceFile.content, backendSamples.atomCatalog, atomName, position);
         updateSelectedUnitFile(() => result.content, result.id);
       } catch (error) {
         setGraphEditError(error instanceof Error ? error.message : 'Unable to add atom.');
       }
     });
-  }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+  }, [atomEditorWorkspaceFile.content, updateSelectedUnitFile]);
+
+  const updateSelectedAtom = useCallback((node: UnitGraphNode, originalId = node.id) => {
+    markPerfSpan('contract.edit.atom', () => {
+      updateSelectedUnitFile(content => serializeUnitGraphNodeUpdate(content, node, originalId), node.id);
+    });
+  }, [updateSelectedUnitFile]);
 
   const insertAtomOnConnection = useCallback((
     atomName: string,
@@ -1437,7 +1474,7 @@ export function EditorWorkspace({
     markPerfSpan('contract.insert.atom', () => {
       try {
         const result = insertAtomNodeOnConnection(
-          selectedUnitWorkspaceFile.content,
+          atomEditorWorkspaceFile.content,
           backendSamples.atomCatalog,
           atomName,
           target,
@@ -1448,7 +1485,7 @@ export function EditorWorkspace({
         setGraphEditError(error instanceof Error ? error.message : 'Unable to insert atom on connection.');
       }
     });
-  }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+  }, [atomEditorWorkspaceFile.content, updateSelectedUnitFile]);
 
   const removeSelectedAtom = useCallback((nodeId?: string) => {
     const targetId = nodeId ?? selectedAtom?.id;
@@ -1464,13 +1501,13 @@ export function EditorWorkspace({
   const replaceSelectedAtom = useCallback((nodeId: string, nextAtomName: string, preserveId: boolean) => {
     markPerfSpan('contract.replace.atom', () => {
       try {
-        const result = replaceAtomNodeInUnit(selectedUnitWorkspaceFile.content, backendSamples.atomCatalog, nodeId, nextAtomName, preserveId);
+        const result = replaceAtomNodeInUnit(atomEditorWorkspaceFile.content, backendSamples.atomCatalog, nodeId, nextAtomName, preserveId);
         updateSelectedUnitFile(() => result.content, result.id);
       } catch (error) {
         setGraphEditError(error instanceof Error ? error.message : 'Unable to replace atom.');
       }
     });
-  }, [selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+  }, [atomEditorWorkspaceFile.content, updateSelectedUnitFile]);
 
   const connectAtoms = useCallback((source: UnitConnectionEndpoint, target: UnitConnectionEndpoint) => {
     markPerfSpan('contract.connect.atom', () => {
@@ -1501,6 +1538,12 @@ export function EditorWorkspace({
     });
   }, [updateSelectedUnitFile]);
 
+  const autoLayoutAtoms = useCallback((positions: Record<string, UnitGraphPosition>) => {
+    markPerfSpan('contract.layout.graphviz', () => {
+      updateSelectedUnitFile(content => setAtomNodePositions(content, positions));
+    });
+  }, [updateSelectedUnitFile]);
+
   const copySelectedAtom = useCallback((nodeId?: string) => {
     const atom = selectedUnitGraph?.nodes.find(node => node.id === (nodeId ?? selectedAtom?.id));
     if (atom) setAtomClipboard(atom);
@@ -1512,7 +1555,7 @@ export function EditorWorkspace({
     markPerfSpan('contract.cut.atom', () => {
       try {
         const result = removeAtomNodeWithTopology(
-          selectedUnitWorkspaceFile.content,
+          atomEditorWorkspaceFile.content,
           backendSamples.atomCatalog,
           atom.id,
         );
@@ -1521,20 +1564,20 @@ export function EditorWorkspace({
         setGraphEditError(error instanceof Error ? error.message : 'Unable to cut atom.');
       }
     });
-  }, [selectedAtom?.id, selectedUnitGraph?.nodes, selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+  }, [atomEditorWorkspaceFile.content, selectedAtom?.id, selectedUnitGraph?.nodes, updateSelectedUnitFile]);
 
   const pasteAtom = useCallback(() => {
     if (!atomClipboard) return;
 
     markPerfSpan('contract.paste.atom', () => {
       try {
-        const result = pasteAtomNodeIntoUnit(selectedUnitWorkspaceFile.content, atomClipboard);
+        const result = pasteAtomNodeIntoUnit(atomEditorWorkspaceFile.content, atomClipboard);
         updateSelectedUnitFile(() => result.content, result.id);
       } catch (error) {
         setGraphEditError(error instanceof Error ? error.message : 'Unable to paste atom.');
       }
     });
-  }, [atomClipboard, selectedUnitWorkspaceFile.content, updateSelectedUnitFile]);
+  }, [atomClipboard, atomEditorWorkspaceFile.content, updateSelectedUnitFile]);
 
   const selectAtom = useCallback((id: string) => {
     setSelectedAtomId(id);
@@ -1557,10 +1600,15 @@ export function EditorWorkspace({
       setParamOriginals(buildParamOriginals(initialProjectInspect));
       setSelectedId(initialProjectInspect.nodes[0] ? `unit-${initialProjectInspect.nodes[0].id}` : null);
       setSelectedRouteIndex(null);
+      setEffectChainDraft(null);
       setCanvasMode('project');
+      onProjectPackageChange(current => ({
+        ...current,
+        editor: { ...current.editor, effectChain: null },
+      }));
       navigate(PROJECT_ROUTE);
     });
-  }, [initialProjectInspect, initialWorkspace, navigate, pushHistory, setWorkspaceFiles]);
+  }, [initialProjectInspect, initialWorkspace, navigate, onProjectPackageChange, pushHistory, setWorkspaceFiles]);
 
   const saveWorkspace = useCallback(() => {
     try {
@@ -1581,11 +1629,15 @@ export function EditorWorkspace({
   }, [entryProject, onWorkspaceChange, paramDrafts, setWorkspaceFiles, workspaceFiles]);
 
   const exportWorkspace = useCallback(() => {
+    if (effectChainBlocked) {
+      setGraphEditError('Complete every panner and mixer endpoint before exporting this project.');
+      return;
+    }
     markPerfSpan('workspace.export', () => {
       const payload = createWorkspacePayload(entryProject, workspaceFiles);
       onExportProject(payload);
     });
-  }, [entryProject, onExportProject, workspaceFiles]);
+  }, [effectChainBlocked, entryProject, onExportProject, workspaceFiles]);
 
   const importWorkspace = useCallback((file: File) => {
     void markPerfSpan('workspace.import', async () => {
@@ -1611,9 +1663,9 @@ export function EditorWorkspace({
         setParamDrafts(buildParamDrafts(importedInspect));
         setParamOriginals(buildParamOriginals(importedInspect));
         setSelectedId(null);
-        setSelectedInstanceIds([]);
         setSelectedRouteIndex(null);
         setSelectedAtomId(null);
+        setEffectChainDraft(importedPackage.editor.effectChain);
         setCanvasMode('project');
         setInspectorView('project');
         setGraphEditError(null);
@@ -1681,9 +1733,6 @@ export function EditorWorkspace({
     setRuntimeReady(true);
   }, []);
 
-  const perfSpans = readPerfSpans(20);
-  const renderPerfSpans = readPerfRenderSpans(20);
-
   return (
     <LiveBypassContext.Provider value={liveBypassContextValue}>
     {!runtimeReady && (
@@ -1706,7 +1755,7 @@ export function EditorWorkspace({
         </div>
       </section>
     )}
-    <div className={`app app--project app--${mode}`}>
+    <div className={`app app--project app--${mode} ${mode === 'effect-chain' ? 'app--simple' : 'app--pro'}`}>
         <ProjectTopbar
           project={project}
           dirtyParamCount={dirtyParamCount + workspaceDraftCount}
@@ -1734,52 +1783,44 @@ export function EditorWorkspace({
           readiness={projectPackage.readiness}
           onAudioAssetChange={updatePackagedAudio}
           onReadinessUpdate={updateReadiness}
+          editingBlocked={effectChainBlocked ? effectChainProblems.map(problem => problem.message).join(' ') : null}
         />
 
       <div className="layout">
-        {mode === 'simple' ? (
+        {mode === 'effect-chain' || !activeLibraryUnit || !selectedUnitGraph ? (
           <SimpleLibraryPanel
             items={simpleEffectLibrary}
             onAdd={addSimpleEffect}
             onAddParallel={addSimpleParallelEffect}
             onDeletePersonal={onDeletePersonalUnit}
+            onEditDefinition={editLibraryDefinition}
           />
         ) : (
-          <ProjectSidebar
-          project={project}
-          workspaceFiles={workspaceFiles}
-          selectedWorkspacePath={selectedWorkspacePath}
-          selectedNodeId={selectedId}
-          selectedRouteIndex={selectedRouteIndex}
-          onSelectWorkspaceFile={selectWorkspaceFile}
-          onCreateUnit={createUnit}
-          onAddInstance={addProjectNode}
-          onAddUnitFromLibrary={addProjectNodeFromLibrary}
-          onAddRoute={createProjectRoute}
-          onSelectNode={selectProjectNode}
-          onOpenContractGraph={openContractGraph}
-          onSelectRoute={selectRoute}
-          routeSources={routeSources}
-          routeTargets={routeTargets}
-          selectedInstanceIds={selectedInstanceIds}
-          unitPlacement={projectUnitPlacement}
-          onToggleBatchInstance={instanceId => setSelectedInstanceIds(current => (
-            current.includes(instanceId) ? current.filter(id => id !== instanceId) : [...current, instanceId]
-          ))}
-          />
+          <aside className="simple-library atom-chain-library" data-testid="atom-chain-library">
+            <header><div><span>Atom Library</span><strong>{backendSamples.atomCatalog.atoms.length}</strong></div><p>Drag atoms into the selected Personal effect.</p></header>
+            <AtomCatalogPanel
+              catalog={backendSamples.atomCatalog}
+              manifest={backendSamples.atomCatalogManifest}
+              onAddAtom={addAtom}
+              showUnitInspect={false}
+              unit={backendSamples.unit}
+            />
+          </aside>
         )}
 
-        {mode === 'pro' && canvasMode === 'contract' && selectedNode?.kind === 'unit' ? (
+        {mode === 'atom-chain' && activeLibraryUnit && selectedUnitGraph ? (
           <Profiler id="ContractGraphCanvas" onRender={handleRenderProfile}>
             <ContractGraphCanvas
               catalog={backendSamples.atomCatalog}
               selectedAtomId={selectedAtomId}
-              selectedUnitLabel={selectedNode.unit.name}
-              workspaceFile={selectedUnitWorkspaceFile}
-              onBackToProject={() => markPerfSpan('ui.returnToProject', () => navigate(PROJECT_ROUTE))}
+              selectedUnitLabel={activeLibraryUnit.title}
+              workspaceFile={atomEditorWorkspaceFile}
+              onBackToProject={() => onModeChange('effect-chain')}
+              onOpenUnitSettings={() => setUnitSettingsOpen(true)}
               onAddAtomAt={addAtom}
               onInsertAtomAtEdge={insertAtomOnConnection}
               onMoveAtom={moveAtom}
+              onAutoLayout={autoLayoutAtoms}
               atomClipboardReady={Boolean(atomClipboard)}
               onCopyAtom={copySelectedAtom}
               onCutAtom={cutSelectedAtom}
@@ -1793,107 +1834,68 @@ export function EditorWorkspace({
               onSelectAtom={selectAtom}
             />
           </Profiler>
-        ) : (
-          <Profiler id="ProjectCanvas" onRender={handleRenderProfile}>
-            <ProjectCanvas
+        ) : mode === 'atom-chain' ? (
+          <main className="effect-chain-canvas atom-chain-empty canvas-area">
+            <div><span>Atom Chain</span><h2>Choose an Effect Library definition</h2><p>Right-click an effect and choose <strong>Edit Atom Chain</strong>. Built-in effects are copied to Personal before editing.</p></div>
+          </main>
+        ) : effectChainDraft ? (
+          <Profiler id="EffectChainCanvas" onRender={handleRenderProfile}>
+            <EffectChainCanvas
+              canPaste={canPasteUnit}
+              draft={effectChainDraft}
               nodes={nodes}
-              edges={edges}
-              selectedRouteIndex={selectedRouteIndex}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onSelectNode={selectProjectNode}
-              onOpenContractGraph={openContractGraph}
-              onSelectRoute={selectRoute}
-              onAddUnit={addProjectNodeFromLibrary}
-              onInsertUnitAtRoute={insertProjectNodeOnRoute}
-              onConnectUnits={createProjectRoute}
-              onCopyUnit={copyProjectNode}
-              onCutUnit={cutProjectNode}
-              onPasteUnit={pasteProjectNode}
-              onRemoveUnit={removeProjectNode}
-              onReplaceUnit={replaceProjectNode}
-              onAddParallelAtRoute={addParallelEffectAtRoute}
-              canPasteUnit={canPasteUnit}
-              parallelOptions={projectParallelOptions}
+              onCopy={copyProjectNode}
+              onCut={cutRailEffect}
+              onAddParallel={addParallelToRail}
+              onDropLibrary={addLibraryEffectToRail}
+              onMoveEffect={moveRailEffect}
+              onParamChange={updateParamDraft}
+              onPaste={pasteRailEffect}
+              onRemoveEffect={removeRailEffect}
+              onReplace={replaceProjectNode}
+              onSelectInstance={selectProjectNode}
+              onSetEndpoint={setRailEndpoint}
+              ports={projectPorts}
+              parallelOptions={simpleEffectLibrary.filter(item => !item.placementError).map(item => ({
+                id: item.id,
+                scope: item.scope,
+                recordId: item.recordId,
+                title: item.title,
+              }))}
+              project={project}
               replacementOptions={projectReplacementOptions}
+              selectedNodeId={selectedId}
             />
           </Profiler>
+        ) : (
+          <main className="effect-chain-canvas atom-chain-empty canvas-area"><div><h2>Effect Chain unavailable</h2><p>{graphEditError}</p></div></main>
         )}
 
-        {mode === 'simple' ? (
+        {mode === 'effect-chain' ? (
           <SimpleInspector
             onApplyPreset={applyPreset}
             onDeletePreset={onDeletePreset}
             onDuplicate={duplicateProjectNode}
-            onOpenPro={() => {
-              onModeChange('pro');
-              if (selectedId) openContractGraph(selectedId);
-            }}
-            onRemove={removeProjectNode}
+            onRemove={removeRailEffect}
             onSavePreset={savePreset}
             onSaveToLibrary={saveSelectedUnitToLibrary}
             presets={selectedUnitPresets}
             selectedNode={selectedNode}
           />
         ) : (
-          <Profiler id="ProjectInspector" onRender={handleRenderProfile}>
-            <ProjectInspector
-            validation={backendSamples.validation}
-            render={backendSamples.render}
-            commands={backendCommands}
-            project={project}
-            inspectorView={inspectorView}
-            onInspectorViewChange={value => {
-              markPerfSpan('ui.change.inspectorView', () => setInspectorView(value));
-            }}
-            selectedNode={selectedNode}
-            selectedRoute={selectedRoute}
-            selectedRouteIndex={selectedRouteIndex}
-            unit={backendSamples.unit}
-            atomCatalog={backendSamples.atomCatalog}
-            atomCatalogManifest={backendSamples.atomCatalogManifest}
-            projectFile={project.file}
-            hasDirtyParamDrafts={hasDirtyDrafts}
-            selectedUnitFile={selectedUnitWorkspaceFile}
-            selectedUnitGraph={selectedUnitGraph}
-            selectedAtom={selectedAtom}
-            atomClipboard={atomClipboard}
-            graphEditError={graphEditError}
-            paramOverrides={paramOverrides}
-            perfSpans={perfSpans}
-            renderPerfSpans={renderPerfSpans}
-            onAddAtom={addAtom}
-            onDuplicateInstance={duplicateProjectNode}
-            onRemoveInstance={removeProjectNode}
-            onRenameInstance={renameProjectNode}
-            onReorderInstance={reorderProjectNode}
-            onReorderUnitParam={reorderUnitParam}
-            onUpdateRoute={updateProjectRoute}
-            onRemoveRoute={deleteProjectRoute}
-            onReorderRoute={reorderProjectRoute}
-            routeSources={routeSources}
-            routeTargets={routeTargets}
-            onCopyAtom={copySelectedAtom}
-            onCutAtom={cutSelectedAtom}
-            onPasteAtom={pasteAtom}
-            onRemoveAtom={removeSelectedAtom}
-            onReplaceAtom={replaceSelectedAtom}
-            onResetUnitParams={resetUnitParamDrafts}
-            onSelectAtom={setSelectedAtomId}
-            onSelectedAtomChange={updateSelectedAtom}
-            onWorkspaceFileChange={updateWorkspaceFile}
-            onSaveToLibrary={saveSelectedUnitToLibrary}
-            />
-          </Profiler>
+          <AtomContextInspector
+            atom={selectedAtom}
+            catalog={backendSamples.atomCatalog}
+            clipboardReady={Boolean(atomClipboard)}
+            error={graphEditError}
+            onCopy={copySelectedAtom}
+            onCut={cutSelectedAtom}
+            onChange={updateSelectedAtom}
+            onPaste={pasteAtom}
+            onRemove={removeSelectedAtom}
+          />
         )}
       </div>
-      <BatchActionBar
-        count={mode === 'pro' ? selectedInstanceIds.length : 0}
-        liveReady={Boolean(liveBypassController)}
-        onBypass={batchBypass}
-        onClear={() => setSelectedInstanceIds([])}
-        onRemove={removeSelectedInstances}
-      />
       <SceneBar
         activeScene={activeScene}
         onApply={applyScene}
@@ -1902,7 +1904,20 @@ export function EditorWorkspace({
         onSave={saveScene}
         scenes={project.scenes}
       />
-      {mode === 'simple' && graphEditError ? <p className="simple-edit-error" role="alert">{graphEditError}</p> : null}
+      {mode === 'effect-chain' && graphEditError ? <p className="simple-edit-error" role="alert">{graphEditError}</p> : null}
+      {mode === 'effect-chain' && effectChainBlocked ? (
+        <p className="effect-chain-blocked" role="status">Draft only — {effectChainProblems.map(problem => problem.message).join(' ')}</p>
+      ) : null}
+      {mode === 'atom-chain' && activeLibraryUnit && selectedUnitGraph ? (
+        <UnitSettingsDrawer
+          file={atomEditorWorkspaceFile}
+          onChange={content => updateSelectedUnitFile(() => content)}
+          onClose={() => setUnitSettingsOpen(false)}
+          onReorderParam={reorderUnitParam}
+          open={unitSettingsOpen}
+          unit={selectedUnitGraph}
+        />
+      ) : null}
     </div>
     <GuidedTour
       onClose={() => {

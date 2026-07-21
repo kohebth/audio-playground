@@ -104,7 +104,7 @@ static int expect_valid_routing_fixture(void) {
     if (status != UC_OK || !unit.routing.role || strcmp(unit.routing.role, "panner") != 0 ||
         unit.routing.paths_len != 2u || strcmp(unit.routing.paths[1].port, "path_2") != 0 ||
         strcmp(unit.routing.paths[1].level_param, "path_2_db") != 0 || !unit.params[0].ui_control ||
-        strcmp(unit.params[0].ui_control, "fader") != 0) {
+        strcmp(unit.params[0].ui_control, "slider") != 0) {
         fprintf(stderr, "routing fixture error: %s\n", err.msg);
         uc_arena_free(&arena);
         return fail("routing metadata was not materialized");

@@ -31,7 +31,10 @@ import { parseProjectGraphDraft } from '../src/lib/projectV2Graph.ts';
 
 const createdAt = '2026-07-20T08:00:00.000Z';
 const empty = createEmptyProjectPackage({ id: 'empty-1', name: 'First Board', now: createdAt });
-assert.equal(empty.manifest.lastMode, 'simple');
+assert.equal(empty.schema, 'apg.project.package.v2');
+assert.equal(empty.version, 2);
+assert.equal(empty.manifest.lastMode, 'effect-chain');
+assert.equal(empty.editor.activeView, 'effect-chain');
 assert.equal(empty.workspace.files.length, 1);
 assert.match(empty.workspace.files[0].content, /units: \[\]/);
 assert.match(empty.workspace.files[0].content, /from: system\.input\n      to: system\.output/);
@@ -56,12 +59,54 @@ assert.throws(
 
 const packaged = createApgProjectPackage(empty.workspace, {
   ...empty.manifest,
-  mode: 'pro',
+  mode: 'atom-chain',
   audio: [audio],
 });
 const restored = parseApgProjectPackage(serializeApgProjectPackage(packaged));
 assert.equal(restored.audio[0].name, 'riff.wav');
-assert.equal(restored.manifest.lastMode, 'pro');
+assert.equal(restored.manifest.lastMode, 'atom-chain');
+assert.equal(restored.editor.activeView, 'atom-chain');
+
+const legacyPackage = structuredClone(empty) as unknown as Record<string, unknown>;
+legacyPackage.schema = 'apg.project.package.v1';
+legacyPackage.version = 1;
+delete legacyPackage.editor;
+((legacyPackage.manifest as Record<string, unknown>)).lastMode = 'pro';
+const upgradedLegacyPackage = validateApgProjectPackage(legacyPackage);
+assert.equal(upgradedLegacyPackage.schema, 'apg.project.package.v2');
+assert.equal(upgradedLegacyPackage.editor.activeView, 'effect-chain');
+
+const incompleteEditorPackage = validateApgProjectPackage({
+  ...empty,
+  editor: {
+    ...empty.editor,
+    effectChain: {
+      version: 1,
+      root: {
+        id: 'root',
+        items: [{
+          kind: 'parallel',
+          id: 'section:parallel_1',
+          section: 'parallel_1',
+          pannerInstanceId: null,
+          mixerInstanceId: 'mix_1',
+          storedPannerInstanceId: 'pan_1',
+          storedMixerInstanceId: 'mix_1',
+          paths: [1, 2].map(index => ({
+            id: `parallel_1:path_${index}`,
+            port: `path_${index}`,
+            levelParam: `path_${index}_db`,
+            rail: { id: `parallel_1:path_${index}`, items: [] },
+          })),
+        }],
+      },
+    },
+  },
+});
+assert.equal(
+  parseApgProjectPackage(serializeApgProjectPackage(incompleteEditorPackage)).editor.effectChain?.root.items[0].kind,
+  'parallel',
+);
 const stereo = structuredClone(restored) as unknown as Record<string, unknown>;
 ((stereo.audio as Array<Record<string, unknown>>)[0]).channels = 2;
 assert.throws(() => validateApgProjectPackage(stereo), /only support mono/);
@@ -226,15 +271,15 @@ assert.equal(ambiguousMigration.migratedSections, 0);
 assert.equal(ambiguousMigration.ambiguousSections, 1);
 assert.deepEqual(ambiguousMigration.workspace, ambiguousWorkspace);
 
-const legacyPackage = createApgProjectPackage(legacyWorkspace, {
+const legacyRoutingPackage = createApgProjectPackage(legacyWorkspace, {
   id: 'legacy-package',
   name: 'Legacy Package',
   createdAt,
   updatedAt: createdAt,
 });
-const migratedPackage = migrateApgProjectRouting(legacyPackage, routingHelpers);
+const migratedPackage = migrateApgProjectRouting(legacyRoutingPackage, routingHelpers);
 assert.equal(migratedPackage.migratedSections, 1);
-assert.equal(migratedPackage.project.manifest.id, legacyPackage.manifest.id);
+assert.equal(migratedPackage.project.manifest.id, legacyRoutingPackage.manifest.id);
 assert.equal(migratedPackage.project.workspace.files.length, legacyWorkspace.files.length + 2);
 
 console.log('studio data tests passed');

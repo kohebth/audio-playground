@@ -21,22 +21,39 @@ it is not exposed as the normal editing interface.
 - A project home screen creates, opens, duplicates, imports, exports, and deletes browser-local projects backed by
   IndexedDB. The portable `.apg` package contains the versioned workspace, manifest, optional mono audio, and readiness
   snapshot; topbar import replaces the open project's contents in place, while home import creates a separate project.
-- A global Simple/Pro switch serves both musicians and DSP authors. Simple mode provides an effect library, pedal-style
-  controls, serial insertion, guided nested parallel routing through explicit Pan 2 / Mix 2 helpers, microphone-only
-  preview, presets, scenes, and a guided tour. Pro mode adds project structure, batch operations, file preview, readiness
-  details, unit-internals editing, and the same route-context parallel action.
+- A global Effect Chain/Atom Chain switch serves both musicians and DSP authors. Effect Chain provides an effect library,
+  pedal-style controls, fixed left-to-right rails, nested parallel routing through explicit Pan 2 / Mix 2 helpers,
+  preview, presets, scenes, and a guided tour. Atom Chain edits a Personal library definition's internal atom graph;
+  opening a built-in definition first clones it to Personal.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
   selected pedal, and structured units can be saved to a personal browser library.
-- Pro unit editing uses structured identity, compatibility, parameter, port, and atom-graph controls. User-placeable
+- Unit Settings uses structured identity, compatibility, parameter, and port controls while the Atom Inspector is
+  strictly contextual to the selected atom. User-placeable
   effects are constrained to one mono audio input and one mono audio output; optional control ports remain available,
   while loaded multi-port mixers and routing helpers stay supported as internal project infrastructure. Raw YAML text is
   no longer mounted in the active editor; transformer and backend validation errors remain visible without replacing the
   last valid runtime.
-- Simple mode accepts live mono input only. Pro mode additionally accepts packaged or selected audio files and rejects
+- Effect Chain accepts live mono input only. Atom Chain additionally accepts packaged or selected audio files and rejects
   stereo/multichannel content with a clear error. Cloud sync, URL imports, browser recording, stereo projects, and browser
   deployment bundles remain outside this scope.
 - The studio adapts to phone-sized viewports, preserves a direct pass-through empty project, and keeps common project
   terminology user-facing while retaining the existing v2 file contracts internally.
+
+### Effect Chain and Atom Chain hardening
+
+- Effect cards cannot be freely positioned or manually wired. Every ordinary effect must resolve to exactly one audio
+  input and one audio output, and drag/drop targets insert or move it at a precise rail slot. Parallel sections are
+  recursive and render as rounded orthogonal split/branch/join rails. The shipped helper catalog remains Pan 2 / Mix 2,
+  while the editor model and per-path dB controls are path-count aware.
+- Panners and mixers are anchored helper cards, not ordinary effects. Removing either endpoint intentionally leaves a
+  persistent repairable section in the editor draft. Local autosave continues, while preview compilation and `.apg`
+  export remain blocked until the missing endpoint is restored. Strict project YAML and the C validator are not relaxed.
+- Atom Chain uses lazy-loaded Graphviz in a Worker. `dot` performs explicit Auto Layout, `nop2` reroutes after manual
+  node movement, and rounded orthogonal edge points are rendered without replacing saved node positions. Unit metadata
+  is edited in a separate drawer so the Atom Inspector never falls back to unit content.
+- Portable project packages now use `apg.project.package.v2`. The package carries the active editor view, active Personal
+  definition, and recursive Effect Chain draft alongside the last valid strict YAML workspace. Version 1 packages are
+  upgraded on read with an empty editor draft and open in Effect Chain.
 
 ## Readiness Declaration
 
@@ -56,9 +73,9 @@ typed frontend integration are implemented through a versioned TypeScript facade
 revisions, validates and prepares them in a Worker, stages valid images in an AudioWorklet, keeps failed edits away from
 the active runtime, and routes stable parameter/bypass names plus meter snapshots through the facade. Runtime image
 hydration and commit are separate Worklet messages; a newly announced editor revision invalidates stale preparation
-before commit, while failure state retains the affected revision and diagnostic. In Pro mode, mono files decode through
+before commit, while failure state retains the affected revision and diagnostic. In Atom Chain, mono files decode through
 WebAudio and feed the real processor Worklet; microphone capture remains a separate selectable input using the same
-runtime. Simple mode keeps that choice focused on live microphone/audio-interface input.
+runtime. Effect Chain keeps that choice focused on live microphone/audio-interface input.
 
 The compact transport keeps one WASM backend alive across parent UI renders, starts and stops both decoded files and
 microphone streams, and suppresses stale meter failures while a Worklet is being disposed. Browser regression coverage
@@ -88,10 +105,9 @@ Cards grow by parameter-row count and wrap at three knobs per row for every unit
 YAML parameter mapping exactly, and the Contract inspector can move parameters up or down through a structured YAML edit.
 Routing helpers render their ordered path levels as vertical keyboard-accessible dB faders and show a fixed `ROUTING ON`
 footer instead of a bypass control.
-Project cards are fixed in both Simple and Pro modes. Topology changes rebuild a deterministic left-to-right Dagre layout
-without consuming or writing project `ui.position` values, while scalar updates preserve the existing React Flow nodes,
-edges, and viewport. Linear routes stay straight; split and merge routes use Dagre's obstacle lanes rendered as rounded
-orthogonal elbows. Automatic layout never changes the current pan or zoom after the initial mount.
+Effect cards are fixed on their Effect Chain rails. Linear routes stay straight; split and merge routes use rounded
+orthogonal elbows. Atom cards remain manually movable inside Atom Chain and explicit Auto Layout does not change the
+current pan or zoom.
 
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
@@ -156,31 +172,25 @@ Unit connections use structured output/input endpoints. Clicking an output handl
 commits it; Escape or a canvas click cancels the armed state. React Flow connect, reconnect, and edge-delete actions
 transform YAML bindings and pass through the common validation/swap pipeline. The transformer rejects unknown nodes or
 fields,
-incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates UI-only position state
-and does not change DSP YAML or announce a workspace revision.
+incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates the unit's DSP-neutral
+`ui.position` metadata and announces a workspace revision; Graphviz reroutes visible edges around those saved positions.
 
 The unit contract canvas derives two fixed, handle-sized boundary rings from public audio ports. Each ring is labeled with
 its graph signal name: the left ring shows where the preceding project stage enters atom inputs, and the right ring shows
 which atom signals leave for the following stage. Boundary rings and their highlighted edges are view-only, remain outside
 atom counts and unit YAML, and cannot be selected, dragged, deleted, reconnected, or used as insertion targets.
 
-Project chain editing is driven from the current project YAML rather than the frozen inspect sample. Users can add,
-duplicate, remove, rename, and reorder instances; add, replace, disconnect, and reorder routes; and select endpoints from
-resolved unit port metadata. Project and atom cards expose keyboard-accessible right-click menus for replace, cut, copy,
-paste, and remove; unit menus additionally expose live on/off. Paste creates a disconnected sibling. Replacement previews
-its impact, keeps the project instance ID and routes, and resets replacement parameters and scene values to defaults.
-Rename updates route endpoints, parameter-control identities, and scene paths atomically. Removing or cutting a normal
-effect bridges its upstream route to its downstream route. Raw source fan-out and raw merges are rejected with an
-`Add in parallel` diagnostic. Right-clicking a route in either mode applies one atomic panner/effect/mixer transaction;
-nested sections are traced recursively. Cutting, removing, pasting, or replacing a routing helper is rejected unless the
-completed topology still has one matching panner/mixer pair with identical ordered paths. Direction, port, occupied-target,
-section, orphan, and cycle checks run before snapshot synchronization. Invalid edits leave the previous active revision in
-the Worklet.
+Project chain editing is driven from the current project YAML rather than the frozen inspect sample, but the user-facing
+surface is the fixed Effect Chain rail. Effect cards expose keyboard-accessible right-click menus for on/off, replace,
+cut, copy, paste, and remove. Removing or cutting an ordinary effect bridges its rail neighbors; raw source fan-out and
+raw merges are not exposed. Parallel creation is an atomic panner/effect/mixer transaction at any root or nested rail
+slot. Direction, port, occupied-target, section, orphan, and cycle checks still run before a complete draft replaces the
+strict YAML snapshot. Incomplete helper drafts leave the previous valid YAML and active Worklet revision untouched.
 
 The internal workspace still uses the versioned `apg.ui.workspace.v2` envelope. Browser persistence wraps that workspace
-in `apg.project.package.v1`, stores projects in IndexedDB, and exports/imports the same JSON-based `.apg` package. The
-package retains every project/unit file as path, role, and YAML content plus manifest, optional mono audio, and readiness
-data; baseline-only editor fields are not serialized. Restore validates format versions, confined relative paths, unique
+in `apg.project.package.v2`, stores projects in IndexedDB, and exports/imports the same JSON-based `.apg` package. The
+package retains every project/unit file as path, role, and YAML content plus manifest, optional mono audio, readiness,
+and editor draft data. Restore validates format versions, confined relative paths, unique
 files, roles, entry project, audio shape, and readiness data before mounting the Worker/AudioWorklet integration. Legacy
 local storage migrates once. Recognizable raw-fanout plus `wet_dry_mix` sections are upgraded idempotently to explicit
 Pan 2 / Mix 2 sections, preserving the mixer ID and translating node/scene ratios to independent dB levels. Ambiguous
@@ -303,7 +313,7 @@ The UI needs a way to drive live or offline preview:
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute, and peak/RMS meter snapshots.
 - **Phase X:** Representative unit fixture metadata, the guitar pedalboard project fixture metadata, deterministic render proof, and compatibility/output capture are complete.
 - **Phase Y:** Web handoff package freezes sample contracts, documents exact fixture commands, refreshes repo guidance, and declares backend readiness. Complete.
-- **Visual-first studio follow-on:** Project home, IndexedDB/`.apg` persistence, Simple/Pro workflows, scenes, presets,
+- **Visual-first studio follow-on:** Project home, IndexedDB/`.apg` persistence, Effect Chain/Atom Chain workflows, scenes, presets,
   parallel routing, locked deterministic project layout, structured Pro editing, and browser release/performance gates
   are complete.
 

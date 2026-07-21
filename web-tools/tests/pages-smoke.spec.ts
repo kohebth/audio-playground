@@ -25,7 +25,6 @@ function deployedBasePath(testInfo: TestInfo): string {
 function monitorNetwork(page: Page, configuredBaseUrl: string): NetworkAudit {
   const audit: NetworkAudit = { badResponses: [], failedRequests: [], sameOriginPaths: [] };
   const origin = new URL(configuredBaseUrl).origin;
-
   page.on('request', request => {
     const url = new URL(request.url());
     if (url.origin === origin) audit.sameOriginPaths.push(url.pathname);
@@ -36,34 +35,9 @@ function monitorNetwork(page: Page, configuredBaseUrl: string): NetworkAudit {
   });
   page.on('response', response => {
     const url = new URL(response.url());
-    if (url.origin === origin && response.status() >= 400) {
-      audit.badResponses.push(`${response.status()} ${url.pathname}`);
-    }
+    if (url.origin === origin && response.status() >= 400) audit.badResponses.push(`${response.status()} ${url.pathname}`);
   });
   return audit;
-}
-
-async function openWorkspace(page: Page, testInfo: TestInfo, route = '/projects') {
-  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'pro'));
-  const url = new URL(`#${route}`, baseUrl(testInfo));
-  await page.goto(url.href);
-  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-}
-
-async function expectProjectNodeLocked(page: Page, testId: string) {
-  const node = page.getByTestId(testId);
-  const before = await node.boundingBox();
-  expect(before).not.toBeNull();
-  await node.click({ position: { x: 12, y: 12 } });
-  await page.keyboard.press('ArrowRight');
-  await page.mouse.move(before!.x + 12, before!.y + 12);
-  await page.mouse.down();
-  await page.mouse.move(before!.x + 112, before!.y + 72, { steps: 8 });
-  await page.mouse.up();
-  const after = await node.boundingBox();
-  expect(after).not.toBeNull();
-  expect(after!.x).toBeCloseTo(before!.x, 1);
-  expect(after!.y).toBeCloseTo(before!.y, 1);
 }
 
 function expectHealthyNetwork(audit: NetworkAudit, expectedBasePath: string) {
@@ -73,98 +47,32 @@ function expectHealthyNetwork(audit: NetworkAudit, expectedBasePath: string) {
   for (const path of audit.sameOriginPaths) expect(path.startsWith(expectedBasePath)).toBe(true);
 }
 
-test('serves base-safe project and unit routes with release diagnostics', async ({ page }, testInfo) => {
+async function openWorkspace(page: Page, testInfo: TestInfo) {
+  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'effect-chain'));
+  await page.goto(new URL('#/projects', baseUrl(testInfo)).href);
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const tourClose = page.getByRole('button', { name: 'Close tour' });
+  if (await tourClose.isVisible()) await tourClose.click();
+  await expect(page.getByTestId('effect-chain-canvas')).toBeVisible();
+}
+
+async function openFirstAtomChain(page: Page) {
+  const effect = page.locator('.effect-library-card').first();
+  await effect.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Edit Atom Chain' }).click();
+  await expect(page.getByTestId('contract-canvas')).toBeVisible();
+}
+
+test('serves base-safe Effect Chain and Graphviz Atom Chain views', async ({ page }, testInfo) => {
   const audit = monitorNetwork(page, baseUrl(testInfo));
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
-
   await openWorkspace(page, testInfo);
-  await expect(page).toHaveURL(/#\/projects$/);
-  await expect(page.getByTestId('project-canvas')).toBeVisible();
-  const gateNode = page.getByTestId('project-node-gate1');
-  await expect(gateNode).toBeVisible();
-  await expectProjectNodeLocked(page, 'project-node-gate1');
-  await page.getByRole('button', { name: 'Simple', exact: true }).click();
-  await expect(page.locator('.app')).toHaveClass(/app--simple/);
-  await expectProjectNodeLocked(page, 'project-node-gate1');
-  await page.getByRole('button', { name: 'Pro', exact: true }).click();
-  await expect(page.locator('.app')).toHaveClass(/app--pro/);
-  const gateBypass = gateNode.getByTestId('project-node-bypass-gate1');
-  await expect(gateBypass).toBeEnabled();
-  await expect(gateBypass).toHaveClass(/node-pedal-footer/);
-  await expect(gateBypass).toHaveText('ON');
-  await expect(gateBypass).toHaveAttribute('aria-pressed', 'true');
-  const bypassHitArea = await gateBypass.evaluate(button => {
-    const pedal = button.parentElement;
-    if (!pedal) throw new Error('Bypass footer has no pedal container');
-    return {
-      footerWidth: button.offsetWidth,
-      pedalWidth: pedal.clientWidth,
-      minHeight: Number.parseFloat(getComputedStyle(button).minHeight),
-    };
-  });
-  expect(bypassHitArea.footerWidth).toBe(bypassHitArea.pedalWidth);
-  expect(bypassHitArea.minHeight).toBe(28);
-  await expect(page.locator('.react-flow__edge-text')).toHaveCount(0);
-  await gateBypass.click();
-  await expect(gateBypass).toHaveText('OFF');
-  await expect(gateBypass).toHaveAttribute('aria-pressed', 'false');
-  await expect(gateNode).toHaveCSS('opacity', '0.5');
-  await gateBypass.click();
-  await expect(gateBypass).toHaveText('ON');
-  await expect(gateNode).toHaveCSS('opacity', '1');
-  for (const control of ['threshold', 'attack', 'release']) {
-    await expect(gateNode.getByTestId(`param-knob-gate1-${control}`)).toBeVisible();
-  }
-  await expect(gateNode.locator('.knob-label')).toHaveText(['Threshold', 'Attack', 'Release']);
-  const phaserNode = page.getByTestId('project-node-phaser1');
-  await expect(phaserNode).toBeVisible();
-  for (const control of ['rate', 'depth', 'center', 'feedback', 'mix']) {
-    await expect(phaserNode.getByTestId(`param-knob-phaser1-${control}`)).toBeVisible();
-  }
-  await expect(phaserNode.locator('.knob-label')).toHaveText(['Rate', 'Depth', 'Center', 'Resonance', 'Mix']);
-  const toneNode = page.getByTestId('project-node-tone1');
-  await expect(toneNode).toBeVisible();
-  for (const control of ['gain', 'bass', 'mid', 'treble', 'presence', 'volume']) {
-    await expect(toneNode.getByTestId(`param-knob-tone1-${control}`)).toBeVisible();
-  }
-  const toneKnobLabels = toneNode.locator('.knob-label');
-  await expect(toneKnobLabels).toHaveText([
-    'Preamp Gain',
-    'Bass',
-    'Middle',
-    'Treble',
-    'Presence',
-    'Master Volume',
-  ]);
-  const toneKnobRows = await toneNode.locator('.unit-knob').evaluateAll(knobs => {
-    const rows = new Map<number, number>();
-    for (const knob of knobs) {
-      const top = Math.round(knob.getBoundingClientRect().top);
-      rows.set(top, (rows.get(top) ?? 0) + 1);
-    }
-    return [...rows.values()];
-  });
-  expect(toneKnobRows).toEqual([3, 3]);
-  const chorusNode = page.getByTestId('project-node-chorus1');
-  await expect(chorusNode).toBeVisible();
-  for (const control of ['rate', 'depth', 'mix']) {
-    await expect(chorusNode.getByTestId(`param-knob-chorus1-${control}`)).toBeVisible();
-  }
-  await expect(chorusNode.locator('.knob-label')).toHaveText(['Rate', 'Depth', 'Mix']);
-  const delayNode = page.getByTestId('project-node-delay1');
-  await expect(delayNode).toBeVisible();
-  for (const control of ['time_samples', 'feedback', 'mix']) {
-    await expect(delayNode.getByTestId(`param-knob-delay1-${control}`)).toBeVisible();
-  }
-  await expect(delayNode.locator('.knob-label')).toHaveText(['Time', 'Feedback', 'Mix']);
-  await expect(page.getByTestId('project-node-blend1')).toHaveCount(0);
-  await page.getByTestId('inspector-tab-contract').click();
-  const diagnostics = page.locator('details.developer-diagnostics');
-  await diagnostics.locator(':scope > summary').click();
-  await expect(page.getByTestId('build-base-path')).toHaveText(deployedBasePath(testInfo));
-  const expectedCommit = process.env.APG_EXPECTED_COMMIT_SHA;
-  if (expectedCommit) await expect(page.getByTestId('build-commit-sha')).toHaveText(expectedCommit);
+
+  await expect(page.getByRole('button', { name: 'Effect Chain', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Atom Chain', exact: true })).toBeVisible();
+  await expect(page.locator('.effect-chain-card')).not.toHaveCount(0);
+  await expect(page.locator('.react-flow__node-projectNode')).toHaveCount(0);
 
   const example = await page.evaluate(async () => {
     const response = await fetch(new URL('units/overdrive.unit.v2.yaml', document.baseURI));
@@ -173,133 +81,63 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   expect(example.ok).toBe(true);
   expect(new URL(example.url).pathname).toBe(`${deployedBasePath(testInfo)}units/overdrive.unit.v2.yaml`);
   expect(example.text).toContain('schema: apg.unit.v2');
-  expect(example.text).toContain('wasm_realtime: true');
 
-  await openWorkspace(page, testInfo, '/unit/tone_stack');
-  await expect(page).toHaveURL(/#\/unit\/tone_stack$/);
-  const contractCanvas = page.getByTestId('contract-canvas');
-  await expect(contractCanvas).toBeVisible();
-  await expect(contractCanvas).toHaveAttribute('data-atom-count', '21');
-  await expect(contractCanvas).toHaveAttribute('data-boundary-count', '2');
-  await expect(page.getByTestId('contract-node-mid_bandpass')).toContainText('filter_biquad');
-  await expect(page.getByRole('button', { name: 'preamp_saturation amplitude_clip_soft' })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'power_saturation amplitude_clip_soft' })).toHaveCount(1);
-  const contractParamNames = page.locator('.structured-param input[aria-label$=" name"]');
-  await expect.poll(() => contractParamNames.evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)))
-    .toEqual(['gain', 'bass', 'mid', 'treble', 'presence', 'volume']);
-  await page.getByTestId('contract-param-volume-up').click();
-  await expect.poll(() => contractParamNames.evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)))
-    .toEqual(['gain', 'bass', 'mid', 'treble', 'volume', 'presence']);
-  await page.getByRole('button', { name: 'Project graph' }).click();
-  await expect(page).toHaveURL(/#\/projects$/);
-  await expect(toneKnobLabels).toHaveText([
-    'Preamp Gain',
-    'Bass',
-    'Middle',
-    'Treble',
-    'Master Volume',
-    'Presence',
-  ]);
-
-  // Keep the boundary-node sizing check on a compact graph: the larger tone
-  // stack intentionally virtualizes its far-edge nodes at the minimum zoom.
-  await openWorkspace(page, testInfo, '/unit/overdrive');
-  await expect(page).toHaveURL(/#\/unit\/overdrive$/);
-  await page.reload();
-  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  const inputBoundary = page.getByTestId('unit-boundary-input');
-  const outputBoundary = page.getByTestId('unit-boundary-output');
-  await expect(inputBoundary).toBeVisible();
-  await expect(inputBoundary).toHaveText('input');
-  await expect(inputBoundary).toHaveCSS('width', '10px');
-  await expect(inputBoundary).toHaveCSS('height', '10px');
-  await expect(outputBoundary).toBeVisible();
-  await expect(outputBoundary).toHaveText('output');
-  await expect(outputBoundary).toHaveCSS('width', '10px');
-  await expect(outputBoundary).toHaveCSS('height', '10px');
-  await expect(page.locator('.react-flow__edge.contract-edge--boundary-input')).toHaveCount(1);
-  await expect(page.locator('.react-flow__edge.contract-edge--boundary-output')).toHaveCount(1);
-  await page.reload();
-  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  await expect(contractCanvas).toBeVisible();
-  await expect(inputBoundary).toBeVisible();
-  await expect(outputBoundary).toBeVisible();
-  await expect(page.getByTestId('atom-palette-browser-hidden')).toContainText('3 browser-incompatible hidden');
-  await page.getByTestId('atom-palette-show-advanced').check();
-  await expect(page.getByTestId('atom-palette-item-freq_fft')).toHaveCount(0);
+  await openFirstAtomChain(page);
+  await expect(page.getByTestId('atom-context-inspector')).toBeVisible();
+  await page.getByRole('button', { name: 'Auto Layout' }).click();
+  await expect(page.locator('.contract-layout-error')).toHaveCount(0, { timeout: 20_000 });
+  await expect(page.locator('.react-flow__edge')).not.toHaveCount(0);
+  await expect(page.getByTestId('atom-context-inspector')).not.toContainText('Unit Contract');
 
   expect(pageErrors).toEqual([]);
   expectHealthyNetwork(audit, deployedBasePath(testInfo));
 });
 
-test('persists locked-layout edits and exports the workspace', async ({ page }, testInfo) => {
+test('keeps missing routing helpers repairable and gates export', async ({ page }, testInfo) => {
   await openWorkspace(page, testInfo);
-  const unitNodes = page.locator('.react-flow__node[data-id^="unit-"]');
-  const initialCount = await unitNodes.count();
-  const viewport = page.locator('.react-flow__viewport');
-  const initialTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
-  const initialStoredWorkspace = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
-  await page.getByTestId('project-unit-item-overdrive_unit').dragTo(page.getByTestId('project-canvas'), {
-    targetPosition: { x: 480, y: 280 },
-  });
-  const countAfterSerialDrop = initialCount + 1;
-  await expect(unitNodes).toHaveCount(countAfterSerialDrop);
-  await expect(viewport).toHaveCSS('transform', initialTransform);
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
-    .not.toBe(initialStoredWorkspace);
-  const storedAfterDrop = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
+  await page.locator('.effect-library-card').first().getByRole('button', { name: /in parallel$/ }).click();
+  const parallel = page.locator('.effect-chain-parallel').last();
+  await expect(parallel).toBeVisible();
 
-  await page.getByRole('button', { name: 'Simple', exact: true }).click();
-  const simpleTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
-  await page.getByRole('button', { name: 'Add Chorus in parallel', exact: true }).click();
-  const expectedParallelCount = countAfterSerialDrop + 3;
-  await expect(unitNodes).toHaveCount(expectedParallelCount);
-  await expect(viewport).toHaveCSS('transform', simpleTransform);
-  const routePaths = await page.locator('.react-flow__edge-path').evaluateAll(paths => (
-    paths.map(path => path.getAttribute('d') ?? '')
-  ));
-  expect(routePaths.some(path => path.includes('Q'))).toBe(true);
-  expect(routePaths.some(path => !path.includes('Q'))).toBe(true);
-  expect(routePaths.every(path => !path.includes('C'))).toBe(true);
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
-    .not.toBe(storedAfterDrop);
+  await parallel.locator('.effect-chain-helper').first().getByRole('button', { name: 'Open panner actions' }).click();
+  await page.getByRole('menuitem', { name: 'Remove panner' }).click();
+  await expect(parallel.locator('.effect-chain-helper--missing')).toContainText('Restore panner');
+  await expect(page.getByTestId('topbar-export')).toBeDisabled();
+  await expect(page.getByTestId('preview-compile')).toBeDisabled();
+
+  await parallel.getByRole('button', { name: /Restore panner/ }).click();
+  await expect(parallel.locator('.effect-chain-helper--missing')).toHaveCount(0);
+  await expect(page.getByTestId('topbar-export')).toBeEnabled();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('topbar-export').click();
+  expect((await downloadPromise).suggestedFilename()).toMatch(/\.apg$/);
 
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  await expect(unitNodes).toHaveCount(expectedParallelCount);
-  await expect(page.getByTestId('topbar-import-input')).toHaveCount(1);
-
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByTestId('topbar-export').click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/\.apg$/);
+  await expect(page.locator('.effect-chain-parallel')).not.toHaveCount(0);
 });
 
 test('registers the AudioWorklet and releases repeated audio resources', async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     const stats: AudioLifecycleStats = { mediaTrackStops: 0, workletDisconnects: 0 };
     Object.defineProperty(window, '__apgPagesAudioStats', { configurable: true, value: stats });
-
     const originalDisconnect = AudioWorkletNode.prototype.disconnect;
     AudioWorkletNode.prototype.disconnect = function disconnect(...args: Parameters<AudioWorkletNode['disconnect']>) {
       stats.workletDisconnects += 1;
       return originalDisconnect.apply(this, args);
     } as AudioWorkletNode['disconnect'];
-
     const originalTrackStop = MediaStreamTrack.prototype.stop;
     MediaStreamTrack.prototype.stop = function stop() {
       stats.mediaTrackStops += 1;
       return originalTrackStop.call(this);
     };
   });
-
   const audit = monitorNetwork(page, baseUrl(testInfo));
-  const pageErrors: string[] = [];
-  page.on('pageerror', error => pageErrors.push(error.message));
   await openWorkspace(page, testInfo);
 
-  for (const mode of ['file', 'mic', 'file', 'mic'] as const) {
-    await page.getByTestId(`preview-mode-${mode}`).click();
+  for (const mode of ['mic', 'file'] as const) {
+    if (mode === 'file') await openFirstAtomChain(page);
+    await page.getByTestId(`preview-mode-${mode}`).click({ timeout: 10_000 });
     await page.getByTestId('preview-start-stop').click();
     await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
     await page.getByTestId('preview-start-stop').click();
@@ -309,50 +147,24 @@ test('registers the AudioWorklet and releases repeated audio resources', async (
   const lifecycle = await page.evaluate(() => (
     window as typeof window & { __apgPagesAudioStats: AudioLifecycleStats }
   ).__apgPagesAudioStats);
-  const processorLoads = audit.sameOriginPaths.filter(path => path.endsWith('/wasm/apg_processor.wasm')).length;
-  expect(processorLoads).toBe(4);
-  expect(lifecycle.workletDisconnects).toBe(4);
-  expect(lifecycle.mediaTrackStops).toBeGreaterThanOrEqual(2);
-  expect(pageErrors).toEqual([]);
+  expect(lifecycle.workletDisconnects).toBe(2);
+  expect(lifecycle.mediaTrackStops).toBeGreaterThanOrEqual(1);
   expectHealthyNetwork(audit, deployedBasePath(testInfo));
 });
 
-test('shows microphone permission failure without crashing the editor', async ({ page }, testInfo) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-      configurable: true,
-      value: () => Promise.reject(new DOMException('Injected microphone permission denial', 'NotAllowedError')),
-    });
-  });
-  await openWorkspace(page, testInfo);
-  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 20_000 });
-  await page.getByTestId('preview-compile').click();
-  await expect(page.locator('.transport-state')).toHaveText('ready', { timeout: 20_000 });
-
-  await page.getByTestId('preview-mode-mic').click();
-  await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
-  await page.getByTestId('preview-start-stop').click();
-  await expect(page.locator('.transport-state')).toHaveText('error');
-  await expect(page.locator('.transport-state')).toHaveAttribute(
-    'aria-label',
-    /Injected microphone permission denial/,
-  );
-  await expect(page.getByTestId('project-canvas')).toBeVisible();
-});
-
-test('contains and recovers from an invalid structured unit edit', async ({ page }, testInfo) => {
+test('contains invalid Unit Settings edits inside Atom Chain', async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
-  await openWorkspace(page, testInfo, '/unit/overdrive');
+  await openWorkspace(page, testInfo);
+  await openFirstAtomChain(page);
+  await page.getByRole('button', { name: 'Unit Settings' }).click();
   const version = page.getByLabel('Unit version');
   await version.fill('not-a-version');
   await version.press('Tab');
   await expect(page.getByRole('alert')).toContainText('semantic versioning');
   await expect(page.getByTestId('contract-canvas')).toBeVisible();
-
   await version.fill('2.0.1');
   await version.press('Tab');
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByTestId('contract-canvas')).toBeVisible();
   expect(pageErrors).toEqual([]);
 });

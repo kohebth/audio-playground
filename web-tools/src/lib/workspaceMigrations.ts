@@ -3,6 +3,7 @@ import yaml from 'js-yaml';
 import type { WorkspaceFile } from './backendSamples';
 import {
   APG_PACKAGE_SCHEMA,
+  LEGACY_APG_PACKAGE_SCHEMA,
   createApgProjectPackage,
   validateApgProjectPackage,
   type ApgProjectPackage,
@@ -331,7 +332,9 @@ export function migrateWorkspaceValue(
   const parsed = parseUnknown(value);
   if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
     const record = parsed as Record<string, unknown>;
-    if (record.schema === APG_PACKAGE_SCHEMA) return migrateApgProjectRouting(validateApgProjectPackage(record), helpers).project;
+    if (record.schema === APG_PACKAGE_SCHEMA || record.schema === LEGACY_APG_PACKAGE_SCHEMA) {
+      return migrateApgProjectRouting(validateApgProjectPackage(record), helpers).project;
+    }
   }
   const workspace = Array.isArray(parsed)
     ? legacyFilesToWorkspace(parsed, options.entryProject)

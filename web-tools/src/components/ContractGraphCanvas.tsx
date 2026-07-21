@@ -10,7 +10,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import {
-  BezierEdge,
+  BaseEdge,
   Controls,
   Handle,
   MiniMap,
@@ -44,6 +44,7 @@ import {
   type UnitPortsDraft,
 } from '../lib/unitV2Graph';
 import { markComponentRender, markPerfSpan } from '../lib/perfTelemetry';
+import type { GraphvizLayoutRequest, GraphvizLayoutResult } from '../lib/graphvizLayout';
 
 type ContractNodeData = {
   id: string;
@@ -64,7 +65,8 @@ type UnitBoundaryNodeData = {
 type ContractAtomFlowNode = Node<ContractNodeData, 'contractNode'>;
 type UnitBoundaryFlowNode = Node<UnitBoundaryNodeData, 'unitBoundaryNode'>;
 type ContractFlowNode = ContractAtomFlowNode | UnitBoundaryFlowNode;
-type ContractFlowEdge = Edge<Record<string, never>, 'contractEdge'>;
+type ContractFlowEdgeData = { points?: Array<{ x: number; y: number }> };
+type ContractFlowEdge = Edge<ContractFlowEdgeData, 'contractEdge'>;
 
 type Props = {
   workspaceFile: WorkspaceFile;
@@ -72,6 +74,7 @@ type Props = {
   selectedUnitLabel: string;
   selectedAtomId: string | null;
   onBackToProject: () => void;
+  onOpenUnitSettings: () => void;
   onConnectAtoms: (source: UnitConnectionEndpoint, target: UnitConnectionEndpoint) => void;
   onDisconnectAtom: (target: UnitConnectionEndpoint) => void;
   onReconnectAtoms: (
@@ -84,6 +87,7 @@ type Props = {
   onAddAtomAt: (atomName: string, position: GraphPosition) => void;
   onInsertAtomAtEdge: (atomName: string, target: UnitConnectionEndpoint, position: GraphPosition) => void;
   onMoveAtom: (nodeId: string, position: GraphPosition) => void;
+  onAutoLayout: (positions: Record<string, GraphPosition>) => void;
   atomClipboardReady: boolean;
   onCopyAtom: (nodeId: string) => void;
   onCutAtom: (nodeId: string) => void;
@@ -430,9 +434,38 @@ const nodeTypes = {
   unitBoundaryNode: UnitBoundaryNode,
 } satisfies NodeTypes;
 
+function roundedPath(points: Array<{ x: number; y: number }>, radius = 8): string {
+  if (points.length < 2) return '';
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const next = points[index + 1];
+    const incoming = Math.min(radius, Math.hypot(current.x - previous.x, current.y - previous.y) / 2);
+    const outgoing = Math.min(radius, Math.hypot(next.x - current.x, next.y - current.y) / 2);
+    const before = {
+      x: current.x - Math.sign(current.x - previous.x) * incoming,
+      y: current.y - Math.sign(current.y - previous.y) * incoming,
+    };
+    const after = {
+      x: current.x + Math.sign(next.x - current.x) * outgoing,
+      y: current.y + Math.sign(next.y - current.y) * outgoing,
+    };
+    path += ` L ${before.x} ${before.y} Q ${current.x} ${current.y} ${after.x} ${after.y}`;
+  }
+  const last = points.at(-1)!;
+  return `${path} L ${last.x} ${last.y}`;
+}
+
 const ContractEdge = memo((props: EdgeProps<ContractFlowEdge>) => {
   useEffect(() => markComponentRender('ContractEdge', props.id));
-  return <BezierEdge {...props} />;
+  const points = props.data?.points?.length ? props.data.points : [
+    { x: props.sourceX, y: props.sourceY },
+    { x: (props.sourceX + props.targetX) / 2, y: props.sourceY },
+    { x: (props.sourceX + props.targetX) / 2, y: props.targetY },
+    { x: props.targetX, y: props.targetY },
+  ];
+  return <BaseEdge {...props} path={roundedPath(points)} />;
 });
 
 ContractEdge.displayName = 'ContractEdge';
@@ -445,6 +478,7 @@ export function ContractGraphCanvas({
   selectedUnitLabel,
   selectedAtomId,
   onBackToProject,
+  onOpenUnitSettings,
   onConnectAtoms,
   onDisconnectAtom,
   onSelectAtom,
@@ -453,6 +487,7 @@ export function ContractGraphCanvas({
   onAddAtomAt,
   onInsertAtomAtEdge,
   onMoveAtom,
+  onAutoLayout,
   atomClipboardReady,
   onCopyAtom,
   onCutAtom,
@@ -482,6 +517,11 @@ export function ContractGraphCanvas({
   const [replacementAtom, setReplacementAtom] = useState('');
   const reactFlowRef = useRef<ReactFlowInstance<ContractFlowNode, Edge> | null>(null);
   const dragStartAtByNode = useRef<Record<string, number>>({});
+  const graphvizWorker = useRef<Worker | null>(null);
+  const graphvizRequestId = useRef(0);
+  const graphvizMode = useRef(new Map<number, 'layout' | 'route'>());
+  const [layoutBusy, setLayoutBusy] = useState(false);
+  const [layoutError, setLayoutError] = useState<string | null>(null);
   const atomCount = parsed.unit?.nodes.length ?? 0;
   const contextAtom = contextMenu ? parsed.unit?.nodes.find(node => node.id === contextMenu.atomId) ?? null : null;
   const replacementOptions = contextAtom
@@ -499,6 +539,67 @@ export function ContractGraphCanvas({
     setContextMenu(null);
     setReplacementOpen(false);
   }, []);
+
+  const applyGraphvizResult = useCallback((result: GraphvizLayoutResult) => {
+    if (result.requestId !== graphvizRequestId.current) return;
+    const mode = graphvizMode.current.get(result.requestId);
+    graphvizMode.current.delete(result.requestId);
+    setLayoutBusy(false);
+    if (result.error) {
+      setLayoutError(result.error);
+      return;
+    }
+    setLayoutError(null);
+    if (mode === 'layout') {
+      setFlowNodes(current => current.map(node => (
+        result.positions[node.id] ? { ...node, position: result.positions[node.id] } : node
+      )));
+      onAutoLayout(Object.fromEntries(Object.entries(result.positions).flatMap(([id, position]) => (
+        id.startsWith('contract-') && id !== INPUT_BOUNDARY_ID && id !== OUTPUT_BOUNDARY_ID
+          ? [[id.replace(/^contract-/, ''), position]]
+          : []
+      ))));
+      requestAnimationFrame(() => reactFlowRef.current?.fitView({ padding: 0.18 }));
+    }
+    setFlowEdges(current => current.map(edge => ({
+      ...edge,
+      data: result.routes[edge.id] ? { points: result.routes[edge.id] } : edge.data,
+    })));
+  }, [onAutoLayout, setFlowEdges, setFlowNodes]);
+
+  useEffect(() => {
+    const worker = new Worker(new URL('../workers/graphviz.worker.ts', import.meta.url), { type: 'module' });
+    graphvizWorker.current = worker;
+    const receive = (event: MessageEvent<GraphvizLayoutResult>) => applyGraphvizResult(event.data);
+    worker.addEventListener('message', receive);
+    return () => {
+      worker.removeEventListener('message', receive);
+      worker.terminate();
+      graphvizWorker.current = null;
+    };
+  }, [applyGraphvizResult]);
+
+  const requestGraphviz = useCallback((mode: 'layout' | 'route', nodes = flowNodes) => {
+    const worker = graphvizWorker.current;
+    if (!worker || nodes.length === 0) return;
+    const requestId = ++graphvizRequestId.current;
+    graphvizMode.current.set(requestId, mode);
+    setLayoutBusy(true);
+    setLayoutError(null);
+    const request: GraphvizLayoutRequest = {
+      requestId,
+      mode,
+      nodes: nodes.map(node => ({
+        id: node.id,
+        x: node.position.x,
+        y: node.position.y,
+        width: node.type === 'contractNode' ? NODE_WIDTH : BOUNDARY_NODE_SIZE,
+        height: node.type === 'contractNode' ? NODE_HEIGHT : BOUNDARY_NODE_SIZE,
+      })),
+      edges: flowEdges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target })),
+    };
+    worker.postMessage(request);
+  }, [flowEdges, flowNodes]);
 
   useEffect(() => {
     if (dropState === 'idle') return;
@@ -631,14 +732,19 @@ export function ContractGraphCanvas({
     <main className="canvas canvas--contract canvas-area" onKeyDownCapture={openKeyboardMenu}>
       <div className="canvas-modebar">
         <button className="btn btn--ghost" onClick={onBackToProject} type="button">
-          Project graph
+          Effect Chain
         </button>
         <div>
-          <span>Contract graph</span>
+          <span>Atom Chain</span>
           <strong>{parsed.unit?.name ?? selectedUnitLabel}</strong>
         </div>
         <code>{workspaceFile.path}</code>
+        <button className="btn btn--ghost" disabled={layoutBusy} onClick={() => requestGraphviz('layout')} type="button">
+          {layoutBusy ? 'Arranging…' : 'Auto Layout'}
+        </button>
+        <button className="btn btn--ghost" onClick={onOpenUnitSettings} type="button">Unit Settings</button>
       </div>
+      {layoutError ? <p className="contract-layout-error" role="alert">Graphviz: {layoutError}</p> : null}
 
       {parsed.error ? (
         <div className="canvas__empty">
@@ -698,6 +804,9 @@ export function ContractGraphCanvas({
                 delete dragStartAtByNode.current[node.id];
                 markPerfSpan('ui.drag.contractAtom.stop', () => {
                   onMoveAtom(node.data.id, node.position);
+                  requestGraphviz('route', flowNodes.map(current => (
+                    current.id === node.id ? { ...current, position: node.position } : current
+                  )));
                 }, startedAt ? { nodeId: node.id, durationMs: performance.now() - startedAt } : { nodeId: node.id });
               }}
               onNodesChange={onNodesChange}

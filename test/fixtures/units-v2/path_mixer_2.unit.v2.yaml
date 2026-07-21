@@ -25,7 +25,7 @@ params:
     smoothing_ms: 10
     ui:
       label: Path 1
-      control: fader
+      control: slider
       unit: dB
       scale: linear
       display_precision: 1
@@ -37,7 +37,7 @@ params:
     smoothing_ms: 10
     ui:
       label: Path 2
-      control: fader
+      control: slider
       unit: dB
       scale: linear
       display_precision: 1

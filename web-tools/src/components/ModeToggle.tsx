@@ -10,20 +10,20 @@ export function ModeToggle({ mode, onChange, compact = false }: Props) {
   return (
     <div className={`mode-toggle ${compact ? 'mode-toggle--compact' : ''}`} aria-label="Editor mode">
       <button
-        aria-pressed={mode === 'simple'}
-        className={mode === 'simple' ? 'active' : ''}
-        onClick={() => onChange('simple')}
+        aria-pressed={mode === 'effect-chain'}
+        className={mode === 'effect-chain' ? 'active' : ''}
+        onClick={() => onChange('effect-chain')}
         type="button"
       >
-        Simple
+        Effect Chain
       </button>
       <button
-        aria-pressed={mode === 'pro'}
-        className={mode === 'pro' ? 'active' : ''}
-        onClick={() => onChange('pro')}
+        aria-pressed={mode === 'atom-chain'}
+        className={mode === 'atom-chain' ? 'active' : ''}
+        onClick={() => onChange('atom-chain')}
         type="button"
       >
-        Pro
+        Atom Chain
       </button>
     </div>
   );

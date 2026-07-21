@@ -6,11 +6,55 @@ import {
   type WorkspacePayload,
 } from './workspacePersistence.ts';
 
-export const APG_PACKAGE_SCHEMA = 'apg.project.package.v1';
-export const APG_PACKAGE_VERSION = 1;
+export const APG_PACKAGE_SCHEMA = 'apg.project.package.v2';
+export const APG_PACKAGE_VERSION = 2;
+export const LEGACY_APG_PACKAGE_SCHEMA = 'apg.project.package.v1';
 
-export type StudioMode = 'simple' | 'pro';
+export type StudioView = 'effect-chain' | 'atom-chain';
+// Kept as an alias while component props migrate from the old Simple/Pro naming.
+export type StudioMode = StudioView;
 export type ReadinessStatus = 'unknown' | 'ready' | 'blocked';
+
+export type EffectChainEffectDraft = {
+  kind: 'effect';
+  instanceId: string;
+};
+
+export type EffectChainPathDraft = {
+  id: string;
+  port: string;
+  levelParam: string;
+  rail: EffectChainRailDraft;
+};
+
+export type EffectChainParallelDraft = {
+  kind: 'parallel';
+  id: string;
+  section: string;
+  pannerInstanceId: string | null;
+  mixerInstanceId: string | null;
+  storedPannerInstanceId: string;
+  storedMixerInstanceId: string;
+  paths: EffectChainPathDraft[];
+};
+
+export type EffectChainItemDraft = EffectChainEffectDraft | EffectChainParallelDraft;
+
+export type EffectChainRailDraft = {
+  id: string;
+  items: EffectChainItemDraft[];
+};
+
+export type EffectChainEditorDraft = {
+  version: 1;
+  root: EffectChainRailDraft;
+};
+
+export type ApgEditorState = {
+  activeView: StudioView;
+  activeLibraryUnitId: string | null;
+  effectChain: EffectChainEditorDraft | null;
+};
 
 export type ProjectReadinessSnapshot = {
   checkedAt: string | null;
@@ -47,6 +91,7 @@ export type ApgProjectPackage = {
   workspace: WorkspacePayload;
   audio: ApgAudioAsset[];
   readiness: ProjectReadinessSnapshot;
+  editor: ApgEditorState;
 };
 
 export type CreateApgPackageOptions = {
@@ -78,6 +123,72 @@ function optionalFiniteNumber(value: unknown, field: string): number | null {
 function readinessStatus(value: unknown, field: string): ReadinessStatus {
   if (value !== 'unknown' && value !== 'ready' && value !== 'blocked') throw new Error(`${field} is invalid.`);
   return value;
+}
+
+function nullableString(value: unknown, field: string): string | null {
+  if (value === null || value === undefined) return null;
+  return requiredString(value, field);
+}
+
+function validateEffectChainRail(value: unknown, field: string, depth = 0): EffectChainRailDraft {
+  if (depth > 32) throw new Error(`${field} nesting is too deep.`);
+  if (!isRecord(value) || !Array.isArray(value.items)) throw new Error(`${field} must be a rail.`);
+  const id = requiredString(value.id, `${field}.id`);
+  return {
+    id,
+    items: value.items.map((item, index): EffectChainItemDraft => {
+      const itemField = `${field}.items[${index}]`;
+      if (!isRecord(item)) throw new Error(`${itemField} must be an object.`);
+      if (item.kind === 'effect') {
+        return { kind: 'effect', instanceId: requiredString(item.instanceId, `${itemField}.instanceId`) };
+      }
+      if (item.kind !== 'parallel' || !Array.isArray(item.paths)) {
+        throw new Error(`${itemField} must be an effect or parallel section.`);
+      }
+      return {
+        kind: 'parallel',
+        id: requiredString(item.id, `${itemField}.id`),
+        section: requiredString(item.section, `${itemField}.section`),
+        pannerInstanceId: nullableString(item.pannerInstanceId, `${itemField}.pannerInstanceId`),
+        mixerInstanceId: nullableString(item.mixerInstanceId, `${itemField}.mixerInstanceId`),
+        storedPannerInstanceId: requiredString(item.storedPannerInstanceId, `${itemField}.storedPannerInstanceId`),
+        storedMixerInstanceId: requiredString(item.storedMixerInstanceId, `${itemField}.storedMixerInstanceId`),
+        paths: item.paths.map((path, pathIndex) => {
+          const pathField = `${itemField}.paths[${pathIndex}]`;
+          if (!isRecord(path)) throw new Error(`${pathField} must be an object.`);
+          return {
+            id: requiredString(path.id, `${pathField}.id`),
+            port: requiredString(path.port, `${pathField}.port`),
+            levelParam: requiredString(path.levelParam, `${pathField}.levelParam`),
+            rail: validateEffectChainRail(path.rail, `${pathField}.rail`, depth + 1),
+          };
+        }),
+      };
+    }),
+  };
+}
+
+function validateEditorState(value: unknown, fallbackView: StudioView): ApgEditorState {
+  if (value === undefined || value === null) {
+    return { activeView: fallbackView, activeLibraryUnitId: null, effectChain: null };
+  }
+  if (!isRecord(value)) throw new Error('Project editor state must be an object.');
+  const activeView = value.activeView;
+  if (activeView !== 'effect-chain' && activeView !== 'atom-chain') {
+    throw new Error('Project editor active view is invalid.');
+  }
+  let effectChain: EffectChainEditorDraft | null = null;
+  if (value.effectChain !== null && value.effectChain !== undefined) {
+    if (!isRecord(value.effectChain) || value.effectChain.version !== 1) {
+      throw new Error('Effect Chain editor state must use version 1.');
+    }
+    effectChain = { version: 1, root: validateEffectChainRail(value.effectChain.root, 'editor.effectChain.root') };
+  }
+  return {
+    activeView,
+    activeLibraryUnitId: nullableString(value.activeLibraryUnitId, 'editor.activeLibraryUnitId'),
+    effectChain,
+  };
 }
 
 export function createUnknownReadiness(): ProjectReadinessSnapshot {
@@ -157,11 +268,16 @@ export function createApgProjectPackage(
       description: options.description ?? '',
       createdAt,
       updatedAt: options.updatedAt ?? createdAt,
-      lastMode: options.mode ?? 'simple',
+      lastMode: options.mode ?? 'effect-chain',
     },
     workspace,
     audio: options.audio ?? [],
     readiness: options.readiness ?? createUnknownReadiness(),
+    editor: {
+      activeView: options.mode ?? 'effect-chain',
+      activeLibraryUnitId: null,
+      effectChain: null,
+    },
   });
 }
 
@@ -175,12 +291,26 @@ export function createApgProjectPackageFromFiles(
 
 export function validateApgProjectPackage(value: unknown): ApgProjectPackage {
   if (!isRecord(value)) throw new Error('APG project package must be an object.');
+  if (value.schema === LEGACY_APG_PACKAGE_SCHEMA && value.version === 1) {
+    if (!isRecord(value.manifest)) throw new Error('APG project package manifest must be an object.');
+    return validateApgProjectPackage({
+      ...value,
+      schema: APG_PACKAGE_SCHEMA,
+      version: APG_PACKAGE_VERSION,
+      manifest: { ...value.manifest, lastMode: 'effect-chain' },
+      editor: {
+        activeView: 'effect-chain',
+        activeLibraryUnitId: null,
+        effectChain: null,
+      },
+    });
+  }
   if (value.schema !== APG_PACKAGE_SCHEMA || value.version !== APG_PACKAGE_VERSION) {
     throw new Error(`APG project package must use ${APG_PACKAGE_SCHEMA} version ${APG_PACKAGE_VERSION}.`);
   }
   if (!isRecord(value.manifest)) throw new Error('APG project package manifest must be an object.');
   const mode = value.manifest.lastMode;
-  if (mode !== 'simple' && mode !== 'pro') throw new Error('APG project package mode is invalid.');
+  if (mode !== 'effect-chain' && mode !== 'atom-chain') throw new Error('APG project package view is invalid.');
   if (!Array.isArray(value.audio)) throw new Error('APG project package audio must be an array.');
   const audio = value.audio.map(validateAudioAsset);
   const audioIds = new Set<string>();
@@ -188,6 +318,7 @@ export function validateApgProjectPackage(value: unknown): ApgProjectPackage {
     if (audioIds.has(asset.id)) throw new Error(`Audio asset id "${asset.id}" is duplicated.`);
     audioIds.add(asset.id);
   }
+  const editor = validateEditorState(value.editor, mode);
   return {
     schema: APG_PACKAGE_SCHEMA,
     version: APG_PACKAGE_VERSION,
@@ -202,6 +333,7 @@ export function validateApgProjectPackage(value: unknown): ApgProjectPackage {
     workspace: validateWorkspacePayload(value.workspace),
     audio,
     readiness: validateReadiness(value.readiness),
+    editor,
   };
 }
 

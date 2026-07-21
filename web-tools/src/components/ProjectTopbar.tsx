@@ -40,6 +40,7 @@ type Props = {
   readiness: ProjectReadinessSnapshot;
   onAudioAssetChange: (asset: ApgAudioAsset | null) => void;
   onReadinessUpdate: (update: Partial<ProjectReadinessSnapshot>) => void;
+  editingBlocked?: string | null;
 };
 
 export function ProjectTopbar({
@@ -69,10 +70,11 @@ export function ProjectTopbar({
   readiness,
   onAudioAssetChange,
   onReadinessUpdate,
+  editingBlocked = null,
 }: Props) {
   const [readinessOpen, setReadinessOpen] = useState(false);
   const draftStateClass = workspaceSaveError ? 'status-pill--bad' : hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
-  const readinessOk = readiness.validation === 'ready' && readiness.preview !== 'blocked';
+  const readinessOk = !editingBlocked && readiness.validation === 'ready' && readiness.preview !== 'blocked';
 
   return (
     <header className="topbar topbar--project app-header">
@@ -91,7 +93,7 @@ export function ProjectTopbar({
           <span className="header-project-label">Active Project</span>
           <div className="header-project-name">
             <strong>{project.name}</strong>
-            <span className="tag">{mode === 'simple' ? 'Pedalboard' : 'Project v2'}</span>
+            <span className="tag">{mode === 'effect-chain' ? 'Effect Chain' : 'Atom Chain'}</span>
           </div>
         </div>
       </div>
@@ -107,6 +109,7 @@ export function ProjectTopbar({
         packagedAudio={packagedAudio}
         onAudioAssetChange={onAudioAssetChange}
         onReadinessUpdate={onReadinessUpdate}
+        editingBlocked={editingBlocked}
       />
 
       <div className="header-right">
@@ -163,7 +166,7 @@ export function ProjectTopbar({
             type="file"
           />
         </label>
-        <button className="btn btn--ghost" data-testid="topbar-export" onClick={onExportWorkspace} type="button">
+        <button className="btn btn--ghost" data-testid="topbar-export" disabled={Boolean(editingBlocked)} onClick={onExportWorkspace} title={editingBlocked ?? undefined} type="button">
           Export .apg
         </button>
         <button className="btn btn--ghost" data-testid="topbar-reset" disabled={!hasWorkspaceDrafts} onClick={onResetWorkspace} type="button">

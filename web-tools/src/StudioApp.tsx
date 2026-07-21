@@ -34,8 +34,8 @@ function newId(prefix = 'project'): string {
 }
 
 function storedMode(): StudioMode {
-  if (typeof window === 'undefined') return 'simple';
-  return window.localStorage.getItem(MODE_STORAGE_KEY) === 'pro' ? 'pro' : 'simple';
+  if (typeof window === 'undefined') return 'effect-chain';
+  return window.localStorage.getItem(MODE_STORAGE_KEY) === 'atom-chain' ? 'atom-chain' : 'effect-chain';
 }
 
 function starterProject(now = new Date().toISOString()): ApgProjectPackage {
@@ -135,7 +135,11 @@ export default function StudioApp() {
     window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
     setActiveProject(current => {
       if (!current) return current;
-      const next = { ...current, manifest: { ...current.manifest, lastMode: nextMode } };
+      const next = {
+        ...current,
+        manifest: { ...current.manifest, lastMode: nextMode },
+        editor: { ...current.editor, activeView: nextMode },
+      };
       void repository.saveProject(next);
       return next;
     });
@@ -143,6 +147,8 @@ export default function StudioApp() {
 
   const openProject = useCallback((project: ApgProjectPackage) => {
     setActiveProject(project);
+    setModeState(project.editor.activeView);
+    window.localStorage.setItem(MODE_STORAGE_KEY, project.editor.activeView);
     window.localStorage.setItem(LAST_PROJECT_STORAGE_KEY, project.manifest.id);
     navigate('/projects');
   }, [navigate]);
@@ -260,6 +266,7 @@ export default function StudioApp() {
     const project = {
       ...activeProject,
       manifest: { ...activeProject.manifest, updatedAt: new Date().toISOString(), lastMode: mode },
+      editor: { ...activeProject.editor, activeView: mode },
       workspace,
       readiness: evaluateWorkspaceReadiness(workspace, activeProject.readiness),
     };

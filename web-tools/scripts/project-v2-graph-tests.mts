@@ -30,6 +30,15 @@ import {
   type ProjectPortCatalog,
 } from '../src/lib/projectV2Graph.ts';
 import { buildProjectGraph } from '../src/lib/projectGraph.ts';
+import {
+  createEffectChainDraft,
+  effectChainDiagnostics,
+  findEffectChainRouteIndex,
+  findEffectLocation,
+  moveEffectDraft,
+  serializeEffectChainDraft,
+  setParallelEndpointDraft,
+} from '../src/lib/effectChainDraft.ts';
 
 const repo = resolve(import.meta.dirname, '../..');
 const project = readFileSync(resolve(repo, 'test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml'), 'utf8');
@@ -220,6 +229,29 @@ assert.deepEqual(parallelDraft.routes, [
   { from: 'parallel_mix.output', to: 'system.output' },
 ]);
 assert.doesNotThrow(() => validateProjectRoutes(parallel.content, ports));
+
+const parallelRail = createEffectChainDraft(parallel.content, ports);
+assert.equal(parallelRail.root.items[0]?.kind, 'parallel');
+assert.equal(effectChainDiagnostics(parallelRail).length, 0);
+const withoutPanner = setParallelEndpointDraft(parallelRail, 'section:parallel_1', 'panner', false);
+assert.deepEqual(effectChainDiagnostics(withoutPanner).map(problem => problem.code), ['missing-panner']);
+assert.throws(() => serializeEffectChainDraft(parallel.content, withoutPanner, ports), /incomplete/);
+const repairedPanner = setParallelEndpointDraft(withoutPanner, 'section:parallel_1', 'panner', true);
+assert.deepEqual(
+  parseProjectGraphDraft(serializeEffectChainDraft(parallel.content, repairedPanner, ports)).routes,
+  parallelDraft.routes,
+);
+
+const linearRail = createEffectChainDraft(project, ports);
+const driveLocation = findEffectLocation(linearRail, 'drive1');
+assert(driveLocation);
+const movedDriveRail = moveEffectDraft(linearRail, 'drive1', { railId: 'root', index: driveLocation.index + 2 });
+const movedDriveProject = parseProjectGraphDraft(serializeEffectChainDraft(project, movedDriveRail, ports));
+const movedDriveInput = movedDriveProject.routes.find(route => route.to === 'drive1.input');
+const movedDriveOutput = movedDriveProject.routes.find(route => route.from === 'drive1.output');
+assert.equal(movedDriveInput?.from, 'tone1.output');
+assert.equal(movedDriveOutput?.to, 'trem1.input');
+
 assert.throws(() => duplicateProjectInstance(parallel.content, 'parallel_pan'), /Add in parallel/);
 assert.throws(() => pasteProjectInstance(parallel.content, copyProjectInstance(parallel.content, 'parallel_mix')), /unpaired/);
 assert.throws(() => removeProjectInstanceWithTopology(parallel.content, ports, 'parallel_pan'), /section|panner/i);
@@ -240,6 +272,20 @@ assert.throws(
 );
 const nestedParallel = readFileSync(resolve(repo, 'test/fixtures/projects-v2/nested-parallel.project.v2.yaml'), 'utf8');
 assert.doesNotThrow(() => validateProjectRoutes(nestedParallel, ports));
+const nestedRail = createEffectChainDraft(nestedParallel, ports);
+const outerParallel = nestedRail.root.items.find(item => item.kind === 'parallel');
+assert(outerParallel?.kind === 'parallel');
+assert(outerParallel.paths.some(path => path.rail.items.some(item => item.kind === 'parallel')));
+assert.equal(effectChainDiagnostics(nestedRail).length, 0);
+const nestedPath = outerParallel.paths.find(path => path.rail.items.some(item => item.kind === 'parallel'));
+assert(nestedPath);
+const nestedSlotRoute = findEffectChainRouteIndex(
+  nestedParallel,
+  nestedRail,
+  ports,
+  { railId: nestedPath.rail.id, index: 0 },
+);
+assert(nestedSlotRoute >= 0);
 const nestedInsert = insertProjectParallelOnRoute(
   parallel.content,
   ports,

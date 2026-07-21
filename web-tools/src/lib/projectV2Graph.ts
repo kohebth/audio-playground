@@ -864,6 +864,31 @@ export function removeProjectRoute(content: string, index: number, ports?: Proje
   return next;
 }
 
+export function writeProjectTopology(
+  content: string,
+  routes: ProjectRouteDraft[],
+  removedInstanceIds: readonly string[] = [],
+): string {
+  const doc = loadDocument(content);
+  const chain = ensureChain(doc);
+  const removed = new Set(removedInstanceIds);
+  chain.nodes = (chain.nodes as unknown[]).filter(isObject).filter(node => !removed.has(String(node.id ?? '')));
+  chain.routes = routes.map(route => ({ ...route }));
+  if (removed.size > 0) {
+    for (const scene of (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject)) {
+      if (isObject(scene.params)) {
+        scene.params = Object.fromEntries(Object.entries(scene.params).filter(([path]) => (
+          ![...removed].some(id => path.startsWith(`${id}.`))
+        )));
+      }
+      if (isObject(scene.bypass)) {
+        scene.bypass = Object.fromEntries(Object.entries(scene.bypass).filter(([id]) => !removed.has(id)));
+      }
+    }
+  }
+  return dumpDocument(doc);
+}
+
 export function moveProjectRoute(content: string, index: number, nextIndex: number): string {
   const doc = loadDocument(content);
   const chain = ensureChain(doc);

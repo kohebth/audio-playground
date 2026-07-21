@@ -790,6 +790,13 @@ export function setAtomNodePosition(content: string, nodeId: string, position: G
   return serializeUnitGraphNodeUpdate(content, { ...node, ui: { ...(node.ui ?? {}), position } }, nodeId);
 }
 
+export function setAtomNodePositions(content: string, positions: Record<string, GraphPosition>): string {
+  return Object.entries(positions).reduce(
+    (current, [nodeId, position]) => setAtomNodePosition(current, nodeId, position),
+    content,
+  );
+}
+
 export function addAtomNodeToUnit(
   content: string,
   catalog: AtomCatalog,
