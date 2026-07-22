@@ -696,21 +696,26 @@ test.describe('UI performance checkpoints', () => {
   test('route create and delete latency', async ({ page }) => {
     await clearPerfSpans(page);
     await page.getByTestId('project-instance-unit').selectOption('tone_stack_unit');
-    await page.getByTestId('project-instance-id').fill('perf_route_unit');
+    await page.getByTestId('project-instance-id').fill('perf_route_source');
+    await page.getByTestId('project-instance-add').click();
+    await page.getByTestId('project-instance-id').fill('perf_route_target');
     await page.getByTestId('project-instance-add').click();
 
     const routeBefore = page.getByTestId(/^route-item-/);
     const beforeCount = await routeBefore.count();
 
-    await page.locator('[data-testid="project-route-source"]').selectOption('trem1.output');
-    await page.locator('[data-testid="project-route-target"]').selectOption('perf_route_unit.input');
+    await page.locator('[data-testid="project-route-source"]').selectOption('perf_route_source.output');
+    await page.locator('[data-testid="project-route-target"]').selectOption('perf_route_target.input');
 
     await clearPerfSpans(page);
     await page.getByTestId('project-route-add').click();
     await expect.poll(() => page.getByTestId(/^route-item-/).count(), { timeout: 5000 }).toBeGreaterThan(beforeCount);
     await runAndAssertBudget(page, 'graph.create.route');
     expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
-    expect(await getComponentRenders(page, 'ProjectNode')).toEqual({});
+    expect(Object.keys(await getComponentRenders(page, 'ProjectNode')).sort()).toEqual([
+      'ProjectNode:perf_route_source',
+      'ProjectNode:perf_route_target',
+    ]);
 
     await page.getByTestId('inspector-tab-atom').click();
     const latestRoute = page.getByTestId(/^route-item-/).last();
@@ -721,7 +726,10 @@ test.describe('UI performance checkpoints', () => {
     await expect.poll(() => page.getByTestId(/^route-item-/).count(), { timeout: 5000 }).toBe(beforeCount);
     await runAndAssertBudget(page, 'graph.delete.route');
     expect((await getPerfCounters(page))['state.workspace.dispatches']).toBe(1);
-    expect(await getComponentRenders(page, 'ProjectNode')).toEqual({});
+    expect(Object.keys(await getComponentRenders(page, 'ProjectNode')).sort()).toEqual([
+      'ProjectNode:perf_route_source',
+      'ProjectNode:perf_route_target',
+    ]);
   });
 
   test('contract atom mutation latency', async ({ page }) => {
@@ -749,9 +757,7 @@ test.describe('UI performance checkpoints', () => {
     await expect.poll(() => list.count(), { timeout: 5000 }).toBeGreaterThan(before);
     await runAndAssertBudget(page, 'contract.add.atom');
 
-    const added = list.last();
     await clearPerfSpans(page);
-    await added.click();
     await page.getByTestId('contract-atom-remove').click();
     await expect.poll(() => list.count(), { timeout: 5000 }).toBe(before);
     await runAndAssertBudget(page, 'contract.remove.atom');

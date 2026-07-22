@@ -57,6 +57,7 @@ const graphContextMenu = read('web-tools/src/components/GraphContextMenu.tsx');
 const paramKnob = read('web-tools/src/components/ParamKnob.tsx');
 const atomPalette = read('web-tools/src/components/AtomCatalogPanel.tsx');
 const contractCanvas = read('web-tools/src/components/ContractGraphCanvas.tsx');
+const graphvizWorker = read('web-tools/src/workers/graphviz.worker.ts');
 const previewPanel = read('web-tools/src/components/PreviewPanel.tsx');
 const liveLatencyBadge = read('web-tools/src/components/LiveLatencyBadge.tsx');
 const audioIo = read('web-tools/src/lib/audioIo.ts');
@@ -105,6 +106,13 @@ includesContent(atomPalette, 'Add atom', 'atom palette must keep a click fallbac
 includesContent(contractCanvas, 'onAddAtomAt(atomName', 'unit graph canvas must create dropped atoms at a pointer position');
 includesContent(contractCanvas, 'onInsertAtomAtEdge(atomName', 'edge drops must use the atomic insert transaction');
 includesContent(contractCanvas, 'onNodeDragStop', 'unit graph canvas must persist atom moves');
+includesContent(contractCanvas, "data-layout-engine=\"graphviz\"", 'unit graph canvas must expose Graphviz as its layout engine');
+includesContent(contractCanvas, "new URL('../workers/graphviz.worker.ts'", 'unit graph layout must run outside the UI thread');
+includesContent(contractCanvas, "postGraphvizRequest('layout'", 'unit graph must request Graphviz layout automatically');
+includesContent(contractCanvas, '<BaseEdge', 'unit graph wiring must use Graphviz-routed orthogonal edges');
+assert(!contractCanvas.includes("from 'dagre'"), 'unit graph layout must not fall back to Dagre');
+includesContent(graphvizWorker, "splines: 'ortho'", 'Graphviz atom wiring must use orthogonal splines');
+includesContent(graphvizWorker, "engine: fixed ? 'nop2' : 'dot'", 'Graphviz must support layout and fixed-position rerouting');
 includesContent(contractCanvas, "markComponentRender('ContractEdge'", 'unit graph canvas must expose edge render scope');
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
 includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
@@ -130,6 +138,8 @@ includesContent(unitV2Graph, 'assertUserPlaceableUnit', 'unit placement must enf
 includesContent(structuredUnitEditor, 'One mono audio input and output', 'structured unit editing must explain the port policy');
 includesContent(appStyles, '--bg-canvas: #151813', 'canvas surface must use the approved brighter token');
 includesContent(projectInspector, 'atom-type-lock', 'selected atom type must render as read-only');
+includesContent(projectInspector, '{isAtomView ? (', 'atom inspector content must be isolated to the Atom tab');
+includesContent(projectInspector, '{isContractView ? (', 'unit contract content must be isolated from the Atom tab');
 assert(!projectInspector.includes('onSelectedAtomChange({ ...selectedAtom, atom:'), 'atom inspector must not directly mutate atom type');
 includesContent(projectInspector, 'Replace atom...', 'atom type changes must route through explicit replacement workflow');
 includesContent(projectInspector, 'previewAtomReplacement', 'atom replacement must preview affected compatibility');
@@ -139,6 +149,7 @@ includesContent(app, 'replaceAtomNodeInUnit', 'atom replacement must apply throu
 includesContent(app, 'undoStack', 'workspace graph edits must track undo history');
 includesContent(app, 'redoStack', 'workspace graph edits must track redo history');
 includesContent(app, 'setAtomNodePosition', 'atom moves must use a YAML-backed transaction');
+includesContent(app, 'setAtomNodePositions', 'manual Graphviz layout must persist through a YAML-backed transaction');
 assert(!app.includes('setProjectInstancePosition'), 'project unit positions must not be written to YAML');
 includesContent(app, 'persistWorkspacePayload', 'workspace writes must use the testable persistence boundary');
 includesContent(projectTopbar, 'workspace-save-status', 'workspace persistence failures must be visible');
@@ -210,7 +221,8 @@ includesContent(projectInspector, 'onCopyAtom', 'contract graph view should expo
 includesContent(projectInspector, 'onCutAtom', 'contract graph view should expose cut action');
 includesContent(projectInspector, 'onPasteAtom', 'contract graph view should expose paste action');
 includesContent(app, 'serializeUnitGraphNodeUpdate(content, node, originalId)', 'atom config edits should update draft YAML');
-includesContent(app, 'onOpenAtomInspector', 'double-click contract nodes should switch to Contract inspector');
+includesContent(app, "setInspectorView('atom')", 'atom selection must switch to the Atom inspector');
+includesContent(app, 'onOpenAtomInspector', 'double-click contract nodes should switch to the Atom inspector');
 includesContent(contractCanvas, 'onNodeDoubleClick', 'contract node interaction should open atom inspector');
 includesContent(contractCanvas, 'onNodeClick', 'contract node click should select atom');
 includesContent(contractCanvas, 'onConnect={connect}', 'contract handles must create structured YAML connections');
@@ -293,6 +305,7 @@ includesContent(viteConfig, 'process.env.VITE_BASE_PATH', 'Vite must read its de
 includesContent(viteConfig, "outDir: 'dist'", 'Vite must emit the Pages artifact to dist');
 includesContent(viteConfig, 'emptyOutDir: true', 'Vite must replace stale build output');
 includesContent(viteConfig, 'sourcemap: true', 'production builds must emit supportable source maps');
+includesContent(viteConfig, 'sourcemapExcludeSources: true', 'production source maps must stay within the Pages artifact budget');
 includesContent(buildInfo, 'import.meta.env.VITE_COMMIT_SHA', 'build diagnostics must use the injected commit SHA');
 includesContent(projectInspector, 'data-testid="build-commit-sha"', 'Developer Diagnostics must expose the deployed commit SHA');
 includesContent(pagesWorkflow, "- 'v2.0-beta[0-9]+'", 'Pages deployment must require a numbered v2.0 beta tag');

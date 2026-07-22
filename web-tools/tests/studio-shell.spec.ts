@@ -97,6 +97,7 @@ test('edits a unit through structured Pro controls without exposing raw source',
   await page.getByTestId('project-instance-item-drive1').dblclick();
 
   await expect(page).toHaveURL(/#\/unit\/overdrive$/);
+  await page.getByTestId('inspector-tab-contract').click();
   await expect(page.getByTestId('structured-unit-editor')).toBeVisible();
   await expect(page.locator('textarea.workspace-editor')).toHaveCount(0);
   expect((await page.locator('.file-item').allTextContents()).join(' ')).not.toContain('.yaml');
@@ -135,6 +136,9 @@ test('connects units by click and exposes undoable unit context actions', async 
   await drive.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: 'drive1 actions' });
   await expect(menu).toBeVisible();
+  await expect(page.getByTestId('inspector-tab-project')).toHaveClass(/inspector-tab--active/);
+  await expect(page.locator('.project-inspector').getByText('Unit Inspector', { exact: true })).toBeVisible();
+  await expect(page.locator('.project-inspector').getByText('Atom Focus', { exact: true })).toHaveCount(0);
   await expect(menu.getByRole('menuitem')).toContainText(['Turn off', 'Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
   await menu.getByRole('menuitem', { name: 'Copy' }).click();
 
@@ -190,6 +194,11 @@ test('collapses an empty split and join without exposing routing containers', as
   await expect(branchEffect).toHaveCount(0);
   const directRails = page.locator('.react-flow__edge[data-id*="unit-path_panner_2-unit-path_mixer_2"]');
   await expect(directRails).toHaveCount(2);
+  const directRailPaths = await directRails.locator('.react-flow__edge-path').evaluateAll(paths => (
+    paths.map(path => path.getAttribute('d') ?? '')
+  ));
+  expect(directRailPaths.every(path => path.startsWith('M ') && !path.includes('C'))).toBe(true);
+  expect(new Set(directRailPaths).size).toBe(2);
 
   await panner.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: /path_panner_2.* actions/ });
@@ -200,7 +209,40 @@ test('collapses an empty split and join without exposing routing containers', as
   await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(8);
 });
 
-test('offers atom replace preview and disconnected clipboard actions', async ({ page }) => {
+test('renders nested branches as knob units with separate orthogonal rails', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const skipTour = page.getByRole('button', { name: 'Skip tour' });
+  await expect(skipTour).toBeVisible();
+  await skipTour.click();
+
+  await page.getByRole('button', { name: 'Add Chorus in parallel' }).click();
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  await page.locator('.react-flow__edge[data-id="route-10-unit-path_panner_2-unit-chorus"]')
+    .click({ button: 'right', force: true });
+  const parallelGroup = page.getByRole('group', { name: 'Parallel effect' });
+  await parallelGroup.getByLabel('Parallel effect').selectOption('delay');
+  await page.getByRole('button', { name: 'Create parallel path' }).click();
+
+  const panners = page.locator('[data-testid^="project-node-path_panner_2"]');
+  const mixers = page.locator('[data-testid^="project-node-path_mixer_2"]');
+  await expect(panners).toHaveCount(2);
+  await expect(mixers).toHaveCount(2);
+  await expect(panners.locator('.unit-knob')).toHaveCount(4);
+  await expect(mixers.locator('.unit-knob')).toHaveCount(4);
+  await expect(page.getByText('Parallel section')).toHaveCount(0);
+
+  const directRails = page.locator(
+    '.react-flow__edge[data-id*="unit-path_panner"][data-id*="unit-path_mixer"] .react-flow__edge-path',
+  );
+  await expect(directRails).toHaveCount(2);
+  const paths = await directRails.evaluateAll(items => items.map(item => item.getAttribute('d') ?? ''));
+  expect(paths.every(path => path.startsWith('M ') && !path.includes('C'))).toBe(true);
+  expect(new Set(paths).size).toBe(2);
+});
+
+test('offers a Graphviz atom editor with atom-only inspection and safe graph actions', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
@@ -209,11 +251,27 @@ test('offers atom replace preview and disconnected clipboard actions', async ({ 
   await skipTour.click();
   await page.getByRole('button', { name: 'Pro', exact: true }).click();
   await page.getByTestId('project-instance-item-drive1').dblclick();
+  await expect(page.getByTestId('contract-auto-layout')).toHaveText('Auto Layout', { timeout: 15_000 });
+  const contractCanvas = page.getByTestId('contract-canvas');
+  await expect(contractCanvas).toHaveAttribute('data-layout-engine', 'graphviz');
+  await expect(contractCanvas).toHaveAttribute('data-layout-status', 'ready');
+  await expect.poll(async () => Number(await contractCanvas.getAttribute('data-routed-edge-count'))).toBeGreaterThan(0);
+  const routedPaths = await contractCanvas.locator('.react-flow__edge-path').evaluateAll(paths => (
+    paths.map(path => path.getAttribute('d') ?? '')
+  ));
+  expect(routedPaths.some(path => path.includes('Q'))).toBe(true);
+  expect(routedPaths.every(path => !path.includes('C'))).toBe(true);
 
   const clip = page.getByTestId('contract-node-clip_drive');
   await clip.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: 'clip_drive actions' });
   await expect(menu.getByRole('menuitem')).toContainText(['Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
+  const inspector = page.locator('.project-inspector');
+  await expect(page.getByTestId('inspector-tab-atom')).toHaveClass(/inspector-tab--active/);
+  await expect(inspector.getByTestId('contract-atom-id')).toHaveValue('clip_drive');
+  await expect(inspector.getByTestId('structured-unit-editor')).toHaveCount(0);
+  await expect(inspector.getByText('Unit Contract', { exact: true })).toHaveCount(0);
+  await expect(inspector.getByText('Unit Inspector', { exact: true })).toHaveCount(0);
   await menu.getByRole('menuitem', { name: 'Replace…' }).click();
   await expect(menu.getByRole('group', { name: 'Atom replacement preview' })).toContainText(/Keeps .* bindings/);
   await menu.getByRole('menuitem', { name: 'Copy' }).click();
@@ -234,4 +292,7 @@ test('offers atom replace preview and disconnected clipboard actions', async ({ 
   await expect(clip).toHaveCount(0);
   await page.getByTestId('topbar-undo').click();
   await expect(page.getByTestId('contract-node-clip_drive')).toBeVisible();
+  await pasted.click();
+  await page.getByTestId('contract-atom-remove').click();
+  await expect(pasted).toHaveCount(0);
 });

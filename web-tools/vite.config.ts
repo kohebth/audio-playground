@@ -16,10 +16,18 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
+        sourcemapExcludeSources: true,
         manualChunks: {
           'graph-vendor': ['@xyflow/react'],
           'yaml-vendor': ['js-yaml'],
         },
+      },
+    },
+  },
+  worker: {
+    rollupOptions: {
+      output: {
+        sourcemapExcludeSources: true,
       },
     },
   },

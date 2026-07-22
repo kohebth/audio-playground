@@ -258,6 +258,7 @@ export function ProjectInspector({
           <p>{graphEditError}</p>
         </div>
       ) : null}
+      {isProjectView ? (
       <details className="inspector-block audio-io-panel" data-testid="audio-io-panel">
         <summary className="inspector-block__label">
           <span><i className="fa-solid fa-sliders" aria-hidden="true" />Audio I/O</span>
@@ -350,6 +351,7 @@ export function ProjectInspector({
           <p className="audio-io-warning">{liveAudio.audioCalibration.error}</p>
         ) : null}
       </details>
+      ) : null}
       {isProjectView && (
         <>
           <details className="inspector-block" open>
@@ -411,9 +413,9 @@ export function ProjectInspector({
         </>
       )}
 
-      {isAtomView && (
+      {isProjectView && (
         <details className="inspector-block inspector-block--selected" open>
-          <summary className="inspector-block__label">Atom Inspector</summary>
+          <summary className="inspector-block__label">{selectedRoute ? 'Route Inspector' : 'Unit Inspector'}</summary>
           {selectedRoute ? (
             <>
               <div className="inspector-block__meta">Selected Route</div>
@@ -550,9 +552,9 @@ export function ProjectInspector({
         </details>
       )}
 
-      {isContractView && (
+      {(isContractView || isAtomView) && (
         <>
-          {selectedUnitGraph && selectedUnitPorts ? (
+          {isContractView && (selectedUnitGraph && selectedUnitPorts ? (
             <StructuredUnitEditor
               file={selectedUnitFile}
               onChange={content => onWorkspaceFileChange(selectedUnitFile.path, content)}
@@ -561,8 +563,10 @@ export function ProjectInspector({
               ports={selectedUnitPorts}
               unit={selectedUnitGraph}
             />
-          ) : <div className="diagnostic-empty">Select a valid unit to edit its contract.</div>}
+          ) : <div className="diagnostic-empty">Select a valid unit to edit its contract.</div>)}
 
+          {isAtomView ? (
+            <>
           <details className="inspector-block" open>
             <summary className="inspector-block__label">Atom Focus</summary>
             <div className="atom-actionbar">
@@ -577,10 +581,10 @@ export function ProjectInspector({
                 ))}
               </select>
               <button data-testid="contract-atom-add" onClick={() => onAddAtom(atomToAdd)} type="button">Add</button>
-              <button data-testid="contract-atom-copy" disabled={!selectedAtom} onClick={onCopyAtom} type="button">Copy</button>
-              <button data-testid="contract-atom-cut" disabled={!selectedAtom} onClick={onCutAtom} type="button">Cut</button>
+              <button data-testid="contract-atom-copy" disabled={!selectedAtom} onClick={() => onCopyAtom()} type="button">Copy</button>
+              <button data-testid="contract-atom-cut" disabled={!selectedAtom} onClick={() => onCutAtom()} type="button">Cut</button>
               <button data-testid="contract-atom-paste" disabled={!atomClipboard} onClick={onPasteAtom} type="button">Paste</button>
-              <button data-testid="contract-atom-remove" disabled={!selectedAtom} onClick={onRemoveAtom} type="button">Remove</button>
+              <button data-testid="contract-atom-remove" disabled={!selectedAtom} onClick={() => onRemoveAtom()} type="button">Remove</button>
             </div>
 
             {selectedUnitGraph ? (
@@ -746,8 +750,16 @@ export function ProjectInspector({
                 </div>
               ))}
             </details>
+          ) : (
+            <div className="diagnostic-empty" data-testid="atom-inspector-empty">
+              Select an atom in the contract graph to inspect it.
+            </div>
+          )}
+            </>
           ) : null}
 
+          {isContractView ? (
+            <>
           <details className="inspector-block developer-diagnostics">
             <summary className="inspector-block__label">
               <i className="fa-solid fa-code" aria-hidden="true" />
@@ -949,6 +961,8 @@ export function ProjectInspector({
               </div>
             </div>
           </details>
+            </>
+          ) : null}
         </>
       )}
       </div>

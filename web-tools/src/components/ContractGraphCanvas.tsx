@@ -10,7 +10,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import {
-  BezierEdge,
+  BaseEdge,
   Controls,
   Handle,
   MiniMap,
@@ -28,7 +28,6 @@ import {
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
-import dagre from 'dagre';
 
 import type { AtomCatalog, WorkspaceFile } from '../lib/backendSamples';
 import { ATOM_DRAG_TYPE } from './AtomCatalogPanel';
@@ -43,6 +42,7 @@ import {
   type UnitPortDraft,
   type UnitPortsDraft,
 } from '../lib/unitV2Graph';
+import type { GraphvizLayoutRequest, GraphvizLayoutResult } from '../lib/graphvizLayout';
 import { markComponentRender, markPerfSpan } from '../lib/perfTelemetry';
 
 type ContractNodeData = {
@@ -64,7 +64,8 @@ type UnitBoundaryNodeData = {
 type ContractAtomFlowNode = Node<ContractNodeData, 'contractNode'>;
 type UnitBoundaryFlowNode = Node<UnitBoundaryNodeData, 'unitBoundaryNode'>;
 type ContractFlowNode = ContractAtomFlowNode | UnitBoundaryFlowNode;
-type ContractFlowEdge = Edge<Record<string, never>, 'contractEdge'>;
+type ContractFlowEdgeData = { points?: Array<{ x: number; y: number }> };
+type ContractFlowEdge = Edge<ContractFlowEdgeData, 'contractEdge'>;
 
 type Props = {
   workspaceFile: WorkspaceFile;
@@ -84,6 +85,7 @@ type Props = {
   onAddAtomAt: (atomName: string, position: GraphPosition) => void;
   onInsertAtomAtEdge: (atomName: string, target: UnitConnectionEndpoint, position: GraphPosition) => void;
   onMoveAtom: (nodeId: string, position: GraphPosition) => void;
+  onAutoLayout: (positions: Record<string, GraphPosition>) => void;
   atomClipboardReady: boolean;
   onCopyAtom: (nodeId: string) => void;
   onCutAtom: (nodeId: string) => void;
@@ -102,7 +104,7 @@ type ParsedContractGraph = {
   error: string | null;
   flow: {
     nodes: ContractFlowNode[];
-    edges: Edge[];
+    edges: ContractFlowEdge[];
   };
 };
 
@@ -200,11 +202,9 @@ function buildContractFlow(
   unit: UnitGraphDraft,
   ports: UnitPortsDraft,
   catalog: AtomCatalog,
-): { nodes: ContractFlowNode[]; edges: Edge[] } {
-  const needsLayout = unit.nodes.some(node => !node.ui?.position);
-  const graph = needsLayout ? new dagre.graphlib.Graph() : null;
+): { nodes: ContractFlowNode[]; edges: ContractFlowEdge[] } {
   const nodes: ContractFlowNode[] = [];
-  const edges: Edge[] = [];
+  const edges: ContractFlowEdge[] = [];
   const signalSource = new Map<string, { nodeId: string; handle: string }>();
   const catalogByName = new Map(catalog.atoms.map(atom => [atom.name, atom]));
   const inputPorts = signalPorts(ports.inputs);
@@ -240,31 +240,28 @@ function buildContractFlow(
     selectable: false,
   };
 
-  graph?.setGraph({ rankdir: 'LR', nodesep: 46, ranksep: 78, marginx: 34, marginy: 42 });
-  graph?.setDefaultEdgeLabel(() => ({}));
   nodes.push(inputBoundary);
   for (const signal of inputSignalNames) {
     signalSource.set(signal, { nodeId: INPUT_BOUNDARY_ID, handle: 'boundary-out' });
   }
 
-  for (const graphNode of unit.nodes) {
+  unit.nodes.forEach((graphNode, index) => {
     const atom = catalogByName.get(graphNode.atom);
     const category = atom?.category ?? 'unknown';
     const color = CATEGORY_COLORS[category] ?? '#64748b';
     const nodeId = `contract-${graphNode.id}`;
 
-    graph?.setNode(nodeId, { width: NODE_WIDTH, height: NODE_HEIGHT });
     nodes.push({
       id: nodeId,
       type: 'contractNode',
-      position: graphNode.ui?.position ?? { x: 0, y: 0 },
+      position: graphNode.ui?.position ?? { x: index * (NODE_WIDTH + 78), y: 0 },
       data: { ...graphNode, category, color },
     });
 
     for (const [port, signal] of Object.entries(graphNode.out)) {
       signalSource.set(signal, { nodeId, handle: `out-${port}` });
     }
-  }
+  });
 
   for (const graphNode of unit.nodes) {
     const target = `contract-${graphNode.id}`;
@@ -273,7 +270,6 @@ function buildContractFlow(
       if (!source) continue;
       const fromBoundary = source.nodeId === INPUT_BOUNDARY_ID;
 
-      if (!fromBoundary) graph?.setEdge(source.nodeId, target);
       edges.push({
         id: fromBoundary
           ? `contract-boundary-input-${signal}-${target}-${port}`
@@ -292,16 +288,6 @@ function buildContractFlow(
         labelStyle: { fill: '#e2e8f0', fontSize: 10, fontWeight: 600 },
         labelBgStyle: { fill: '#111827', fillOpacity: 0.9 },
       });
-    }
-  }
-
-  if (graph) {
-    dagre.layout(graph);
-    const storedPositionIds = new Set(unit.nodes.filter(node => node.ui?.position).map(node => `contract-${node.id}`));
-    for (const node of nodes) {
-      if (node.type !== 'contractNode' || storedPositionIds.has(node.id)) continue;
-      const position = graph.node(node.id);
-      node.position = { x: position.x - NODE_WIDTH / 2, y: position.y - NODE_HEIGHT / 2 };
     }
   }
 
@@ -430,9 +416,99 @@ const nodeTypes = {
   unitBoundaryNode: UnitBoundaryNode,
 } satisfies NodeTypes;
 
+type RoutePoint = { x: number; y: number };
+
+function pointToward(origin: RoutePoint, target: RoutePoint, distance: number): RoutePoint {
+  const length = Math.hypot(target.x - origin.x, target.y - origin.y);
+  if (length === 0) return origin;
+  const ratio = distance / length;
+  return {
+    x: origin.x + (target.x - origin.x) * ratio,
+    y: origin.y + (target.y - origin.y) * ratio,
+  };
+}
+
+function coordinate(value: number): number {
+  return Number(value.toFixed(2));
+}
+
+function roundedPath(points: RoutePoint[], radius = 8): string {
+  if (points.length === 0) return '';
+  const path = [`M ${coordinate(points[0].x)} ${coordinate(points[0].y)}`];
+
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const previous = points[index - 1];
+    const corner = points[index];
+    const next = points[index + 1];
+    const cornerRadius = Math.min(
+      radius,
+      Math.hypot(corner.x - previous.x, corner.y - previous.y) / 2,
+      Math.hypot(next.x - corner.x, next.y - corner.y) / 2,
+    );
+    const entry = pointToward(corner, previous, cornerRadius);
+    const exit = pointToward(corner, next, cornerRadius);
+    path.push(`L ${coordinate(entry.x)} ${coordinate(entry.y)}`);
+    if (cornerRadius > 0) {
+      path.push(`Q ${coordinate(corner.x)} ${coordinate(corner.y)} ${coordinate(exit.x)} ${coordinate(exit.y)}`);
+    }
+  }
+
+  const last = points.at(-1)!;
+  path.push(`L ${coordinate(last.x)} ${coordinate(last.y)}`);
+  return path.join(' ');
+}
+
+function appendRoutePoint(points: RoutePoint[], point: RoutePoint): void {
+  const previous = points.at(-1);
+  if (previous?.x === point.x && previous.y === point.y) return;
+  points.push(point);
+}
+
+function removeCollinearPoints(points: RoutePoint[]): RoutePoint[] {
+  return points.filter((point, index) => {
+    if (index === 0 || index === points.length - 1) return true;
+    const previous = points[index - 1];
+    const next = points[index + 1];
+    return !((previous.x === point.x && point.x === next.x)
+      || (previous.y === point.y && point.y === next.y));
+  });
+}
+
+function edgePoints(planned: RoutePoint[] | undefined, source: RoutePoint, target: RoutePoint): RoutePoint[] {
+  const graphvizPoints = (planned ?? []).filter((point, index, points) => (
+    index === 0 || point.x !== points[index - 1].x || point.y !== points[index - 1].y
+  ));
+  const hints = graphvizPoints.slice(1, -1);
+  if (hints.length === 0) {
+    const midpointX = source.x + (target.x - source.x) / 2;
+    return [source, { x: midpointX, y: source.y }, { x: midpointX, y: target.y }, target];
+  }
+
+  const points: RoutePoint[] = [source];
+  for (const hint of hints) {
+    const previous = points.at(-1)!;
+    if (previous.x !== hint.x && previous.y !== hint.y) {
+      appendRoutePoint(points, { x: hint.x, y: previous.y });
+    }
+    appendRoutePoint(points, hint);
+  }
+
+  const previous = points.at(-1)!;
+  if (previous.x !== target.x && previous.y !== target.y) {
+    appendRoutePoint(points, { x: previous.x, y: target.y });
+  }
+  appendRoutePoint(points, target);
+  return removeCollinearPoints(points);
+}
+
 const ContractEdge = memo((props: EdgeProps<ContractFlowEdge>) => {
   useEffect(() => markComponentRender('ContractEdge', props.id));
-  return <BezierEdge {...props} />;
+  const points = edgePoints(
+    props.data?.points,
+    { x: props.sourceX, y: props.sourceY },
+    { x: props.targetX, y: props.targetY },
+  );
+  return <BaseEdge {...props} path={roundedPath(points)} />;
 });
 
 ContractEdge.displayName = 'ContractEdge';
@@ -453,6 +529,7 @@ export function ContractGraphCanvas({
   onAddAtomAt,
   onInsertAtomAtEdge,
   onMoveAtom,
+  onAutoLayout,
   atomClipboardReady,
   onCopyAtom,
   onCutAtom,
@@ -474,14 +551,20 @@ export function ContractGraphCanvas({
     }
   }, [catalog, workspaceFile.content]);
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<ContractFlowNode>(parsed.flow.nodes);
-  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(parsed.flow.edges);
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<ContractFlowEdge>(parsed.flow.edges);
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
   const [connectionArmed, setConnectionArmed] = useState(false);
   const [contextMenu, setContextMenu] = useState<(ContextMenuPoint & { atomId: string }) | null>(null);
   const [replacementOpen, setReplacementOpen] = useState(false);
   const [replacementAtom, setReplacementAtom] = useState('');
-  const reactFlowRef = useRef<ReactFlowInstance<ContractFlowNode, Edge> | null>(null);
+  const reactFlowRef = useRef<ReactFlowInstance<ContractFlowNode, ContractFlowEdge> | null>(null);
   const dragStartAtByNode = useRef<Record<string, number>>({});
+  const graphvizWorker = useRef<Worker | null>(null);
+  const graphvizRequestId = useRef(0);
+  const graphvizRequests = useRef(new Map<number, { mode: 'layout' | 'route'; persist: boolean }>());
+  const autoLayoutTopology = useRef<string | null>(null);
+  const [layoutBusy, setLayoutBusy] = useState(false);
+  const [layoutError, setLayoutError] = useState<string | null>(null);
   const atomCount = parsed.unit?.nodes.length ?? 0;
   const contextAtom = contextMenu ? parsed.unit?.nodes.find(node => node.id === contextMenu.atomId) ?? null : null;
   const replacementOptions = contextAtom
@@ -499,6 +582,90 @@ export function ContractGraphCanvas({
     setContextMenu(null);
     setReplacementOpen(false);
   }, []);
+
+  const applyGraphvizResult = useCallback((result: GraphvizLayoutResult) => {
+    const request = graphvizRequests.current.get(result.requestId);
+    graphvizRequests.current.delete(result.requestId);
+    if (result.requestId !== graphvizRequestId.current) return;
+    setLayoutBusy(false);
+    if (result.error) {
+      setLayoutError(result.error);
+      return;
+    }
+
+    setLayoutError(null);
+    if (request?.mode === 'layout') {
+      setFlowNodes(current => current.map(node => (
+        result.positions[node.id] ? { ...node, position: result.positions[node.id] } : node
+      )));
+      if (request.persist) {
+        const atomPositions = Object.fromEntries(Object.entries(result.positions).flatMap(([id, position]) => (
+          id.startsWith('contract-') && id !== INPUT_BOUNDARY_ID && id !== OUTPUT_BOUNDARY_ID
+            ? [[id.replace(/^contract-/, ''), position]]
+            : []
+        )));
+        onAutoLayout(atomPositions);
+      }
+      requestAnimationFrame(() => reactFlowRef.current?.fitView({ padding: 0.18 }));
+    }
+    setFlowEdges(current => current.map(edge => ({
+      ...edge,
+      data: result.routes[edge.id] ? { points: result.routes[edge.id] } : edge.data,
+    })));
+  }, [onAutoLayout, setFlowEdges, setFlowNodes]);
+
+  const postGraphvizRequest = useCallback((
+    mode: 'layout' | 'route',
+    requestNodes: ContractFlowNode[],
+    requestEdges: ContractFlowEdge[],
+    persist = false,
+  ) => {
+    const worker = graphvizWorker.current;
+    if (!worker || requestNodes.length === 0) return;
+    const requestId = ++graphvizRequestId.current;
+    graphvizRequests.current.set(requestId, { mode, persist });
+    setLayoutBusy(true);
+    setLayoutError(null);
+    const request: GraphvizLayoutRequest = {
+      requestId,
+      mode,
+      nodes: requestNodes.map(node => ({
+        id: node.id,
+        x: node.position.x,
+        y: node.position.y,
+        width: node.type === 'contractNode' ? NODE_WIDTH : BOUNDARY_NODE_SIZE,
+        height: node.type === 'contractNode' ? NODE_HEIGHT : BOUNDARY_NODE_SIZE,
+      })),
+      edges: requestEdges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target })),
+    };
+    worker.postMessage(request);
+  }, []);
+
+  useEffect(() => {
+    const worker = new Worker(new URL('../workers/graphviz.worker.ts', import.meta.url), { type: 'module' });
+    const requests = graphvizRequests.current;
+    graphvizWorker.current = worker;
+    const receive = (event: MessageEvent<GraphvizLayoutResult>) => applyGraphvizResult(event.data);
+    worker.addEventListener('message', receive);
+    return () => {
+      worker.removeEventListener('message', receive);
+      worker.terminate();
+      graphvizWorker.current = null;
+      requests.clear();
+      autoLayoutTopology.current = null;
+    };
+  }, [applyGraphvizResult]);
+
+  const topologySignature = useMemo(() => JSON.stringify({
+    nodes: parsed.flow.nodes.map(node => node.id),
+    edges: parsed.flow.edges.map(edge => [edge.id, edge.source, edge.target]),
+  }), [parsed.flow.edges, parsed.flow.nodes]);
+
+  useEffect(() => {
+    if (parsed.error || autoLayoutTopology.current === topologySignature) return;
+    autoLayoutTopology.current = topologySignature;
+    postGraphvizRequest('layout', parsed.flow.nodes, parsed.flow.edges);
+  }, [parsed.error, parsed.flow.edges, parsed.flow.nodes, postGraphvizRequest, topologySignature]);
 
   useEffect(() => {
     if (dropState === 'idle') return;
@@ -634,11 +801,21 @@ export function ContractGraphCanvas({
           Project graph
         </button>
         <div>
-          <span>Contract graph</span>
+          <span>Atom graph</span>
           <strong>{parsed.unit?.name ?? selectedUnitLabel}</strong>
         </div>
         <code>{workspaceFile.path}</code>
+        <button
+          className="btn btn--ghost"
+          data-testid="contract-auto-layout"
+          disabled={layoutBusy}
+          onClick={() => postGraphvizRequest('layout', flowNodes, flowEdges, true)}
+          type="button"
+        >
+          {layoutBusy ? 'Arranging…' : 'Auto Layout'}
+        </button>
       </div>
+      {layoutError ? <p className="contract-layout-error" role="alert">Graphviz: {layoutError}</p> : null}
 
       {parsed.error ? (
         <div className="canvas__empty">
@@ -647,9 +824,13 @@ export function ContractGraphCanvas({
         </div>
       ) : (
         <div
+          aria-busy={layoutBusy}
           className={`flow-shell flow-shell--contract flow-shell--drop-${dropState}${connectionArmed ? ' flow-shell--connecting' : ''}`}
           data-atom-count={atomCount}
           data-boundary-count="2"
+          data-layout-engine="graphviz"
+          data-layout-status={layoutError ? 'error' : layoutBusy ? 'busy' : 'ready'}
+          data-routed-edge-count={flowEdges.filter(edge => edge.data?.points?.length).length}
           data-testid="contract-canvas"
           onDragLeave={() => setDropState('idle')}
           onDragOver={dragOver}
@@ -698,6 +879,9 @@ export function ContractGraphCanvas({
                 delete dragStartAtByNode.current[node.id];
                 markPerfSpan('ui.drag.contractAtom.stop', () => {
                   onMoveAtom(node.data.id, node.position);
+                  postGraphvizRequest('route', flowNodes.map(current => (
+                    current.id === node.id ? { ...current, position: node.position } : current
+                  )), flowEdges);
                 }, startedAt ? { nodeId: node.id, durationMs: performance.now() - startedAt } : { nodeId: node.id });
               }}
               onNodesChange={onNodesChange}

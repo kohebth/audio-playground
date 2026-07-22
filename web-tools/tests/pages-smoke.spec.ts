@@ -184,6 +184,7 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await expect(page.getByTestId('contract-node-mid_bandpass')).toContainText('filter_biquad');
   await expect(page.getByRole('button', { name: 'preamp_saturation amplitude_clip_soft' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'power_saturation amplitude_clip_soft' })).toHaveCount(1);
+  await page.getByTestId('inspector-tab-contract').click();
   const contractParamNames = page.locator('.structured-param input[aria-label$=" name"]');
   await expect.poll(() => contractParamNames.evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)))
     .toEqual(['gain', 'bass', 'mid', 'treble', 'presence', 'volume']);

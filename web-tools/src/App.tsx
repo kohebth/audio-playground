@@ -88,6 +88,7 @@ import {
   reconnectUnitConnection,
   serializeUnitGraphNodeUpdate,
   setAtomNodePosition,
+  setAtomNodePositions,
   updateProjectInstanceParam,
   type GraphPosition as UnitGraphPosition,
   type UnitGraphNode,
@@ -382,7 +383,7 @@ export function EditorWorkspace({
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
-  const [inspectorView, setInspectorView] = useState<InspectorView>(initialRouteWorkspacePath ? 'contract' : 'project');
+  const [inspectorView, setInspectorView] = useState<InspectorView>(initialRouteWorkspacePath ? 'atom' : 'project');
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(initialRouteNode ? 'contract' : 'project');
   const [selectedAtomId, setSelectedAtomId] = useState<string | null>(null);
   const [atomClipboard, setAtomClipboard] = useState<UnitGraphNode | null>(null);
@@ -558,7 +559,7 @@ export function EditorWorkspace({
     setSelectedAtomId(null);
     setSelectedId(node ? `unit-${node.id}` : null);
     setCanvasMode(node ? 'contract' : 'project');
-    setInspectorView('contract');
+    setInspectorView(node ? 'atom' : 'contract');
   }, [entryProject, location.pathname, navigate, project.file, project.nodes, project.units, workspaceFiles]);
 
   const selectWorkspaceFile = useCallback((path: string) => {
@@ -773,9 +774,7 @@ export function EditorWorkspace({
       }
       setSelectedRouteIndex(null);
       setSelectedAtomId(null);
-      if (id.startsWith('unit-')) {
-        setInspectorView('atom');
-      }
+      setInspectorView('project');
     });
   }, []);
 
@@ -789,7 +788,7 @@ export function EditorWorkspace({
       setSelectedRouteIndex(null);
       setSelectedWorkspacePath(path);
       setCanvasMode('contract');
-      setInspectorView('contract');
+      setInspectorView('atom');
       setSelectedAtomId(null);
       navigate(unitRoute(path));
     });
@@ -801,6 +800,7 @@ export function EditorWorkspace({
       setSelectedId(null);
       setCanvasMode('project');
       setSelectedAtomId(null);
+      setInspectorView('project');
     });
   }, []);
 
@@ -1524,6 +1524,12 @@ export function EditorWorkspace({
     });
   }, [updateSelectedUnitFile]);
 
+  const autoLayoutAtoms = useCallback((positions: Record<string, UnitGraphPosition>) => {
+    markPerfSpan('contract.layout.graphviz', () => {
+      updateSelectedUnitFile(content => setAtomNodePositions(content, positions));
+    });
+  }, [updateSelectedUnitFile]);
+
   const copySelectedAtom = useCallback((nodeId?: string) => {
     const atom = selectedUnitGraph?.nodes.find(node => node.id === (nodeId ?? selectedAtom?.id));
     if (atom) setAtomClipboard(atom);
@@ -1561,12 +1567,13 @@ export function EditorWorkspace({
 
   const selectAtom = useCallback((id: string) => {
     setSelectedAtomId(id);
+    setInspectorView('atom');
   }, []);
 
   const openAtomInspector = useCallback((id: string) => {
     markPerfSpan('ui.openAtomInspector', () => {
       setSelectedAtomId(id);
-      setInspectorView('contract');
+      setInspectorView('atom');
     });
   }, []);
 
@@ -1803,6 +1810,7 @@ export function EditorWorkspace({
               onAddAtomAt={addAtom}
               onInsertAtomAtEdge={insertAtomOnConnection}
               onMoveAtom={moveAtom}
+              onAutoLayout={autoLayoutAtoms}
               atomClipboardReady={Boolean(atomClipboard)}
               onCopyAtom={copySelectedAtom}
               onCutAtom={cutSelectedAtom}

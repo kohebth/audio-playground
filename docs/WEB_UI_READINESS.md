@@ -22,9 +22,9 @@ it is not exposed as the normal editing interface.
   IndexedDB. The portable `.apg` package contains the versioned workspace, manifest, optional mono audio, and readiness
   snapshot; topbar import replaces the open project's contents in place, while home import creates a separate project.
 - A global Simple/Pro switch serves both musicians and DSP authors. Simple mode provides an effect library, pedal-style
-  controls, serial insertion, guided non-nested parallel routing through a real wet/dry mixer, microphone-only preview,
-  presets, scenes, and a guided tour. Pro mode adds project structure, batch operations, file preview, readiness details,
-  and unit-internals editing.
+  controls, serial insertion, and guided parallel routing through an explicit panner/mixer pair. Each helper path has its
+  own knob-backed level control. Pro mode adds project structure, batch operations, file preview, readiness details, and
+  unit-internals editing; neither mode replaces the original pedal-card control model with a second chain UI.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
   selected pedal, and structured units can be saved to a personal browser library.
 - Pro unit editing uses structured identity, compatibility, parameter, port, and atom-graph controls. User-placeable
@@ -91,6 +91,12 @@ without consuming or writing project `ui.position` values, while scalar updates 
 edges, and viewport. Linear routes stay straight; split and merge routes use Dagre's obstacle lanes rendered as rounded
 orthogonal elbows. Automatic layout never changes the current pan or zoom after the initial mount.
 
+Panner and mixer helpers render as the same knob-bearing pedal cards as effect units, with two system-provided paths by
+default and no visible `parallel section` container. Their separate handles form two straight branch rails wherever
+geometry permits and rounded right-angle elbows where an obstacle requires a turn. Removing either helper collapses the
+whole split/join pair only after both paths are empty; populated paths remain protected so an effect cannot be discarded
+implicitly.
+
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
 
@@ -155,6 +161,12 @@ fields,
 incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates UI-only position state
 and does not change DSP YAML or announce a workspace revision.
 
+Opening a unit enters the existing Pro atom graph and selects the Atom inspector. That inspector contains only the atom
+list, selected atom identity, bindings, configuration, and atom actions; project-unit actions stay under Project and
+structured unit metadata stays under Contract. A dedicated worker runs Graphviz `dot` with orthogonal splines when the
+atom topology opens or changes. Edges render as rounded orthogonal paths, dragging an atom requests fixed-position
+Graphviz rerouting, and the explicit Auto Layout action can persist the generated atom positions without exposing YAML.
+
 The unit contract canvas derives two fixed, handle-sized boundary rings from public audio ports. Each ring is labeled with
 its graph signal name: the left ring shows where the preceding project stage enters atom inputs, and the right ring shows
 which atom signals leave for the following stage. Boundary rings and their highlighted edges are view-only, remain outside
@@ -166,8 +178,8 @@ resolved unit port metadata. Project and atom cards expose keyboard-accessible r
 paste, and remove; unit menus additionally expose live on/off. Paste creates a disconnected sibling. Replacement previews
 its impact, keeps the project instance ID and routes, and resets replacement parameters and scene values to defaults.
 Rename updates route endpoints, parameter-control identities, and scene paths atomically. Removing or cutting a normal
-effect bridges its upstream route to every downstream branch; special routing units drop incident routes and remain an
-explicit repair task. Direction, port, occupied-target, and cycle checks run before snapshot
+effect bridges its upstream route to every downstream branch; an empty routing pair collapses atomically to one direct
+route, while a populated pair must be emptied first. Direction, port, occupied-target, and cycle checks run before snapshot
 synchronization. A broken chain can validate structurally but fails preparation, leaving the previous active revision in
 the Worklet until a complete route is restored.
 
