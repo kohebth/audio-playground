@@ -32,6 +32,7 @@ export type ProjectParamControl = {
   min?: string;
   max?: string;
   unit?: string;
+  control?: string;
 };
 
 export type ProjectRoutePoint = { x: number; y: number };

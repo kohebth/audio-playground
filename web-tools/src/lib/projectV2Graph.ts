@@ -8,11 +8,20 @@ import type {
   ProjectScene,
   ProjectUnit,
 } from './backendSamples';
-import { classifyUserEffectContent } from './unitV2Graph.ts';
+import { classifyUserEffectContent, parseUnitGraphDraft } from './unitV2Graph.ts';
 
 export type ProjectUnitRefDraft = { id: string; file: string };
 export type GraphPosition = { x: number; y: number };
-export type ProjectInstanceDraft = { id: string; unit: string; params: Record<string, string>; ui?: { position?: GraphPosition } };
+export type ProjectRoutingRole = 'panner' | 'mixer';
+export type ProjectRoutingPath = { port: string; levelParam: string };
+export type ProjectRoutingContract = { role: ProjectRoutingRole; paths: ProjectRoutingPath[] };
+export type ProjectInstanceDraft = {
+  id: string;
+  unit: string;
+  params: Record<string, string>;
+  routing?: { section: string };
+  ui?: { position?: GraphPosition };
+};
 export type ProjectRouteDraft = { from: string; to: string };
 export type ProjectSceneDraft = {
   name: string;
@@ -33,6 +42,7 @@ export type ProjectGraphDraft = {
 export type ProjectUnitPorts = {
   inputs: string[];
   outputs: string[];
+  routing?: ProjectRoutingContract;
   userPlaceable?: boolean;
   reason?: string | null;
 };
@@ -41,6 +51,7 @@ export type ProjectPortCatalog = Record<string, ProjectUnitPorts>;
 export type ProjectInstanceClipboard = {
   unit: string;
   params: Record<string, string>;
+  routing?: { section: string };
 };
 
 export type ProjectRemovalResult = {
@@ -84,6 +95,11 @@ function parsePosition(value: unknown): GraphPosition | undefined {
   return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
 }
 
+function parseRoutingSection(value: unknown): { section: string } | undefined {
+  if (!isObject(value) || typeof value.section !== 'string' || value.section.length === 0) return undefined;
+  return { section: value.section };
+}
+
 function parseEndpoint(endpoint: string): { instance: string; port: string } {
   const separator = endpoint.indexOf('.');
   if (separator < 1 || separator === endpoint.length - 1) throw new Error(`Invalid project endpoint "${endpoint}".`);
@@ -110,6 +126,12 @@ function uniqueId(existing: Set<string>, base: string): string {
   return id;
 }
 
+function uniqueRoutingSection(existing: Set<string>): string {
+  let suffix = 1;
+  while (existing.has(`parallel_${suffix}`)) suffix += 1;
+  return `parallel_${suffix}`;
+}
+
 export function parseProjectGraphDraft(content: string): ProjectGraphDraft {
   const doc = loadDocument(content);
   const chain = isObject(doc.chain) ? doc.chain : {};
@@ -125,6 +147,7 @@ export function parseProjectGraphDraft(content: string): ProjectGraphDraft {
       id: String(node.id ?? ''),
       unit: String(node.unit ?? ''),
       params: stringMap(node.params),
+      routing: parseRoutingSection(node.routing),
       ui: isObject(node.ui) ? { position: parsePosition(node.ui.position) } : undefined,
     })),
     routes: (Array.isArray(chain.routes) ? chain.routes : []).filter(isObject).map(route => ({
@@ -158,6 +181,7 @@ export function projectDraftToInspect(
     id: node.id,
     unit: node.unit,
     params: Object.entries(node.params).map(([key, value]) => ({ key, value })),
+    routing: node.routing,
   }));
   const routes: ProjectRoute[] = draft.routes.map(route => ({ ...route }));
   const scenes: ProjectScene[] = draft.scenes.map(scene => ({
@@ -180,11 +204,13 @@ export function projectDraftToInspect(
 
 export function parseUnitPortNames(content: string): ProjectUnitPorts {
   const policy = classifyUserEffectContent(content);
+  const routing = parseUnitGraphDraft(content).routing;
   return {
     inputs: policy.audioInputs.map(port => port.name),
     outputs: policy.audioOutputs.map(port => port.name),
-    userPlaceable: policy.userPlaceable,
-    reason: policy.reason,
+    routing: routing ? { role: routing.role, paths: routing.paths.map(path => ({ ...path })) } : undefined,
+    userPlaceable: routing ? false : policy.userPlaceable,
+    reason: routing ? 'Routing helpers are placed by Add in parallel.' : policy.reason,
   };
 }
 
@@ -212,6 +238,7 @@ export function addProjectInstance(
   unit: string,
   requestedId: string,
   params: Record<string, string> = {},
+  routing?: { section: string },
 ): { content: string; id: string } {
   const doc = loadDocument(content);
   const draft = parseProjectGraphDraft(content);
@@ -220,6 +247,7 @@ export function addProjectInstance(
   if (draft.nodes.some(node => node.id === requestedId)) throw new Error(`Project instance "${requestedId}" already exists.`);
   const chain = ensureChain(doc);
   const node: Record<string, unknown> = { id: requestedId, unit, params: { ...params } };
+  if (routing) node.routing = { ...routing };
   (chain.nodes as unknown[]).push(node);
   return { content: dumpDocument(doc), id: requestedId };
 }
@@ -257,48 +285,69 @@ export function insertProjectParallelOnRoute(
   ports: ProjectPortCatalog,
   effectUnit: string,
   effectId: string,
+  pannerUnit: string,
+  pannerId: string,
   mixerUnit: string,
   mixerId: string,
   routeIndex: number,
   effectParams: Record<string, string> = {},
-  mixerParams: Record<string, string> = { mix: '0.5' },
-): { content: string; effectId: string; mixerId: string } {
+  pannerParams?: Record<string, string>,
+  mixerParams?: Record<string, string>,
+): { content: string; effectId: string; pannerId: string; mixerId: string; section: string } {
   const draft = parseProjectGraphDraft(content);
   const route = draft.routes[routeIndex];
   if (!route) throw new Error(`Project route ${routeIndex} was not found.`);
   const effectPorts = ports[effectUnit];
-  if (!effectPorts || effectPorts.inputs.length !== 1 || effectPorts.outputs.length !== 1) {
+  if (!isUserPlaceablePorts(effectPorts)) {
     throw new Error(`Parallel effect "${effectUnit}" must have exactly one input and one output.`);
   }
+  const pannerPorts = ports[pannerUnit];
   const mixerPorts = ports[mixerUnit];
-  if (!mixerPorts
-    || mixerPorts.inputs.length !== 2
-    || !mixerPorts.inputs.includes('dry')
-    || !mixerPorts.inputs.includes('wet')
-    || mixerPorts.outputs.length !== 1) {
-    throw new Error(`Parallel mixer "${mixerUnit}" must expose dry and wet inputs and one output.`);
+  if (!pannerPorts?.routing || pannerPorts.routing.role !== 'panner'
+    || pannerPorts.inputs.length !== 1 || pannerPorts.outputs.length !== 2) {
+    throw new Error(`Parallel panner "${pannerUnit}" must expose one input and exactly two routed outputs.`);
+  }
+  if (!mixerPorts?.routing || mixerPorts.routing.role !== 'mixer'
+    || mixerPorts.inputs.length !== 2 || mixerPorts.outputs.length !== 1) {
+    throw new Error(`Parallel mixer "${mixerUnit}" must expose exactly two routed inputs and one output.`);
+  }
+  const pannerPaths = pannerPorts.routing.paths;
+  const mixerPaths = mixerPorts.routing.paths;
+  if (pannerPaths.length !== 2 || mixerPaths.length !== 2
+    || pannerPaths.some((path, index) => (
+      path.port !== pannerPorts.outputs[index]
+      || path.port !== mixerPaths[index]?.port
+      || path.port !== mixerPorts.inputs[index]
+    ))) {
+    throw new Error('Parallel panner and mixer must expose the same two ordered routing paths.');
   }
 
-  const effect = addProjectInstance(content, effectUnit, effectId, effectParams);
-  const mixer = addProjectInstance(effect.content, mixerUnit, mixerId, mixerParams);
+  const section = uniqueRoutingSection(new Set(draft.nodes.flatMap(node => node.routing ? [node.routing.section] : [])));
+  const resolvedPannerParams = pannerParams ?? Object.fromEntries(pannerPaths.map(path => [path.levelParam, '0.0']));
+  const resolvedMixerParams = mixerParams ?? Object.fromEntries(mixerPaths.map(path => [path.levelParam, '-6.0206']));
+  const panner = addProjectInstance(content, pannerUnit, pannerId, resolvedPannerParams, { section });
+  const effect = addProjectInstance(panner.content, effectUnit, effectId, effectParams);
+  const mixer = addProjectInstance(effect.content, mixerUnit, mixerId, resolvedMixerParams, { section });
   const doc = loadDocument(mixer.content);
   const chain = ensureChain(doc);
   const routes = (chain.routes as unknown[]).filter(isObject);
   routes.splice(routeIndex, 1,
-    { from: route.from, to: `${effectId}.${effectPorts.inputs[0]}` },
-    { from: route.from, to: `${mixerId}.dry` },
-    { from: `${effectId}.${effectPorts.outputs[0]}`, to: `${mixerId}.wet` },
+    { from: route.from, to: `${pannerId}.${pannerPorts.inputs[0]}` },
+    { from: `${pannerId}.${pannerPaths[0].port}`, to: `${mixerId}.${mixerPaths[0].port}` },
+    { from: `${pannerId}.${pannerPaths[1].port}`, to: `${effectId}.${effectPorts.inputs[0]}` },
+    { from: `${effectId}.${effectPorts.outputs[0]}`, to: `${mixerId}.${mixerPaths[1].port}` },
     { from: `${mixerId}.${mixerPorts.outputs[0]}`, to: route.to });
   chain.routes = routes;
   const next = dumpDocument(doc);
   validateProjectRoutes(next, ports);
-  return { content: next, effectId, mixerId };
+  return { content: next, effectId, pannerId, mixerId, section };
 }
 
 export function duplicateProjectInstance(content: string, instanceId: string): { content: string; id: string } {
   const draft = parseProjectGraphDraft(content);
   const source = draft.nodes.find(node => node.id === instanceId);
   if (!source) throw new Error(`Project instance "${instanceId}" was not found.`);
+  if (source.routing) throw new Error('Routing helpers can only be created through Add in parallel.');
   const id = uniqueId(new Set(draft.nodes.map(node => node.id)), `${source.id}_copy`);
   return addProjectInstance(content, source.unit, id, source.params);
 }
@@ -306,13 +355,14 @@ export function duplicateProjectInstance(content: string, instanceId: string): {
 export function copyProjectInstance(content: string, instanceId: string): ProjectInstanceClipboard {
   const source = parseProjectGraphDraft(content).nodes.find(node => node.id === instanceId);
   if (!source) throw new Error(`Project instance "${instanceId}" was not found.`);
-  return { unit: source.unit, params: { ...source.params } };
+  return { unit: source.unit, params: { ...source.params }, routing: source.routing };
 }
 
 export function pasteProjectInstance(
   content: string,
   clipboard: ProjectInstanceClipboard,
 ): { content: string; id: string } {
+  if (clipboard.routing) throw new Error('Paste would create an unpaired routing helper; use Add in parallel instead.');
   const draft = parseProjectGraphDraft(content);
   const id = uniqueId(new Set(draft.nodes.map(node => node.id)), `${clipboard.unit.replace(/_unit$/, '')}_copy`);
   return addProjectInstance(content, clipboard.unit, id, clipboard.params);
@@ -331,8 +381,23 @@ export function replaceProjectInstance(
   if (!draft.units.some(unit => unit.id === nextUnit)) throw new Error(`Project unit "${nextUnit}" was not found.`);
   const currentPorts = ports[current.unit];
   const nextPorts = ports[nextUnit];
-  if (!isUserPlaceablePorts(currentPorts)) throw new Error('Only single-input, single-output effects can be replaced in place.');
-  if (!isUserPlaceablePorts(nextPorts)) throw new Error('Replacement must have one mono audio input and one mono audio output.');
+  const replacingRouting = Boolean(currentPorts?.routing || nextPorts?.routing || current.routing);
+  if (replacingRouting) {
+    const currentRouting = currentPorts?.routing;
+    const nextRouting = nextPorts?.routing;
+    const sameContract = currentRouting && nextRouting
+      && currentRouting.role === nextRouting.role
+      && currentRouting.paths.length === nextRouting.paths.length
+      && currentRouting.paths.every((path, index) => (
+        path.port === nextRouting.paths[index]?.port && path.levelParam === nextRouting.paths[index]?.levelParam
+      ));
+    if (!current.routing || !sameContract) {
+      throw new Error('Routing helpers can only be replaced by a helper with the same role and path contract.');
+    }
+  } else {
+    if (!isUserPlaceablePorts(currentPorts)) throw new Error('Only single-input, single-output effects can be replaced in place.');
+    if (!isUserPlaceablePorts(nextPorts)) throw new Error('Replacement must have one mono audio input and one mono audio output.');
+  }
 
   const doc = loadDocument(content);
   const chain = ensureChain(doc);
@@ -341,11 +406,11 @@ export function replaceProjectInstance(
   node.unit = nextUnit;
   node.params = { ...defaults };
   for (const route of (chain.routes as unknown[]).filter(isObject)) {
-    if (String(route.from) === `${instanceId}.${currentPorts.outputs[0]}`) {
-      route.from = `${instanceId}.${nextPorts.outputs[0]}`;
+    if (String(route.from) === `${instanceId}.${currentPorts!.outputs[0]}`) {
+      route.from = `${instanceId}.${nextPorts!.outputs[0]}`;
     }
-    if (String(route.to) === `${instanceId}.${currentPorts.inputs[0]}`) {
-      route.to = `${instanceId}.${nextPorts.inputs[0]}`;
+    if (String(route.to) === `${instanceId}.${currentPorts!.inputs[0]}`) {
+      route.to = `${instanceId}.${nextPorts!.inputs[0]}`;
     }
   }
   for (const scene of (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject)) {
@@ -451,6 +516,45 @@ export function removeProjectInstanceWithTopology(
   return { content: next, mode: bridgedRoutes > 0 ? 'bridged' : 'disconnected', bridgedRoutes };
 }
 
+export function removeEmptyProjectRoutingSection(
+  content: string,
+  ports: ProjectPortCatalog,
+  instanceId: string,
+): ProjectRemovalResult {
+  const draft = parseProjectGraphDraft(content);
+  const selected = draft.nodes.find(node => node.id === instanceId);
+  const selectedContract = selected ? ports[selected.unit]?.routing : undefined;
+  if (!selected || !selected.routing || !selectedContract) {
+    throw new Error(`Routing helper "${instanceId}" was not found.`);
+  }
+
+  const sectionNodes = draft.nodes.filter(node => node.routing?.section === selected.routing!.section);
+  const panner = sectionNodes.find(node => ports[node.unit]?.routing?.role === 'panner');
+  const mixer = sectionNodes.find(node => ports[node.unit]?.routing?.role === 'mixer');
+  if (!panner || !mixer || sectionNodes.length !== 2) {
+    throw new Error(`Routing section "${selected.routing.section}" is incomplete.`);
+  }
+  const pannerPorts = ports[panner.unit];
+  const mixerPorts = ports[mixer.unit];
+  const incoming = draft.routes.find(route => route.to === `${panner.id}.${pannerPorts.inputs[0]}`);
+  const outgoing = draft.routes.find(route => route.from === `${mixer.id}.${mixerPorts.outputs[0]}`);
+  const directPaths = pannerPorts.routing!.paths.every((path, index) => (
+    draft.routes.some(route => (
+      route.from === `${panner.id}.${path.port}`
+      && route.to === `${mixer.id}.${mixerPorts.routing!.paths[index].port}`
+    ))
+  ));
+  if (!incoming || !outgoing || !directPaths) {
+    throw new Error('Remove the effects inside both parallel paths before removing the split/join.');
+  }
+
+  const withoutPanner = removeProjectInstance(content, panner.id);
+  const withoutHelpers = removeProjectInstance(withoutPanner, mixer.id);
+  const next = addProjectRoute(withoutHelpers, ports, { from: incoming.from, to: outgoing.to });
+  validateProjectRoutes(next, ports);
+  return { content: next, mode: 'bridged', bridgedRoutes: 1 };
+}
+
 export function moveProjectInstance(content: string, instanceId: string, nextIndex: number): string {
   const doc = loadDocument(content);
   const chain = ensureChain(doc);
@@ -476,6 +580,9 @@ function validateSceneSnapshot(
   }
   for (const instance of Object.keys(bypass)) {
     if (!instances.has(instance)) throw new Error(`Scene bypass references missing instance "${instance}".`);
+    if (draft.nodes.find(node => node.id === instance)?.routing) {
+      throw new Error(`Routing helper "${instance}" is always active and cannot be bypassed by a scene.`);
+    }
   }
 }
 
@@ -529,6 +636,7 @@ export function applyProjectScene(
   const draft = parseProjectGraphDraft(content);
   const scene = draft.scenes.find(item => item.name === name);
   if (!scene) throw new Error(`Scene "${name}" was not found.`);
+  validateSceneSnapshot(draft, scene.params, scene.bypass);
   const doc = loadDocument(content);
   const chain = ensureChain(doc);
   const nodes = (chain.nodes as unknown[]).filter(isObject);
@@ -567,6 +675,9 @@ function validateRoute(
   if (draft.routes.some((item, index) => index !== replacedIndex && item.to === route.to)) {
     throw new Error(`Route target "${route.to}" is already connected.`);
   }
+  if (draft.routes.some((item, index) => index !== replacedIndex && item.from === route.from)) {
+    throw new Error(`Route source "${route.from}" is already connected. Use Add in parallel to split a path.`);
+  }
   const adjacency = new Map<string, Set<string>>();
   const candidates = draft.routes.filter((_, index) => index !== replacedIndex).concat(route);
   for (const item of candidates) {
@@ -594,9 +705,57 @@ function validateRoute(
 export function validateProjectRoutes(content: string, ports: ProjectPortCatalog): void {
   const draft = parseProjectGraphDraft(content);
   const nodesById = new Map(draft.nodes.map(node => [node.id, node]));
-  const occupiedTargets = new Set<string>();
-  const adjacency = new Map<string, Set<string>>();
-  const indegree = new Map(draft.nodes.map(node => [node.id, 0]));
+  const sections = new Map<string, { panner?: ProjectInstanceDraft; mixer?: ProjectInstanceDraft }>();
+  const routeBySource = new Map<string, ProjectRouteDraft>();
+  const routeByTarget = new Map<string, ProjectRouteDraft>();
+  const incidentCount = new Map(draft.nodes.map(node => [node.id, 0]));
+
+  for (const node of draft.nodes) {
+    const contract = ports[node.unit];
+    if (!contract) throw new Error(`Project unit contract "${node.unit}" was not found.`);
+    const routing = contract.routing;
+    if (routing) {
+      if (!node.routing?.section) throw new Error(`Routing helper "${node.id}" must declare routing.section.`);
+      if (routing.paths.length !== 2) throw new Error(`Routing helper "${node.id}" must expose exactly two paths.`);
+      const pathPorts = routing.paths.map(path => path.port);
+      if (routing.role === 'panner'
+        && (contract.inputs.length !== 1 || contract.outputs.length !== 2
+          || contract.outputs.some((port, index) => port !== pathPorts[index]))) {
+        throw new Error(`Panner "${node.id}" must expose one input and its two ordered path outputs.`);
+      }
+      if (routing.role === 'mixer'
+        && (contract.inputs.length !== 2 || contract.outputs.length !== 1
+          || contract.inputs.some((port, index) => port !== pathPorts[index]))) {
+        throw new Error(`Mixer "${node.id}" must expose its two ordered path inputs and one output.`);
+      }
+      const section = sections.get(node.routing.section) ?? {};
+      if (section[routing.role]) {
+        throw new Error(`Routing section "${node.routing.section}" has more than one ${routing.role}.`);
+      }
+      section[routing.role] = node;
+      sections.set(node.routing.section, section);
+    } else {
+      if (node.routing) throw new Error(`Effect "${node.id}" cannot declare routing.section.`);
+      if (!isUserPlaceablePorts(contract)) {
+        throw new Error(`Effect "${node.id}" must expose exactly one mono input and one mono output.`);
+      }
+    }
+  }
+
+  for (const [sectionId, section] of sections) {
+    if (!section.panner || !section.mixer) {
+      throw new Error(`Routing section "${sectionId}" must contain one panner and one mixer.`);
+    }
+    const panner = ports[section.panner.unit].routing!;
+    const mixer = ports[section.mixer.unit].routing!;
+    if (panner.paths.some((path, index) => (
+      path.port !== mixer.paths[index]?.port || path.levelParam !== mixer.paths[index]?.levelParam
+    ))) {
+      throw new Error(`Routing section "${sectionId}" panner and mixer path contracts do not match.`);
+    }
+  }
+
+  for (const scene of draft.scenes) validateSceneSnapshot(draft, scene.params, scene.bypass);
 
   for (const route of draft.routes) {
     const source = parseEndpoint(route.from);
@@ -606,39 +765,97 @@ export function validateProjectRoutes(content: string, ports: ProjectPortCatalog
     } else {
       const node = nodesById.get(source.instance);
       if (!node) throw new Error(`Route source instance "${source.instance}" was not found.`);
-      if (!ports[node.unit]?.outputs.includes(source.port)) throw new Error(`"${route.from}" is not a unit output.`);
+      if (!ports[node.unit].outputs.includes(source.port)) throw new Error(`"${route.from}" is not a unit output.`);
+      incidentCount.set(node.id, (incidentCount.get(node.id) ?? 0) + 1);
     }
     if (target.instance === 'system') {
       if (target.port !== 'output') throw new Error('Only system.output can be a route target.');
     } else {
       const node = nodesById.get(target.instance);
       if (!node) throw new Error(`Route target instance "${target.instance}" was not found.`);
-      if (!ports[node.unit]?.inputs.includes(target.port)) throw new Error(`"${route.to}" is not a unit input.`);
+      if (!ports[node.unit].inputs.includes(target.port)) throw new Error(`"${route.to}" is not a unit input.`);
+      incidentCount.set(node.id, (incidentCount.get(node.id) ?? 0) + 1);
     }
-    if (occupiedTargets.has(route.to)) throw new Error(`Route target "${route.to}" is already connected.`);
-    occupiedTargets.add(route.to);
+    if (routeBySource.has(route.from)) {
+      throw new Error(`Route source "${route.from}" is already connected. Use Add in parallel to split a path.`);
+    }
+    if (routeByTarget.has(route.to)) throw new Error(`Route target "${route.to}" is already connected.`);
+    routeBySource.set(route.from, route);
+    routeByTarget.set(route.to, route);
+  }
 
-    if (source.instance === 'system' || target.instance === 'system') continue;
-    const targets = adjacency.get(source.instance) ?? new Set<string>();
-    if (!targets.has(target.instance)) {
-      targets.add(target.instance);
-      adjacency.set(source.instance, targets);
-      indegree.set(target.instance, (indegree.get(target.instance) ?? 0) + 1);
+  if (!routeBySource.has('system.input')) throw new Error('system.input must have exactly one route.');
+  if (!routeByTarget.has('system.output')) throw new Error('system.output must have exactly one route.');
+
+  for (const node of draft.nodes) {
+    const contract = ports[node.unit];
+    const endpoints = [
+      ...contract.inputs.map(port => `${node.id}.${port}`),
+      ...contract.outputs.map(port => `${node.id}.${port}`),
+    ];
+    const connected = endpoints.filter(endpoint => routeBySource.has(endpoint) || routeByTarget.has(endpoint));
+    if (contract.routing) {
+      if (connected.length !== endpoints.length) {
+        throw new Error(`Routing helper "${node.id}" must have every input and output connected.`);
+      }
+    } else if (connected.length !== 0 && connected.length !== 2) {
+      throw new Error(`Effect "${node.id}" must have one connected input and one connected output.`);
     }
   }
 
-  const ready = [...indegree.entries()].flatMap(([nodeId, count]) => count === 0 ? [nodeId] : []);
-  let visited = 0;
-  while (ready.length > 0) {
-    const nodeId = ready.pop()!;
-    visited += 1;
-    for (const target of adjacency.get(nodeId) ?? []) {
-      const next = (indegree.get(target) ?? 0) - 1;
-      indegree.set(target, next);
-      if (next === 0) ready.push(target);
+  const visitedNodes = new Set<string>();
+  const activeSources = new Set<string>();
+  const activeSections = new Set<string>();
+
+  const trace = (sourceEndpoint: string, expectedTarget: string): void => {
+    if (activeSources.has(sourceEndpoint)) throw new Error('Project routes create a cycle.');
+    const route = routeBySource.get(sourceEndpoint);
+    if (!route) throw new Error(`Routing path from "${sourceEndpoint}" is incomplete.`);
+    if (route.to === expectedTarget) return;
+    const target = parseEndpoint(route.to);
+    if (target.instance === 'system') {
+      throw new Error(`Routing path from "${sourceEndpoint}" reached ${route.to} instead of ${expectedTarget}.`);
+    }
+    const node = nodesById.get(target.instance)!;
+    const contract = ports[node.unit];
+    activeSources.add(sourceEndpoint);
+    visitedNodes.add(node.id);
+    try {
+      if (!contract.routing) {
+        if (target.port !== contract.inputs[0]) throw new Error(`Routing path enters "${route.to}" through the wrong port.`);
+        trace(`${node.id}.${contract.outputs[0]}`, expectedTarget);
+        return;
+      }
+      if (contract.routing.role === 'mixer') {
+        throw new Error(`Routing path crossed into mixer "${node.id}" before its matching path endpoint.`);
+      }
+      if (target.port !== contract.inputs[0]) throw new Error(`Routing path enters panner "${node.id}" through the wrong port.`);
+      const sectionId = node.routing!.section;
+      if (activeSections.has(sectionId)) throw new Error(`Routing section "${sectionId}" creates a cycle.`);
+      const section = sections.get(sectionId)!;
+      const mixer = section.mixer!;
+      const mixerContract = ports[mixer.unit];
+      activeSections.add(sectionId);
+      visitedNodes.add(mixer.id);
+      try {
+        contract.routing.paths.forEach((path, index) => {
+          trace(`${node.id}.${path.port}`, `${mixer.id}.${mixerContract.routing!.paths[index].port}`);
+        });
+      } finally {
+        activeSections.delete(sectionId);
+      }
+      trace(`${mixer.id}.${mixerContract.outputs[0]}`, expectedTarget);
+    } finally {
+      activeSources.delete(sourceEndpoint);
+    }
+  };
+
+  trace('system.input', 'system.output');
+  for (const node of draft.nodes) {
+    if ((incidentCount.get(node.id) ?? 0) > 0 && !visitedNodes.has(node.id)) {
+      throw new Error(`Connected effect "${node.id}" is orphaned from the system input/output path.`);
     }
   }
-  if (visited !== draft.nodes.length) throw new Error('Project routes create a cycle.');
 }
 
 export function addProjectRoute(
@@ -650,7 +867,9 @@ export function addProjectRoute(
   const draft = parseProjectGraphDraft(content);
   validateRoute(draft, ports, route);
   (ensureChain(doc).routes as unknown[]).push({ ...route });
-  return dumpDocument(doc);
+  const next = dumpDocument(doc);
+  if (draft.nodes.some(node => node.routing)) validateProjectRoutes(next, ports);
+  return next;
 }
 
 export function replaceProjectRoute(
@@ -664,16 +883,24 @@ export function replaceProjectRoute(
   if (!draft.routes[index]) throw new Error(`Project route ${index} was not found.`);
   validateRoute(draft, ports, route, index);
   (ensureChain(doc).routes as unknown[])[index] = { ...route };
-  return dumpDocument(doc);
+  const next = dumpDocument(doc);
+  if (draft.nodes.some(node => node.routing)) validateProjectRoutes(next, ports);
+  return next;
 }
 
-export function removeProjectRoute(content: string, index: number): string {
+export function removeProjectRoute(content: string, index: number, ports?: ProjectPortCatalog): string {
   const doc = loadDocument(content);
+  const draft = parseProjectGraphDraft(content);
   const chain = ensureChain(doc);
   const routes = (chain.routes as unknown[]).filter(isObject);
   if (!routes[index]) throw new Error(`Project route ${index} was not found.`);
   chain.routes = routes.filter((_, routeIndex) => routeIndex !== index);
-  return dumpDocument(doc);
+  const next = dumpDocument(doc);
+  if (draft.nodes.some(node => node.routing)) {
+    if (!ports) throw new Error('Routing projects require unit contracts before a route can be removed.');
+    validateProjectRoutes(next, ports);
+  }
+  return next;
 }
 
 export function moveProjectRoute(content: string, index: number, nextIndex: number): string {

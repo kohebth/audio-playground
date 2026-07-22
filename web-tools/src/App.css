@@ -3576,6 +3576,34 @@ body {
 .project-home__intro p { max-width: 600px; color: var(--text-secondary); font-size: 17px; line-height: 1.65; }
 .project-home__error { margin: -24px 0 24px; padding: 12px 15px; border: 1px solid #6b302c; background: #281513; color: #ffb0aa; }
 
+.studio-migration-notice {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: 2000;
+  display: flex;
+  max-width: min(680px, calc(100vw - 24px));
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px 10px 15px;
+  border: 1px solid color-mix(in srgb, var(--accent-green) 50%, var(--border-default));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, black);
+  box-shadow: var(--shadow-panel);
+  color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1.4;
+  transform: translateX(-50%);
+}
+
+.studio-migration-notice button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+}
+
 .project-home__section-title { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 18px; }
 .project-home__section-title > div { display: flex; align-items: center; gap: 9px; }
 .project-home__section-title span { font-size: 18px; font-weight: 650; }
@@ -4242,6 +4270,17 @@ body {
   white-space: nowrap;
 }
 
+.project-node__routing-badge {
+  flex-shrink: 0;
+  padding: 3px 5px;
+  border: 1px solid color-mix(in srgb, var(--accent-green) 42%, transparent);
+  border-radius: 999px;
+  color: var(--accent-green);
+  font: 700 6px var(--font-mono);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
 .node-pedal-body {
   display: flex;
   min-height: 86px;
@@ -4385,6 +4424,11 @@ body {
   background: color-mix(in srgb, var(--accent-red) 20%, var(--bg-base));
 }
 
+.node-pedal-footer--always-on {
+  cursor: default;
+  background: color-mix(in srgb, var(--accent-green) 12%, var(--bg-base));
+}
+
 .node-pedal-footer:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: -2px;
@@ -4501,6 +4545,7 @@ body {
 .graph-context-menu__replace p { color: var(--text-secondary); font-size: 9px; line-height: 1.45; }
 .graph-context-menu__confirm { padding: 7px 9px; border: 1px solid var(--accent-blue); border-radius: 6px; background: var(--accent-blue-dim); color: var(--text-primary); cursor: pointer; font: 700 10px var(--font-sans); }
 .graph-context-menu__confirm:disabled { cursor: not-allowed; opacity: .45; }
+.graph-context-menu__empty { padding: 9px; color: var(--text-muted); font-size: 10px; }
 
 .structured-card__hint { margin: -2px 0 10px; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
 .effect-library-card__actions button:disabled { cursor: not-allowed; opacity: .35; }

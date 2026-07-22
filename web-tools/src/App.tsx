@@ -9,7 +9,7 @@ import { BatchActionBar } from './components/BatchActionBar';
 import { GuidedTour } from './components/GuidedTour';
 import { LiveLatencyBadge } from './components/LiveLatencyBadge';
 import { ProjectCanvas } from './components/ProjectCanvas';
-import type { ProjectReplacementOption } from './components/ProjectCanvas';
+import type { ProjectParallelOption, ProjectReplacementOption } from './components/ProjectCanvas';
 import { ProjectInspector } from './components/ProjectInspector';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ProjectTopbar } from './components/ProjectTopbar';
@@ -20,7 +20,8 @@ import {
   backendCommands,
   backendSamples,
   initialWorkspaceFiles,
-  wetDryMixWorkspaceFile,
+  pathMixer2WorkspaceFile,
+  pathPanner2WorkspaceFile,
   type WorkspaceFile,
 } from './lib/backendSamples';
 import { buildProjectGraph, type ProjectNodeData, type ProjectParamControl } from './lib/projectGraph';
@@ -46,6 +47,7 @@ import {
   parseUnitPortNames,
   pasteProjectInstance,
   projectDraftToInspect,
+  removeEmptyProjectRoutingSection,
   removeProjectInstanceWithTopology,
   removeProjectRoute,
   removeProjectScene,
@@ -63,6 +65,7 @@ import {
   type ApgProjectPackage,
   type StudioMode,
 } from './lib/projectPackage';
+import { migrateApgProjectRouting, migrateLegacyWetDryWorkspace } from './lib/workspaceMigrations';
 import {
   createPersonalPreset,
   listPresetsForUnit,
@@ -150,6 +153,7 @@ type WorkspaceHistoryEntry = {
 const WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v2';
 const LEGACY_WORKSPACE_STORAGE_KEY = 'apg.unit-editor.workspace.v1';
 const PROJECT_ROUTE = '/projects';
+const ROUTING_MIGRATION_HELPERS = { panner: pathPanner2WorkspaceFile, mixer: pathMixer2WorkspaceFile };
 
 function resolveWorkspacePath(baseFile: string, reference: string): string {
   const segments = baseFile.split('/');
@@ -200,9 +204,10 @@ function workspacePathFromRoute(pathname: string, files: WorkspaceFile[]): strin
 
 function loadWorkspaceState(projectPackage?: ApgProjectPackage): { entryProject: string; files: WorkspaceFile[] } {
   if (projectPackage) {
+    const migrated = migrateApgProjectRouting(projectPackage, ROUTING_MIGRATION_HELPERS).project;
     return {
-      entryProject: projectPackage.workspace.entryProject,
-      files: hydrateWorkspaceFiles(projectPackage.workspace, initialWorkspaceFiles),
+      entryProject: migrated.workspace.entryProject,
+      files: hydrateWorkspaceFiles(migrated.workspace, initialWorkspaceFiles),
     };
   }
   const fallback = { entryProject: backendSamples.project.file, files: initialWorkspaceFiles };
@@ -210,8 +215,8 @@ function loadWorkspaceState(projectPackage?: ApgProjectPackage): { entryProject:
   try {
     const saved = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
     if (saved) {
-      const payload = parseWorkspacePayload(saved);
-      return { entryProject: payload.entryProject, files: hydrateWorkspaceFiles(payload, initialWorkspaceFiles) };
+      const result = migrateLegacyWetDryWorkspace(parseWorkspacePayload(saved), ROUTING_MIGRATION_HELPERS);
+      return { entryProject: result.workspace.entryProject, files: hydrateWorkspaceFiles(result.workspace, initialWorkspaceFiles) };
     }
     const legacy = window.localStorage.getItem(LEGACY_WORKSPACE_STORAGE_KEY);
     if (legacy) {
@@ -223,7 +228,11 @@ function loadWorkspaceState(projectPackage?: ApgProjectPackage): { entryProject:
         files,
       });
       window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
-      return { entryProject: payload.entryProject, files: hydrateWorkspaceFiles(payload, initialWorkspaceFiles) };
+      const result = migrateLegacyWetDryWorkspace(payload, ROUTING_MIGRATION_HELPERS);
+      return {
+        entryProject: result.workspace.entryProject,
+        files: hydrateWorkspaceFiles(result.workspace, initialWorkspaceFiles),
+      };
     }
     return fallback;
   } catch {
@@ -474,10 +483,24 @@ export function EditorWorkspace({
   }, [projectWorkspaceFile.content]);
   if (parsedProjectDraft) lastValidProjectDraft.current = parsedProjectDraft;
   const projectDraft = parsedProjectDraft ?? lastValidProjectDraft.current;
-  const project = useMemo(
-    () => projectDraftToInspect(projectDraft, backendSamples.project, projectWorkspaceFile.path),
-    [projectDraft, projectWorkspaceFile.path],
-  );
+  const project = useMemo(() => {
+    const inspect = projectDraftToInspect(projectDraft, backendSamples.project, projectWorkspaceFile.path);
+    return {
+      ...inspect,
+      units: inspect.units.map(unit => {
+        const reference = projectDraft.units.find(item => item.id === unit.id);
+        const path = reference ? resolveWorkspacePath(projectWorkspaceFile.path, reference.file) : null;
+        const file = path ? workspaceFiles.find(item => item.path === path && item.role === 'unit') : null;
+        if (!file) return unit;
+        try {
+          const draft = parseUnitGraphDraft(file.content);
+          return { ...unit, name: draft.meta.title || draft.name, compatibility: draft.compatibility };
+        } catch {
+          return unit;
+        }
+      }),
+    };
+  }, [projectDraft, projectWorkspaceFile.path, workspaceFiles]);
   const selectedNode = findUnitNode(nodes, selectedId);
   const selectedRoute = selectedRouteIndex === null ? null : project.routes[selectedRouteIndex] ?? null;
   const paramOverrides = useMemo(
@@ -574,6 +597,7 @@ export function EditorWorkspace({
           min: param.min,
           max: param.max,
           unit: param.ui?.unit,
+          control: param.ui?.control,
         }))];
       } catch {
         return [reference.id, []];
@@ -581,10 +605,22 @@ export function EditorWorkspace({
     }),
   ), [projectDraft.units, projectWorkspaceFile.path, workspaceFiles]);
   const projectReplacementOptions = useMemo<ProjectReplacementOption[]>(() => project.units.flatMap(unit => {
-    if (!projectUnitPlacement[unit.id]?.allowed) return [];
-    return [{ id: unit.id, label: unit.name, paramCount: projectParamControls[unit.id]?.length ?? 0 }];
-  }), [project.units, projectParamControls, projectUnitPlacement]);
-  const canPasteUnit = Boolean(unitClipboard && projectUnitPlacement[unitClipboard.unit]?.allowed);
+    const contract = projectPorts[unit.id];
+    if (!contract || (!contract.userPlaceable && !contract.routing)) return [];
+    return [{
+      id: unit.id,
+      label: unit.name,
+      paramCount: projectParamControls[unit.id]?.length ?? 0,
+      routing: contract.routing,
+    }];
+  }), [project.units, projectParamControls, projectPorts]);
+  const projectParallelOptions = useMemo<ProjectParallelOption[]>(() => simpleEffectLibrary.map(item => ({
+    id: item.id,
+    label: item.title,
+    disabled: Boolean(item.placementError),
+    reason: item.placementError,
+  })), [simpleEffectLibrary]);
+  const canPasteUnit = Boolean(unitClipboard);
 
   const updateParamDraft = useCallback((instanceId: string, paramKey: string, value: string) => {
     markPerfSpan('param.update', () => {
@@ -632,7 +668,7 @@ export function EditorWorkspace({
               paramControls: projectParamControls[unitData.unit.id] ?? [],
               onParamChange: updateParamDraft,
               bypassed: nodeBypassByInstance?.[unitData.instance.id] ?? false,
-              bypassAvailable: nodeBypassAvailable,
+              bypassAvailable: nodeBypassAvailable && !unitData.instance.routing && !projectPorts[unitData.unit.id]?.routing,
               onBypassChange: setProjectNodeBypass,
             };
           }
@@ -669,7 +705,7 @@ export function EditorWorkspace({
             paramControls: projectParamControls[unit.id] ?? [],
             onParamChange: updateParamDraft,
             bypassed: nodeBypassByInstance?.[instance.id] ?? false,
-            bypassAvailable: nodeBypassAvailable,
+            bypassAvailable: nodeBypassAvailable && !instance.routing && !projectPorts[unit.id]?.routing,
             onBypassChange: setProjectNodeBypass,
           };
           const previous = JSON.stringify({
@@ -937,14 +973,15 @@ export function EditorWorkspace({
     setWorkspaceFiles,
   ]);
 
-  const addSimpleParallelEffect = useCallback((item: EffectLibraryItem) => {
+  const addSimpleParallelEffect = useCallback((item: EffectLibraryItem, requestedRouteIndex?: number) => {
     markPerfSpan('graph.add.simpleParallelEffect', () => {
       try {
         const source = libraryWorkspaceSource(item, personalUnits);
         if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
         assertUserPlaceableUnit(source.content);
-        const outputRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
-        if (outputRouteIndex < 0) throw new Error('Connect the board to Output before adding a parallel effect.');
+        const fallbackRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
+        const routeIndex = requestedRouteIndex ?? selectedRouteIndex ?? fallbackRouteIndex;
+        if (!project.routes[routeIndex]) throw new Error('Select a connected route before adding a parallel effect.');
 
         let content = projectWorkspaceFile.content;
         const nextPorts = { ...projectPorts };
@@ -961,32 +998,60 @@ export function EditorWorkspace({
           filesToAdd.push({ ...source, path });
         }
 
-        let mixerReference = parseProjectGraphDraft(content).units.find(reference => reference.id === 'wet_dry_mix_unit');
-        if (!mixerReference) {
-          const mixerPath = 'units/wet_dry_mix.unit.v2.yaml';
+        let pannerReference = parseProjectGraphDraft(content).units.find(reference => (
+          reference.id === 'path_panner_2_unit' || reference.file.endsWith('/path_panner_2.unit.v2.yaml')
+        ));
+        if (!pannerReference) {
+          const pannerPath = 'units/path_panner_2.unit.v2.yaml';
           content = addProjectUnitReference(
             content,
-            'wet_dry_mix_unit',
+            'path_panner_2_unit',
+            relativeWorkspaceReference(projectWorkspaceFile.path, pannerPath),
+          );
+          pannerReference = {
+            id: 'path_panner_2_unit',
+            file: relativeWorkspaceReference(projectWorkspaceFile.path, pannerPath),
+          };
+          nextPorts.path_panner_2_unit = parseUnitPortNames(pathPanner2WorkspaceFile.content);
+          filesToAdd.push({ ...pathPanner2WorkspaceFile, path: pannerPath });
+        }
+
+        let mixerReference = parseProjectGraphDraft(content).units.find(reference => (
+          reference.id === 'path_mixer_2_unit' || reference.file.endsWith('/path_mixer_2.unit.v2.yaml')
+        ));
+        if (!mixerReference) {
+          const mixerPath = 'units/path_mixer_2.unit.v2.yaml';
+          content = addProjectUnitReference(
+            content,
+            'path_mixer_2_unit',
             relativeWorkspaceReference(projectWorkspaceFile.path, mixerPath),
           );
-          mixerReference = { id: 'wet_dry_mix_unit', file: relativeWorkspaceReference(projectWorkspaceFile.path, mixerPath) };
-          nextPorts.wet_dry_mix_unit = parseUnitPortNames(wetDryMixWorkspaceFile.content);
-          filesToAdd.push({ ...wetDryMixWorkspaceFile, path: mixerPath });
+          mixerReference = {
+            id: 'path_mixer_2_unit',
+            file: relativeWorkspaceReference(projectWorkspaceFile.path, mixerPath),
+          };
+          nextPorts.path_mixer_2_unit = parseUnitPortNames(pathMixer2WorkspaceFile.content);
+          filesToAdd.push({ ...pathMixer2WorkspaceFile, path: mixerPath });
         }
 
         const effectDefaults = Object.fromEntries(parseUnitGraphDraft(source.content).params.map(param => [param.name, param.default]));
-        const mixerDefaults = Object.fromEntries(parseUnitGraphDraft(wetDryMixWorkspaceFile.content).params.map(param => [param.name, param.default]));
+        const pannerDefaults = Object.fromEntries(parseUnitGraphDraft(pathPanner2WorkspaceFile.content).params.map(param => [param.name, param.default]));
+        const mixerDefaults = Object.fromEntries(parseUnitGraphDraft(pathMixer2WorkspaceFile.content).params.map(param => [param.name, param.default]));
         const effectId = uniqueInstanceId(project.nodes.map(node => node.id), effectReference.id);
-        const mixerId = uniqueInstanceId([...project.nodes.map(node => node.id), effectId], 'wet_dry_mix_unit');
+        const pannerId = uniqueInstanceId([...project.nodes.map(node => node.id), effectId], 'path_panner_2_unit');
+        const mixerId = uniqueInstanceId([...project.nodes.map(node => node.id), effectId, pannerId], 'path_mixer_2_unit');
         const result = insertProjectParallelOnRoute(
           content,
           nextPorts,
           effectReference.id,
           effectId,
+          pannerReference.id,
+          pannerId,
           mixerReference.id,
           mixerId,
-          outputRouteIndex,
+          routeIndex,
           effectDefaults,
+          pannerDefaults,
           mixerDefaults,
         );
         pushHistory();
@@ -998,6 +1063,7 @@ export function EditorWorkspace({
         });
         const values = Object.fromEntries([
           ...Object.entries(effectDefaults).map(([key, value]) => [paramDraftKey(effectId, key), value]),
+          ...Object.entries(pannerDefaults).map(([key, value]) => [paramDraftKey(pannerId, key), value]),
           ...Object.entries(mixerDefaults).map(([key, value]) => [paramDraftKey(mixerId, key), value]),
         ]);
         setParamDrafts(current => ({ ...current, ...values }));
@@ -1016,8 +1082,18 @@ export function EditorWorkspace({
     projectWorkspaceFile.content,
     projectWorkspaceFile.path,
     pushHistory,
+    selectedRouteIndex,
     setWorkspaceFiles,
   ]);
+
+  const addParallelEffectAtRoute = useCallback((unitId: string, routeIndex: number) => {
+    const item = simpleEffectLibrary.find(candidate => candidate.id === unitId);
+    if (!item) {
+      setGraphEditError(`Effect "${unitId}" is unavailable.`);
+      return;
+    }
+    addSimpleParallelEffect(item, routeIndex);
+  }, [addSimpleParallelEffect, simpleEffectLibrary]);
 
   const duplicateProjectNode = useCallback((instanceId: string) => {
     markPerfSpan('graph.duplicate.projectNode', () => {
@@ -1053,12 +1129,20 @@ export function EditorWorkspace({
 
   const removeProjectNode = useCallback((instanceId: string) => {
     markPerfSpan('graph.remove.projectNode', () => {
-      if (!updateProjectFile(content => removeProjectInstanceWithTopology(content, projectPorts, instanceId).content)) return;
-      setParamDrafts(values => withoutInstanceValues(values, instanceId));
-      setParamOriginals(values => withoutInstanceValues(values, instanceId));
+      const instance = projectDraft.nodes.find(node => node.id === instanceId);
+      const sectionIds = instance?.routing
+        ? projectDraft.nodes.filter(node => node.routing?.section === instance.routing?.section).map(node => node.id)
+        : [instanceId];
+      if (!updateProjectFile(content => (
+        instance?.routing
+          ? removeEmptyProjectRoutingSection(content, projectPorts, instanceId).content
+          : removeProjectInstanceWithTopology(content, projectPorts, instanceId).content
+      ))) return;
+      setParamDrafts(values => sectionIds.reduce(withoutInstanceValues, values));
+      setParamOriginals(values => sectionIds.reduce(withoutInstanceValues, values));
       setSelectedId(null);
     });
-  }, [projectPorts, updateProjectFile]);
+  }, [projectDraft.nodes, projectPorts, updateProjectFile]);
 
   const copyProjectNode = useCallback((instanceId: string) => {
     try {
@@ -1115,7 +1199,9 @@ export function EditorWorkspace({
         const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
         const file = workspaceFiles.find(item => item.path === path);
         if (file?.role !== 'unit') throw new Error(`Unit source for "${nextUnitId}" is unavailable.`);
-        assertUserPlaceableUnit(file.content);
+        const current = projectDraft.nodes.find(node => node.id === instanceId);
+        if (!current) throw new Error(`Project instance "${instanceId}" was not found.`);
+        if (!projectPorts[current.unit]?.routing) assertUserPlaceableUnit(file.content);
         const defaults = Object.fromEntries(parseUnitGraphDraft(file.content).params.map(param => [param.name, param.default]));
         const content = replaceProjectInstance(
           projectWorkspaceFile.content,
@@ -1136,13 +1222,13 @@ export function EditorWorkspace({
         setGraphEditError(error instanceof Error ? error.message : 'Unable to replace unit.');
       }
     });
-  }, [projectDraft.units, projectPorts, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
+  }, [projectDraft.nodes, projectDraft.units, projectPorts, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
 
   const saveScene = useCallback((name: string) => {
     const params = Object.fromEntries(project.nodes.flatMap(node => (
       node.params.map(param => [`${node.id}.${param.key}`, param.value])
     )));
-    const bypass = Object.fromEntries(project.nodes.map(node => [
+    const bypass = Object.fromEntries(project.nodes.filter(node => !node.routing).map(node => [
       node.id,
       liveBypassController?.bypassByInstance[node.id] ?? false,
     ]));
@@ -1237,8 +1323,11 @@ export function EditorWorkspace({
   }, [onSavePersonalUnit, projectPackage.manifest.name, selectedNode, selectedUnitName, selectedUnitWorkspaceFile]);
 
   const batchBypass = useCallback((enabled: boolean) => {
-    for (const instanceId of selectedInstanceIds) void liveBypassController?.setBypass(instanceId, enabled);
-  }, [liveBypassController, selectedInstanceIds]);
+    const routingIds = new Set(project.nodes.filter(node => node.routing).map(node => node.id));
+    for (const instanceId of selectedInstanceIds) {
+      if (!routingIds.has(instanceId)) void liveBypassController?.setBypass(instanceId, enabled);
+    }
+  }, [liveBypassController, project.nodes, selectedInstanceIds]);
 
   const removeSelectedInstances = useCallback(() => {
     if (selectedInstanceIds.length < 2) return;
@@ -1276,10 +1365,10 @@ export function EditorWorkspace({
 
   const deleteProjectRoute = useCallback((index: number) => {
     markPerfSpan('graph.delete.route', () => {
-      if (!updateProjectFile(content => removeProjectRoute(content, index))) return;
+      if (!updateProjectFile(content => removeProjectRoute(content, index, projectPorts))) return;
       setSelectedRouteIndex(null);
     });
-  }, [updateProjectFile]);
+  }, [projectPorts, updateProjectFile]);
 
   const reorderProjectRoute = useCallback((index: number, nextIndex: number) => {
     markPerfSpan('graph.reorder.route', () => {
@@ -1524,7 +1613,10 @@ export function EditorWorkspace({
   const importWorkspace = useCallback((file: File) => {
     void markPerfSpan('workspace.import', async () => {
       try {
-        const importedPackage = parseApgProjectPackage(await file.text());
+        const importedPackage = migrateApgProjectRouting(
+          parseApgProjectPackage(await file.text()),
+          ROUTING_MIGRATION_HELPERS,
+        ).project;
         const importedFiles = hydrateWorkspaceFiles(importedPackage.workspace, initialWorkspaceFiles);
         const importedProject = importedFiles.find(item => item.path === importedPackage.workspace.entryProject);
         if (!importedProject) throw new Error('The imported package has no entry project.');
@@ -1743,7 +1835,9 @@ export function EditorWorkspace({
               onPasteUnit={pasteProjectNode}
               onRemoveUnit={removeProjectNode}
               onReplaceUnit={replaceProjectNode}
+              onAddParallelAtRoute={addParallelEffectAtRoute}
               canPasteUnit={canPasteUnit}
+              parallelOptions={projectParallelOptions}
               replacementOptions={projectReplacementOptions}
             />
           </Profiler>

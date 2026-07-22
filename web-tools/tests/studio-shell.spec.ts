@@ -65,12 +65,17 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   await expect(page.getByTestId('scene-apply-Browser Scene')).toBeVisible();
 
   await page.getByRole('button', { name: 'Add Chorus in parallel' }).click();
-  await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(10);
-  await expect(page.locator('[data-testid^="project-node-wet_dry_mix"]')).toBeVisible();
+  await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(11);
+  await expect(page.locator('[data-testid^="project-node-path_panner_2"]')).toBeVisible();
+  await expect(page.locator('[data-testid^="project-node-path_mixer_2"]')).toBeVisible();
+  await expect(page.locator('[data-testid^="project-node-path_panner_2"] .unit-knob')).toHaveCount(2);
+  await expect(page.locator('[data-testid^="project-node-path_mixer_2"] .unit-knob')).toHaveCount(2);
+  await expect(page.getByText('Parallel section')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Pro', exact: true }).click();
   await expect(page.getByTestId('preview-mode-file')).toBeVisible();
-  await expect(page.getByTestId('project-unit-item-wet_dry_mix_unit')).toBeDisabled();
+  await expect(page.getByTestId('project-unit-item-path_panner_2_unit')).toBeDisabled();
+  await expect(page.getByTestId('project-unit-item-path_mixer_2_unit')).toBeDisabled();
   await page.getByRole('button', { name: 'Select gate1 for batch editing' }).click();
   await expect(page.getByTestId('batch-action-bar')).toContainText('2 effects selected');
   await page.locator('.topbar__status .status-pill').first().click();
@@ -139,22 +144,60 @@ test('connects units by click and exposes undoable unit context actions', async 
   await expect(pasted).toBeVisible();
   await expect(page.getByTestId('route-item-9')).toHaveCount(0);
 
-  await drive.locator('.project-node__handle--output').click({ force: true });
-  await expect(page.getByTestId('project-canvas')).toHaveClass(/flow-shell--connecting/);
-  await pasted.locator('.project-node__handle--input').click({ force: true });
-  await expect(page.getByTestId('route-item-9')).toContainText('drive1.output');
-  await expect(page.getByTestId('route-item-9')).toContainText('overdrive_copy.input');
-
   await pasted.click({ button: 'right' });
-  await page.getByRole('menu', { name: 'overdrive_copy actions' }).getByRole('menuitem', { name: 'Remove' }).click();
-  await expect(pasted).toHaveCount(0);
+  await page.getByRole('menu', { name: 'overdrive_copy actions' }).getByRole('menuitem', { name: 'Copy' }).click();
+  await pasted.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'overdrive_copy actions' }).getByRole('menuitem', { name: 'Paste' }).click();
+  const secondPasted = page.getByTestId('project-node-overdrive_copy_2');
+  await expect(secondPasted).toBeVisible();
+
+  await pasted.locator('.project-node__handle--output').click({ force: true });
+  await expect(page.getByTestId('project-canvas')).toHaveClass(/flow-shell--connecting/);
+  await secondPasted.locator('.project-node__handle--input').click({ force: true });
+  await expect(page.getByTestId('route-item-9')).toContainText('overdrive_copy.output');
+  await expect(page.getByTestId('route-item-9')).toContainText('overdrive_copy_2.input');
+
+  await secondPasted.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'overdrive_copy_2 actions' }).getByRole('menuitem', { name: 'Remove' }).click();
+  await expect(secondPasted).toHaveCount(0);
   await page.getByTestId('topbar-undo').click();
-  await expect(page.getByTestId('project-node-overdrive_copy')).toBeVisible();
-  const restoredFlowNode = page.locator('.react-flow__node[data-id="unit-overdrive_copy"]');
+  await expect(page.getByTestId('project-node-overdrive_copy_2')).toBeVisible();
+  const restoredFlowNode = page.locator('.react-flow__node[data-id="unit-overdrive_copy_2"]');
   await restoredFlowNode.focus();
   await restoredFlowNode.press('Shift+F10');
-  await expect(page.getByRole('menu', { name: 'overdrive_copy actions' })).toBeVisible();
+  await expect(page.getByRole('menu', { name: 'overdrive_copy_2 actions' })).toBeVisible();
   await page.keyboard.press('Escape');
+});
+
+test('collapses an empty split and join without exposing routing containers', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const skipTour = page.getByRole('button', { name: 'Skip tour' });
+  await expect(skipTour).toBeVisible();
+  await skipTour.click();
+
+  await page.getByRole('button', { name: 'Add Chorus in parallel' }).click();
+  const panner = page.locator('[data-testid^="project-node-path_panner_2"]');
+  const mixer = page.locator('[data-testid^="project-node-path_mixer_2"]');
+  const branchEffect = page.getByTestId('project-node-chorus');
+  await expect(panner.locator('.unit-knob')).toHaveCount(2);
+  await expect(mixer.locator('.unit-knob')).toHaveCount(2);
+  await expect(page.getByText('Parallel section')).toHaveCount(0);
+
+  await branchEffect.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'chorus actions' }).getByRole('menuitem', { name: 'Remove' }).click();
+  await expect(branchEffect).toHaveCount(0);
+  const directRails = page.locator('.react-flow__edge[data-id*="unit-path_panner_2-unit-path_mixer_2"]');
+  await expect(directRails).toHaveCount(2);
+
+  await panner.click({ button: 'right' });
+  const menu = page.getByRole('menu', { name: /path_panner_2.* actions/ });
+  await expect(menu.getByRole('menuitem', { name: 'Remove split/join' })).toBeVisible();
+  await menu.getByRole('menuitem', { name: 'Remove split/join' }).click();
+  await expect(panner).toHaveCount(0);
+  await expect(mixer).toHaveCount(0);
+  await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(8);
 });
 
 test('offers atom replace preview and disconnected clipboard actions', async ({ page }) => {
