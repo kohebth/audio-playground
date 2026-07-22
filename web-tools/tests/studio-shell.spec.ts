@@ -49,6 +49,19 @@ test('creates a project from the eight-effect rail template', async ({ page }) =
   await expect(page.locator('.react-flow__edge[data-id*="system-input"] .project-route__rail')).toHaveCount(1);
   await expect(page.locator('.header-project-name strong')).toHaveText('Eight Rail');
   await expect(page.getByText('Saved locally', { exact: true })).toBeVisible();
+
+  const railAnchors = await page.locator('.react-flow__node').evaluateAll(nodes => nodes.flatMap(node => {
+    const handle = node.querySelector('.project-node__handle');
+    if (!handle) return [];
+    const bounds = handle.getBoundingClientRect();
+    return [bounds.top + bounds.height / 2];
+  }));
+  expect(Math.max(...railAnchors) - Math.min(...railAnchors)).toBeLessThan(1);
+  const routeEndpointYs = await page.locator('.project-route__rail').evaluateAll(paths => paths.flatMap(path => {
+    const route = path as SVGPathElement;
+    return [route.getPointAtLength(0).y, route.getPointAtLength(route.getTotalLength()).y];
+  }));
+  expect(Math.max(...routeEndpointYs) - Math.min(...routeEndpointYs)).toBeLessThan(1);
 });
 
 test('drags effect units onto the Pipeline and a specific rail', async ({ page }) => {
@@ -376,6 +389,81 @@ test('offers a Graphviz atom editor with atom-only inspection and safe graph act
   ));
   expect(routedPaths.some(path => path.includes('Q'))).toBe(true);
   expect(routedPaths.every(path => !path.includes('C'))).toBe(true);
+
+  const boundaryGeometry = await contractCanvas.evaluate(canvas => {
+    const bounds = (selector: string) => canvas.querySelector(selector)?.getBoundingClientRect();
+    const input = bounds('[data-id="contract-unit-input"]');
+    const output = bounds('[data-id="contract-unit-output"]');
+    const atoms = [...canvas.querySelectorAll('.react-flow__node-contractNode')]
+      .map(node => node.getBoundingClientRect());
+    if (!input || !output || atoms.length === 0) return null;
+    return {
+      inputCenterY: input.top + input.height / 2,
+      inputRight: input.right,
+      outputCenterY: output.top + output.height / 2,
+      outputLeft: output.left,
+      atomLeft: Math.min(...atoms.map(atom => atom.left)),
+      atomRight: Math.max(...atoms.map(atom => atom.right)),
+    };
+  });
+  expect(boundaryGeometry).not.toBeNull();
+  expect(Math.abs(boundaryGeometry!.inputCenterY - boundaryGeometry!.outputCenterY)).toBeLessThan(1);
+  expect(boundaryGeometry!.inputRight).toBeLessThan(boundaryGeometry!.atomLeft);
+  expect(boundaryGeometry!.outputLeft).toBeGreaterThan(boundaryGeometry!.atomRight);
+
+  const wireObstructions = await contractCanvas.locator('.react-flow__edge-path').evaluateAll(paths => {
+    const atoms = [...document.querySelectorAll<HTMLElement>('.react-flow__node-contractNode')].map(node => ({
+      id: node.closest<HTMLElement>('.react-flow__node')?.dataset.id ?? 'unknown',
+      bounds: node.getBoundingClientRect(),
+    }));
+    return paths.flatMap(pathElement => {
+      const path = pathElement as SVGPathElement;
+      const transform = path.getScreenCTM();
+      if (!transform) return [];
+      const edgeId = path.closest<SVGGElement>('.react-flow__edge')?.dataset.id ?? 'unknown';
+      const length = path.getTotalLength();
+      return atoms.flatMap(atom => {
+        for (let distance = 2; distance < length - 2; distance += 2) {
+          const point = path.getPointAtLength(distance);
+          const x = transform.a * point.x + transform.c * point.y + transform.e;
+          const y = transform.b * point.x + transform.d * point.y + transform.f;
+          if (x > atom.bounds.left + 2 && x < atom.bounds.right - 2
+            && y > atom.bounds.top + 2 && y < atom.bounds.bottom - 2) {
+            return [`${edgeId} crosses ${atom.id}`];
+          }
+        }
+        return [];
+      });
+    });
+  });
+  expect(wireObstructions).toEqual([]);
+
+  const levelValue = page.getByTestId('contract-node-level_value');
+  const inputBoundary = page.getByTestId('unit-boundary-input');
+  const levelBounds = await levelValue.boundingBox();
+  const inputBounds = await inputBoundary.boundingBox();
+  expect(levelBounds).not.toBeNull();
+  expect(inputBounds).not.toBeNull();
+  await page.mouse.move(levelBounds!.x + levelBounds!.width / 2, levelBounds!.y + levelBounds!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(inputBounds!.x - 40, levelBounds!.y + levelBounds!.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+  await expect(contractCanvas).toHaveAttribute('data-layout-status', 'ready', { timeout: 30_000 });
+  const clampedLevelBounds = await levelValue.boundingBox();
+  const stableInputBounds = await inputBoundary.boundingBox();
+  const stableOutputBounds = await page.getByTestId('unit-boundary-output').boundingBox();
+  expect(clampedLevelBounds).not.toBeNull();
+  expect(stableInputBounds).not.toBeNull();
+  expect(stableOutputBounds).not.toBeNull();
+  expect(clampedLevelBounds!.x).toBeLessThan(levelBounds!.x - 50);
+  expect(clampedLevelBounds!.x).toBeGreaterThan(stableInputBounds!.x + stableInputBounds!.width);
+  expect(Math.abs(
+    stableInputBounds!.y + stableInputBounds!.height / 2 - boundaryGeometry!.inputCenterY,
+  )).toBeLessThan(1);
+  expect(Math.abs(
+    stableOutputBounds!.y + stableOutputBounds!.height / 2 - boundaryGeometry!.outputCenterY,
+  )).toBeLessThan(1);
 
   const initialAtomCount = Number(await contractCanvas.getAttribute('data-atom-count'));
   const clipHard = page.getByTestId('atom-palette-item-amplitude_clip_hard');

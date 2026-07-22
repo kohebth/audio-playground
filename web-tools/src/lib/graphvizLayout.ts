@@ -17,6 +17,11 @@ export type GraphvizLayoutRequest = {
   mode: 'layout' | 'route';
   nodes: GraphvizLayoutNode[];
   edges: GraphvizLayoutEdge[];
+  boundaryConstraint?: {
+    inputId: string;
+    outputId: string;
+    gap: number;
+  };
 };
 
 export type GraphvizLayoutResult = {

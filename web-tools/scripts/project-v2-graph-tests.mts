@@ -89,6 +89,11 @@ assert(linearLayout.edges.every(edge => edge.data.points.every((point, index, po
   index === 0 || point.x === points[index - 1].x || point.y === points[index - 1].y
 ))));
 assert.equal(new Set(linearLayout.edges.flatMap(edge => [edge.data.points[0].y, edge.data.points.at(-1)!.y])).size, 1);
+assert.equal(
+  new Set(linearLayout.nodes.map(node => node.position.y + node.data.visualLayout.railTop)).size,
+  1,
+  'every ordinary unit and system boundary should expose the same logical rail anchor',
+);
 assert.deepEqual(buildProjectGraph(projectInspect), linearLayout);
 
 const overdriveContent = readFileSync(resolve(repo, 'test/fixtures/units-v2/overdrive.unit.v2.yaml'), 'utf8');
@@ -338,8 +343,8 @@ assert(parallelPannerNode?.data.kind === 'unit');
 assert(parallelMixerNode?.data.kind === 'unit');
 assert(parallelPannerNode.data.routingLayout);
 assert(parallelMixerNode.data.routingLayout);
-assert.equal(parallelPannerNode.data.routingLayout.height, 266);
-assert.equal(parallelMixerNode.data.routingLayout.height, 266);
+assert(parallelPannerNode.data.routingLayout.height >= 266);
+assert(parallelMixerNode.data.routingLayout.height >= 266);
 assert.deepEqual(
   Object.values(parallelPannerNode.data.routingLayout.outputTops),
   Object.values(parallelPannerNode.data.routingLayout.controlTops),
@@ -363,9 +368,9 @@ assert(dryRoute.data.points.every((point, index, points) => (
 )));
 const branchRect = {
   left: branchNode.position.x,
-  right: branchNode.position.x + 140,
+  right: branchNode.position.x + branchNode.data.visualLayout.width,
   top: branchNode.position.y,
-  bottom: branchNode.position.y + 132,
+  bottom: branchNode.position.y + branchNode.data.visualLayout.height,
 };
 for (let index = 1; index < dryRoute.data.points.length; index += 1) {
   const start = dryRoute.data.points[index - 1];

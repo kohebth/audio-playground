@@ -121,6 +121,9 @@ includesContent(contractCanvas, '<BaseEdge', 'unit graph wiring must use Graphvi
 assert(!contractCanvas.includes("from 'dagre'"), 'unit graph layout must not fall back to Dagre');
 includesContent(graphvizWorker, "splines: 'ortho'", 'Graphviz atom wiring must use orthogonal splines');
 includesContent(graphvizWorker, "engine: fixed ? 'nop2' : 'dot'", 'Graphviz must support layout and fixed-position rerouting');
+includesContent(graphvizWorker, 'alignBoundaryNodes', 'Graphviz layout must align Contract boundaries outside atom bounds');
+includesContent(graphvizWorker, 'routesOutsideNodes', 'Graphviz routes must fall back outside atom cards when obstructed');
+includesContent(contractCanvas, 'clampAtomToBoundaryGutter', 'manual atom movement must preserve boundary gutters');
 includesContent(contractCanvas, "markComponentRender('ContractEdge'", 'unit graph canvas must expose edge render scope');
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
 includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
@@ -144,6 +147,7 @@ includesContent(projectTemplates, 'createWorkspaceTemplateProjectPackage', 'work
 includesContent(projectTopbar, '{projectName}', 'the project header must show the package name instead of the template internals');
 includesContent(projectGraph, 'new dagre.graphlib.Graph({ multigraph: true })', 'project layout must retain per-route Dagre geometry');
 includesContent(projectGraph, "type: 'projectRoute'", 'project graph routes must use the orthogonal edge renderer');
+includesContent(projectGraph, 'visualLayout: ProjectNodeVisualLayout', 'project units must expose one rendered rail anchor');
 includesContent(projectCanvas, 'flow-shell--drop-${dropState}', 'project canvas must expose valid/reject drop feedback');
 includesContent(projectCanvas, 'connectOnClick', 'project handles must support one-click connection start/end');
 includesContent(contractCanvas, 'connectOnClick', 'atom handles must support one-click connection start/end');

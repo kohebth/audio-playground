@@ -25,6 +25,7 @@ it is not exposed as the normal editing interface.
 - The two explicit workspaces are **Pipeline** and **Contract**. Pipeline is the knob-rich,
   fixed-layout pedalboard with serial insertion and guided parallel routing through the existing panner/mixer cards;
   one continuous main rail runs from Input through the serial chain to Output and tucks beneath the existing unit cards.
+  Each ordinary unit is one logical point on that rail, with its input and output sharing the same rendered anchor.
   Panners fork it into separate straight rails, each retaining its own knob-backed level control, before a mixer restores
   the single rail. Effects can be appended with the + action, dragged onto the Pipeline, or inserted on a specific rail;
   unit positions remain system-controlled. Connection handles appear only while interacting. Contract is the Graphviz
@@ -96,7 +97,8 @@ Project cards are fixed in Pipeline. Topology changes rebuild a deterministic le
 without consuming or writing project `ui.position` values, while scalar updates preserve the existing React Flow nodes,
 edges, and viewport. Linear routes stay straight on a single visual rail; split and merge routes use Dagre's obstacle
 lanes rendered as separate rails with rounded orthogonal elbows. Automatic layout never changes the current pan or zoom
-after the initial mount.
+after the initial mount. Rendered card dimensions are the same dimensions consumed by Dagre, preventing knob-row height
+from shifting a unit's connection point above or below its rail.
 
 Panner and mixer helpers render as the same knob-bearing pedal cards as effect units, with two system-provided paths by
 default and no visible `parallel section` container. Their height expands with the path count and with the vertical lane
@@ -175,7 +177,9 @@ instance to the copy, and later edits propagate to every matching instance in th
 inspector contains selected atom identity, bindings,
 configuration, and atom actions; structured unit metadata lives in the separate Contract Settings drawer. A dedicated
 worker runs Graphviz `dot` with orthogonal splines when topology opens or changes. Edges render as rounded orthogonal
-paths, dragging an atom requests fixed-position Graphviz rerouting, and Auto Layout can persist generated atom positions.
+paths. A constrained second pass pins Input and Output to one baseline outside the atom bounds, reserves their horizontal
+gutters, and reroutes any obstructed connection through an outer orthogonal lane. Dragging an atom requests fixed-position
+Graphviz rerouting without moving that boundary baseline, and Auto Layout can persist generated atom positions.
 Opening or reloading a project always returns to Pipeline; no Contract route is restored implicitly.
 
 The unit contract canvas derives two fixed, handle-sized boundary rings from public audio ports. Each ring is labeled with

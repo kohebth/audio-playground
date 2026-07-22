@@ -25,7 +25,11 @@ function portTop(offset: number | undefined, index: number, count: number): stri
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
   const renderId = data.kind === 'system' ? data.id : data.instance.id;
   useEffect(() => markComponentRender('ProjectNode', renderId));
-  const style = { '--node-color': data.color } as CSSProperties;
+  const style = {
+    '--node-color': data.color,
+    width: `${data.visualLayout.width}px`,
+    height: `${data.visualLayout.height}px`,
+  } as CSSProperties;
 
   if (data.kind === 'system') {
     const isInput = data.id === 'system-input';
@@ -36,8 +40,16 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
         className={`project-node node-card nopan project-node--system ${selected ? 'project-node--selected selected' : ''}`}
         style={style}
       >
-        {!isInput && <Handle type="target" position={Position.Left} id="output" className="project-node__handle" />}
-        <div className="node-system">
+        {!isInput && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            id="output"
+            className="project-node__handle"
+            style={{ top: `${data.visualLayout.railTop}px` }}
+          />
+        )}
+        <div className="node-system" style={{ width: '100%', height: '100%' }}>
           <span className="node-sys-label">System</span>
           <span className="node-sys-title">{data.label}</span>
           <i
@@ -46,7 +58,15 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           />
           <span className="node-sys-port">{data.detail}</span>
         </div>
-        {isInput && <Handle type="source" position={Position.Right} id="input" className="project-node__handle" />}
+        {isInput && (
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="input"
+            className="project-node__handle"
+            style={{ top: `${data.visualLayout.railTop}px` }}
+          />
+        )}
       </div>
     );
   }
@@ -99,14 +119,20 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           id={port}
           key={port}
           position={Position.Left}
-          style={{ top: portTop(data.routingLayout?.inputTops[port], index, inputPorts.length) }}
+          style={{
+            top: portTop(
+              data.routingLayout?.inputTops[port] ?? data.visualLayout.railTop,
+              index,
+              inputPorts.length,
+            ),
+          }}
           title={port}
           type="target"
         />
       ))}
       <div
         className={`node-pedal${wide ? ' wide' : ''}${flexibleRouting ? ' node-pedal--routing' : ''}`}
-        style={data.routingLayout ? { height: `${data.routingLayout.height}px` } : undefined}
+        style={{ width: '100%', height: '100%' }}
       >
         <div className="node-pedal-header">
           <span className="pedal-type-name">{data.unit.name}</span>
@@ -174,7 +200,13 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           id={port}
           key={port}
           position={Position.Right}
-          style={{ top: portTop(data.routingLayout?.outputTops[port], index, outputPorts.length) }}
+          style={{
+            top: portTop(
+              data.routingLayout?.outputTops[port] ?? data.visualLayout.railTop,
+              index,
+              outputPorts.length,
+            ),
+          }}
           title={port}
           type="source"
         />

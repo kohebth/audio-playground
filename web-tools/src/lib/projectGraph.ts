@@ -10,6 +10,7 @@ export type ProjectNodeData =
       label: string;
       detail: string;
       color: string;
+      visualLayout: ProjectNodeVisualLayout;
     }
   | {
       kind: 'unit';
@@ -24,6 +25,7 @@ export type ProjectNodeData =
       onBypassChange?: (instanceId: string, enabled: boolean) => Promise<void>;
       ports?: ProjectUnitPorts;
       routingLayout?: ProjectRoutingNodeLayout;
+      visualLayout: ProjectNodeVisualLayout;
     };
 
 export type ProjectParamControl = {
@@ -51,17 +53,25 @@ export type ProjectRoutingNodeLayout = {
   controlTops: Record<string, number>;
 };
 
+export type ProjectNodeVisualLayout = {
+  width: number;
+  height: number;
+  railTop: number;
+};
+
 const UNIT_NODE_COMPACT_WIDTH = 140;
 const UNIT_NODE_WIDE_WIDTH = 190;
-const UNIT_NODE_EMPTY_HEIGHT = 132;
-const UNIT_NODE_FIRST_KNOB_ROW_HEIGHT = 166;
-const UNIT_NODE_EXTRA_KNOB_ROW_HEIGHT = 77;
+// Keep Dagre's card model identical to the rendered pedal. The previous smaller
+// values made React Flow attach edges several pixels away from Dagre's rail.
+const UNIT_NODE_EMPTY_HEIGHT = 147;
+const UNIT_NODE_FIRST_KNOB_ROW_HEIGHT = 183;
+const UNIT_NODE_EXTRA_KNOB_ROW_HEIGHT = 82;
 const KNOBS_PER_ROW = 3;
 const ROUTING_PATH_GAP = 98;
 // Leaves room for the pedal header, the 40px knob, its labels, and the footer around the outer lanes.
 const ROUTING_PATH_PADDING = 84;
 const SYSTEM_NODE_WIDTH = 100;
-const SYSTEM_NODE_HEIGHT = 118;
+const SYSTEM_NODE_HEIGHT = 109;
 const UNIT_COLORS = ['#3b82f6', '#059669', '#2563eb', '#db2777', '#7c3aed', '#dc2626'];
 
 type NodeGeometry = {
@@ -90,11 +100,16 @@ function routeEdgeId(index: number, source: string, target: string): string {
 }
 
 function createSystemNode(id: string, label: string, detail: string, color: string): Node<ProjectNodeData> {
+  const visualLayout = {
+    width: SYSTEM_NODE_WIDTH,
+    height: SYSTEM_NODE_HEIGHT,
+    railTop: SYSTEM_NODE_HEIGHT / 2,
+  };
   return {
     id,
     type: 'projectNode',
     position: { x: 0, y: 0 },
-    data: { kind: 'system', id, label, detail, color },
+    data: { kind: 'system', id, label, detail, color, visualLayout },
   };
 }
 
@@ -341,10 +356,6 @@ function createRoutingLayout(
   };
 }
 
-function distributePortYs(ports: string[], top: number, height: number): Record<string, number> {
-  return Object.fromEntries(ports.map((port, index) => [port, top + ((index + 1) * height) / (ports.length + 1)]));
-}
-
 export function buildProjectGraph(
   project: ProjectInspect,
   ports: ProjectPortCatalog = {},
@@ -368,6 +379,7 @@ export function buildProjectGraph(
     if (!unit) return;
     const unitPorts = ports[instance.unit];
     const routingPathCount = unitPorts?.routing?.paths.length ?? 0;
+    const dimensions = unitNodeDimensions(instance.params.length, routingPathCount);
 
     const node: Node<ProjectNodeData> = {
       id: `unit-${instance.id}`,
@@ -380,11 +392,15 @@ export function buildProjectGraph(
         index,
         color: UNIT_COLORS[index % UNIT_COLORS.length],
         ports: unitPorts,
+        visualLayout: {
+          ...dimensions,
+          railTop: dimensions.height / 2,
+        },
       },
     };
 
     nodes.push(node);
-    graph.setNode(node.id, unitNodeDimensions(instance.params.length, routingPathCount));
+    graph.setNode(node.id, dimensions);
   });
 
   project.routes.forEach((route, index) => {
@@ -426,25 +442,28 @@ export function buildProjectGraph(
     const position = graph.node(node.id);
     const routingLayout = routingLayouts.get(node.id);
     const dimensions = node.data.kind === 'system'
-      ? { width: SYSTEM_NODE_WIDTH, height: SYSTEM_NODE_HEIGHT }
+      ? node.data.visualLayout
       : routingLayout
         ? { width: UNIT_NODE_COMPACT_WIDTH, height: routingLayout.height }
-        : unitNodeDimensions(node.data.instance.params.length);
+        : node.data.visualLayout;
     node.position = {
       x: position.x - dimensions.width / 2,
       y: position.y - dimensions.height / 2,
     };
-    if (node.data.kind === 'unit' && routingLayout) node.data.routingLayout = routingLayout;
+    if (node.data.kind === 'unit' && routingLayout) {
+      node.data.routingLayout = routingLayout;
+      node.data.visualLayout = {
+        width: dimensions.width,
+        height: dimensions.height,
+        railTop: dimensions.height / 2,
+      };
+    }
   }
 
   const geometries = new Map(nodes.map(node => {
     const position = graph.node(node.id);
     const routingLayout = node.data.kind === 'unit' ? node.data.routingLayout : undefined;
-    const dimensions = node.data.kind === 'system'
-      ? { width: SYSTEM_NODE_WIDTH, height: SYSTEM_NODE_HEIGHT }
-      : routingLayout
-        ? { width: UNIT_NODE_COMPACT_WIDTH, height: routingLayout.height }
-        : unitNodeDimensions(node.data.instance.params.length);
+    const dimensions = node.data.visualLayout;
     const top = position.y - dimensions.height / 2;
     const inputPorts = node.data.kind === 'unit' && node.data.ports?.inputs.length
       ? node.data.ports.inputs
@@ -459,10 +478,10 @@ export function buildProjectGraph(
       bottom: top + dimensions.height,
       inputYs: routingLayout
         ? Object.fromEntries(Object.entries(routingLayout.inputTops).map(([port, offset]) => [port, top + offset]))
-        : distributePortYs(inputPorts, top, dimensions.height),
+        : Object.fromEntries(inputPorts.map(port => [port, top + node.data.visualLayout.railTop])),
       outputYs: routingLayout
         ? Object.fromEntries(Object.entries(routingLayout.outputTops).map(([port, offset]) => [port, top + offset]))
-        : distributePortYs(outputPorts, top, dimensions.height),
+        : Object.fromEntries(outputPorts.map(port => [port, top + node.data.visualLayout.railTop])),
     } satisfies NodeGeometry] as const;
   }));
 

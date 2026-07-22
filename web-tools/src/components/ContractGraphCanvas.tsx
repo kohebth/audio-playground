@@ -111,6 +111,8 @@ type ParsedContractGraph = {
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 136;
+const NODE_CONTENT_BASE_HEIGHT = 75;
+const NODE_CONFIG_ROW_HEIGHT = 17;
 const BOUNDARY_NODE_SIZE = 10;
 const BOUNDARY_NODE_GAP = 96;
 const INPUT_BOUNDARY_ID = 'contract-unit-input';
@@ -128,6 +130,26 @@ const CATEGORY_COLORS: Record<string, string> = {
   modulation: '#f97316',
   nonlinear: '#ef4444',
 };
+
+function contractNodeHeight(data: ContractNodeData): number {
+  return Math.max(NODE_HEIGHT, NODE_CONTENT_BASE_HEIGHT + Object.keys(data.config).length * NODE_CONFIG_ROW_HEIGHT);
+}
+
+function clampAtomToBoundaryGutter(
+  position: GraphPosition,
+  nodes: ContractFlowNode[],
+): GraphPosition {
+  const input = nodes.find(node => node.id === INPUT_BOUNDARY_ID);
+  const output = nodes.find(node => node.id === OUTPUT_BOUNDARY_ID);
+  if (!input || !output) return position;
+  const minimumX = input.position.x + BOUNDARY_NODE_SIZE + BOUNDARY_NODE_GAP;
+  const maximumX = output.position.x - BOUNDARY_NODE_GAP - NODE_WIDTH;
+  if (maximumX < minimumX) return position;
+  return {
+    x: Math.min(maximumX, Math.max(minimumX, position.x)),
+    y: position.y,
+  };
+}
 
 function sameStringRecord(left: Record<string, string>, right: Record<string, string>): boolean {
   const leftEntries = Object.entries(left);
@@ -335,7 +357,10 @@ const ContractNode = memo(({ data, selected }: NodeProps<ContractAtomFlowNode>) 
   useEffect(() => markComponentRender('ContractNode', data.id));
   const inputPorts = Object.keys(data.in);
   const outputPorts = Object.keys(data.out);
-  const style = { '--contract-node-color': data.color } as CSSProperties;
+  const style = {
+    '--contract-node-color': data.color,
+    height: `${contractNodeHeight(data)}px`,
+  } as CSSProperties;
 
   return (
     <div
@@ -638,9 +663,14 @@ export function ContractGraphCanvas({
         x: node.position.x,
         y: node.position.y,
         width: node.type === 'contractNode' ? NODE_WIDTH : BOUNDARY_NODE_SIZE,
-        height: node.type === 'contractNode' ? NODE_HEIGHT : BOUNDARY_NODE_SIZE,
+        height: node.type === 'contractNode' ? contractNodeHeight(node.data) : BOUNDARY_NODE_SIZE,
       })),
       edges: requestEdges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target })),
+      boundaryConstraint: {
+        inputId: INPUT_BOUNDARY_ID,
+        outputId: OUTPUT_BOUNDARY_ID,
+        gap: BOUNDARY_NODE_GAP,
+      },
     };
     worker.postMessage(request);
   }, []);
@@ -706,9 +736,9 @@ export function ContractGraphCanvas({
       const next = parsed.flow.nodes.map(node => {
         const positioned = currentById.get(node.id);
         if (!positioned) return node;
-        const position = node.type === 'unitBoundaryNode' || storedPositionIds.has(node.id)
-          ? node.position
-          : positioned.position;
+        const position = node.type === 'unitBoundaryNode'
+          ? positioned.position
+          : storedPositionIds.has(node.id) ? node.position : positioned.position;
         if (sameFlowNodeData(positioned, node)
           && positioned.position.x === position.x
           && positioned.position.y === position.y) {
@@ -892,10 +922,13 @@ export function ContractGraphCanvas({
                 const startedAt = dragStartAtByNode.current[node.id];
                 delete dragStartAtByNode.current[node.id];
                 markPerfSpan('ui.drag.contractAtom.stop', () => {
-                  onMoveAtom(node.data.id, node.position);
-                  postGraphvizRequest('route', flowNodes.map(current => (
-                    current.id === node.id ? { ...current, position: node.position } : current
-                  )), flowEdges);
+                  const position = clampAtomToBoundaryGutter(node.position, flowNodes);
+                  const routedNodes = flowNodes.map(current => (
+                    current.id === node.id ? { ...current, position } : current
+                  ));
+                  setFlowNodes(routedNodes);
+                  onMoveAtom(node.data.id, position);
+                  postGraphvizRequest('route', routedNodes, flowEdges);
                 }, startedAt ? { nodeId: node.id, durationMs: performance.now() - startedAt } : { nodeId: node.id });
               }}
               onNodesChange={onNodesChange}
