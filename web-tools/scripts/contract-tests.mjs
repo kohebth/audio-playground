@@ -125,7 +125,7 @@ includesContent(contractCanvas, "markComponentRender('ContractEdge'", 'unit grap
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
 includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
-includesContent(simpleLibrary, 'draggable={!item.placementError}', 'active Pipeline library items must be draggable');
+includesContent(simpleLibrary, 'draggable={!picksContract && !item.placementError}', 'active Pipeline library items must be draggable');
 includesContent(simpleLibrary, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, item.id)', 'active Pipeline library must emit unit drop payloads');
 includesContent(projectCanvas, 'onAddUnit(unitId', 'project canvas must retain unit drag-and-drop creation');
 includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops must use the atomic route insertion transaction');
@@ -266,6 +266,8 @@ includesContent(modeToggle, '>\n        Pipeline\n', 'the primary project view m
 includesContent(modeToggle, '>\n        Contract\n', 'the definition editor must be named Contract');
 includesContent(studioApp, "return 'simple'", 'opening a project must always start in Pipeline');
 includesContent(simpleLibrary, 'Edit Contract', 'library context actions must open Contract');
+includesContent(simpleLibrary, "purpose === 'contract'", 'Contract must turn the unit library into a direct editor picker');
+includesContent(simpleLibrary, 'onEditContract(item)', 'clicking a Contract unit must open that unit for editing');
 includesContent(projectCanvas, 'Edit Contract', 'pipeline instance context actions must open Contract');
 includesContent(app, 'createPersonalUnitCopy', 'built-in effects must clone before contract editing');
 includesContent(app, 'rebindProjectInstanceUnit', 'instance contract editing must rebind the active project to its Personal copy');

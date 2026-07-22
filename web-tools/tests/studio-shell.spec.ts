@@ -75,6 +75,24 @@ test('drags effect units onto the Pipeline and a specific rail', async ({ page }
   await expect(inputRail).toHaveCount(0);
 });
 
+test('opens a unit for editing with one click in Contract', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Skip tour' }).click();
+
+  await page.getByTestId('view-effect-contract').click();
+  await expect(page.getByRole('heading', { name: 'Choose a unit to edit' })).toBeVisible();
+  const overdrive = page.getByRole('button', { name: 'Edit Overdrive Contract' });
+  await expect(overdrive).toHaveAttribute('draggable', 'false');
+  await overdrive.click();
+
+  await expect(page).toHaveURL(/#\/unit\/overdrive_copy$/);
+  await expect(page.getByTestId('contract-canvas')).toBeVisible();
+  await expect(page.getByTestId('contract-atom-library')).toBeVisible();
+  await expect(page.getByTestId('atom-context-inspector')).toBeVisible();
+});
+
 test('keeps the Pipeline usable at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');

@@ -1904,6 +1904,7 @@ export function EditorWorkspace({
             onAddParallel={addSimpleParallelEffect}
             onDeletePersonal={onDeletePersonalUnit}
             onEditContract={item => { void editLibraryContract(item); }}
+            purpose={mode === 'pro' ? 'contract' : 'pipeline'}
           />
         ) : (
           <aside className="simple-library contract-atom-library" data-testid="contract-atom-library">
@@ -1951,8 +1952,8 @@ export function EditorWorkspace({
           <main className="canvas canvas-area contract-empty-state" data-testid="contract-empty-state">
             <div>
               <span>Contract</span>
-              <h2>Choose a Contract to edit</h2>
-              <p>Right-click a Personal effect to edit it. Built-in effects are copied to Personal before any changes are made.</p>
+              <h2>Choose a unit to edit</h2>
+              <p>Click a unit in the library. Built-in units are copied to Personal before any changes are made.</p>
               <button
                 className="btn btn--primary"
                 onClick={() => document.querySelector<HTMLElement>('.effect-library-card')?.focus()}

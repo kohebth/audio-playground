@@ -169,9 +169,10 @@ fields,
 incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates UI-only position state
 and does not change DSP YAML or announce a workspace revision.
 
-Opening Edit Contract from a Pipeline instance or library card enters the Graphviz atom graph. Built-ins are first cloned
-to Personal; editing an instance rebinds that active-project instance to the copy, and later edits propagate to every
-matching instance in that active project only. The right inspector contains selected atom identity, bindings,
+In Contract, clicking a unit library card enters that unit's Graphviz atom graph; Pipeline instance actions retain an
+explicit Edit Contract command. Built-ins are first cloned to Personal; editing an instance rebinds that active-project
+instance to the copy, and later edits propagate to every matching instance in that active project only. The right
+inspector contains selected atom identity, bindings,
 configuration, and atom actions; structured unit metadata lives in the separate Contract Settings drawer. A dedicated
 worker runs Graphviz `dot` with orthogonal splines when topology opens or changes. Edges render as rounded orthogonal
 paths, dragging an atom requests fixed-position Graphviz rerouting, and Auto Layout can persist generated atom positions.

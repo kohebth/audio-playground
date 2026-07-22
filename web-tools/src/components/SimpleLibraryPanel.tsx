@@ -19,6 +19,7 @@ type Props = {
   onAddParallel: (item: EffectLibraryItem) => void;
   onDeletePersonal: (recordId: string) => void;
   onEditContract: (item: EffectLibraryItem) => void;
+  purpose: 'pipeline' | 'contract';
 };
 
 const categoryColor: Record<string, string> = {
@@ -30,10 +31,11 @@ const categoryColor: Record<string, string> = {
   reverb: 'cyan',
 };
 
-export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePersonal, onEditContract }: Props) {
+export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePersonal, onEditContract, purpose }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [draggingItemKey, setDraggingItemKey] = useState<string | null>(null);
+  const picksContract = purpose === 'contract';
   const categories = useMemo(() => ['All', ...new Set(items.map(item => item.category))], [items]);
   const filtered = useMemo(() => items.filter(item => (
     (category === 'All' || item.category === category)
@@ -44,14 +46,20 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
   return (
     <aside className="simple-library" data-tour="library">
       <header>
-        <div><span>Effect library</span><strong>{items.length}</strong></div>
-        <p>Click + to append, or drag an effect onto the Pipeline or a rail.</p>
+        <div><span>{picksContract ? 'Unit library' : 'Effect library'}</span><strong>{items.length}</strong></div>
+        <p>{picksContract
+          ? 'Click a unit to edit its Contract.'
+          : 'Click + to append, or drag an effect onto the Pipeline or a rail.'}</p>
       </header>
       <label className="simple-library__search">
         <span aria-hidden="true">⌕</span>
-        <input onChange={event => setQuery(event.target.value)} placeholder="Find an effect" value={query} />
+        <input
+          onChange={event => setQuery(event.target.value)}
+          placeholder={picksContract ? 'Find a unit' : 'Find an effect'}
+          value={query}
+        />
       </label>
-      <div className="simple-library__categories" aria-label="Effect categories">
+      <div className="simple-library__categories" aria-label={picksContract ? 'Unit categories' : 'Effect categories'}>
         {categories.map(item => (
           <button className={category === item ? 'active' : ''} key={item} onClick={() => setCategory(item)} type="button">
             {item}
@@ -61,16 +69,29 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
       <div className="simple-library__list">
         {filtered.map(item => (
           <article
-            className={`effect-library-card${draggingItemKey === `${item.scope}-${item.id}` ? ' effect-library-card--dragging' : ''}`}
+            aria-disabled={picksContract && item.placementError ? true : undefined}
+            aria-label={picksContract ? `Edit ${item.title} Contract` : undefined}
+            className={`effect-library-card${picksContract ? ' effect-library-card--contract' : ''}${draggingItemKey === `${item.scope}-${item.id}` ? ' effect-library-card--dragging' : ''}`}
             data-testid={`effect-library-item-${item.scope}-${item.id}`}
-            draggable={!item.placementError}
+            draggable={!picksContract && !item.placementError}
             key={`${item.scope}-${item.id}`}
+            onClick={event => {
+              if (!picksContract || item.placementError) return;
+              if (event.target instanceof Element && event.target.closest('button')) return;
+              onEditContract(item);
+            }}
             onContextMenu={event => {
               event.preventDefault();
               setMenu({ item, x: event.clientX, y: event.clientY });
             }}
+            role={picksContract ? 'button' : undefined}
             tabIndex={0}
             onKeyDown={event => {
+              if (picksContract && !item.placementError && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                onEditContract(item);
+                return;
+              }
               if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
               event.preventDefault();
               const bounds = event.currentTarget.getBoundingClientRect();
@@ -89,7 +110,7 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
                 setDraggingItemKey(`${item.scope}-${item.id}`);
               }, { unit: item.id });
             }}
-            title={item.placementError ?? 'Drag onto the Pipeline or a rail'}
+            title={item.placementError ?? (picksContract ? `Edit ${item.title} Contract` : 'Drag onto the Pipeline or a rail')}
           >
             <i className={`effect-library-card__icon effect-library-card__icon--${categoryColor[item.category] ?? 'blue'}`}>
               <span />
@@ -98,7 +119,7 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
               <strong>{item.title}{item.scope === 'personal' ? <b>Yours</b> : null}</strong>
               <small>{item.description}</small>
             </span>
-            <div className="effect-library-card__actions">
+            {!picksContract ? <div className="effect-library-card__actions">
               <button
                 aria-label={`Add ${item.title}`}
                 disabled={Boolean(item.placementError)}
@@ -116,10 +137,12 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
               {item.scope === 'personal' && item.recordId ? (
                 <button aria-label={`Delete ${item.title} from personal library`} onClick={() => onDeletePersonal(item.recordId!)} title="Remove from personal library" type="button">×</button>
               ) : null}
-            </div>
+            </div> : null}
           </article>
         ))}
-        {filtered.length === 0 ? <p className="simple-library__empty">No effects match that search.</p> : null}
+        {filtered.length === 0 ? (
+          <p className="simple-library__empty">No {picksContract ? 'units' : 'effects'} match that search.</p>
+        ) : null}
       </div>
       {menu ? (
         <GraphContextMenu label={`${menu.item.title} library actions`} onClose={() => setMenu(null)} point={menu}>

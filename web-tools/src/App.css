@@ -3801,6 +3801,11 @@ body {
 .effect-library-card:hover { border-color: var(--border-default); background: var(--bg-elevated); }
 .effect-library-card[draggable='true'] { cursor: grab; }
 .effect-library-card[draggable='true']:active { cursor: grabbing; }
+.effect-library-card--contract { cursor: pointer; }
+.effect-library-card--contract:hover,
+.effect-library-card--contract:focus-visible { border-color: var(--accent); background: var(--accent-green-dim); outline: none; }
+.effect-library-card--contract:active { transform: scale(.98); }
+.effect-library-card--contract[aria-disabled='true'] { cursor: not-allowed; opacity: .45; }
 .effect-library-card--dragging { opacity: .5; transform: scale(.98); }
 .effect-library-card > span { min-width: 0; flex: 1; }
 .effect-library-card strong,
