@@ -225,6 +225,7 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await expect(contractCanvas).toBeVisible();
   await expect(inputBoundary).toBeVisible();
   await expect(outputBoundary).toBeVisible();
+  await page.getByTestId('inspector-tab-contract').click();
   await expect(page.getByTestId('atom-palette-browser-hidden')).toContainText('3 browser-incompatible hidden');
   await page.getByTestId('atom-palette-show-advanced').check();
   await expect(page.getByTestId('atom-palette-item-freq_fft')).toHaveCount(0);
@@ -252,20 +253,24 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   await page.getByRole('button', { name: 'Simple', exact: true }).click();
   const simpleTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
   await page.getByRole('button', { name: 'Add Chorus in parallel', exact: true }).click();
-  await expect(unitNodes).toHaveCount(initialCount + 3);
+  await expect(unitNodes).toHaveCount(initialCount + 4);
   await expect(viewport).toHaveCSS('transform', simpleTransform);
   const routePaths = await page.locator('.react-flow__edge-path').evaluateAll(paths => (
     paths.map(path => path.getAttribute('d') ?? '')
   ));
-  expect(routePaths.some(path => path.includes('Q'))).toBe(true);
   expect(routePaths.some(path => !path.includes('Q'))).toBe(true);
   expect(routePaths.every(path => !path.includes('C'))).toBe(true);
+  const routingPaths = await page.locator(
+    '.react-flow__edge[data-id*="unit-path_panner_2"], .react-flow__edge[data-id*="unit-path_mixer_2"]',
+  ).locator('.react-flow__edge-path').evaluateAll(paths => paths.map(path => path.getAttribute('d') ?? ''));
+  expect(routingPaths).toHaveLength(5);
+  expect(routingPaths.every(path => !path.includes('Q') && !path.includes('C'))).toBe(true);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
     .not.toBe(storedAfterDrop);
 
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  await expect(unitNodes).toHaveCount(initialCount + 3);
+  await expect(unitNodes).toHaveCount(initialCount + 4);
   await expect(page.getByTestId('topbar-import-input')).toHaveCount(1);
 
   const downloadPromise = page.waitForEvent('download');
@@ -343,6 +348,7 @@ test('contains and recovers from an invalid structured unit edit', async ({ page
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
   await openWorkspace(page, testInfo, '/unit/overdrive');
+  await page.getByTestId('inspector-tab-contract').click();
   const version = page.getByLabel('Unit version');
   await version.fill('not-a-version');
   await version.press('Tab');
