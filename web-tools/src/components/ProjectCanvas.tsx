@@ -30,6 +30,7 @@ import type { ProjectRoutingContract } from '../lib/projectV2Graph';
 
 const nodeTypes = { projectNode: ProjectNode } satisfies NodeTypes;
 const ROUTE_CORNER_RADIUS = 10;
+const RAIL_NODE_INSET = 12;
 
 function pointToward(origin: ProjectRoutePoint, target: ProjectRoutePoint, distance: number): ProjectRoutePoint {
   const length = Math.hypot(target.x - origin.x, target.y - origin.y);
@@ -98,6 +99,25 @@ function renderPoints(
   ));
 }
 
+function tuckRailUnderNodes(points: ProjectRoutePoint[]): ProjectRoutePoint[] {
+  if (points.length < 2) return points;
+  const tucked = points.map(point => ({ ...point }));
+  const first = tucked[0];
+  const afterFirst = tucked[1];
+  if (first.y === afterFirst.y) {
+    const direction = Math.sign(afterFirst.x - first.x) || 1;
+    first.x -= direction * RAIL_NODE_INSET;
+  }
+
+  const last = tucked.at(-1)!;
+  const beforeLast = tucked.at(-2)!;
+  if (last.y === beforeLast.y) {
+    const direction = Math.sign(last.x - beforeLast.x) || 1;
+    last.x += direction * RAIL_NODE_INSET;
+  }
+  return tucked;
+}
+
 const ProjectRoute = memo(({
   data,
   id,
@@ -109,16 +129,25 @@ const ProjectRoute = memo(({
   style,
   targetX,
   targetY,
-}: EdgeProps<ProjectRouteEdge>) => (
-  <BaseEdge
-    id={id}
-    interactionWidth={interactionWidth ?? 24}
-    markerEnd={markerEnd}
-    markerStart={markerStart}
-    path={routePath(renderPoints(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }))}
-    style={style}
-  />
-));
+}: EdgeProps<ProjectRouteEdge>) => {
+  const path = routePath(tuckRailUnderNodes(
+    renderPoints(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }),
+  ));
+  return (
+    <>
+      <path aria-hidden="true" className="project-route__bed" d={path} />
+      <BaseEdge
+        className="project-route__signal"
+        id={id}
+        interactionWidth={interactionWidth ?? 24}
+        markerEnd={markerEnd}
+        markerStart={markerStart}
+        path={path}
+        style={style}
+      />
+    </>
+  );
+});
 
 ProjectRoute.displayName = 'ProjectRoute';
 
@@ -361,8 +390,8 @@ export function ProjectCanvas({
       animated: selected,
       style: {
         ...edge.style,
-        stroke: selected ? 'var(--accent)' : 'var(--text-muted)',
-        strokeWidth: selected ? 2.6 : 1.6,
+        stroke: selected ? 'var(--accent)' : 'var(--project-rail-signal)',
+        strokeWidth: selected ? 3.2 : 2.2,
       },
     };
   });

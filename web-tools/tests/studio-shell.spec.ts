@@ -60,6 +60,25 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   await expect(audioInputMode.getByRole('button')).toHaveText(['Mic', 'Audio File']);
   await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'false');
+  const firstRail = page.locator('.react-flow__edge').first();
+  await expect(firstRail.locator('.project-route__bed')).toHaveCount(1);
+  await expect(firstRail.locator('.project-route__signal')).toHaveCount(1);
+  const railLayers = await firstRail.evaluate(edge => {
+    const bed = edge.querySelector<SVGPathElement>('.project-route__bed');
+    const signal = edge.querySelector<SVGPathElement>('.project-route__signal');
+    return {
+      samePath: bed?.getAttribute('d') === signal?.getAttribute('d'),
+      bedWidth: Number.parseFloat(getComputedStyle(bed!).strokeWidth),
+      signalWidth: Number.parseFloat(getComputedStyle(signal!).strokeWidth),
+    };
+  });
+  expect(railLayers.samePath).toBe(true);
+  expect(railLayers.bedWidth).toBeGreaterThan(railLayers.signalWidth);
+  const driveNode = page.getByTestId('project-node-drive1');
+  const driveOutput = driveNode.locator('.project-node__handle--output');
+  await expect(driveOutput).toHaveCSS('opacity', '0');
+  await driveNode.hover();
+  await expect(driveOutput).toHaveCSS('opacity', '1');
   await page.getByTestId('project-node-drive1').click();
   await page.getByRole('button', { name: /Warm Push/ }).click();
 

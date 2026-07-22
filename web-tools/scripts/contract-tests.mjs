@@ -128,7 +128,11 @@ includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops
 includesContent(projectCanvas, 'nodesDraggable={false}', 'Pipeline units must remain fixed');
 assert(!projectCanvas.includes('onNodeDragStop'), 'project canvas must not expose a unit-move interaction');
 includesContent(projectCanvas, 'ROUTE_CORNER_RADIUS = 10', 'project route elbows must use the fixed rounded corner radius');
+includesContent(projectCanvas, 'RAIL_NODE_INSET = 12', 'project rails must tuck beneath unit cards');
+includesContent(projectCanvas, 'project-route__bed', 'project routes must render a continuous rail bed');
+includesContent(projectCanvas, 'project-route__signal', 'project routes must render a signal conductor above the rail bed');
 includesContent(projectCanvas, '<BaseEdge', 'project routes must render their planned orthogonal geometry');
+includesContent(appStyles, '.project-node:hover > .project-node__handle', 'rail connection handles must reveal on interaction');
 includesContent(projectGraph, 'new dagre.graphlib.Graph({ multigraph: true })', 'project layout must retain per-route Dagre geometry');
 includesContent(projectGraph, "type: 'projectRoute'", 'project graph routes must use the orthogonal edge renderer');
 includesContent(projectCanvas, 'flow-shell--drop-${dropState}', 'project canvas must expose valid/reject drop feedback');

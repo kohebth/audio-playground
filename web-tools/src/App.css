@@ -1119,7 +1119,28 @@ body {
 }
 
 .canvas--project {
+  --project-rail-bed: #060906;
+  --project-rail-signal: #778575;
   background: var(--bg-canvas);
+}
+
+.canvas--project .project-route__bed,
+.canvas--project .project-route__signal {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.canvas--project .project-route__bed {
+  stroke: var(--project-rail-bed);
+  stroke-width: 8;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .72));
+  pointer-events: none;
+}
+
+.canvas--project .react-flow__edge.animated .project-route__bed {
+  animation: none;
+  stroke-dasharray: none;
 }
 
 .canvas--contract {
@@ -4502,8 +4523,15 @@ body {
   border: 2px solid var(--node-color) !important;
   background: transparent !important;
   box-shadow: 0 0 10px color-mix(in srgb, var(--node-color) 30%, transparent) !important;
-  opacity: 1 !important;
+  opacity: 0 !important;
   transform: translateY(-50%) !important;
+  transition: opacity .15s ease, box-shadow .15s ease !important;
+}
+
+.project-node:hover > .project-node__handle,
+.project-node__handle:focus-visible,
+.flow-shell--connecting .project-node__handle {
+  opacity: 1 !important;
 }
 
 .flow-shell--connecting::before {
@@ -4526,6 +4554,10 @@ body {
 .flow-shell--connecting .project-node__handle,
 .flow-shell--connecting .contract-node__handle {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-blue) 24%, transparent), 0 0 14px var(--accent-blue) !important;
+}
+
+@media (hover: none) {
+  .project-node__handle { opacity: .72 !important; }
 }
 
 .graph-context-menu {

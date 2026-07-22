@@ -6,8 +6,9 @@ approachable without exposing YAML.
 
 ## Product decisions
 
-- **Pipeline** is the existing knob-rich board. Units stay fixed; panner/mixer cards, flexible height, straight
-  branch rails, and rounded orthogonal turns are preserved.
+- **Pipeline** is the existing knob-rich board. Units stay fixed on continuous layered signal rails that tuck beneath
+  their cards; panner/mixer cards, flexible height, separate straight branch rails, and rounded orthogonal turns are
+  preserved. Connection handles reveal only during interaction.
 - **Contract** edits one Personal effect definition as a Graphviz atom graph. Its right inspector is atom-only;
   identity, compatibility, parameters, and ports live in a separate Contract Settings drawer.
 - Editing a built-in first creates a Personal copy. Entry is available from a library context menu and a Pipeline
