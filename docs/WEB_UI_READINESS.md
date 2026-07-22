@@ -18,13 +18,15 @@ This checklist defines what must be true before the v2 web UI becomes the main w
 The primary web workflow is now visual and local-first. YAML remains the canonical engine and persistence contract, but
 it is not exposed as the normal editing interface.
 
-- A project home screen creates, opens, duplicates, imports, exports, and deletes browser-local projects backed by
-  IndexedDB. The portable `.apg` package contains the versioned workspace, manifest, optional mono audio, and readiness
-  snapshot; topbar import replaces the open project's contents in place, while home import creates a separate project.
+- A project home screen creates projects from either a blank Input-to-Output rail or the bundled eight-effect chain,
+  and opens, duplicates, imports, exports, and deletes browser-local projects backed by IndexedDB. The portable `.apg`
+  package contains the versioned workspace, manifest, optional mono audio, and readiness snapshot; topbar import replaces
+  the open project's contents in place, while home import creates a separate project.
 - The two explicit workspaces are **Pipeline** and **Contract**. Pipeline is the knob-rich,
   non-draggable pedalboard with serial insertion and guided parallel routing through the existing panner/mixer cards;
-  every route is a continuous layered signal rail that tucks beneath the existing unit cards, and every helper path
-  retains its own knob-backed level control and separate straight rail. Connection handles appear only while interacting.
+  one continuous main rail runs from Input through the serial chain to Output and tucks beneath the existing unit cards.
+  Panners fork it into separate straight rails, each retaining its own knob-backed level control, before a mixer restores
+  the single rail. Connection handles appear only while interacting.
   Contract is the Graphviz atom editor for one Personal effect definition. The legacy `simple`/`pro` values remain
   serialization details only.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
@@ -91,8 +93,8 @@ vertical path lane. Effect knob order follows the referenced unit YAML parameter
 declared path order, and Contract Settings can move ordinary parameters through a structured edit.
 Project cards are fixed in Pipeline. Topology changes rebuild a deterministic left-to-right Dagre layout
 without consuming or writing project `ui.position` values, while scalar updates preserve the existing React Flow nodes,
-edges, and viewport. Linear routes stay straight on a shared visual rail; split and merge routes use Dagre's obstacle
-lanes rendered as layered rails with rounded orthogonal elbows. Automatic layout never changes the current pan or zoom
+edges, and viewport. Linear routes stay straight on a single visual rail; split and merge routes use Dagre's obstacle
+lanes rendered as separate rails with rounded orthogonal elbows. Automatic layout never changes the current pan or zoom
 after the initial mount.
 
 Panner and mixer helpers render as the same knob-bearing pedal cards as effect units, with two system-provided paths by
@@ -322,7 +324,7 @@ The UI needs a way to drive live or offline preview:
 
 The first product workflow is delivered:
 
-- [x] Local project browser and portable `.apg` packages
+- [x] Local project browser, blank/eight-effect creation templates, and portable `.apg` packages
 - [x] Pedalboard canvas for unit instances, serial routes, and guided parallel wet/dry routes
 - [x] Pipeline workflow with fixed pedal cards, knobs, microphone/file preview, scenes, presets, and tour
 - [x] Contract workflow with Personal-copy ownership, Graphviz atom editing, and atom-only inspection

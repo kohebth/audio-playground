@@ -6,6 +6,7 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await expect(page.locator('.project-card')).toContainText(['Guitar Pedalboard', 'New project']);
 
   await page.getByRole('button', { name: 'New project', exact: true }).first().click();
+  await expect(page.getByRole('radio', { name: /Blank rail/ })).toBeChecked();
   await page.getByPlaceholder('Midnight pedalboard').fill('Midnight Board');
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page).toHaveURL(/#\/projects$/);
@@ -14,6 +15,7 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await expect(page.getByText('Build from left to right')).toBeVisible();
   await expect(page.getByTestId('view-effect-pipeline')).toHaveText('Pipeline');
   await expect(page.getByTestId('view-effect-contract')).toHaveText('Contract');
+  await expect(page.locator('.react-flow__edge .project-route__rail')).toHaveCount(1);
   await page.getByRole('button', { name: 'Skip tour' }).click();
 
   await page.getByRole('button', { name: 'Add Overdrive', exact: true }).click();
@@ -30,6 +32,23 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await page.getByTitle('All projects').click();
   await expect(page.getByRole('heading', { name: 'Pick up where you left off.' })).toBeVisible();
   await expect(page.locator('.project-card')).toContainText(['Midnight Board', 'Guitar Pedalboard', 'New project']);
+});
+
+test('creates a project from the eight-effect rail template', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New project', exact: true }).first().click();
+  await page.getByRole('radio', { name: /8 effects/ }).check();
+  await page.getByPlaceholder('Midnight pedalboard').fill('Eight Rail');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const tour = page.getByRole('button', { name: 'Skip tour' });
+  if (await tour.isVisible()) await tour.click();
+
+  await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(8);
+  await expect(page.locator('.react-flow__edge .project-route__rail')).toHaveCount(9);
+  await expect(page.locator('.react-flow__edge[data-id*="system-input"] .project-route__rail')).toHaveCount(1);
+  await expect(page.locator('.header-project-name strong')).toHaveText('Eight Rail');
+  await expect(page.getByText('Saved locally', { exact: true })).toBeVisible();
 });
 
 test('keeps the Pipeline usable at phone width', async ({ page }) => {
@@ -61,19 +80,8 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'false');
   const firstRail = page.locator('.react-flow__edge').first();
-  await expect(firstRail.locator('.project-route__bed')).toHaveCount(1);
-  await expect(firstRail.locator('.project-route__signal')).toHaveCount(1);
-  const railLayers = await firstRail.evaluate(edge => {
-    const bed = edge.querySelector<SVGPathElement>('.project-route__bed');
-    const signal = edge.querySelector<SVGPathElement>('.project-route__signal');
-    return {
-      samePath: bed?.getAttribute('d') === signal?.getAttribute('d'),
-      bedWidth: Number.parseFloat(getComputedStyle(bed!).strokeWidth),
-      signalWidth: Number.parseFloat(getComputedStyle(signal!).strokeWidth),
-    };
-  });
-  expect(railLayers.samePath).toBe(true);
-  expect(railLayers.bedWidth).toBeGreaterThan(railLayers.signalWidth);
+  await expect(firstRail.locator('.project-route__rail')).toHaveCount(1);
+  await expect(firstRail.locator('.project-route__bed')).toHaveCount(0);
   const driveNode = page.getByTestId('project-node-drive1');
   const driveOutput = driveNode.locator('.project-node__handle--output');
   await expect(driveOutput).toHaveCSS('opacity', '0');

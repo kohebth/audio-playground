@@ -10,7 +10,10 @@ import {
   serializeApgProjectPackage,
   validateApgProjectPackage,
 } from '../src/lib/projectPackage.ts';
-import { createEmptyProjectPackage } from '../src/lib/projectTemplates.ts';
+import {
+  createEmptyProjectPackage,
+  createWorkspaceTemplateProjectPackage,
+} from '../src/lib/projectTemplates.ts';
 import { evaluateWorkspaceReadiness } from '../src/lib/projectReadiness.ts';
 import {
   BUILT_IN_UNIT_PRESETS,
@@ -38,6 +41,18 @@ assert.match(empty.workspace.files[0].content, /from: system\.input\n      to: s
 const emptyReadiness = evaluateWorkspaceReadiness(empty.workspace);
 assert.equal(emptyReadiness.validation, 'ready');
 assert.equal(emptyReadiness.targets.wasm_realtime, 'ready');
+
+const templateCopy = createWorkspaceTemplateProjectPackage({
+  id: 'template-1',
+  name: 'Template Copy',
+  now: createdAt,
+  description: 'Copied from a template.',
+  entryProject: empty.workspace.entryProject,
+  files: empty.workspace.files.map(file => ({ ...file, originalContent: file.content })),
+});
+assert.equal(templateCopy.manifest.name, 'Template Copy');
+assert.equal(templateCopy.manifest.description, 'Copied from a template.');
+assert.match(templateCopy.workspace.files[0].content, /name: first_board/);
 
 const audio = createMonoAudioAsset({
   id: 'audio-1',

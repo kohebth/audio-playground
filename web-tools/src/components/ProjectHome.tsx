@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 
 import type { ApgProjectPackage } from '../lib/projectPackage';
+import type { ProjectTemplateId } from '../lib/projectTemplates';
 import { parseProjectGraphDraft } from '../lib/projectV2Graph';
 import { AppLogo } from './AppLogo';
 
@@ -8,7 +9,7 @@ type Props = {
   projects: ApgProjectPackage[];
   loading: boolean;
   error: string | null;
-  onCreate: (name: string) => void;
+  onCreate: (name: string, template: ProjectTemplateId) => void;
   onDelete: (project: ApgProjectPackage) => void;
   onDuplicate: (project: ApgProjectPackage) => void;
   onExport: (project: ApgProjectPackage) => void;
@@ -44,6 +45,7 @@ export function ProjectHome({
 }: Props) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
+  const [template, setTemplate] = useState<ProjectTemplateId>('empty');
   const sorted = useMemo(
     () => [...projects].sort((left, right) => right.manifest.updatedAt.localeCompare(left.manifest.updatedAt)),
     [projects],
@@ -53,9 +55,13 @@ export function ProjectHome({
     event.preventDefault();
     const nextName = name.trim();
     if (!nextName) return;
-    onCreate(nextName);
+    onCreate(nextName, template);
     setName('');
     setCreating(false);
+  };
+  const openCreate = () => {
+    setTemplate('empty');
+    setCreating(true);
   };
 
   return (
@@ -78,7 +84,7 @@ export function ProjectHome({
               type="file"
             />
           </label>
-          <button className="btn btn--primary" onClick={() => setCreating(true)} type="button">New project</button>
+          <button className="btn btn--primary" onClick={openCreate} type="button">New project</button>
         </div>
       </header>
 
@@ -99,7 +105,7 @@ export function ProjectHome({
         {loading ? (
           <div className="project-home__loading"><i /><span>Opening your studio…</span></div>
         ) : sorted.length === 0 ? (
-          <button className="project-home__empty" onClick={() => setCreating(true)} type="button">
+          <button className="project-home__empty" onClick={openCreate} type="button">
             <span>+</span><strong>Create your first project</strong><small>Start with a clean, silent-free pass-through board.</small>
           </button>
         ) : (
@@ -130,8 +136,8 @@ export function ProjectHome({
                 </article>
               );
             })}
-            <button className="project-card project-card--new" onClick={() => setCreating(true)} type="button">
-              <span>+</span><strong>New project</strong><small>Begin with an empty board</small>
+            <button className="project-card project-card--new" onClick={openCreate} type="button">
+              <span>+</span><strong>New project</strong><small>Choose a blank rail or 8 effects</small>
             </button>
           </div>
         )}
@@ -142,7 +148,7 @@ export function ProjectHome({
           <form className="new-project-dialog" onMouseDown={event => event.stopPropagation()} onSubmit={submit}>
             <span className="project-home__eyebrow">New project</span>
             <h2>Name this board</h2>
-            <p>You can change the project name later.</p>
+            <p>Choose a starting rail. You can change the project name later.</p>
             <input
               autoFocus
               maxLength={64}
@@ -150,6 +156,31 @@ export function ProjectHome({
               placeholder="Midnight pedalboard"
               value={name}
             />
+            <fieldset className="project-template-picker">
+              <legend>Start from</legend>
+              <div>
+                <label className={template === 'empty' ? 'active' : ''}>
+                  <input
+                    checked={template === 'empty'}
+                    name="project-template"
+                    onChange={() => setTemplate('empty')}
+                    type="radio"
+                    value="empty"
+                  />
+                  <span><strong>Blank rail</strong><small>Input → Output, ready for your first effect.</small></span>
+                </label>
+                <label className={template === 'eight-effects' ? 'active' : ''}>
+                  <input
+                    checked={template === 'eight-effects'}
+                    name="project-template"
+                    onChange={() => setTemplate('eight-effects')}
+                    type="radio"
+                    value="eight-effects"
+                  />
+                  <span><strong>8 effects</strong><small>Gate, Phaser, Drive, Amp, Tremolo, Chorus, Delay, Reverb.</small></span>
+                </label>
+              </div>
+            </fieldset>
             <footer>
               <button className="btn btn--ghost" onClick={() => setCreating(false)} type="button">Cancel</button>
               <button className="btn btn--primary" disabled={!name.trim()} type="submit">Create project</button>

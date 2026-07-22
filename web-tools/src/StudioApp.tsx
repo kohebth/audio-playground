@@ -17,7 +17,11 @@ import {
   type ApgProjectPackage,
   type StudioMode,
 } from './lib/projectPackage';
-import { createEmptyProjectPackage } from './lib/projectTemplates';
+import {
+  createEmptyProjectPackage,
+  createWorkspaceTemplateProjectPackage,
+  type ProjectTemplateId,
+} from './lib/projectTemplates';
 import { evaluateWorkspaceReadiness } from './lib/projectReadiness';
 import type { PersonalUnitRecord, UnitPreset } from './lib/presetLibrary';
 import { createStudioRepository } from './lib/studioRepository';
@@ -161,8 +165,16 @@ export default function StudioApp() {
     navigate('/projects');
   }, [navigate]);
 
-  const createProject = useCallback((name: string) => {
-    const created = createEmptyProjectPackage({ id: newId(), name, mode });
+  const createProject = useCallback((name: string, template: ProjectTemplateId) => {
+    const options = { id: newId(), name, mode };
+    const created = template === 'eight-effects'
+      ? createWorkspaceTemplateProjectPackage({
+          ...options,
+          description: 'An eight-effect guitar signal chain.',
+          entryProject: backendSamples.project.file,
+          files: initialWorkspaceFiles,
+        })
+      : createEmptyProjectPackage(options);
     const project = { ...created, readiness: evaluateWorkspaceReadiness(created.workspace, created.readiness) };
     void repository.saveProject(project).then(() => {
       setProjects(current => [project, ...current]);

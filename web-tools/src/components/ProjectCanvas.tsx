@@ -134,18 +134,15 @@ const ProjectRoute = memo(({
     renderPoints(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }),
   ));
   return (
-    <>
-      <path aria-hidden="true" className="project-route__bed" d={path} />
-      <BaseEdge
-        className="project-route__signal"
-        id={id}
-        interactionWidth={interactionWidth ?? 24}
-        markerEnd={markerEnd}
-        markerStart={markerStart}
-        path={path}
-        style={style}
-      />
-    </>
+    <BaseEdge
+      className="project-route__rail"
+      id={id}
+      interactionWidth={interactionWidth ?? 24}
+      markerEnd={markerEnd}
+      markerStart={markerStart}
+      path={path}
+      style={style}
+    />
   );
 });
 
@@ -390,7 +387,7 @@ export function ProjectCanvas({
       animated: selected,
       style: {
         ...edge.style,
-        stroke: selected ? 'var(--accent)' : 'var(--project-rail-signal)',
+        stroke: selected ? 'var(--accent)' : 'var(--project-rail)',
         strokeWidth: selected ? 3.2 : 2.2,
       },
     };

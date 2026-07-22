@@ -1,6 +1,15 @@
 import type { WorkspaceFile } from './backendSamples';
 import { createApgProjectPackageFromFiles, type ApgProjectPackage, type StudioMode } from './projectPackage.ts';
 
+export type ProjectTemplateId = 'empty' | 'eight-effects';
+
+type ProjectPackageOptions = {
+  id: string;
+  name: string;
+  mode?: StudioMode;
+  now?: string;
+};
+
 export function projectSlug(name: string): string {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
   return /^[a-z]/.test(slug) ? slug : `project_${slug || 'untitled'}`;
@@ -29,12 +38,7 @@ targets:
 `;
 }
 
-export function createEmptyProjectPackage(options: {
-  id: string;
-  name: string;
-  mode?: StudioMode;
-  now?: string;
-}): ApgProjectPackage {
+export function createEmptyProjectPackage(options: ProjectPackageOptions): ApgProjectPackage {
   const slug = projectSlug(options.name);
   const path = `projects/${slug}.project.v2.yaml`;
   const content = createEmptyProjectYaml(options.name);
@@ -42,6 +46,22 @@ export function createEmptyProjectPackage(options: {
   return createApgProjectPackageFromFiles(path, files, {
     id: options.id,
     name: options.name.trim() || 'Untitled Project',
+    mode: options.mode,
+    createdAt: options.now,
+    updatedAt: options.now,
+  });
+}
+
+export function createWorkspaceTemplateProjectPackage(options: ProjectPackageOptions & {
+  entryProject: string;
+  files: WorkspaceFile[];
+  description: string;
+}): ApgProjectPackage {
+  const files = options.files.map(file => ({ ...file, originalContent: file.content }));
+  return createApgProjectPackageFromFiles(options.entryProject, files, {
+    id: options.id,
+    name: options.name.trim() || 'Untitled Project',
+    description: options.description,
     mode: options.mode,
     createdAt: options.now,
     updatedAt: options.now,

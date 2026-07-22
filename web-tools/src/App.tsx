@@ -1853,7 +1853,7 @@ export function EditorWorkspace({
     )}
     <div className={`app app--project app--${mode}`}>
         <ProjectTopbar
-          project={project}
+          projectName={projectPackage.manifest.name}
           dirtyParamCount={dirtyParamCount + workspaceDraftCount}
           hasDirtyParamDrafts={hasDirtyDrafts}
           hasWorkspaceDrafts={hasWorkspaceDrafts}

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 
-import type { ProjectInspect } from '../lib/backendSamples';
 import { AppLogo } from './AppLogo';
 import { PreviewPanel } from './PreviewPanel';
 import type { ParamOverride } from '../lib/projectParams';
@@ -15,7 +14,7 @@ import { ProjectReadinessPanel } from './ProjectReadinessPanel';
 import { AudioIoDrawer } from './AudioIoDrawer';
 
 type Props = {
-  project: ProjectInspect;
+  projectName: string;
   dirtyParamCount: number;
   hasDirtyParamDrafts: boolean;
   hasWorkspaceDrafts: boolean;
@@ -44,7 +43,7 @@ type Props = {
 };
 
 export function ProjectTopbar({
-  project,
+  projectName,
   dirtyParamCount,
   hasDirtyParamDrafts,
   hasWorkspaceDrafts,
@@ -93,7 +92,7 @@ export function ProjectTopbar({
         <div className="header-project">
           <span className="header-project-label">Active Project</span>
           <div className="header-project-name">
-            <strong>{project.name}</strong>
+            <strong>{projectName}</strong>
             <span className="tag">{mode === 'simple' ? 'Pipeline' : 'Contract'}</span>
           </div>
         </div>
