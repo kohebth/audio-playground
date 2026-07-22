@@ -11,7 +11,7 @@ import {
   duplicateProjectInstance,
   insertProjectParallelOnRoute,
   insertProjectInstanceOnRoute,
-  moveProjectInstance,
+  moveProjectInstanceOnRoute,
   moveProjectRoute,
   parseProjectGraphDraft,
   parseUnitPortNames,
@@ -505,8 +505,69 @@ const renamedScene = renameProjectScene(withScene, 'Drive Check', 'Drive Ready')
 assert.equal(parseProjectGraphDraft(renamedScene).scenes.at(-1)?.name, 'Drive Ready');
 assert.equal(parseProjectGraphDraft(removeProjectScene(renamedScene, 'Drive Ready')).scenes.length, 2);
 
-const moved = parseProjectGraphDraft(moveProjectInstance(project, 'drive1', 4));
-assert.equal(moved.nodes[4].id, 'drive1');
+const movedForwardContent = moveProjectInstanceOnRoute(project, ports, 'drive1', 6);
+const movedForward = parseProjectGraphDraft(movedForwardContent);
+assert.deepEqual(movedForward.nodes, draft.nodes, 'moving a unit must not rewrite its serialized node record');
+assert.deepEqual(movedForward.scenes, draft.scenes, 'moving a unit must preserve scene parameters and bypass state');
+assert.deepEqual(movedForward.routes, [
+  { from: 'system.input', to: 'gate1.input' },
+  { from: 'gate1.output', to: 'phaser1.input' },
+  { from: 'phaser1.output', to: 'tone1.input' },
+  { from: 'tone1.output', to: 'trem1.input' },
+  { from: 'trem1.output', to: 'chorus1.input' },
+  { from: 'chorus1.output', to: 'drive1.input' },
+  { from: 'drive1.output', to: 'delay1.input' },
+  { from: 'delay1.output', to: 'reverb1.input' },
+  { from: 'reverb1.output', to: 'system.output' },
+]);
+assert.doesNotThrow(() => validateProjectRoutes(movedForwardContent, ports));
+
+const movedBackwardContent = moveProjectInstanceOnRoute(project, ports, 'delay1', 2);
+const movedBackward = parseProjectGraphDraft(movedBackwardContent);
+assert(movedBackward.routes.some(route => route.from === 'phaser1.output' && route.to === 'delay1.input'));
+assert(movedBackward.routes.some(route => route.from === 'delay1.output' && route.to === 'drive1.input'));
+assert(movedBackward.routes.some(route => route.from === 'chorus1.output' && route.to === 'reverb1.input'));
+assert.doesNotThrow(() => validateProjectRoutes(movedBackwardContent, ports));
+assert.equal(moveProjectInstanceOnRoute(project, ports, 'drive1', 2), project);
+assert.equal(moveProjectInstanceOnRoute(project, ports, 'drive1', 3), project);
+assert.throws(() => moveProjectInstanceOnRoute(project, ports, 'missing', 0), /was not found/);
+assert.throws(() => moveProjectInstanceOnRoute(project, ports, 'drive1', 99), /route 99/i);
+
+const placedPasteContent = moveProjectInstanceOnRoute(pasted.content, ports, pasted.id, 0);
+const placedPaste = parseProjectGraphDraft(placedPasteContent);
+assert(placedPaste.routes.some(route => route.from === 'system.input' && route.to === `${pasted.id}.input`));
+assert(placedPaste.routes.some(route => route.from === `${pasted.id}.output` && route.to === 'gate1.input'));
+assert.doesNotThrow(() => validateProjectRoutes(placedPasteContent, ports));
+
+const movedAcrossPathsContent = moveProjectInstanceOnRoute(parallel.content, ports, 'parallel_drive', 1);
+const movedAcrossPaths = parseProjectGraphDraft(movedAcrossPathsContent);
+assert(movedAcrossPaths.routes.some(route => (
+  route.from === 'parallel_pan.path_1' && route.to === 'parallel_drive.input'
+)));
+assert(movedAcrossPaths.routes.some(route => (
+  route.from === 'parallel_pan.path_2' && route.to === 'parallel_mix.path_2'
+)));
+assert.doesNotThrow(() => validateProjectRoutes(movedAcrossPathsContent, ports));
+
+const movedBeforeSplitContent = moveProjectInstanceOnRoute(parallel.content, ports, 'parallel_drive', 0);
+const movedBeforeSplit = parseProjectGraphDraft(movedBeforeSplitContent);
+assert(movedBeforeSplit.routes.some(route => route.from === 'system.input' && route.to === 'parallel_drive.input'));
+assert(movedBeforeSplit.routes.some(route => route.from === 'parallel_drive.output' && route.to === 'parallel_pan.input'));
+assert.doesNotThrow(() => validateProjectRoutes(movedBeforeSplitContent, ports));
+
+const movedIntoNestedContent = moveProjectInstanceOnRoute(nestedInsert.content, ports, 'parallel_drive', 3);
+const movedIntoNested = parseProjectGraphDraft(movedIntoNestedContent);
+assert(movedIntoNested.routes.some(route => (
+  route.from === 'nested_pan.path_1' && route.to === 'parallel_drive.input'
+)));
+assert(movedIntoNested.routes.some(route => (
+  route.from === 'parallel_drive.output' && route.to === 'nested_mix.path_1'
+)));
+assert.doesNotThrow(() => validateProjectRoutes(movedIntoNestedContent, ports));
+assert.throws(
+  () => moveProjectInstanceOnRoute(parallel.content, ports, 'parallel_pan', 4),
+  /Routing helpers cannot move/,
+);
 
 const disconnected = removeProjectRoute(project, 3);
 assert.equal(parseProjectGraphDraft(disconnected).routes.length, 8);

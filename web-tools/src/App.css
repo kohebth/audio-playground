@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* ─── Tokens ─────────────────────────────────────────────────────────────── */
 :root {
   --bg-base: #060a13;
@@ -39,14 +37,21 @@
   --radius-lg: 14px;
   --radius-xl: 18px;
   --radius-full: 9999px;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-sans: 'JetBrains Mono Variable', 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
   --shadow-glow-blue: 0 0 20px rgba(74, 158, 255, 0.15);
   --shadow-glow-green: 0 0 20px rgba(52, 211, 153, 0.15);
   --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
 
 body {
   font-family: var(--font-sans);
@@ -56,6 +61,10 @@ body {
   height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.react-flow {
+  font-family: var(--font-sans);
 }
 
 /* ─── App shell ──────────────────────────────────────────────────────────── */
@@ -1130,6 +1139,86 @@ body {
   stroke-linejoin: round;
 }
 
+.project-route__action-anchor {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.project-route__action {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--project-rail) 72%, var(--border-default));
+  border-radius: 50%;
+  outline: 0;
+  background: color-mix(in srgb, var(--bg-canvas) 92%, transparent);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, .42);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 9px;
+  pointer-events: auto;
+  transition: opacity .16s ease, transform .16s ease, border-color .16s ease, color .16s ease, background .16s ease;
+}
+
+.project-route__action--branch {
+  opacity: 0;
+  transform: scale(.82);
+}
+
+.project-route__action--branch.project-route__action--visible,
+.project-route__action--branch:hover,
+.project-route__action--branch:focus-visible {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-green-dim) 76%, var(--bg-canvas));
+  color: var(--accent);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.project-route__action--branch.project-route__action--insert {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-green-dim) 76%, var(--bg-canvas));
+  color: var(--accent);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.project-route__action--branch.project-route__action--suppressed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.project-route__action--move {
+  width: 29px;
+  height: 29px;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-green-dim) 78%, var(--bg-canvas));
+  color: var(--accent);
+  animation: project-route-target 1.35s ease-in-out infinite;
+}
+
+.project-route__action--move:hover:not(:disabled),
+.project-route__action--move:focus-visible {
+  background: var(--accent);
+  color: #11140f;
+  transform: scale(1.08);
+}
+
+.project-route__action--current {
+  border-color: var(--border-default);
+  background: var(--bg-canvas);
+  color: var(--text-dim);
+  cursor: default;
+  animation: none;
+  opacity: .65;
+}
+
+@keyframes project-route-target {
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 13%, transparent), 0 5px 16px rgba(0, 0, 0, .42); }
+}
+
 .canvas--contract {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1176,6 +1265,10 @@ body {
 
 .canvas--project .flow-shell--drop-valid::after {
   content: 'Drop effect on Pipeline or rail';
+}
+
+.canvas--project .flow-shell--dragging-instance.flow-shell--drop-valid::after {
+  content: 'Drop on the highlighted rail to move';
 }
 
 .canvas--contract .flow-shell--drop-valid::after {
@@ -3875,18 +3968,19 @@ body {
   .app--simple .app-header .header-left { flex: 1 1 auto; }
   .app--simple .header-brand-name,
   .app--simple .header-divider,
-  .app--simple .header-project-label,
-  .app--simple .header-project-name .tag,
+  .app--simple .header-project,
   .app--simple .topbar__help { display: none; }
   .app--simple .app-header .header-right { flex: 0 0 auto; overflow: visible; }
   .app--simple .mode-toggle--compact button { min-width: 44px; padding: 5px 6px; }
   .app--simple .transport-island { position: absolute; z-index: 20; right: 8px; bottom: 206px; width: auto; max-width: calc(100vw - 16px); border: 1px solid var(--border-default); border-radius: 12px; box-shadow: var(--shadow-panel); }
   .app--simple .layout { position: relative; display: block; min-height: 0; flex: 1; overflow: hidden; }
   .app--simple .canvas-area { position: absolute; height: auto; min-height: 0; inset: 0 0 196px; }
+  .app--simple .canvas-area .react-flow__minimap { display: none; }
   .simple-library { position: absolute; z-index: 12; bottom: 0; left: 0; width: 100%; min-width: 0; height: 196px; border-top: 1px solid var(--border-default); border-right: 0; box-shadow: 0 -14px 34px rgba(0,0,0,.28); }
   .simple-library > header { display: flex; align-items: center; gap: 12px; padding: 10px 12px 7px; }
   .simple-library > header div { justify-content: flex-start; gap: 6px; }
-  .simple-library > header p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .simple-library > header span { font-size: 11px; white-space: nowrap; }
+  .simple-library > header p { display: none; }
   .simple-library__search { position: absolute; top: 7px; right: 9px; width: 150px; margin: 0; }
   .simple-library__categories { padding: 0 10px 7px; }
   .simple-library__list { display: flex; gap: 6px; padding: 0 10px 9px; overflow-x: auto; overflow-y: hidden; }
@@ -4243,6 +4337,14 @@ body {
   box-shadow: 0 8px 32px rgba(0,0,0,.4);
 }
 
+.project-node.node-card.project-node--movable {
+  cursor: grab;
+}
+
+.project-node.node-card.project-node--movable:active {
+  cursor: grabbing;
+}
+
 .project-node.node-card.project-node--selected {
   box-shadow: 0 4px 20px rgba(0,0,0,.3), var(--shadow-glow-blue);
 }
@@ -4343,6 +4445,25 @@ body {
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.project-node__move-grip {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 5px;
+  color: color-mix(in srgb, var(--node-color) 62%, var(--text-dim));
+  font-size: 9px;
+  opacity: .52;
+  transition: background .15s ease, color .15s ease, opacity .15s ease;
+}
+
+.project-node--movable:hover .project-node__move-grip {
+  background: color-mix(in srgb, var(--node-color) 14%, transparent);
+  color: var(--node-color);
+  opacity: 1;
 }
 
 .project-node__routing-badge {
@@ -4582,6 +4703,47 @@ body {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-blue) 24%, transparent), 0 0 14px var(--accent-blue) !important;
 }
 
+.project-move-prompt {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 28px);
+  padding: 7px 9px 7px 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--border-default));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-canvas) 92%, transparent);
+  box-shadow: var(--shadow-panel);
+  color: var(--text-secondary);
+  font: 700 9px var(--font-mono);
+  transform: translateX(-50%);
+  backdrop-filter: blur(12px);
+}
+
+.project-move-prompt > i,
+.project-move-prompt strong {
+  color: var(--accent);
+}
+
+.project-move-prompt span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-move-prompt button {
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: 700 8px var(--font-sans);
+}
+
 @media (hover: none) {
   .project-node__handle { opacity: .72 !important; }
 }
@@ -4652,6 +4814,62 @@ body {
 .graph-context-menu__confirm { padding: 7px 9px; border: 1px solid var(--accent-blue); border-radius: 6px; background: var(--accent-blue-dim); color: var(--text-primary); cursor: pointer; font: 700 10px var(--font-sans); }
 .graph-context-menu__confirm:disabled { cursor: not-allowed; opacity: .45; }
 .graph-context-menu__empty { padding: 9px; color: var(--text-muted); font-size: 10px; }
+
+.graph-context-menu__branch-list {
+  display: grid;
+  gap: 3px;
+  padding: 2px;
+}
+
+.graph-context-menu__branch-list > button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 7px;
+  outline: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.graph-context-menu__branch-list > button:hover:not(:disabled),
+.graph-context-menu__branch-list > button:focus-visible {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.graph-context-menu__branch-list > button:disabled {
+  cursor: not-allowed;
+  opacity: .42;
+}
+
+.graph-context-menu__branch-list > button > i {
+  color: var(--accent);
+  text-align: center;
+}
+
+.graph-context-menu__branch-list strong,
+.graph-context-menu__branch-list small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-context-menu__branch-list strong {
+  font-size: 10px;
+}
+
+.graph-context-menu__branch-list small {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 8px;
+}
 
 .structured-card__hint { margin: -2px 0 10px; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
 .effect-library-card__actions button:disabled { cursor: not-allowed; opacity: .35; }

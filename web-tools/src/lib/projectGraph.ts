@@ -42,6 +42,13 @@ export type ProjectRoutePoint = { x: number; y: number };
 
 export type ProjectRouteEdgeData = {
   points: ProjectRoutePoint[];
+  routeIndex: number;
+  branchHintVisible?: boolean;
+  branchInteractionDisabled?: boolean;
+  insertTarget?: boolean;
+  moveTarget?: 'available' | 'current';
+  onOpenBranchPicker?: (routeIndex: number, point: { x: number; y: number }) => void;
+  onMoveHere?: (routeIndex: number) => void;
 };
 
 export type ProjectRouteEdge = Edge<ProjectRouteEdgeData, 'projectRoute'>;
@@ -209,7 +216,7 @@ function createRouteEdge(
     target,
     sourceHandle: sourcePort,
     targetHandle: targetPort,
-    data: { points },
+    data: { points, routeIndex: index },
     style: { stroke: '#64748b', strokeWidth: 1.6 },
   };
 }

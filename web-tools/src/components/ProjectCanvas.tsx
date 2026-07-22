@@ -1,6 +1,7 @@
 import {
   BaseEdge,
   Controls,
+  EdgeLabelRenderer,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
@@ -19,10 +20,11 @@ import { memo, useCallback, useEffect, useState, type DragEvent, type KeyboardEv
 
 import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
 import { ProjectNode } from './ProjectNode';
-import { UNIT_DRAG_TYPE } from './ProjectSidebar';
+import { PROJECT_INSTANCE_DRAG_TYPE, UNIT_DRAG_TYPE } from '../lib/graphDragTypes';
 import type {
   ProjectNodeData,
   ProjectRouteEdge,
+  ProjectRouteEdgeData,
   ProjectRoutePoint,
 } from '../lib/projectGraph';
 import { markPerfSpan } from '../lib/perfTelemetry';
@@ -118,6 +120,22 @@ function tuckRailUnderNodes(points: ProjectRoutePoint[]): ProjectRoutePoint[] {
   return tucked;
 }
 
+function railActionPoint(points: ProjectRoutePoint[]): ProjectRoutePoint {
+  let longestHorizontal: { length: number; point: ProjectRoutePoint } | null = null;
+  let longestSegment: { length: number; point: ProjectRoutePoint } | null = null;
+  for (let index = 1; index < points.length; index += 1) {
+    const start = points[index - 1];
+    const end = points[index];
+    const length = Math.hypot(end.x - start.x, end.y - start.y);
+    const point = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    if (!longestSegment || length > longestSegment.length) longestSegment = { length, point };
+    if (start.y === end.y && (!longestHorizontal || length > longestHorizontal.length)) {
+      longestHorizontal = { length, point };
+    }
+  }
+  return longestHorizontal?.point ?? longestSegment?.point ?? points[0] ?? { x: 0, y: 0 };
+}
+
 const ProjectRoute = memo(({
   data,
   id,
@@ -130,19 +148,77 @@ const ProjectRoute = memo(({
   targetX,
   targetY,
 }: EdgeProps<ProjectRouteEdge>) => {
-  const path = routePath(tuckRailUnderNodes(
+  const points = tuckRailUnderNodes(
     renderPoints(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }),
-  ));
+  );
+  const path = routePath(points);
+  const actionPoint = railActionPoint(points);
+  const moveTarget = data?.moveTarget;
   return (
-    <BaseEdge
-      className="project-route__rail"
-      id={id}
-      interactionWidth={interactionWidth ?? 24}
-      markerEnd={markerEnd}
-      markerStart={markerStart}
-      path={path}
-      style={style}
-    />
+    <>
+      <BaseEdge
+        className="project-route__rail"
+        id={id}
+        interactionWidth={interactionWidth ?? 24}
+        markerEnd={markerEnd}
+        markerStart={markerStart}
+        path={path}
+        style={style}
+      />
+      {data?.routeIndex !== undefined && (moveTarget || data.onOpenBranchPicker) ? (
+        <EdgeLabelRenderer>
+          <div
+            className={`project-route__action-anchor${moveTarget ? ' project-route__action-anchor--move' : ''}`}
+            data-project-route-index={data.routeIndex}
+            style={{
+              transform: `translate(-50%, -50%) translate(${actionPoint.x}px, ${actionPoint.y}px)`,
+            }}
+          >
+            {moveTarget ? (
+              <button
+                aria-label={moveTarget === 'current' ? 'Current rail position' : `Move unit to route ${data.routeIndex + 1}`}
+                className={`project-route__action project-route__action--move${moveTarget === 'current' ? ' project-route__action--current' : ''}`}
+                data-testid={`project-route-move-${data.routeIndex}`}
+                disabled={moveTarget === 'current'}
+                onClick={event => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  data.onMoveHere?.(data.routeIndex);
+                }}
+                title={moveTarget === 'current' ? 'This unit already occupies this rail position' : 'Move here'}
+                type="button"
+              >
+                <i className={`fa-solid ${moveTarget === 'current' ? 'fa-check' : 'fa-location-dot'}`} aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                aria-disabled={data.branchInteractionDisabled || data.insertTarget || undefined}
+                aria-label={data.insertTarget
+                  ? `Insert effect on route ${data.routeIndex + 1}`
+                  : `Add branch on route ${data.routeIndex + 1}`}
+                className={`project-route__action project-route__action--branch${data.branchHintVisible ? ' project-route__action--visible' : ''}${data.insertTarget ? ' project-route__action--insert' : ''}${data.branchInteractionDisabled ? ' project-route__action--suppressed' : ''}`}
+                data-testid={`project-route-branch-${data.routeIndex}`}
+                onClick={event => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (data.branchInteractionDisabled || data.insertTarget) return;
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  data.onOpenBranchPicker?.(data.routeIndex, {
+                    x: bounds.left + bounds.width / 2,
+                    y: bounds.top + bounds.height / 2,
+                  });
+                }}
+                tabIndex={data.branchInteractionDisabled || data.insertTarget ? -1 : 0}
+                title={data.insertTarget ? 'Drop effect here' : 'Add branch'}
+                type="button"
+              >
+                <i className={`fa-solid ${data.insertTarget ? 'fa-plus' : 'fa-code-branch'}`} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </EdgeLabelRenderer>
+      ) : null}
+    </>
   );
 });
 
@@ -167,6 +243,7 @@ type Props = {
   onPasteUnit: () => void;
   onRemoveUnit: (instanceId: string) => void;
   onReplaceUnit: (instanceId: string, unitId: string) => void;
+  onMoveUnitToRoute: (instanceId: string, routeIndex: number) => void;
   onAddParallelAtRoute: (unitId: string, routeIndex: number) => void;
   canPasteUnit: boolean;
   replacementOptions: ProjectReplacementOption[];
@@ -199,13 +276,30 @@ type ProjectFlowProps = Omit<Props,
   | 'onAddParallelAtRoute'
   | 'parallelOptions'> & {
   displayedEdges: ProjectRouteEdge[];
+  movingInstanceId: string | null;
+  onCancelMove: () => void;
+  onOpenBranchPicker: (routeIndex: number, point: ContextMenuPoint) => void;
   onNodeContextMenu: NodeMouseHandler<Node<ProjectNodeData>>;
   onEdgeContextMenu: EdgeMouseHandler<ProjectRouteEdge>;
 };
 
 function routeIndexFromEdge(edge: Edge): number | null {
+  const routeIndex = (edge.data as ProjectRouteEdgeData | undefined)?.routeIndex;
+  if (typeof routeIndex === 'number') return routeIndex;
   const match = edge.id.match(/^route-(\d+)-/);
   return match ? Number(match[1]) : null;
+}
+
+function routeIndexFromEventTarget(target: EventTarget | null, edges: ProjectRouteEdge[]): number | null {
+  if (!(target instanceof Element)) return null;
+  const actionAnchor = target.closest<HTMLElement>('[data-project-route-index]');
+  if (actionAnchor) {
+    const routeIndex = Number(actionAnchor.dataset.projectRouteIndex);
+    if (Number.isInteger(routeIndex)) return routeIndex;
+  }
+  const edgeElement = target.closest<SVGGElement>('.react-flow__edge');
+  const edge = edgeElement ? edges.find(item => item.id === edgeElement.dataset.id) : null;
+  return edge ? routeIndexFromEdge(edge) : null;
 }
 
 function projectEndpoint(nodeId: string | null, handleId: string | null, direction: 'source' | 'target'): string | null {
@@ -219,63 +313,145 @@ function projectEndpoint(nodeId: string | null, handleId: string | null, directi
 function ProjectFlow({
   nodes,
   displayedEdges,
+  selectedRouteIndex,
   onNodesChange,
   onEdgesChange,
   onSelectNode,
   onSelectRoute,
   onAddUnit,
   onInsertUnitAtRoute,
+  onMoveUnitToRoute,
   onConnectUnits,
+  movingInstanceId,
+  onCancelMove,
+  onOpenBranchPicker,
   onNodeContextMenu,
   onEdgeContextMenu,
 }: ProjectFlowProps) {
   const [dropState, setDropState] = useState<'idle' | 'valid' | 'reject'>('idle');
   const [connectionArmed, setConnectionArmed] = useState(false);
+  const [dragKind, setDragKind] = useState<'library' | 'instance' | null>(null);
+  const [draggedInstanceId, setDraggedInstanceId] = useState<string | null>(null);
+  const [hoveredRouteIndex, setHoveredRouteIndex] = useState<number | null>(null);
+  const [dropRouteIndex, setDropRouteIndex] = useState<number | null>(null);
+
+  const resetDrag = useCallback(() => {
+    setDropState('idle');
+    setDragKind(null);
+    setDraggedInstanceId(null);
+    setDropRouteIndex(null);
+  }, []);
 
   useEffect(() => {
-    if (!connectionArmed) return;
     const cancel = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setConnectionArmed(false);
+      if (event.key !== 'Escape') return;
+      setConnectionArmed(false);
+      onCancelMove();
     };
     window.addEventListener('keydown', cancel);
     return () => window.removeEventListener('keydown', cancel);
-  }, [connectionArmed]);
+  }, [onCancelMove]);
 
-  const dragState = (event: DragEvent) => event.dataTransfer.types.includes(UNIT_DRAG_TYPE) ? 'valid' : 'reject';
+  useEffect(() => {
+    window.addEventListener('dragend', resetDrag);
+    return () => window.removeEventListener('dragend', resetDrag);
+  }, [resetDrag]);
+
+  const dragType = (event: DragEvent): 'library' | 'instance' | 'reject' => {
+    if (event.dataTransfer.types.includes(PROJECT_INSTANCE_DRAG_TYPE)) return 'instance';
+    if (event.dataTransfer.types.includes(UNIT_DRAG_TYPE)) return 'library';
+    return 'reject';
+  };
+
   const dragOver = (event: DragEvent) => {
     markPerfSpan('ui.dragOver.projectNode', () => {
-      const state = dragState(event);
+      const kind = dragType(event);
+      const routeIndex = routeIndexFromEventTarget(event.target, displayedEdges);
+      const state = kind === 'library' || (kind === 'instance' && routeIndex !== null) ? 'valid' : 'reject';
       event.preventDefault();
-      event.dataTransfer.dropEffect = state === 'valid' ? 'copy' : 'none';
+      event.dataTransfer.dropEffect = state === 'valid' ? (kind === 'instance' ? 'move' : 'copy') : 'none';
       setDropState(state);
+      setDragKind(kind === 'reject' ? null : kind);
+      setDropRouteIndex(routeIndex);
     });
   };
   const drop = (event: DragEvent) => {
     markPerfSpan('ui.drop.projectNode', () => {
       event.preventDefault();
+      const instanceId = event.dataTransfer.getData(PROJECT_INSTANCE_DRAG_TYPE);
       const unitId = event.dataTransfer.getData(UNIT_DRAG_TYPE);
-      setDropState('idle');
+      const routeIndex = routeIndexFromEventTarget(event.target, displayedEdges);
+      resetDrag();
+      if (instanceId) {
+        const edge = routeIndex === null
+          ? null
+          : displayedEdges.find(candidate => routeIndexFromEdge(candidate) === routeIndex);
+        const nodeId = `unit-${instanceId}`;
+        if (edge && edge.source !== nodeId && edge.target !== nodeId) {
+          onMoveUnitToRoute(instanceId, routeIndex!);
+        }
+        return;
+      }
       if (!unitId) return;
-      const edgeElement = event.target instanceof Element ? event.target.closest<SVGGElement>('.react-flow__edge') : null;
-      const edge = edgeElement ? displayedEdges.find(item => item.id === edgeElement.dataset.id) : null;
-      const routeIndex = edge ? routeIndexFromEdge(edge) : null;
       if (routeIndex !== null) onInsertUnitAtRoute(unitId, routeIndex);
       else onAddUnit(unitId);
-    }, { valid: event.dataTransfer.types.includes(UNIT_DRAG_TYPE) });
+    }, { valid: dragType(event) !== 'reject' });
   };
+
+  const interactiveEdges = displayedEdges.map(edge => {
+    const routeIndex = routeIndexFromEdge(edge);
+    const edgeData: ProjectRouteEdgeData = edge.data ?? { points: [], routeIndex: routeIndex ?? 0 };
+    const activeMovingInstanceId = movingInstanceId ?? draggedInstanceId;
+    const movingNodeId = activeMovingInstanceId ? `unit-${activeMovingInstanceId}` : null;
+    const currentPosition = Boolean(movingNodeId && (edge.source === movingNodeId || edge.target === movingNodeId));
+    const interactionsHidden = connectionArmed || dragKind !== null || draggedInstanceId !== null;
+    const dropTarget = routeIndex !== null && routeIndex === dropRouteIndex;
+    return {
+      ...edge,
+      style: {
+        ...edge.style,
+        stroke: dropTarget ? 'var(--accent)' : edge.style?.stroke,
+        strokeWidth: dropTarget ? 4 : edge.style?.strokeWidth,
+      },
+      data: {
+        ...edgeData,
+        routeIndex: routeIndex ?? edgeData.routeIndex,
+        branchHintVisible: !movingInstanceId
+          && !interactionsHidden
+          && routeIndex !== null
+          && (routeIndex === selectedRouteIndex || routeIndex === hoveredRouteIndex),
+        branchInteractionDisabled: connectionArmed,
+        insertTarget: dragKind === 'library',
+        moveTarget: activeMovingInstanceId ? (currentPosition ? 'current' : 'available') : undefined,
+        onOpenBranchPicker: activeMovingInstanceId ? undefined : onOpenBranchPicker,
+        onMoveHere: movingInstanceId && !currentPosition
+          ? index => {
+            onMoveUnitToRoute(movingInstanceId, index);
+            onCancelMove();
+          }
+          : undefined,
+      },
+    } satisfies ProjectRouteEdge;
+  });
 
   return (
     <div
-      className={`flow-shell flow-shell--drop-${dropState}${connectionArmed ? ' flow-shell--connecting' : ''}`}
+      className={`flow-shell flow-shell--drop-${dropState}${connectionArmed ? ' flow-shell--connecting' : ''}${movingInstanceId ? ' flow-shell--moving' : ''}${dragKind === 'instance' ? ' flow-shell--dragging-instance' : ''}`}
       data-testid="project-canvas"
-      onDragLeave={() => setDropState('idle')}
+      onDragEnd={resetDrag}
       onDragOver={dragOver}
+      onDragStart={event => {
+        const instanceId = event.dataTransfer.getData(PROJECT_INSTANCE_DRAG_TYPE);
+        if (!instanceId) return;
+        setDraggedInstanceId(instanceId);
+        setDragKind('instance');
+      }}
       onDrop={drop}
     >
       <div className="edit-plane-grid" aria-hidden="true" />
       <ReactFlow
         nodes={nodes}
-        edges={displayedEdges}
+        edges={interactiveEdges}
         edgeTypes={edgeTypes}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
@@ -294,11 +470,28 @@ function ProjectFlow({
         onNodeClick={(event, node) => onSelectNode(node.id, event.shiftKey)}
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
+        onEdgeMouseEnter={(_, edge) => setHoveredRouteIndex(routeIndexFromEdge(edge))}
+        onEdgeMouseLeave={(_, edge) => {
+          const routeIndex = routeIndexFromEdge(edge);
+          setHoveredRouteIndex(current => current === routeIndex ? null : current);
+        }}
         onEdgeClick={(_, edge) => {
           const routeIndex = routeIndexFromEdge(edge);
-          if (routeIndex !== null) onSelectRoute(routeIndex);
+          if (routeIndex === null) return;
+          if (movingInstanceId) {
+            const movingNodeId = `unit-${movingInstanceId}`;
+            if (edge.source !== movingNodeId && edge.target !== movingNodeId) {
+              onMoveUnitToRoute(movingInstanceId, routeIndex);
+              onCancelMove();
+            }
+            return;
+          }
+          onSelectRoute(routeIndex);
         }}
-        onPaneClick={() => setConnectionArmed(false)}
+        onPaneClick={() => {
+          setConnectionArmed(false);
+          onCancelMove();
+        }}
         fitView
         fitViewOptions={{ padding: 0.16 }}
         minZoom={0.2}
@@ -328,6 +521,7 @@ export function ProjectCanvas({
   onPasteUnit,
   onRemoveUnit,
   onReplaceUnit,
+  onMoveUnitToRoute,
   onEditUnitContract,
   onAddParallelAtRoute,
   canPasteUnit,
@@ -335,16 +529,25 @@ export function ProjectCanvas({
   parallelOptions,
   ...props
 }: Props) {
+  const { onSelectRoute } = props;
   const [contextMenu, setContextMenu] = useState<(ContextMenuPoint & { nodeId: string }) | null>(null);
   const [routeMenu, setRouteMenu] = useState<(ContextMenuPoint & { routeIndex: number }) | null>(null);
   const [replacementOpen, setReplacementOpen] = useState(false);
   const [replacementUnit, setReplacementUnit] = useState('');
-  const [parallelUnit, setParallelUnit] = useState('');
+  const [movingInstanceId, setMovingInstanceId] = useState<string | null>(null);
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
     setRouteMenu(null);
     setReplacementOpen(false);
   }, []);
+  const cancelMove = useCallback(() => setMovingInstanceId(null), []);
+  useEffect(() => {
+    if (movingInstanceId && !nodes.some(node => (
+      node.data.kind === 'unit' && node.data.instance.id === movingInstanceId
+    ))) {
+      setMovingInstanceId(null);
+    }
+  }, [movingInstanceId, nodes]);
   const contextNode = contextMenu ? nodes.find(node => node.id === contextMenu.nodeId) : null;
   const unitData = contextNode?.data.kind === 'unit' ? contextNode.data : null;
   const currentRouting = unitData?.ports?.routing;
@@ -392,8 +595,12 @@ export function ProjectCanvas({
       },
     };
   });
-  const enabledParallelOptions = parallelOptions.filter(option => !option.disabled);
-  const chosenParallel = enabledParallelOptions.find(option => option.id === parallelUnit) ?? enabledParallelOptions[0];
+  const openBranchPicker = useCallback((routeIndex: number, point: ContextMenuPoint) => {
+    onSelectRoute(routeIndex);
+    setContextMenu(null);
+    setRouteMenu({ routeIndex, ...point });
+    setReplacementOpen(false);
+  }, [onSelectRoute]);
 
   return (
     <main className="canvas canvas--project canvas-area" onKeyDownCapture={openKeyboardMenu}>
@@ -404,6 +611,10 @@ export function ProjectCanvas({
           edges={edges}
           selectedRouteIndex={selectedRouteIndex}
           displayedEdges={displayedEdges}
+          movingInstanceId={movingInstanceId}
+          onCancelMove={cancelMove}
+          onMoveUnitToRoute={onMoveUnitToRoute}
+          onOpenBranchPicker={openBranchPicker}
           onNodeContextMenu={(event, node) => {
             if (node.data.kind !== 'unit') return;
             event.preventDefault();
@@ -419,10 +630,16 @@ export function ProjectCanvas({
             props.onSelectRoute(routeIndex);
             setContextMenu(null);
             setRouteMenu({ routeIndex, x: event.clientX, y: event.clientY });
-            setParallelUnit(chosenParallel?.id ?? '');
           }}
         />
       </ReactFlowProvider>
+      {movingInstanceId ? (
+        <div className="project-move-prompt" role="status">
+          <i className="fa-solid fa-location-dot" aria-hidden="true" />
+          <span>Moving <strong>{movingInstanceId}</strong> · choose a rail</span>
+          <button onClick={cancelMove} type="button">Cancel</button>
+        </div>
+      ) : null}
       {contextMenu && unitData ? (
         <GraphContextMenu
           label={`${unitData.instance.id} actions`}
@@ -446,6 +663,17 @@ export function ProjectCanvas({
           >
             {unitData.bypassed ? 'Turn on' : 'Turn off'}
           </GraphMenuButton>
+          <GraphMenuButton
+            disabled={Boolean(unitData.instance.routing || currentRouting)}
+            icon="fa-location-dot"
+            onClick={() => {
+              setMovingInstanceId(unitData.instance.id);
+              closeContextMenu();
+            }}
+            title={unitData.instance.routing || currentRouting
+              ? 'Panners and mixers stay fixed on their routing section.'
+              : 'Choose another rail position for this unit.'}
+          >Move…</GraphMenuButton>
           <GraphMenuButton
             disabled={Boolean(currentRouting)}
             icon="fa-diagram-project"
@@ -510,31 +738,25 @@ export function ProjectCanvas({
             <span>Pan 2 → effect → Mix 2</span>
           </div>
           {parallelOptions.length > 0 ? (
-            <div className="graph-context-menu__replace" role="group" aria-label="Parallel effect">
-              <label>
-                <span>Effect</span>
-                <select
-                  aria-label="Parallel effect"
-                  onChange={event => setParallelUnit(event.target.value)}
-                  value={chosenParallel?.id ?? ''}
-                >
-                  {parallelOptions.map(option => (
-                    <option disabled={option.disabled} key={option.id} value={option.id}>
-                      {option.label}{option.disabled ? ' — unavailable' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {chosenParallel ? (
+            <div className="graph-context-menu__branch-list" role="group" aria-label="Choose an effect for this branch">
+              {parallelOptions.map(option => (
                 <button
-                  className="graph-context-menu__confirm"
+                  disabled={option.disabled}
+                  key={option.id}
                   onClick={() => {
-                    onAddParallelAtRoute(chosenParallel.id, routeMenu.routeIndex);
+                    onAddParallelAtRoute(option.id, routeMenu.routeIndex);
                     closeContextMenu();
                   }}
+                  title={option.disabled ? option.reason : `Create a branch with ${option.label}`}
                   type="button"
-                >Create parallel path</button>
-              ) : <p>No mono effects are available for this route.</p>}
+                >
+                  <i className="fa-solid fa-wave-square" aria-hidden="true" />
+                  <span>
+                    <strong>{option.label}</strong>
+                    <small>{option.disabled ? option.reason ?? 'Unavailable' : 'Add on a new two-path branch'}</small>
+                  </span>
+                </button>
+              ))}
             </div>
           ) : <p className="graph-context-menu__empty">No effects are available.</p>}
         </GraphContextMenu>

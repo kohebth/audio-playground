@@ -40,6 +40,7 @@ import {
   duplicateProjectInstance,
   insertProjectParallelOnRoute,
   insertProjectInstanceOnRoute,
+  moveProjectInstanceOnRoute,
   parseProjectGraphDraft,
   parseUnitPortNames,
   pasteProjectInstance,
@@ -1242,6 +1243,24 @@ export function EditorWorkspace({
     addSimpleParallelEffect(item, routeIndex);
   }, [addSimpleParallelEffect, simpleEffectLibrary]);
 
+  const moveProjectNodeToRoute = useCallback((instanceId: string, routeIndex: number) => {
+    markPerfSpan('graph.move.projectNode', () => {
+      try {
+        const content = moveProjectInstanceOnRoute(
+          projectWorkspaceFile.content,
+          projectPorts,
+          instanceId,
+          routeIndex,
+        );
+        if (content === projectWorkspaceFile.content || !updateProjectFile(() => content)) return;
+        setSelectedId(`unit-${instanceId}`);
+        setSelectedRouteIndex(null);
+      } catch (error) {
+        setGraphEditError(error instanceof Error ? error.message : 'Unable to move that unit.');
+      }
+    });
+  }, [projectPorts, projectWorkspaceFile.content, updateProjectFile]);
+
   const duplicateProjectNode = useCallback((instanceId: string) => {
     markPerfSpan('graph.duplicate.projectNode', () => {
       try {
@@ -1980,6 +1999,7 @@ export function EditorWorkspace({
               onPasteUnit={pasteProjectNode}
               onRemoveUnit={removeProjectNode}
               onReplaceUnit={replaceProjectNode}
+              onMoveUnitToRoute={moveProjectNodeToRoute}
               onAddParallelAtRoute={addParallelEffectAtRoute}
               canPasteUnit={canPasteUnit}
               parallelOptions={projectParallelOptions}

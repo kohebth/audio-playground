@@ -55,6 +55,7 @@ const modeToggle = read('web-tools/src/components/ModeToggle.tsx');
 const simpleLibrary = read('web-tools/src/components/SimpleLibraryPanel.tsx');
 const structuredUnitEditor = read('web-tools/src/components/StructuredUnitEditor.tsx');
 const projectCanvas = read('web-tools/src/components/ProjectCanvas.tsx');
+const graphDragTypes = read('web-tools/src/lib/graphDragTypes.ts');
 const projectHome = read('web-tools/src/components/ProjectHome.tsx');
 const projectNode = read('web-tools/src/components/ProjectNode.tsx');
 const projectGraph = read('web-tools/src/lib/projectGraph.ts');
@@ -126,7 +127,12 @@ includesContent(graphvizWorker, 'routesOutsideNodes', 'Graphviz routes must fall
 includesContent(contractCanvas, 'clampAtomToBoundaryGutter', 'manual atom movement must preserve boundary gutters');
 includesContent(contractCanvas, "markComponentRender('ContractEdge'", 'unit graph canvas must expose edge render scope');
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
-includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
+includesContent(graphDragTypes, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
+includesContent(
+  graphDragTypes,
+  "PROJECT_INSTANCE_DRAG_TYPE = 'application/x-apg-project-instance'",
+  'placed Pipeline units must use a distinct move payload type',
+);
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
 includesContent(simpleLibrary, 'draggable={!picksContract && !item.placementError}', 'active Pipeline library items must be draggable');
 includesContent(simpleLibrary, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, item.id)', 'active Pipeline library must emit unit drop payloads');
@@ -134,6 +140,8 @@ includesContent(projectCanvas, 'onAddUnit(unitId', 'project canvas must retain u
 includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops must use the atomic route insertion transaction');
 includesContent(projectCanvas, 'nodesDraggable={false}', 'Pipeline units must remain fixed');
 assert(!projectCanvas.includes('onNodeDragStop'), 'project canvas must not expose a unit-move interaction');
+includesContent(projectCanvas, 'onMoveUnitToRoute', 'Pipeline unit movement must target a deterministic rail');
+includesContent(projectV2Graph, 'moveProjectInstanceOnRoute', 'Pipeline moves must use a topology-aware transaction');
 includesContent(projectCanvas, 'ROUTE_CORNER_RADIUS = 10', 'project route elbows must use the fixed rounded corner radius');
 includesContent(projectCanvas, 'RAIL_NODE_INSET = 12', 'project rails must tuck beneath unit cards');
 includesContent(projectCanvas, 'project-route__rail', 'project routes must render as one visual rail');

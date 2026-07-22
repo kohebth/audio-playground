@@ -31,6 +31,9 @@ approachable without exposing YAML.
 - [x] Move Audio I/O into a view-independent non-modal topbar panel.
 - [x] Normalize direct/reloaded Contract routes back to Pipeline without breaking internal Contract navigation.
 - [x] Offer blank-rail and bundled eight-effect templates when creating a project.
+- [x] Self-host JetBrains Mono across Web Tools and remove the external font dependency.
+- [x] Move ordinary effects through validated rail drops while keeping helpers fixed, and expose branch creation directly
+  from every rail segment.
 - [x] Cover graph transforms, ownership/propagation, route stability, invalid edits, responsive Pipeline behavior,
   live audio, and production smoke paths.
 

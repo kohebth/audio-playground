@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
 import type { ProjectInspect, WorkspaceFile } from '../lib/backendSamples';
+import { UNIT_DRAG_TYPE } from '../lib/graphDragTypes';
 import { markPerfSpan } from '../lib/perfTelemetry';
 
 type Props = {
@@ -23,8 +24,6 @@ type Props = {
   onToggleBatchInstance: (instanceId: string) => void;
   unitPlacement: Record<string, { allowed: boolean; reason: string | null }>;
 };
-
-export const UNIT_DRAG_TYPE = 'application/x-apg-unit';
 
 const unitDotColors = ['var(--accent-blue)', 'var(--accent-orange)', 'var(--accent-cyan)', 'var(--accent-purple)', 'var(--accent-green)', '#f472b6'];
 type SidebarSection = 'workspace' | 'pedalboard' | 'routes' | 'drafts';

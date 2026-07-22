@@ -12,7 +12,7 @@ type Props = {
 
 const theme = EditorView.theme({
   '&': { height: '100%', fontSize: '13px' },
-  '.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', padding: '8px 0', caretColor: 'var(--accent)' },
+  '.cm-content': { fontFamily: 'var(--font-mono)', padding: '8px 0', caretColor: 'var(--accent)' },
   '.cm-line': { padding: '0 8px' },
   '.cm-gutters': { backgroundColor: 'var(--bg-elevated)', borderRight: '1px solid var(--border)', color: 'var(--text-muted)' },
   '.cm-activeLineGutter': { backgroundColor: 'var(--bg-hover)' },

@@ -655,17 +655,63 @@ export function removeEmptyProjectRoutingSection(
   return { content: next, mode: 'bridged', bridgedRoutes: 1 };
 }
 
-export function moveProjectInstance(content: string, instanceId: string, nextIndex: number): string {
+export function moveProjectInstanceOnRoute(
+  content: string,
+  ports: ProjectPortCatalog,
+  instanceId: string,
+  targetRouteIndex: number,
+): string {
+  const draft = parseProjectGraphDraft(content);
+  const instance = draft.nodes.find(node => node.id === instanceId);
+  if (!instance) throw new Error(`Project instance "${instanceId}" was not found.`);
+  const contract = ports[instance.unit];
+  if (instance.routing || contract?.routing) throw new Error('Routing helpers cannot move independently.');
+  if (!isUserPlaceablePorts(contract) || contract.inputs.length !== 1 || contract.outputs.length !== 1) {
+    throw new Error(`Effect "${instanceId}" must expose exactly one input and one output to move on a rail.`);
+  }
+  const targetRoute = draft.routes[targetRouteIndex];
+  if (!targetRoute) throw new Error(`Project route ${targetRouteIndex} was not found.`);
+
+  const inputEndpoint = `${instanceId}.${contract.inputs[0]}`;
+  const outputEndpoint = `${instanceId}.${contract.outputs[0]}`;
+  const incomingIndexes = draft.routes.flatMap((route, index) => route.to === inputEndpoint ? [index] : []);
+  const outgoingIndexes = draft.routes.flatMap((route, index) => route.from === outputEndpoint ? [index] : []);
+  const disconnected = incomingIndexes.length === 0 && outgoingIndexes.length === 0;
+  const connected = incomingIndexes.length === 1 && outgoingIndexes.length === 1;
+  if (!disconnected && !connected) {
+    throw new Error(`Effect "${instanceId}" must be fully connected or fully disconnected before it can move.`);
+  }
+  if (connected && (targetRouteIndex === incomingIndexes[0] || targetRouteIndex === outgoingIndexes[0])) {
+    return content;
+  }
+
+  const incidentIndexes = connected
+    ? [incomingIndexes[0], outgoingIndexes[0]].sort((left, right) => left - right)
+    : [];
+  const incomingRoute = connected ? draft.routes[incomingIndexes[0]] : null;
+  const outgoingRoute = connected ? draft.routes[outgoingIndexes[0]] : null;
+  const nextRoutes: ProjectRouteDraft[] = [];
+  draft.routes.forEach((route, index) => {
+    if (index === targetRouteIndex) {
+      nextRoutes.push(
+        { from: targetRoute.from, to: inputEndpoint },
+        { from: outputEndpoint, to: targetRoute.to },
+      );
+      return;
+    }
+    if (connected && index === incidentIndexes[0]) {
+      nextRoutes.push({ from: incomingRoute!.from, to: outgoingRoute!.to });
+      return;
+    }
+    if (connected && index === incidentIndexes[1]) return;
+    nextRoutes.push({ ...route });
+  });
+
   const doc = loadDocument(content);
-  const chain = ensureChain(doc);
-  const nodes = (chain.nodes as unknown[]).filter(isObject);
-  const index = nodes.findIndex(node => String(node.id) === instanceId);
-  if (index < 0) throw new Error(`Project instance "${instanceId}" was not found.`);
-  const bounded = Math.max(0, Math.min(nodes.length - 1, nextIndex));
-  const [node] = nodes.splice(index, 1);
-  nodes.splice(bounded, 0, node);
-  chain.nodes = nodes;
-  return dumpDocument(doc);
+  ensureChain(doc).routes = nextRoutes;
+  const next = dumpDocument(doc);
+  validateProjectRoutes(next, ports);
+  return next;
 }
 
 function validateSceneSnapshot(

@@ -1,5 +1,6 @@
-import { memo, useEffect, type CSSProperties } from 'react';
+import { memo, useEffect, useRef, type CSSProperties, type DragEvent } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { PROJECT_INSTANCE_DRAG_TYPE } from '../lib/graphDragTypes';
 import type { ProjectNodeData } from '../lib/projectGraph';
 import { ParamKnob } from './ParamKnob';
 import { markComponentRender } from '../lib/perfTelemetry';
@@ -23,6 +24,7 @@ function portTop(offset: number | undefined, index: number, count: number): stri
 }
 
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
+  const moveDragBlocked = useRef(false);
   const renderId = data.kind === 'system' ? data.id : data.instance.id;
   useEffect(() => markComponentRender('ProjectNode', renderId));
   const style = {
@@ -76,6 +78,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   const controlsByKey = new Map(data.paramControls?.map(control => [control.key, control]) ?? []);
   const routingContract = data.ports?.routing;
   const routing = Boolean(data.instance.routing || routingContract);
+  const movable = !routing;
   const flexibleRouting = Boolean(routingContract);
   const routingParamKeys = new Set(routingContract?.paths.map(path => path.levelParam) ?? []);
   const params = routingContract ? [
@@ -105,11 +108,30 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
       />
     );
   };
+  const startMoveDrag = (event: DragEvent<HTMLDivElement>) => {
+    const blocked = event.target instanceof Element
+      && Boolean(event.target.closest('.nodrag, button, input, select, textarea'));
+    if (!movable || blocked || moveDragBlocked.current) {
+      event.preventDefault();
+      return;
+    }
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData(PROJECT_INSTANCE_DRAG_TYPE, data.instance.id);
+  };
 
   return (
     <div
       data-testid={`project-node-${data.instance.id}`}
-      className={`project-node node-card nopan ${routing ? 'project-node--routing' : ''} ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
+      className={`project-node node-card nopan ${routing ? 'project-node--routing' : 'project-node--movable'} ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
+      draggable={movable}
+      onDragEnd={() => { moveDragBlocked.current = false; }}
+      onDragStart={startMoveDrag}
+      onPointerDownCapture={event => {
+        moveDragBlocked.current = event.target instanceof Element
+          && Boolean(event.target.closest('.nodrag, button, input, select, textarea'));
+      }}
+      onPointerCancelCapture={() => { moveDragBlocked.current = false; }}
+      onPointerUpCapture={() => { moveDragBlocked.current = false; }}
       style={style}
     >
       {inputPorts.map((port, index) => (
@@ -137,6 +159,11 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
         <div className="node-pedal-header">
           <span className="pedal-type-name">{data.unit.name}</span>
           {routing ? <span className="project-node__routing-badge">Always active</span> : null}
+          {movable ? (
+            <span aria-hidden="true" className="project-node__move-grip" title="Drag to another rail">
+              <i className="fa-solid fa-grip-lines" />
+            </span>
+          ) : null}
         </div>
         <div className={`node-pedal-body${flexibleRouting ? ' node-pedal-body--routing' : ''}`}>
           <span className="pedal-instance">{data.instance.id}</span>

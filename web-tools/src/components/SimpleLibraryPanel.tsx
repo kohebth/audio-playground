@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
+import { UNIT_DRAG_TYPE } from '../lib/graphDragTypes';
 import { markPerfSpan } from '../lib/perfTelemetry';
 import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
-import { UNIT_DRAG_TYPE } from './ProjectSidebar';
 
 export type EffectLibraryItem = {
   id: string;

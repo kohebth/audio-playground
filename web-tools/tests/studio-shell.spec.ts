@@ -2,6 +2,16 @@ import { expect, test } from '@playwright/test';
 
 test('creates and restores a visual-first local project', async ({ page }) => {
   await page.goto('/');
+  await expect(page.locator('body')).toHaveCSS('font-family', /JetBrains Mono Variable/);
+  await expect(page.getByRole('button', { name: 'New project', exact: true }).first())
+    .toHaveCSS('font-family', /JetBrains Mono Variable/);
+  expect(await page.evaluate(async () => {
+    await document.fonts.ready;
+    return {
+      loaded: document.fonts.check('12px "JetBrains Mono Variable"'),
+      remoteFonts: performance.getEntriesByType('resource').some(entry => entry.name.includes('fonts.googleapis.com')),
+    };
+  })).toEqual({ loaded: true, remoteFonts: false });
   await expect(page.getByRole('heading', { name: 'Pick up where you left off.' })).toBeVisible();
   await expect(page.locator('.project-card')).toContainText(['Guitar Pedalboard', 'New project']);
 
@@ -80,12 +90,106 @@ test('drags effect units onto the Pipeline and a specific rail', async ({ page }
 
   const inputRail = page.getByTestId('rf__edge-route-0-system-input-unit-overdrive');
   const chorus = page.getByTestId('effect-library-item-built-in-chorus');
-  await chorus.dragTo(inputRail);
+  await chorus.dragTo(page.locator('[data-project-route-index="0"]'));
   await expect(page.getByTestId('project-node-chorus')).toBeVisible();
-  await expect(page.getByTestId('rf__edge-route-0-system-input-unit-chorus')).toBeVisible();
+  await expect(page.getByTestId('rf__edge-route-0-system-input-unit-chorus').locator('.project-route__rail'))
+    .toHaveCount(1);
   await expect(page.getByTestId('rf__edge-route-1-unit-chorus-unit-overdrive').locator('.project-route__rail'))
     .toHaveAttribute('d', /^M /);
   await expect(inputRail).toHaveCount(0);
+});
+
+test('moves placed effects between rail positions without enabling free layout', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New project', exact: true }).first().click();
+  await page.getByRole('radio', { name: /8 effects/ }).check();
+  await page.getByPlaceholder('Midnight pedalboard').fill('Move Rail');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const tour = page.getByRole('button', { name: 'Skip tour' });
+  await expect(tour).toBeVisible();
+  await tour.click();
+
+  const drive = page.getByTestId('project-node-drive1');
+  const targetRail = page.locator('[data-project-route-index="6"]');
+  await expect(drive).toHaveAttribute('draggable', 'true');
+  const driveKnob = page.getByTestId('param-knob-drive1-drive');
+  const knobBounds = await driveKnob.boundingBox();
+  expect(knobBounds).not.toBeNull();
+  await page.mouse.move(knobBounds!.x + knobBounds!.width / 2, knobBounds!.y + knobBounds!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(knobBounds!.x + knobBounds!.width / 2, knobBounds!.y - 18, { steps: 4 });
+  await page.mouse.up();
+  await expect(page.getByTestId('project-canvas')).not.toHaveClass(/flow-shell--dragging-instance/);
+  await expect(page.locator(
+    '.react-flow__edge[data-id="route-2-unit-phaser1-unit-drive1"] .project-route__rail',
+  )).toHaveCount(1);
+  await drive.locator('.node-pedal-header').dragTo(targetRail);
+  await expect(page.locator(
+    '.react-flow__edge[data-id="route-2-unit-phaser1-unit-tone1"] .project-route__rail',
+  )).toHaveCount(1);
+  await expect(page.locator(
+    '.react-flow__edge[data-id="route-5-unit-chorus1-unit-drive1"] .project-route__rail',
+  )).toHaveCount(1);
+  await expect(page.locator(
+    '.react-flow__edge[data-id="route-6-unit-drive1-unit-delay1"] .project-route__rail',
+  )).toHaveCount(1);
+
+  await drive.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Move…' }).click();
+  await expect(page.locator('.project-move-prompt')).toContainText('Moving drive1');
+  await expect(page.locator('[data-testid^="project-route-move-"]')).toHaveCount(9);
+  await expect(page.locator('[data-testid^="project-route-move-"]:disabled')).toHaveCount(2);
+  await page.getByTestId('project-route-move-0').click();
+  await expect(page.locator(
+    '.react-flow__edge[data-id="route-0-system-input-unit-drive1"] .project-route__rail',
+  )).toHaveCount(1);
+  await expect(page.locator('.project-move-prompt')).toHaveCount(0);
+  await page.getByTestId('topbar-undo').click();
+  await expect(page.locator(
+    '.react-flow__edge[data-id="route-5-unit-chorus1-unit-drive1"] .project-route__rail',
+  )).toHaveCount(1);
+  await drive.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Move…' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.project-move-prompt')).toHaveCount(0);
+});
+
+test('reveals branch hints on every rail and keeps routing helpers fixed', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New project', exact: true }).first().click();
+  await page.getByPlaceholder('Midnight pedalboard').fill('Branch Hints');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const tour = page.getByRole('button', { name: 'Skip tour' });
+  await expect(tour).toBeVisible();
+  await tour.click();
+
+  const rail = page.locator('.react-flow__edge[data-id*="system-input-system-output"] .project-route__rail');
+  const hint = page.getByTestId('project-route-branch-0');
+  await expect(hint).toHaveCSS('opacity', '0');
+  await rail.hover({ force: true });
+  await expect(hint).toHaveCSS('opacity', '1');
+  await rail.click({ force: true });
+  await page.mouse.move(4, 4);
+  await expect(hint).toHaveCSS('opacity', '1');
+  await hint.click();
+  const picker = page.getByRole('group', { name: 'Choose an effect for this branch' });
+  await picker.getByRole('button', { name: /Overdrive/ }).click();
+
+  const panner = page.locator('[data-testid^="project-node-path_panner_2"]');
+  const mixer = page.locator('[data-testid^="project-node-path_mixer_2"]');
+  await expect(panner).toHaveAttribute('draggable', 'false');
+  await expect(mixer).toHaveAttribute('draggable', 'false');
+  await expect(page.getByTestId('project-node-overdrive')).toHaveAttribute('draggable', 'true');
+  await expect(page.locator('[data-testid^="project-route-branch-"]')).toHaveCount(5);
+  await expect(page.getByText('Parallel section')).toHaveCount(0);
+
+  const pannerFlowNode = page.locator('.react-flow__node[data-id^="unit-path_panner_2"]');
+  await pannerFlowNode.focus();
+  await pannerFlowNode.press('Shift+F10');
+  await expect(page.getByRole('menu', { name: /path_panner_2.* actions/ })
+    .getByRole('menuitem', { name: 'Move…' })).toBeDisabled();
 });
 
 test('opens a unit for editing with one click in Contract', async ({ page }) => {
@@ -117,6 +221,8 @@ test('keeps the Pipeline usable at phone width', async ({ page }) => {
   await expect(page.locator('.simple-library')).toBeVisible();
   await expect(page.locator('.simple-library__list')).toHaveCSS('overflow-x', 'auto');
   await expect(page.getByTestId('project-canvas')).toBeVisible();
+  await expect(page.locator('.canvas--project .react-flow__minimap')).toBeHidden();
+  await expect(page.locator('.app--simple .header-project')).toBeHidden();
   const libraryBox = await page.locator('.simple-library').boundingBox();
   expect(libraryBox?.width).toBeGreaterThanOrEqual(380);
   expect(libraryBox?.height).toBeLessThanOrEqual(200);
@@ -257,7 +363,7 @@ test('connects units by click and exposes undoable unit context actions', async 
   await drive.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: 'drive1 actions' });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole('menuitem')).toContainText(['Turn off', 'Edit Contract', 'Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
+  await expect(menu.getByRole('menuitem')).toContainText(['Turn off', 'Move…', 'Edit Contract', 'Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
   await menu.getByRole('menuitem', { name: 'Copy' }).click();
 
   await drive.click({ button: 'right' });
@@ -340,9 +446,8 @@ test('renders nested branches as knob units with separate orthogonal rails', asy
   await page.getByRole('button', { name: 'Fit View' }).click();
   await page.locator('.react-flow__edge[data-id="route-10-unit-path_panner_2-unit-chorus"]')
     .click({ button: 'right', force: true });
-  const parallelGroup = page.getByRole('group', { name: 'Parallel effect' });
-  await parallelGroup.getByLabel('Parallel effect').selectOption('delay');
-  await page.getByRole('button', { name: 'Create parallel path' }).click();
+  const parallelGroup = page.getByRole('group', { name: 'Choose an effect for this branch' });
+  await parallelGroup.getByRole('button', { name: /Delay/ }).click();
 
   const panners = page.locator('[data-testid^="project-node-path_panner_2"]');
   const mixers = page.locator('[data-testid^="project-node-path_mixer_2"]');

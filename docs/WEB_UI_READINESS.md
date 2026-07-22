@@ -22,13 +22,17 @@ it is not exposed as the normal editing interface.
   and opens, duplicates, imports, exports, and deletes browser-local projects backed by IndexedDB. The portable `.apg`
   package contains the versioned workspace, manifest, optional mono audio, and readiness snapshot; topbar import replaces
   the open project's contents in place, while home import creates a separate project.
+- The self-hosted JetBrains Mono variable family is the single Web Tools typeface across project home, Pipeline,
+  Contract, controls, dialogs, graph labels, and structured editors; no runtime font request depends on Google Fonts.
 - The two explicit workspaces are **Pipeline** and **Contract**. Pipeline is the knob-rich,
   fixed-layout pedalboard with serial insertion and guided parallel routing through the existing panner/mixer cards;
   one continuous main rail runs from Input through the serial chain to Output and tucks beneath the existing unit cards.
   Each ordinary unit is one logical point on that rail, with its input and output sharing the same rendered anchor.
   Panners fork it into separate straight rails, each retaining its own knob-backed level control, before a mixer restores
-  the single rail. Effects can be appended with the + action, dragged onto the Pipeline, or inserted on a specific rail;
-  unit positions remain system-controlled. Connection handles appear only while interacting. Contract is the Graphviz
+  the single rail. Effects can be appended with the + action, dragged onto the Pipeline, inserted on a specific rail, or
+  moved between main, branch, and nested-branch rails without free-position dragging. Every rail exposes a hover, click,
+  and keyboard fork hint that creates the existing Pan 2/effect/Mix 2 topology on that exact route. Panner and mixer
+  positions remain system-controlled. Connection handles appear only while interacting. Contract is the Graphviz
   atom editor for one Personal effect definition; atoms can be added by button or dragged onto the graph or a connection.
   The legacy `simple`/`pro` values remain serialization details only.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
@@ -93,7 +97,10 @@ Dragging a card knob uses the same clamped YAML update and live parameter synchr
 Effect cards grow by parameter-row count and wrap at three knobs per row. Routing helpers instead place one knob on each
 vertical path lane. Effect knob order follows the referenced unit YAML parameter mapping, routing knob order follows its
 declared path order, and Contract Settings can move ordinary parameters through a structured edit.
-Project cards are fixed in Pipeline. Topology changes rebuild a deterministic left-to-right Dagre layout
+Project cards are spatially fixed in Pipeline. An ordinary effect can change audio order only by moving it onto a rail;
+panners and mixers cannot move independently. The route transaction bridges the old position, splits the destination,
+and preserves the instance ID, parameters, scenes, bypass identity, and node record. Topology changes rebuild a
+deterministic left-to-right Dagre layout
 without consuming or writing project `ui.position` values, while scalar updates preserve the existing React Flow nodes,
 edges, and viewport. Linear routes stay straight on a single visual rail; split and merge routes use Dagre's obstacle
 lanes rendered as separate rails with rounded orthogonal elbows. Automatic layout never changes the current pan or zoom
@@ -188,9 +195,11 @@ which atom signals leave for the following stage. Boundary rings and their highl
 atom counts and unit YAML, and cannot be selected, dragged, deleted, reconnected, or used as insertion targets.
 
 Project chain editing is driven from the current project YAML rather than the frozen inspect sample. Users can add,
-duplicate, remove, rename, and reorder instances; add, replace, disconnect, and reorder routes; and select endpoints from
-resolved unit port metadata. Project and atom cards expose keyboard-accessible right-click menus for replace, cut, copy,
-paste, and remove; unit menus additionally expose live on/off. Paste creates a disconnected sibling. Replacement previews
+duplicate, remove, rename, and move ordinary instances onto any connected route; add, replace, disconnect, and reorder
+routes; and select endpoints from resolved unit port metadata. Desktop card dragging and a guided Move action share the
+same validated topology transaction. Project and atom cards expose keyboard-accessible right-click menus for replace,
+move, cut, copy, paste, and remove; unit menus additionally expose live on/off. Paste creates a disconnected sibling.
+Replacement previews
 its impact, keeps the project instance ID and routes, and resets replacement parameters and scene values to defaults.
 Rename updates route endpoints, parameter-control identities, and scene paths atomically. Removing or cutting a normal
 effect bridges its upstream route to every downstream branch; an empty routing pair collapses atomically to one direct

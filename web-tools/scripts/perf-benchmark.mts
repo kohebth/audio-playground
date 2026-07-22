@@ -6,7 +6,7 @@ import type { AtomCatalog, AtomCatalogAtom } from '../src/lib/backendSamples.ts'
 import {
   addProjectInstance,
   addProjectRoute,
-  moveProjectInstance,
+  moveProjectInstanceOnRoute,
   moveProjectRoute,
   parseProjectGraphDraft,
   parseUnitPortNames,
@@ -274,15 +274,28 @@ function benchmarkProjectMutations(content: string, draft: ReturnType<typeof par
     });
   }
 
-  if (draft.nodes.length > 1) {
-    const iterations = Math.max(5, Math.min(50, draft.nodes));
+  const movableNodes = draft.nodes.filter(node => {
+    const contract = ports[node.unit];
+    return !node.routing && !contract?.routing && contract?.inputs.length === 1 && contract.outputs.length === 1;
+  });
+  if (movableNodes.length > 1) {
+    const iterations = Math.max(5, Math.min(50, movableNodes.length));
     mutations.moveInstanceMs = measure(() => {
       let workingContent = working.content;
       for (let index = 0; index < iterations; index += 1) {
-        const nextIndex = Math.min(Math.max(0, index % draft.nodes), draft.nodes - 1);
-        const source = draft.nodes[index % draft.nodes].id;
-        const targetIndex = (nextIndex + 1) % draft.nodes;
-        workingContent = moveProjectInstance(workingContent, source, targetIndex);
+        const current = parseProjectGraphDraft(workingContent);
+        const source = movableNodes[index % movableNodes.length].id;
+        const sourceNode = current.nodes.find(node => node.id === source)!;
+        const contract = ports[sourceNode.unit];
+        const adjacent = new Set(current.routes.flatMap((route, routeIndex) => (
+          route.to === `${source}.${contract.inputs[0]}` || route.from === `${source}.${contract.outputs[0]}`
+            ? [routeIndex]
+            : []
+        )));
+        const targetIndex = current.routes.findIndex((_, routeIndex) => !adjacent.has(routeIndex));
+        if (targetIndex >= 0) {
+          workingContent = moveProjectInstanceOnRoute(workingContent, ports, source, targetIndex);
+        }
       }
     });
   }
