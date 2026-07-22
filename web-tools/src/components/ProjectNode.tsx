@@ -18,6 +18,10 @@ function orderParamsByUnitContract(data: Extract<ProjectNodeData, { kind: 'unit'
   ];
 }
 
+function portTop(offset: number | undefined, index: number, count: number): string {
+  return offset === undefined ? `${((index + 1) * 100) / (count + 1)}%` : `${offset}px`;
+}
+
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
   const renderId = data.kind === 'system' ? data.id : data.instance.id;
   useEffect(() => markComponentRender('ProjectNode', renderId));
@@ -48,17 +52,44 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   }
 
   const bypassed = data.bypassed ?? false;
-  const params = orderParamsByUnitContract(data);
+  const contractedParams = orderParamsByUnitContract(data);
   const controlsByKey = new Map(data.paramControls?.map(control => [control.key, control]) ?? []);
-  const routing = Boolean(data.instance.routing || data.ports?.routing);
-  const wide = params.length >= 3;
+  const routingContract = data.ports?.routing;
+  const routing = Boolean(data.instance.routing || routingContract);
+  const flexibleRouting = Boolean(routingContract);
+  const routingParamKeys = new Set(routingContract?.paths.map(path => path.levelParam) ?? []);
+  const params = routingContract ? [
+    ...routingContract.paths.flatMap(path => {
+      const param = contractedParams.find(candidate => candidate.key === path.levelParam);
+      return param ? [param] : [];
+    }),
+    ...contractedParams.filter(param => !routingParamKeys.has(param.key)),
+  ] : contractedParams;
+  const wide = !flexibleRouting && params.length >= 3;
   const inputPorts = data.ports?.inputs.length ? data.ports.inputs : ['input'];
   const outputPorts = data.ports?.outputs.length ? data.ports.outputs : ['output'];
+  const renderKnob = (param: (typeof params)[number]) => {
+    const control = controlsByKey.get(param.key);
+    return (
+      <ParamKnob
+        key={param.key}
+        ariaLabel={`${data.instance.id} ${param.key}`}
+        compact
+        integer={control?.type === 'int'}
+        label={control?.label ?? param.key}
+        max={control?.max}
+        min={control?.min}
+        onChange={value => data.onParamChange?.(data.instance.id, param.key, value)}
+        unit={control?.unit}
+        value={param.value}
+      />
+    );
+  };
 
   return (
     <div
       data-testid={`project-node-${data.instance.id}`}
-      className={`project-node node-card nopan ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
+      className={`project-node node-card nopan ${routing ? 'project-node--routing' : ''} ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
       style={style}
     >
       {inputPorts.map((port, index) => (
@@ -68,42 +99,48 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           id={port}
           key={port}
           position={Position.Left}
-          style={{ top: `${((index + 1) * 100) / (inputPorts.length + 1)}%` }}
+          style={{ top: portTop(data.routingLayout?.inputTops[port], index, inputPorts.length) }}
           title={port}
           type="target"
         />
       ))}
-      <div className={`node-pedal${wide ? ' wide' : ''}`}>
+      <div
+        className={`node-pedal${wide ? ' wide' : ''}${flexibleRouting ? ' node-pedal--routing' : ''}`}
+        style={data.routingLayout ? { height: `${data.routingLayout.height}px` } : undefined}
+      >
         <div className="node-pedal-header">
           <span className="pedal-type-name">{data.unit.name}</span>
           {routing ? <span className="project-node__routing-badge">Always active</span> : null}
         </div>
-        <div className="node-pedal-body">
+        <div className={`node-pedal-body${flexibleRouting ? ' node-pedal-body--routing' : ''}`}>
           <span className="pedal-instance">{data.instance.id}</span>
-          {params.length > 0 ? (
+          {!flexibleRouting && params.length > 0 ? (
             <div className="project-node__knobs knobs-row" aria-label={`${data.instance.id} controls`}>
-              {params.map(param => {
-                const control = controlsByKey.get(param.key);
-                return (
-                  <ParamKnob
-                    key={param.key}
-                    ariaLabel={`${data.instance.id} ${param.key}`}
-                    compact
-                    integer={control?.type === 'int'}
-                    label={control?.label ?? param.key}
-                    max={control?.max}
-                    min={control?.min}
-                    onChange={value => data.onParamChange?.(data.instance.id, param.key, value)}
-                    unit={control?.unit}
-                    value={param.value}
-                  />
-                );
-              })}
+              {params.map(renderKnob)}
             </div>
-          ) : (
+          ) : !flexibleRouting ? (
             <span className="project-node__empty">No exposed controls</span>
-          )}
+          ) : null}
         </div>
+        {flexibleRouting && params.length > 0 ? (
+          <div className="project-node__routing-controls" aria-label={`${data.instance.id} path controls`}>
+            {params.map((param, index) => (
+              <div
+                className="project-node__routing-control"
+                key={param.key}
+                style={{
+                  top: portTop(
+                    data.routingLayout?.controlTops[param.key],
+                    index,
+                    params.length,
+                  ),
+                }}
+              >
+                {renderKnob(param)}
+              </div>
+            ))}
+          </div>
+        ) : null}
         {routing ? (
           <div className="node-pedal-footer node-pedal-footer--always-on" title="Routing helpers are always active">
             <span className="node-pedal-footer__indicator" aria-hidden="true" />
@@ -137,7 +174,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           id={port}
           key={port}
           position={Position.Right}
-          style={{ top: `${((index + 1) * 100) / (outputPorts.length + 1)}%` }}
+          style={{ top: portTop(data.routingLayout?.outputTops[port], index, outputPorts.length) }}
           title={port}
           type="source"
         />

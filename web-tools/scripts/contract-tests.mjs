@@ -189,6 +189,8 @@ includesContent(app, 'pathPanner2WorkspaceFile', 'parallel insertion must includ
 includesContent(app, 'pathMixer2WorkspaceFile', 'parallel insertion must include the system mixer helper');
 includesContent(projectNode, '<ParamKnob', 'routing path levels must reuse the effect-unit knobs');
 assert(!projectNode.includes('ProjectFader'), 'routing helpers must not introduce a second control model');
+includesContent(projectNode, 'project-node__routing-control', 'routing knobs must align to their vertical path lanes');
+includesContent(projectGraph, 'requiredRoutingHeight', 'routing helper height must expand with its resolved lane span');
 includesContent(projectNode, 'ROUTING ON', 'routing helpers must render as always active');
 includesContent(projectV2Graph, 'Use Add in parallel to split a path', 'raw project fan-out must be rejected');
 includesContent(projectV2Graph, 'removeEmptyProjectRoutingSection', 'empty split/join pairs must be removable atomically');

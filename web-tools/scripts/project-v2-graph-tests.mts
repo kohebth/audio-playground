@@ -281,11 +281,36 @@ const parallelInspect = {
   ],
   routes: parallelDraft.routes,
 };
-const parallelLayout = buildProjectGraph(parallelInspect);
+const parallelLayout = buildProjectGraph(parallelInspect, ports);
 const dryRoute = parallelLayout.edges[1];
 const branchNode = parallelLayout.nodes.find(node => node.id === 'unit-parallel_drive');
+const parallelPannerNode = parallelLayout.nodes.find(node => node.id === 'unit-parallel_pan');
+const parallelMixerNode = parallelLayout.nodes.find(node => node.id === 'unit-parallel_mix');
 assert(branchNode);
-assert(dryRoute.data.points.length > 2);
+assert(parallelPannerNode?.data.kind === 'unit');
+assert(parallelMixerNode?.data.kind === 'unit');
+assert(parallelPannerNode.data.routingLayout);
+assert(parallelMixerNode.data.routingLayout);
+assert.equal(parallelPannerNode.data.routingLayout.height, 266);
+assert.equal(parallelMixerNode.data.routingLayout.height, 266);
+assert.deepEqual(
+  Object.values(parallelPannerNode.data.routingLayout.outputTops),
+  Object.values(parallelPannerNode.data.routingLayout.controlTops),
+);
+assert.deepEqual(
+  Object.values(parallelMixerNode.data.routingLayout.inputTops),
+  Object.values(parallelMixerNode.data.routingLayout.controlTops),
+);
+assert.equal(dryRoute.data.points.length, 2);
+assert.equal(
+  dryRoute.data.points[0].y,
+  parallelPannerNode.position.y + parallelPannerNode.data.routingLayout.outputTops.path_1,
+);
+assert.equal(
+  dryRoute.data.points.at(-1)?.y,
+  parallelMixerNode.position.y + parallelMixerNode.data.routingLayout.inputTops.path_1,
+);
+assert(parallelLayout.edges.every(edge => edge.data.points.length === 2));
 assert(dryRoute.data.points.every((point, index, points) => (
   index === 0 || point.x === points[index - 1].x || point.y === points[index - 1].y
 )));
@@ -306,6 +331,62 @@ for (let index = 1; index < dryRoute.data.points.length; index += 1) {
     && Math.max(start.y, end.y) > branchRect.top && Math.min(start.y, end.y) < branchRect.bottom;
   assert(!crossesHorizontal && !crossesVertical, 'parallel dry route must avoid the branch card');
 }
+
+const nestedLayout = buildProjectGraph(
+  projectDraftToInspect(parseProjectGraphDraft(nestedParallel), {
+    ...projectInspect,
+    units: parallelInspect.units,
+  }),
+  ports,
+);
+const outerPanner = nestedLayout.nodes.find(node => node.id === 'unit-outer_pan');
+const innerPanner = nestedLayout.nodes.find(node => node.id === 'unit-inner_pan');
+assert(outerPanner?.data.kind === 'unit' && outerPanner.data.routingLayout);
+assert(innerPanner?.data.kind === 'unit' && innerPanner.data.routingLayout);
+assert(outerPanner.data.routingLayout.height > innerPanner.data.routingLayout.height);
+assert(nestedLayout.edges.every(edge => edge.data.points.length === 2));
+
+const fourPathContract = {
+  paths: Array.from({ length: 4 }, (_, index) => ({
+    port: `path_${index + 1}`,
+    levelParam: `path_${index + 1}_db`,
+  })),
+};
+const fourPathPorts: ProjectPortCatalog = {
+  path_panner_2_unit: {
+    inputs: ['input'],
+    outputs: fourPathContract.paths.map(path => path.port),
+    routing: { role: 'panner', paths: fourPathContract.paths },
+  },
+  path_mixer_2_unit: {
+    inputs: fourPathContract.paths.map(path => path.port),
+    outputs: ['output'],
+    routing: { role: 'mixer', paths: fourPathContract.paths },
+  },
+};
+const fourPathInspect = {
+  ...parallelInspect,
+  nodes: [
+    { id: 'four_pan', unit: 'path_panner_2_unit', params: [], routing: { section: 'four' } },
+    { id: 'four_mix', unit: 'path_mixer_2_unit', params: [], routing: { section: 'four' } },
+  ],
+  routes: [
+    { from: 'system.input', to: 'four_pan.input' },
+    ...fourPathContract.paths.map(path => ({
+      from: `four_pan.${path.port}`,
+      to: `four_mix.${path.port}`,
+    })),
+    { from: 'four_mix.output', to: 'system.output' },
+  ],
+};
+const fourPathLayout = buildProjectGraph(fourPathInspect, fourPathPorts);
+const fourPathPanner = fourPathLayout.nodes.find(node => node.id === 'unit-four_pan');
+assert(fourPathPanner?.data.kind === 'unit');
+assert(fourPathPanner.data.routingLayout);
+assert(fourPathPanner.data.routingLayout.height > parallelPannerNode.data.routingLayout.height);
+assert.equal(Object.keys(fourPathPanner.data.routingLayout.controlTops).length, 4);
+assert.equal(new Set(fourPathLayout.edges.slice(1, 5).map(edge => edge.data.points[0].y)).size, 4);
+assert(fourPathLayout.edges.slice(1, 5).every(edge => edge.data.points.length === 2));
 
 const duplicated = duplicateProjectInstance(project, 'drive1');
 const duplicate = parseProjectGraphDraft(duplicated.content).nodes.find(node => node.id === duplicated.id);

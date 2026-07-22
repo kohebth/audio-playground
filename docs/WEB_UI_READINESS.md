@@ -84,18 +84,20 @@ the same fast path before the synchronized YAML revision is prepared.
 Project-unit parameters are edited directly on their canvas cards. Each card renders compact knobs from the referenced
 unit's parameter metadata, including label, range, and unit; the inspector retains structural actions and reset only.
 Dragging a card knob uses the same clamped YAML update and live parameter synchronization path as other parameter edits.
-Cards grow by parameter-row count and wrap at three knobs per row for every unit. Knob order follows the referenced unit
-YAML parameter mapping exactly, and the Contract inspector can move parameters up or down through a structured YAML edit.
+Effect cards grow by parameter-row count and wrap at three knobs per row. Routing helpers instead place one knob on each
+vertical path lane. Effect knob order follows the referenced unit YAML parameter mapping, routing knob order follows its
+declared path order, and the Contract inspector can move ordinary parameters through a structured YAML edit.
 Project cards are fixed in both Simple and Pro modes. Topology changes rebuild a deterministic left-to-right Dagre layout
 without consuming or writing project `ui.position` values, while scalar updates preserve the existing React Flow nodes,
 edges, and viewport. Linear routes stay straight; split and merge routes use Dagre's obstacle lanes rendered as rounded
 orthogonal elbows. Automatic layout never changes the current pan or zoom after the initial mount.
 
 Panner and mixer helpers render as the same knob-bearing pedal cards as effect units, with two system-provided paths by
-default and no visible `parallel section` container. Their separate handles form two straight branch rails wherever
-geometry permits and rounded right-angle elbows where an obstacle requires a turn. Removing either helper collapses the
-whole split/join pair only after both paths are empty; populated paths remain protected so an effect cannot be discarded
-implicitly.
+default and no visible `parallel section` container. Their height expands with the path count and with the vertical lane
+span required by nested routing. Every path knob shares its Y coordinate with its handle, so each branch leaves the split
+and enters the join on a straight rail; rounded right-angle elbows remain available where an obstacle requires a turn.
+Removing either helper collapses the whole split/join pair only after both paths are empty; populated paths remain
+protected so an effect cannot be discarded implicitly.
 
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.

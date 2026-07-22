@@ -4261,7 +4261,16 @@ body {
   width: 190px;
 }
 
+.node-pedal--routing {
+  position: relative;
+  display: flex;
+  width: 140px;
+  flex-direction: column;
+}
+
 .node-pedal-header {
+  position: relative;
+  z-index: 2;
   display: flex;
   min-height: 31px;
   align-items: center;
@@ -4304,6 +4313,11 @@ body {
   gap: 12px;
 }
 
+.node-pedal-body--routing {
+  min-height: 0;
+  flex: 1;
+}
+
 .pedal-instance {
   max-width: 100%;
   overflow: hidden;
@@ -4322,6 +4336,19 @@ body {
   justify-content: center;
   gap: 12px 14px;
   margin-top: 0;
+}
+
+.project-node__routing-controls {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+}
+
+.project-node__routing-control {
+  position: absolute;
+  left: 50%;
+  width: 40px;
+  transform: translate(-50%, -20px);
 }
 
 .unit-knob.knob-wrapper {
@@ -4407,6 +4434,8 @@ body {
 }
 
 .node-pedal-footer {
+  position: relative;
+  z-index: 2;
   display: flex;
   width: 100%;
   min-height: 28px;

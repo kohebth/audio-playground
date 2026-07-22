@@ -71,6 +71,28 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   await expect(page.locator('[data-testid^="project-node-path_panner_2"] .unit-knob')).toHaveCount(2);
   await expect(page.locator('[data-testid^="project-node-path_mixer_2"] .unit-knob')).toHaveCount(2);
   await expect(page.getByText('Parallel section')).toHaveCount(0);
+  for (const [helper, handleSelector] of [
+    [page.locator('[data-testid^="project-node-path_panner_2"]'), '.project-node__handle--output'],
+    [page.locator('[data-testid^="project-node-path_mixer_2"]'), '.project-node__handle--input'],
+  ] as const) {
+    const alignment = await helper.evaluate((node, selector) => {
+      const center = (element: Element) => {
+        const bounds = element.getBoundingClientRect();
+        return bounds.top + bounds.height / 2;
+      };
+      return {
+        height: (node.querySelector('.node-pedal') as HTMLElement | null)?.offsetHeight ?? 0,
+        knobs: [...node.querySelectorAll('.unit-knob .knob')].map(center),
+        handles: [...node.querySelectorAll(selector)].map(center),
+      };
+    }, handleSelector);
+    expect(alignment.height).toBeGreaterThanOrEqual(266);
+    expect(alignment.knobs).toHaveLength(2);
+    expect(alignment.handles).toHaveLength(2);
+    expect(Math.abs(alignment.knobs[0] - alignment.handles[0])).toBeLessThan(1);
+    expect(Math.abs(alignment.knobs[1] - alignment.handles[1])).toBeLessThan(1);
+    expect(alignment.knobs[1] - alignment.knobs[0]).toBeGreaterThan(10);
+  }
 
   await page.getByRole('button', { name: 'Pro', exact: true }).click();
   await expect(page.getByTestId('preview-mode-file')).toBeVisible();
@@ -232,6 +254,15 @@ test('renders nested branches as knob units with separate orthogonal rails', asy
   await expect(panners.locator('.unit-knob')).toHaveCount(4);
   await expect(mixers.locator('.unit-knob')).toHaveCount(4);
   await expect(page.getByText('Parallel section')).toHaveCount(0);
+  const pannerHeights = await panners.evaluateAll(nodes => nodes.map(node => (
+    (node.querySelector('.node-pedal') as HTMLElement | null)?.offsetHeight ?? 0
+  )));
+  const mixerHeights = await mixers.evaluateAll(nodes => nodes.map(node => (
+    (node.querySelector('.node-pedal') as HTMLElement | null)?.offsetHeight ?? 0
+  )));
+  expect(Math.min(...pannerHeights, ...mixerHeights)).toBeGreaterThanOrEqual(266);
+  expect(Math.max(...pannerHeights)).toBeGreaterThan(Math.min(...pannerHeights));
+  expect(Math.max(...mixerHeights)).toBeGreaterThan(Math.min(...mixerHeights));
 
   const directRails = page.locator(
     '.react-flow__edge[data-id*="unit-path_panner"][data-id*="unit-path_mixer"] .react-flow__edge-path',
