@@ -36,6 +36,9 @@ test('controls file and microphone playback with transport shortcuts', async ({ 
   const transport = page.getByTestId('preview-start-stop');
 
   await expect(state).toHaveText(/idle|ready/, { timeout: 15_000 });
+  await expect(page.getByRole('group', { name: 'Audio input mode' }).getByRole('button')).toHaveText(['Mic', 'Audio File']);
+  await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'false');
   await page.keyboard.press('Space');
   await expect(state).toHaveText('running', { timeout: 15_000 });
   await page.keyboard.press('m');
@@ -52,7 +55,8 @@ test('controls file and microphone playback with transport shortcuts', async ({ 
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'))).not.toBeNull();
   await expect(state).toHaveText('ready');
 
-  await page.getByTestId('preview-mode-mic').click();
+  await page.getByTestId('preview-mode-file').click();
+  await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'true');
   await transport.click();
   await expect(state).toHaveText('running', { timeout: 15_000 });
   await transport.click();

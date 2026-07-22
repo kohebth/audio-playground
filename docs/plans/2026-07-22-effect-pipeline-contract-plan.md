@@ -15,8 +15,8 @@ approachable without exposing YAML.
 - Editing an instance rebinds only that instance to the Personal copy. Later definition edits update matching instances
   in the active project, including routes, parameter defaults, and scene paths; other projects remain unchanged.
 - User effects retain exactly one mono audio input and one mono audio output. Internal routing helpers remain exempt.
-- Both microphone and mono-file preview remain available in both workspaces through view-independent transport and
-  Audio I/O controls.
+- Microphone is the first and default preview source in both workspaces; mono-file preview remains available as the
+  secondary source through view-independent transport and Audio I/O controls.
 - Opening or reloading a project always starts in Effect Pipeline. Internal `simple`/`pro` values are retained only for
   `.apg` compatibility.
 

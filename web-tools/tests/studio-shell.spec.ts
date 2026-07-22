@@ -54,8 +54,10 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   await expect(skipTour).toBeVisible();
   await skipTour.click();
 
-  await expect(page.getByTestId('preview-mode-file')).toBeVisible();
-  await expect(page.getByTestId('preview-mode-mic')).toBeVisible();
+  const audioInputMode = page.getByRole('group', { name: 'Audio input mode' });
+  await expect(audioInputMode.getByRole('button')).toHaveText(['Mic', 'Audio File']);
+  await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'false');
   await page.getByTestId('project-node-drive1').click();
   await page.getByRole('button', { name: /Warm Push/ }).click();
 

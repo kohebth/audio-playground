@@ -31,9 +31,9 @@ it is not exposed as the normal editing interface.
   remains atom-only. User-placeable effects are constrained to one mono audio input and one mono audio output; optional
   control ports remain available, while loaded multi-port mixers and routing helpers stay supported as internal project
   infrastructure. Raw YAML text is not mounted in the active editor.
-- Microphone and packaged/selected mono-file preview remain available in both workspaces. Stereo/multichannel content is
-  rejected with a clear error. Cloud sync, URL imports, browser recording, stereo projects, and browser deployment
-  bundles remain outside this scope.
+- Microphone is the first and default preview source in both workspaces. Packaged/selected mono files remain available
+  as the secondary source, while stereo/multichannel content is rejected with a clear error. Cloud sync, URL imports,
+  browser recording, stereo projects, and browser deployment bundles remain outside this scope.
 - The studio adapts to phone-sized viewports, preserves a direct pass-through empty project, and keeps common project
   terminology user-facing while retaining the existing v2 file contracts internally.
 

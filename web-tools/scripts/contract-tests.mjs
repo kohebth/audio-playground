@@ -278,6 +278,11 @@ includesContent(previewPanel, 'AUDIO_CALIBRATION_HINTS', 'live preview must cali
 includesContent(previewPanel, 'decodeAudioData', 'live preview must decode uploaded audio files');
 includesContent(previewPanel, 'createBufferSource', 'uploaded files must use a WebAudio buffer source');
 includesContent(previewPanel, "type InputMode = 'file' | 'microphone'", 'file and microphone transports must remain separate');
+includesContent(previewPanel, "useState<InputMode>('microphone')", 'microphone must be the default preview source');
+assert(
+  previewPanel.indexOf('data-testid="preview-mode-mic"') < previewPanel.indexOf('data-testid="preview-mode-file"'),
+  'microphone must be presented before the secondary file source',
+);
 includesContent(previewPanel, 'backend.reset()', 'live preview reset must use the WASM backend');
 includesContent(previewPanel, "running ? stop() : start()", 'live engine start and stop must share one control');
 includesContent(previewPanel, 'backend.setParam', 'live parameter controls must use the WASM backend');

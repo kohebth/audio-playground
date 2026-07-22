@@ -129,7 +129,7 @@ export function PreviewPanel({
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
-  const [inputMode, setInputMode] = useState<InputMode>(() => studioMode === 'simple' ? 'microphone' : 'file');
+  const [inputMode, setInputMode] = useState<InputMode>('microphone');
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [audioFileName, setAudioFileName] = useState('No audio file selected');
   const revisionRef = useRef(0);
@@ -1097,8 +1097,19 @@ export function PreviewPanel({
             <button className="transport-btn" data-testid="preview-compile" disabled={!backend} onClick={() => void compile()} title="Compile" type="button">
               <i className="fa-solid fa-hammer" aria-hidden="true" />
             </button>
-        </div>
+          </div>
           <div className="transport-group preview-panel__mode" aria-label="Audio input mode" role="group">
+            <button
+              aria-pressed={inputMode === 'microphone'}
+              data-testid="preview-mode-mic"
+              className={`source-toggle ${inputMode === 'microphone' ? 'active' : ''}`}
+              disabled={running}
+              onClick={() => setInputMode('microphone')}
+              type="button"
+            >
+              <i className="fa-solid fa-microphone" aria-hidden="true" />
+              Mic
+            </button>
             {studioMode === 'pro' ? (
               <button
                 aria-pressed={inputMode === 'file'}
@@ -1112,17 +1123,6 @@ export function PreviewPanel({
                 Audio File
               </button>
             ) : null}
-            <button
-              aria-pressed={inputMode === 'microphone'}
-              data-testid="preview-mode-mic"
-              className={`source-toggle ${inputMode === 'microphone' ? 'active' : ''}`}
-              disabled={running}
-              onClick={() => setInputMode('microphone')}
-              type="button"
-            >
-              <i className="fa-solid fa-microphone" aria-hidden="true" />
-              Mic
-            </button>
             {studioMode === 'pro' && inputMode === 'file' && (
               <label className="transport-file">
                 <span>{audioFileName}</span>
@@ -1166,6 +1166,14 @@ export function PreviewPanel({
       )}
 
       <div className="preview-panel__mode" aria-label="Audio input mode" role="group">
+        <button
+          aria-pressed={inputMode === 'microphone'}
+          disabled={running}
+          onClick={() => setInputMode('microphone')}
+          type="button"
+        >
+          Microphone
+        </button>
         {studioMode === 'pro' ? (
           <button
             aria-pressed={inputMode === 'file'}
@@ -1176,14 +1184,6 @@ export function PreviewPanel({
             Audio file
           </button>
         ) : null}
-        <button
-          aria-pressed={inputMode === 'microphone'}
-          disabled={running}
-          onClick={() => setInputMode('microphone')}
-          type="button"
-        >
-          Microphone
-        </button>
       </div>
 
       {studioMode === 'pro' && inputMode === 'file' && (
