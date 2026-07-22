@@ -51,6 +51,30 @@ test('creates a project from the eight-effect rail template', async ({ page }) =
   await expect(page.getByText('Saved locally', { exact: true })).toBeVisible();
 });
 
+test('drags effect units onto the Pipeline and a specific rail', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New project', exact: true }).first().click();
+  await page.getByPlaceholder('Midnight pedalboard').fill('Drag Board');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Skip tour' }).click();
+
+  const canvas = page.getByTestId('project-canvas');
+  const overdrive = page.getByTestId('effect-library-item-built-in-overdrive');
+  await expect(overdrive).toHaveAttribute('draggable', 'true');
+  await overdrive.dragTo(canvas, { targetPosition: { x: 420, y: 260 } });
+  await expect(page.getByTestId('project-node-overdrive')).toBeVisible();
+
+  const inputRail = page.getByTestId('rf__edge-route-0-system-input-unit-overdrive');
+  const chorus = page.getByTestId('effect-library-item-built-in-chorus');
+  await chorus.dragTo(inputRail);
+  await expect(page.getByTestId('project-node-chorus')).toBeVisible();
+  await expect(page.getByTestId('rf__edge-route-0-system-input-unit-chorus')).toBeVisible();
+  await expect(page.getByTestId('rf__edge-route-1-unit-chorus-unit-overdrive').locator('.project-route__rail'))
+    .toHaveAttribute('d', /^M /);
+  await expect(inputRail).toHaveCount(0);
+});
+
 test('keeps the Pipeline usable at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
@@ -334,6 +358,14 @@ test('offers a Graphviz atom editor with atom-only inspection and safe graph act
   ));
   expect(routedPaths.some(path => path.includes('Q'))).toBe(true);
   expect(routedPaths.every(path => !path.includes('C'))).toBe(true);
+
+  const initialAtomCount = Number(await contractCanvas.getAttribute('data-atom-count'));
+  const clipHard = page.getByTestId('atom-palette-item-amplitude_clip_hard');
+  await expect(clipHard).toHaveAttribute('draggable', 'true');
+  await clipHard.dragTo(contractCanvas, { targetPosition: { x: 420, y: 260 } });
+  await expect(contractCanvas).toHaveAttribute('data-atom-count', String(initialAtomCount + 1));
+  await expect(page.getByTestId('contract-node-amplitude_clip_hard')).toBeVisible();
+  await expect(clipHard).not.toHaveClass(/atom-palette__item--dragging/);
 
   const clip = page.getByTestId('contract-node-clip_drive');
   await clip.click({ button: 'right' });

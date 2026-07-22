@@ -1174,6 +1174,14 @@ body {
   content: 'Drop to create';
 }
 
+.canvas--project .flow-shell--drop-valid::after {
+  content: 'Drop effect on Pipeline or rail';
+}
+
+.canvas--contract .flow-shell--drop-valid::after {
+  content: 'Drop atom on graph or connection';
+}
+
 .flow-shell--drop-reject::after {
   display: flex;
   border-color: var(--danger);
@@ -3143,6 +3151,11 @@ body {
   cursor: grabbing;
 }
 
+.atom-palette__item--dragging {
+  opacity: .5;
+  transform: scale(.98);
+}
+
 .atom-palette__item span,
 .unit-inspect__nodes span {
   min-width: 0;
@@ -3784,8 +3797,11 @@ body {
 .simple-library__categories button { padding: 5px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; background: transparent; color: var(--text-muted); font: 600 9px var(--font-sans); text-transform: capitalize; cursor: pointer; }
 .simple-library__categories button.active { border-color: var(--accent); background: var(--accent-green-dim); color: var(--accent); }
 .simple-library__list { flex: 1; overflow-y: auto; padding: 0 10px 14px; }
-.effect-library-card { display: flex; width: 100%; align-items: center; gap: 10px; margin-bottom: 5px; padding: 9px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--text-primary); cursor: pointer; text-align: left; }
+.effect-library-card { display: flex; width: 100%; align-items: center; gap: 10px; margin-bottom: 5px; padding: 9px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--text-primary); cursor: default; text-align: left; transition: border-color .15s ease, background .15s ease, opacity .15s ease, transform .15s ease; }
 .effect-library-card:hover { border-color: var(--border-default); background: var(--bg-elevated); }
+.effect-library-card[draggable='true'] { cursor: grab; }
+.effect-library-card[draggable='true']:active { cursor: grabbing; }
+.effect-library-card--dragging { opacity: .5; transform: scale(.98); }
 .effect-library-card > span { min-width: 0; flex: 1; }
 .effect-library-card strong,
 .effect-library-card small { display: block; }

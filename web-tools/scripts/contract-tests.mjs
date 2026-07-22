@@ -125,6 +125,8 @@ includesContent(contractCanvas, "markComponentRender('ContractEdge'", 'unit grap
 includesContent(contractCanvas, 'flow-shell--drop-${dropState}', 'unit graph canvas must expose valid/reject drop feedback');
 includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'unit library must define a drag payload type');
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
+includesContent(simpleLibrary, 'draggable={!item.placementError}', 'active Pipeline library items must be draggable');
+includesContent(simpleLibrary, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, item.id)', 'active Pipeline library must emit unit drop payloads');
 includesContent(projectCanvas, 'onAddUnit(unitId', 'project canvas must retain unit drag-and-drop creation');
 includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops must use the atomic route insertion transaction');
 includesContent(projectCanvas, 'nodesDraggable={false}', 'Pipeline units must remain fixed');

@@ -51,6 +51,7 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitI
   const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? initialPaletteAtom?.name ?? '');
   const [filter, setFilter] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [draggingAtomName, setDraggingAtomName] = useState<string | null>(null);
   const paletteAtoms = useMemo(
     () => catalog.atoms.filter(atom => (
       atom.profiles.wasm_realtime === true
@@ -124,17 +125,21 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitI
         {filteredAtoms.map(atom => (
           <button
             key={atom.name}
-            className={`atom-palette__item ${atom.name === selectedAtomName ? 'atom-palette__item--active' : ''}`}
+            className={`atom-palette__item${atom.name === selectedAtomName ? ' atom-palette__item--active' : ''}${draggingAtomName === atom.name ? ' atom-palette__item--dragging' : ''}`}
             draggable
             data-testid={`atom-palette-item-${atom.name}`}
             onClick={() => setSelectedAtomName(atom.name)}
+            onDragEnd={() => setDraggingAtomName(null)}
             onDragStart={event => {
               markPerfSpan('ui.dragStart.atomPalette', () => {
                 event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.name);
+                event.dataTransfer.setData('text/plain', atom.name);
                 event.dataTransfer.effectAllowed = 'copy';
+                setDraggingAtomName(atom.name);
               }, { atom: atom.name });
             }}
             style={{ '--category-color': categoryColor(atom.category) } as CSSProperties}
+            title="Drag onto the Contract graph or a connection"
             type="button"
           >
             <span>{atom.name}</span>

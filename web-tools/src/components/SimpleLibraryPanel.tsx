@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { markPerfSpan } from '../lib/perfTelemetry';
 import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
+import { UNIT_DRAG_TYPE } from './ProjectSidebar';
 
 export type EffectLibraryItem = {
   id: string;
@@ -31,6 +33,7 @@ const categoryColor: Record<string, string> = {
 export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePersonal, onEditContract }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
+  const [draggingItemKey, setDraggingItemKey] = useState<string | null>(null);
   const categories = useMemo(() => ['All', ...new Set(items.map(item => item.category))], [items]);
   const filtered = useMemo(() => items.filter(item => (
     (category === 'All' || item.category === category)
@@ -42,7 +45,7 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
     <aside className="simple-library" data-tour="library">
       <header>
         <div><span>Effect library</span><strong>{items.length}</strong></div>
-        <p>Tap an effect to add it at the end of your board.</p>
+        <p>Click + to append, or drag an effect onto the Pipeline or a rail.</p>
       </header>
       <label className="simple-library__search">
         <span aria-hidden="true">⌕</span>
@@ -58,7 +61,9 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
       <div className="simple-library__list">
         {filtered.map(item => (
           <article
-            className="effect-library-card"
+            className={`effect-library-card${draggingItemKey === `${item.scope}-${item.id}` ? ' effect-library-card--dragging' : ''}`}
+            data-testid={`effect-library-item-${item.scope}-${item.id}`}
+            draggable={!item.placementError}
             key={`${item.scope}-${item.id}`}
             onContextMenu={event => {
               event.preventDefault();
@@ -71,6 +76,20 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
               const bounds = event.currentTarget.getBoundingClientRect();
               setMenu({ item, x: bounds.left + 24, y: bounds.top + 24 });
             }}
+            onDragEnd={() => setDraggingItemKey(null)}
+            onDragStart={event => {
+              if (event.target instanceof Element && event.target.closest('.effect-library-card__actions')) {
+                event.preventDefault();
+                return;
+              }
+              markPerfSpan('ui.dragStart.projectUnit', () => {
+                event.dataTransfer.setData(UNIT_DRAG_TYPE, item.id);
+                event.dataTransfer.setData('text/plain', item.title);
+                event.dataTransfer.effectAllowed = 'copy';
+                setDraggingItemKey(`${item.scope}-${item.id}`);
+              }, { unit: item.id });
+            }}
+            title={item.placementError ?? 'Drag onto the Pipeline or a rail'}
           >
             <i className={`effect-library-card__icon effect-library-card__icon--${categoryColor[item.category] ?? 'blue'}`}>
               <span />

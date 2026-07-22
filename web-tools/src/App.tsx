@@ -1037,18 +1037,23 @@ export function EditorWorkspace({
     });
   }, [project.nodes, projectDraft.units, projectPorts, projectWorkspaceFile.content, projectWorkspaceFile.path, updateProjectFile, workspaceFiles]);
 
-  const addSimpleEffect = useCallback((item: EffectLibraryItem) => {
+  const addSimpleEffect = useCallback((item: EffectLibraryItem, requestedRouteIndex?: number) => {
     markPerfSpan('graph.add.simpleEffect', () => {
       try {
         const source = libraryWorkspaceSource(item, personalUnits);
         if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
         assertUserPlaceableUnit(source.content);
-        const outputRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
-        if (outputRouteIndex < 0) throw new Error('Connect the board to Output before adding another effect.');
+        const fallbackRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
+        const routeIndex = requestedRouteIndex ?? fallbackRouteIndex;
+        if (!project.routes[routeIndex]) {
+          throw new Error(requestedRouteIndex === undefined
+            ? 'Connect the board to Output before adding another effect.'
+            : 'Drop that effect on a connected rail.');
+        }
         const existing = projectDraft.units.find(reference => reference.id === `${item.id}_unit`
           || reference.file.endsWith(`/${item.id}.unit.v2.yaml`));
         if (existing) {
-          insertProjectNodeOnRoute(existing.id, outputRouteIndex);
+          insertProjectNodeOnRoute(existing.id, routeIndex);
           return;
         }
 
@@ -1069,7 +1074,7 @@ export function EditorWorkspace({
           { ...projectPorts, [unitId]: ports },
           unitId,
           instanceId,
-          outputRouteIndex,
+          routeIndex,
           defaults,
         );
         pushHistory();
@@ -1104,6 +1109,16 @@ export function EditorWorkspace({
     pushHistory,
     setWorkspaceFiles,
   ]);
+
+  const placeLibraryEffect = useCallback((itemId: string, routeIndex?: number) => {
+    const item = simpleEffectLibrary.find(candidate => candidate.id === itemId);
+    if (item) {
+      addSimpleEffect(item, routeIndex);
+      return;
+    }
+    if (routeIndex === undefined) addProjectNodeFromLibrary(itemId);
+    else insertProjectNodeOnRoute(itemId, routeIndex);
+  }, [addProjectNodeFromLibrary, addSimpleEffect, insertProjectNodeOnRoute, simpleEffectLibrary]);
 
   const addSimpleParallelEffect = useCallback((item: EffectLibraryItem, requestedRouteIndex?: number) => {
     markPerfSpan('graph.add.simpleParallelEffect', () => {
@@ -1956,8 +1971,8 @@ export function EditorWorkspace({
               onSelectNode={selectProjectNode}
               onEditUnitContract={instanceId => { void editInstanceContract(instanceId); }}
               onSelectRoute={selectRoute}
-              onAddUnit={addProjectNodeFromLibrary}
-              onInsertUnitAtRoute={insertProjectNodeOnRoute}
+              onAddUnit={placeLibraryEffect}
+              onInsertUnitAtRoute={placeLibraryEffect}
               onConnectUnits={createProjectRoute}
               onCopyUnit={copyProjectNode}
               onCutUnit={cutProjectNode}

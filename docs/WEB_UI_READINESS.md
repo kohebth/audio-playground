@@ -23,12 +23,13 @@ it is not exposed as the normal editing interface.
   package contains the versioned workspace, manifest, optional mono audio, and readiness snapshot; topbar import replaces
   the open project's contents in place, while home import creates a separate project.
 - The two explicit workspaces are **Pipeline** and **Contract**. Pipeline is the knob-rich,
-  non-draggable pedalboard with serial insertion and guided parallel routing through the existing panner/mixer cards;
+  fixed-layout pedalboard with serial insertion and guided parallel routing through the existing panner/mixer cards;
   one continuous main rail runs from Input through the serial chain to Output and tucks beneath the existing unit cards.
   Panners fork it into separate straight rails, each retaining its own knob-backed level control, before a mixer restores
-  the single rail. Connection handles appear only while interacting.
-  Contract is the Graphviz atom editor for one Personal effect definition. The legacy `simple`/`pro` values remain
-  serialization details only.
+  the single rail. Effects can be appended with the + action, dragged onto the Pipeline, or inserted on a specific rail;
+  unit positions remain system-controlled. Connection handles appear only while interacting. Contract is the Graphviz
+  atom editor for one Personal effect definition; atoms can be added by button or dragged onto the graph or a connection.
+  The legacy `simple`/`pro` values remain serialization details only.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
   selected pedal, and structured units can be saved to a personal browser library.
 - Contract Settings provides structured identity, compatibility, parameter, and port controls, while the right inspector
