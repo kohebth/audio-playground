@@ -125,7 +125,7 @@ includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'un
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
 includesContent(projectCanvas, 'onAddUnit(unitId', 'project canvas must retain unit drag-and-drop creation');
 includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops must use the atomic route insertion transaction');
-includesContent(projectCanvas, 'nodesDraggable={false}', 'Effect Pipeline units must remain fixed');
+includesContent(projectCanvas, 'nodesDraggable={false}', 'Pipeline units must remain fixed');
 assert(!projectCanvas.includes('onNodeDragStop'), 'project canvas must not expose a unit-move interaction');
 includesContent(projectCanvas, 'ROUTE_CORNER_RADIUS = 10', 'project route elbows must use the fixed rounded corner radius');
 includesContent(projectCanvas, '<BaseEdge', 'project routes must render their planned orthogonal geometry');
@@ -248,18 +248,18 @@ includesContent(projectInspector, 'onRenameInstance', 'project inspector must ex
 includesContent(projectInspector, 'onRemoveRoute', 'project inspector must expose structural route disconnection');
 includesContent(projectSidebar, 'onCreateUnit(unitName)', 'workspace sidebar must expose unit creation');
 
-// Effect Pipeline / Effect Contract replace the old mode-specific editor surfaces.
-includesContent(modeToggle, 'Effect Pipeline', 'the primary project view must be named Effect Pipeline');
-includesContent(modeToggle, 'Effect Contract', 'the definition editor must be named Effect Contract');
-includesContent(studioApp, "return 'simple'", 'opening a project must always start in Effect Pipeline');
-includesContent(simpleLibrary, 'Edit Contract', 'library context actions must open Effect Contract');
-includesContent(projectCanvas, 'Edit Contract', 'pipeline instance context actions must open Effect Contract');
+// Pipeline / Contract replace the old mode-specific editor surfaces.
+includesContent(modeToggle, '>\n        Pipeline\n', 'the primary project view must be named Pipeline');
+includesContent(modeToggle, '>\n        Contract\n', 'the definition editor must be named Contract');
+includesContent(studioApp, "return 'simple'", 'opening a project must always start in Pipeline');
+includesContent(simpleLibrary, 'Edit Contract', 'library context actions must open Contract');
+includesContent(projectCanvas, 'Edit Contract', 'pipeline instance context actions must open Contract');
 includesContent(app, 'createPersonalUnitCopy', 'built-in effects must clone before contract editing');
 includesContent(app, 'rebindProjectInstanceUnit', 'instance contract editing must rebind the active project to its Personal copy');
 includesContent(app, 'syncProjectUnitContract', 'Personal contract edits must update matching active-project routes and parameters');
 includesContent(app, 'personalUnitWorkspacePath', 'Personal definitions must propagate through stable workspace references');
-includesContent(app, 'contract-empty-state', 'Effect Contract must provide an actionable empty state');
-includesContent(app, '<AtomContextInspector', 'Effect Contract must use the atom-only inspector');
+includesContent(app, 'contract-empty-state', 'Contract must provide an actionable empty state');
+includesContent(app, '<AtomContextInspector', 'Contract must use the atom-only inspector');
 assert(!atomContextInspector.includes('Unit Inspect'), 'the atom inspector must not render unit inspection');
 includesContent(unitSettingsDrawer, 'Contract Settings', 'unit-level editing must live in the separate Contract Settings drawer');
 includesContent(app, 'assertUserPlaceableUnit(content)', 'Contract edits must preserve the one-input/one-output effect policy');

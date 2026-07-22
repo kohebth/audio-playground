@@ -16,7 +16,7 @@ export function ModeToggle({ mode, onChange, compact = false }: Props) {
         onClick={() => onChange('simple')}
         type="button"
       >
-        Effect Pipeline
+        Pipeline
       </button>
       <button
         aria-pressed={mode === 'pro'}
@@ -25,7 +25,7 @@ export function ModeToggle({ mode, onChange, compact = false }: Props) {
         onClick={() => onChange('pro')}
         type="button"
       >
-        Effect Contract
+        Contract
       </button>
     </div>
   );

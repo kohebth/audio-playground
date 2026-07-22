@@ -3737,7 +3737,7 @@ body {
 .topbar__audio-io:hover,
 .topbar__help:hover { border-color: var(--border-default); color: var(--text-primary); }
 
-/* Effect Pipeline workspace (legacy storage mode: simple). */
+/* Pipeline workspace (legacy storage mode: simple). */
 .app--simple .layout { background: #0e100d; }
 .simple-library {
   display: flex;
@@ -5050,7 +5050,7 @@ body {
   .structured-grid--two { grid-template-columns: 1fr; }
 }
 
-/* Effect Contract view */
+/* Contract view */
 .app--simple .topbar__workspace-actions { display: flex; }
 .app--simple .topbar__workspace-actions > label,
 .app--simple .topbar__workspace-actions > [data-testid="topbar-export"],

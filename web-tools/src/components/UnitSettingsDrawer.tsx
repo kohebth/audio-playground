@@ -41,7 +41,7 @@ export function UnitSettingsDrawer({ file, open, unit, onChange, onClose, onReor
         tabIndex={-1}
       >
         <header>
-          <div><span>Effect Contract</span><strong>Contract settings</strong></div>
+          <div><span>Contract</span><strong>Contract settings</strong></div>
           <button aria-label="Close Contract Settings" onClick={onClose} type="button">×</button>
         </header>
         <StructuredUnitEditor

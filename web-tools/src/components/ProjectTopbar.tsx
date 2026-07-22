@@ -94,7 +94,7 @@ export function ProjectTopbar({
           <span className="header-project-label">Active Project</span>
           <div className="header-project-name">
             <strong>{project.name}</strong>
-            <span className="tag">{mode === 'simple' ? 'Effect Pipeline' : 'Effect Contract'}</span>
+            <span className="tag">{mode === 'simple' ? 'Pipeline' : 'Contract'}</span>
           </div>
         </div>
       </div>

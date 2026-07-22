@@ -436,12 +436,12 @@ export function rebindProjectInstanceUnit(
   const draft = parseProjectGraphDraft(content);
   const current = draft.nodes.find(node => node.id === instanceId);
   if (!current) throw new Error(`Project instance "${instanceId}" was not found.`);
-  if (current.routing) throw new Error('Routing helpers do not expose editable effect contracts.');
+  if (current.routing) throw new Error('Routing helpers do not expose editable contracts.');
   if (!draft.units.some(unit => unit.id === nextUnit)) throw new Error(`Project unit "${nextUnit}" was not found.`);
   const currentPorts = ports[current.unit];
   const nextPorts = ports[nextUnit];
   if (!isUserPlaceablePorts(currentPorts) || !isUserPlaceablePorts(nextPorts)) {
-    throw new Error('Effect contracts must keep one mono audio input and one mono audio output.');
+    throw new Error('Contracts must keep one mono audio input and one mono audio output.');
   }
 
   const doc = loadDocument(content);
@@ -474,7 +474,7 @@ export function syncProjectUnitContract(
   const previousPorts = parseUnitPortNames(previousUnitContent);
   const nextPorts = parseUnitPortNames(nextUnitContent);
   if (!isUserPlaceablePorts(previousPorts) || !isUserPlaceablePorts(nextPorts)) {
-    throw new Error('Effect contracts must keep one mono audio input and one mono audio output.');
+    throw new Error('Contracts must keep one mono audio input and one mono audio output.');
   }
 
   const nextParams = parseUnitGraphDraft(nextUnitContent).params;
@@ -485,7 +485,7 @@ export function syncProjectUnitContract(
   const matchingNodes = nodes.filter(node => String(node.unit) === unitId);
   const matchingIds = new Set(matchingNodes.map(node => String(node.id)));
   for (const node of matchingNodes) {
-    if (parseRoutingSection(node.routing)) throw new Error('Routing helpers cannot use editable effect contracts.');
+    if (parseRoutingSection(node.routing)) throw new Error('Routing helpers cannot use editable contracts.');
     const existing = stringMap(node.params);
     node.params = Object.fromEntries(nextParams.map(param => [param.name, existing[param.name] ?? param.default]));
   }

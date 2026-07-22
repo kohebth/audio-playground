@@ -76,7 +76,7 @@ function expectHealthyNetwork(audit: NetworkAudit, expectedBasePath: string) {
   for (const path of audit.sameOriginPaths) expect(path.startsWith(expectedBasePath)).toBe(true);
 }
 
-test('serves base-safe Effect Pipeline and Contract routes', async ({ page }, testInfo) => {
+test('serves base-safe Pipeline and Contract routes', async ({ page }, testInfo) => {
   const audit = monitorNetwork(page, baseUrl(testInfo));
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));

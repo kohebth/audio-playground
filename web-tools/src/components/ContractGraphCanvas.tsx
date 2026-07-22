@@ -809,10 +809,10 @@ export function ContractGraphCanvas({
     <main className="canvas canvas--contract canvas-area" onKeyDownCapture={openKeyboardMenu}>
       <div className="canvas-modebar">
         <button className="btn btn--ghost" onClick={onBackToProject} type="button">
-          Effect Pipeline
+          Pipeline
         </button>
         <div>
-          <span>Effect Contract</span>
+          <span>Contract</span>
           <strong>{parsed.unit?.name ?? selectedUnitLabel}</strong>
         </div>
         <code>{workspaceFile.path}</code>

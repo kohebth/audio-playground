@@ -682,7 +682,7 @@ export function EditorWorkspace({
       await persistPersonalUnit(copy);
       openPersonalContract(copy);
     } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : 'Unable to open that Effect Contract.');
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to open that Contract.');
     }
   }, [openPersonalContract, persistPersonalUnit, personalUnits]);
 
@@ -691,7 +691,7 @@ export function EditorWorkspace({
       const instance = projectDraft.nodes.find(node => node.id === instanceId);
       if (!instance) throw new Error(`Effect instance "${instanceId}" was not found.`);
       if (instance.routing || projectPorts[instance.unit]?.routing) {
-        throw new Error('Panning and mixing helpers are managed by the Effect Pipeline.');
+        throw new Error('Panning and mixing helpers are managed by the Pipeline.');
       }
       const reference = projectDraft.units.find(unit => unit.id === instance.unit);
       if (!reference) throw new Error(`Effect definition "${instance.unit}" was not found.`);
@@ -754,7 +754,7 @@ export function EditorWorkspace({
       });
       openPersonalContract(copy);
     } catch (error) {
-      setGraphEditError(error instanceof Error ? error.message : 'Unable to open that Effect Contract.');
+      setGraphEditError(error instanceof Error ? error.message : 'Unable to open that Contract.');
     }
   }, [
     openPersonalContract,
@@ -1935,8 +1935,8 @@ export function EditorWorkspace({
         ) : mode === 'pro' ? (
           <main className="canvas canvas-area contract-empty-state" data-testid="contract-empty-state">
             <div>
-              <span>Effect Contract</span>
-              <h2>Choose an effect contract to edit</h2>
+              <span>Contract</span>
+              <h2>Choose a Contract to edit</h2>
               <p>Right-click a Personal effect to edit it. Built-in effects are copied to Personal before any changes are made.</p>
               <button
                 className="btn btn--primary"
@@ -2002,7 +2002,7 @@ export function EditorWorkspace({
           <aside className="simple-inspector contract-empty-inspector">
             <span className="simple-inspector__eyebrow">Atom inspector</span>
             <h2>No contract selected</h2>
-            <p>Open an Effect Contract to inspect only the selected atom here.</p>
+            <p>Open a Contract to inspect only the selected atom here.</p>
           </aside>
         )}
       </div>

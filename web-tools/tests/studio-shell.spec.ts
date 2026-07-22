@@ -12,6 +12,8 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
   await expect(page.locator('.simple-library')).toBeVisible();
   await expect(page.getByText('Build from left to right')).toBeVisible();
+  await expect(page.getByTestId('view-effect-pipeline')).toHaveText('Pipeline');
+  await expect(page.getByTestId('view-effect-contract')).toHaveText('Contract');
   await page.getByRole('button', { name: 'Skip tour' }).click();
 
   await page.getByRole('button', { name: 'Add Overdrive', exact: true }).click();
@@ -30,7 +32,7 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await expect(page.locator('.project-card')).toContainText(['Midnight Board', 'Guitar Pedalboard', 'New project']);
 });
 
-test('keeps the Effect Pipeline usable at phone width', async ({ page }) => {
+test('keeps the Pipeline usable at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();

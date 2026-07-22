@@ -427,7 +427,7 @@ export function ProjectCanvas({
               onEditUnitContract(unitData.instance.id);
               closeContextMenu();
             }}
-            title={currentRouting ? 'Routing helpers do not expose effect contracts.' : undefined}
+            title={currentRouting ? 'Routing helpers do not expose contracts.' : undefined}
           >Edit Contract</GraphMenuButton>
           <GraphMenuButton
             disabled={!canReplace || availableReplacements.length === 0}
@@ -436,7 +436,7 @@ export function ProjectCanvas({
               setReplacementOpen(open => !open);
               setReplacementUnit(chosenReplacement?.id ?? '');
             }}
-            title={canReplace ? undefined : 'This unit does not have a replaceable effect contract.'}
+            title={canReplace ? undefined : 'This unit does not have a replaceable contract.'}
           >Replace…</GraphMenuButton>
           {replacementOpen && chosenReplacement ? (
             <div className="graph-context-menu__replace" role="group" aria-label="Replacement preview">

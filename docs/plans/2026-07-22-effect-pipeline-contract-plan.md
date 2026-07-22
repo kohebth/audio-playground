@@ -1,4 +1,4 @@
-# Plan: Effect Pipeline and Effect Contract workspaces
+# Plan: Pipeline and Contract workspaces
 
 **Date:** 2026-07-22
 **Goal:** Restore the pedalboard as the primary product view and make effect-definition editing explicit, safe, and
@@ -6,9 +6,9 @@ approachable without exposing YAML.
 
 ## Product decisions
 
-- **Effect Pipeline** is the existing knob-rich board. Units stay fixed; panner/mixer cards, flexible height, straight
+- **Pipeline** is the existing knob-rich board. Units stay fixed; panner/mixer cards, flexible height, straight
   branch rails, and rounded orthogonal turns are preserved.
-- **Effect Contract** edits one Personal effect definition as a Graphviz atom graph. Its right inspector is atom-only;
+- **Contract** edits one Personal effect definition as a Graphviz atom graph. Its right inspector is atom-only;
   identity, compatibility, parameters, and ports live in a separate Contract Settings drawer.
 - Editing a built-in first creates a Personal copy. Entry is available from a library context menu and a Pipeline
   instance context menu.
@@ -17,7 +17,7 @@ approachable without exposing YAML.
 - User effects retain exactly one mono audio input and one mono audio output. Internal routing helpers remain exempt.
 - Microphone is the first and default preview source in both workspaces; mono-file preview remains available as the
   secondary source through view-independent transport and Audio I/O controls.
-- Opening or reloading a project always starts in Effect Pipeline. Internal `simple`/`pro` values are retained only for
+- Opening or reloading a project always starts in Pipeline. Internal `simple`/`pro` values are retained only for
   `.apg` compatibility.
 
 ## Delivered implementation
