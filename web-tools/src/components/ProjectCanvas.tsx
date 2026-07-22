@@ -131,7 +131,7 @@ type Props = {
   onNodesChange: OnNodesChange<Node<ProjectNodeData>>;
   onEdgesChange: OnEdgesChange<ProjectRouteEdge>;
   onSelectNode: (id: string, additive?: boolean) => void;
-  onOpenContractGraph: (id: string) => void;
+  onEditUnitContract: (instanceId: string) => void;
   onSelectRoute: (index: number) => void;
   onAddUnit: (unitId: string) => void;
   onInsertUnitAtRoute: (unitId: string, routeIndex: number) => void;
@@ -163,6 +163,7 @@ export type ProjectParallelOption = {
 
 type ProjectFlowProps = Omit<Props,
   'canPasteUnit'
+  | 'onEditUnitContract'
   | 'onCopyUnit'
   | 'onCutUnit'
   | 'onPasteUnit'
@@ -195,7 +196,6 @@ function ProjectFlow({
   onNodesChange,
   onEdgesChange,
   onSelectNode,
-  onOpenContractGraph,
   onSelectRoute,
   onAddUnit,
   onInsertUnitAtRoute,
@@ -268,7 +268,6 @@ function ProjectFlow({
         onNodeClick={(event, node) => onSelectNode(node.id, event.shiftKey)}
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
-        onNodeDoubleClick={(_, node) => onOpenContractGraph(node.id)}
         onEdgeClick={(_, edge) => {
           const routeIndex = routeIndexFromEdge(edge);
           if (routeIndex !== null) onSelectRoute(routeIndex);
@@ -303,6 +302,7 @@ export function ProjectCanvas({
   onPasteUnit,
   onRemoveUnit,
   onReplaceUnit,
+  onEditUnitContract,
   onAddParallelAtRoute,
   canPasteUnit,
   replacementOptions,
@@ -420,6 +420,15 @@ export function ProjectCanvas({
           >
             {unitData.bypassed ? 'Turn on' : 'Turn off'}
           </GraphMenuButton>
+          <GraphMenuButton
+            disabled={Boolean(currentRouting)}
+            icon="fa-diagram-project"
+            onClick={() => {
+              onEditUnitContract(unitData.instance.id);
+              closeContextMenu();
+            }}
+            title={currentRouting ? 'Routing helpers do not expose effect contracts.' : undefined}
+          >Edit Contract</GraphMenuButton>
           <GraphMenuButton
             disabled={!canReplace || availableReplacements.length === 0}
             icon="fa-repeat"

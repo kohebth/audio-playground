@@ -21,20 +21,19 @@ it is not exposed as the normal editing interface.
 - A project home screen creates, opens, duplicates, imports, exports, and deletes browser-local projects backed by
   IndexedDB. The portable `.apg` package contains the versioned workspace, manifest, optional mono audio, and readiness
   snapshot; topbar import replaces the open project's contents in place, while home import creates a separate project.
-- A global Simple/Pro switch serves both musicians and DSP authors. Simple mode provides an effect library, pedal-style
-  controls, serial insertion, and guided parallel routing through an explicit panner/mixer pair. Each helper path has its
-  own knob-backed level control. Pro mode adds project structure, batch operations, file preview, readiness details, and
-  unit-internals editing; neither mode replaces the original pedal-card control model with a second chain UI.
+- The two explicit workspaces are **Effect Pipeline** and **Effect Contract**. Effect Pipeline is the knob-rich,
+  non-draggable pedalboard with serial insertion and guided parallel routing through the existing panner/mixer cards;
+  every helper path retains its own knob-backed level control and straight rail. Effect Contract is the Graphviz atom
+  editor for one Personal effect definition. The legacy `simple`/`pro` values remain serialization details only.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
   selected pedal, and structured units can be saved to a personal browser library.
-- Pro unit editing uses structured identity, compatibility, parameter, port, and atom-graph controls. User-placeable
-  effects are constrained to one mono audio input and one mono audio output; optional control ports remain available,
-  while loaded multi-port mixers and routing helpers stay supported as internal project infrastructure. Raw YAML text is
-  no longer mounted in the active editor; transformer and backend validation errors remain visible without replacing the
-  last valid runtime.
-- Simple mode accepts live mono input only. Pro mode additionally accepts packaged or selected audio files and rejects
-  stereo/multichannel content with a clear error. Cloud sync, URL imports, browser recording, stereo projects, and browser
-  deployment bundles remain outside this scope.
+- Contract Settings provides structured identity, compatibility, parameter, and port controls, while the right inspector
+  remains atom-only. User-placeable effects are constrained to one mono audio input and one mono audio output; optional
+  control ports remain available, while loaded multi-port mixers and routing helpers stay supported as internal project
+  infrastructure. Raw YAML text is not mounted in the active editor.
+- Microphone and packaged/selected mono-file preview remain available in both workspaces. Stereo/multichannel content is
+  rejected with a clear error. Cloud sync, URL imports, browser recording, stereo projects, and browser deployment
+  bundles remain outside this scope.
 - The studio adapts to phone-sized viewports, preserves a direct pass-through empty project, and keeps common project
   terminology user-facing while retaining the existing v2 file contracts internally.
 
@@ -56,9 +55,9 @@ typed frontend integration are implemented through a versioned TypeScript facade
 revisions, validates and prepares them in a Worker, stages valid images in an AudioWorklet, keeps failed edits away from
 the active runtime, and routes stable parameter/bypass names plus meter snapshots through the facade. Runtime image
 hydration and commit are separate Worklet messages; a newly announced editor revision invalidates stale preparation
-before commit, while failure state retains the affected revision and diagnostic. In Pro mode, mono files decode through
-WebAudio and feed the real processor Worklet; microphone capture remains a separate selectable input using the same
-runtime. Simple mode keeps that choice focused on live microphone/audio-interface input.
+before commit, while failure state retains the affected revision and diagnostic. Mono files decode through WebAudio and
+feed the real processor Worklet; microphone capture remains a separate selectable input using the same runtime in both
+Effect Pipeline and Effect Contract.
 
 The compact transport keeps one WASM backend alive across parent UI renders, starts and stops both decoded files and
 microphone streams, and suppresses stale meter failures while a Worklet is being disposed. Browser regression coverage
@@ -66,11 +65,12 @@ exercises both transport modes. Workspace shortcuts map `Ctrl/Cmd+S` to local sa
 and `Space` to start or stop playback while leaving text-editing controls unaffected. The v2 initialization splash uses
 the bundled APG grid mark and dismisses automatically when the audio runtime is ready, without a manual launch gate.
 
-The right inspector exposes persisted browser audio input/output selection. AudioContext output routing is
+A view-independent Audio I/O control in the project topbar exposes persisted browser input/output selection in a
+non-modal panel, so the transport remains usable while configuring or calibrating. AudioContext output routing is
 feature-detected, microphone constraints request the selected device, mono capture, matching sample rate, and disabled
-voice processing, and the UI reports actual capture/context sample rates plus capture/base/output latency. Device
-changes rebuild the browser backend, rehydrate the same workspace revision, and restore running, mute, bypass, and
-parameter-control state; a failed rebuild restores the previous known-good configuration.
+voice processing, and the UI reports actual capture/context sample rates plus capture/base/output latency. Device changes
+rebuild the browser backend, rehydrate the same workspace revision, and restore running, mute, bypass, and parameter
+state; a failed rebuild restores the previous known-good configuration.
 
 The live preview exposes workspace, prepared, active, and failed revisions independently. Worker and processor failures
 render the structured diagnostic code, phase, revision, file, and schema path instead of collapsing the backend result
@@ -86,8 +86,8 @@ unit's parameter metadata, including label, range, and unit; the inspector retai
 Dragging a card knob uses the same clamped YAML update and live parameter synchronization path as other parameter edits.
 Effect cards grow by parameter-row count and wrap at three knobs per row. Routing helpers instead place one knob on each
 vertical path lane. Effect knob order follows the referenced unit YAML parameter mapping, routing knob order follows its
-declared path order, and the Contract inspector can move ordinary parameters through a structured YAML edit.
-Project cards are fixed in both Simple and Pro modes. Topology changes rebuild a deterministic left-to-right Dagre layout
+declared path order, and Contract Settings can move ordinary parameters through a structured edit.
+Project cards are fixed in Effect Pipeline. Topology changes rebuild a deterministic left-to-right Dagre layout
 without consuming or writing project `ui.position` values, while scalar updates preserve the existing React Flow nodes,
 edges, and viewport. Linear routes stay straight; split and merge routes use Dagre's obstacle lanes rendered as rounded
 orthogonal elbows. Automatic layout never changes the current pan or zoom after the initial mount.
@@ -102,7 +102,7 @@ protected so an effect cannot be discarded implicitly.
 Monitoring is explicitly polled at 10 Hz outside `process()`. Snapshots include peak, RMS, frame count, active revision,
 and underruns; the render callback performs no meter message allocation or temporary typed-array view allocation.
 
-Developer Diagnostics includes an opt-in five-second microphone latency profile. The AudioWorklet measures callback
+The view-independent Audio I/O panel includes an opt-in five-second microphone latency profile. The AudioWorklet measures callback
 cadence gaps and samples input copy, WASM graph execution, output copy, latency-probe work, channel copy, and total
 callback time every eighth quantum into fixed-capacity buffers. Polling constructs mean, p95, maximum, deadline
 utilization, underrun, and deadline-miss results outside `process()`. Reports classify real-time health from callback
@@ -118,7 +118,7 @@ The live microphone-path estimate remains neutral through 20 ms, warns above 20 
 Output-only estimates and measured acoustic-loopback status retain their existing presentation.
 
 The GitHub Pages production boundary uses a configurable Vite base path and hash routes for the project and unit views.
-Developer Diagnostics exposes the injected build commit, deployment base, and mode, and the explicitly public overdrive
+Project readiness exposes the injected build commit, deployment base, and mode, and the explicitly public overdrive
 v2 fixture is shipped under `units/` with a contract test that prevents fixture drift. Clean `npm ci`, lint, tests, a
 `/audio-playground/` production build, and the project/unit browser route flow pass locally. The Pages workflow now
 rebuilds and smoke-tests the Emscripten control/processor modules, uses clean installs and fixed Node 22, runs TypeScript,
@@ -163,11 +163,13 @@ fields,
 incompatible catalog field types/sizes, occupied targets, and cycles. Canvas node movement updates UI-only position state
 and does not change DSP YAML or announce a workspace revision.
 
-Opening a unit enters the existing Pro atom graph and selects the Atom inspector. That inspector contains only the atom
-list, selected atom identity, bindings, configuration, and atom actions; project-unit actions stay under Project and
-structured unit metadata stays under Contract. A dedicated worker runs Graphviz `dot` with orthogonal splines when the
-atom topology opens or changes. Edges render as rounded orthogonal paths, dragging an atom requests fixed-position
-Graphviz rerouting, and the explicit Auto Layout action can persist the generated atom positions without exposing YAML.
+Opening Edit Contract from a Pipeline instance or library card enters the Graphviz atom graph. Built-ins are first cloned
+to Personal; editing an instance rebinds that active-project instance to the copy, and later edits propagate to every
+matching instance in that active project only. The right inspector contains selected atom identity, bindings,
+configuration, and atom actions; structured unit metadata lives in the separate Contract Settings drawer. A dedicated
+worker runs Graphviz `dot` with orthogonal splines when topology opens or changes. Edges render as rounded orthogonal
+paths, dragging an atom requests fixed-position Graphviz rerouting, and Auto Layout can persist generated atom positions.
+Opening or reloading a project always returns to Effect Pipeline; no Contract route is restored implicitly.
 
 The unit contract canvas derives two fixed, handle-sized boundary rings from public audio ports. Each ring is labeled with
 its graph signal name: the left ring shows where the preceding project stage enters atom inputs, and the right ring shows
@@ -309,9 +311,9 @@ The UI needs a way to drive live or offline preview:
 - **Phase W:** Runtime supports product controls and meters. Complete for params, bypass, mute, and peak/RMS meter snapshots.
 - **Phase X:** Representative unit fixture metadata, the guitar pedalboard project fixture metadata, deterministic render proof, and compatibility/output capture are complete.
 - **Phase Y:** Web handoff package freezes sample contracts, documents exact fixture commands, refreshes repo guidance, and declares backend readiness. Complete.
-- **Visual-first studio follow-on:** Project home, IndexedDB/`.apg` persistence, Simple/Pro workflows, scenes, presets,
-  parallel routing, locked deterministic project layout, structured Pro editing, and browser release/performance gates
-  are complete.
+- **Visual-first studio follow-on:** Project home, IndexedDB/`.apg` persistence, Effect Pipeline/Effect Contract
+  workflows, scenes, presets, parallel routing, locked deterministic project layout, structured Contract Settings, and
+  browser release/performance gates are complete.
 
 ## Delivered Web UI Scope
 
@@ -319,8 +321,8 @@ The first product workflow is delivered:
 
 - [x] Local project browser and portable `.apg` packages
 - [x] Pedalboard canvas for unit instances, serial routes, and guided parallel wet/dry routes
-- [x] Simple musician workflow with pedals, live input, scenes, presets, and tour
-- [x] Pro workflow with diagnostics, compatibility, batch actions, file preview, and readiness
+- [x] Effect Pipeline workflow with fixed pedal cards, knobs, microphone/file preview, scenes, presets, and tour
+- [x] Effect Contract workflow with Personal-copy ownership, Graphviz atom editing, and atom-only inspection
 - [x] Parameter controls generated from unit metadata
 - [x] Structured atom-level unit editor after the project-level workflow
 - [x] One-click project/atom connections with named handles and cancel state

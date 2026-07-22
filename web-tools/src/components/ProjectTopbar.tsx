@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import type { ProjectInspect } from '../lib/backendSamples';
 import { AppLogo } from './AppLogo';
@@ -12,6 +12,7 @@ import type {
 } from '../lib/projectPackage';
 import { ModeToggle } from './ModeToggle';
 import { ProjectReadinessPanel } from './ProjectReadinessPanel';
+import { AudioIoDrawer } from './AudioIoDrawer';
 
 type Props = {
   project: ProjectInspect;
@@ -71,6 +72,8 @@ export function ProjectTopbar({
   onReadinessUpdate,
 }: Props) {
   const [readinessOpen, setReadinessOpen] = useState(false);
+  const [audioIoOpen, setAudioIoOpen] = useState(false);
+  const closeAudioIo = useCallback(() => setAudioIoOpen(false), []);
   const draftStateClass = workspaceSaveError ? 'status-pill--bad' : hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
   const readinessOk = readiness.validation === 'ready' && readiness.preview !== 'blocked';
 
@@ -91,7 +94,7 @@ export function ProjectTopbar({
           <span className="header-project-label">Active Project</span>
           <div className="header-project-name">
             <strong>{project.name}</strong>
-            <span className="tag">{mode === 'simple' ? 'Pedalboard' : 'Project v2'}</span>
+            <span className="tag">{mode === 'simple' ? 'Effect Pipeline' : 'Effect Contract'}</span>
           </div>
         </div>
       </div>
@@ -103,7 +106,7 @@ export function ProjectTopbar({
         paramOverrides={paramOverrides}
         workspaceFiles={workspaceFiles}
         onSaveWorkspace={onSaveWorkspace}
-        studioMode={mode}
+        studioMode="pro"
         packagedAudio={packagedAudio}
         onAudioAssetChange={onAudioAssetChange}
         onReadinessUpdate={onReadinessUpdate}
@@ -111,11 +114,28 @@ export function ProjectTopbar({
 
       <div className="header-right">
         <ModeToggle compact mode={mode} onChange={onModeChange} />
+        <button
+          aria-expanded={audioIoOpen}
+          aria-label="Audio I/O"
+          className="topbar__audio-io"
+          data-testid="audio-io-open"
+          onClick={() => {
+            setReadinessOpen(false);
+            setAudioIoOpen(open => !open);
+          }}
+          title="Audio I/O"
+          type="button"
+        >
+          <i className="fa-solid fa-sliders" aria-hidden="true" />
+        </button>
         <button className="topbar__help" onClick={onTour} title="Show guided tour" type="button">?</button>
         <div className="topbar__status" aria-label="Project status">
           <button
             className={`status-pill ${readinessOk ? 'status-pill--ok' : 'status-pill--bad'}`}
-            onClick={() => setReadinessOpen(open => !open)}
+            onClick={() => {
+              setAudioIoOpen(false);
+              setReadinessOpen(open => !open);
+            }}
             type="button"
           >
             {readinessOk ? 'Ready' : readiness.validation === 'unknown' ? 'Checking' : 'Blocked'}
@@ -171,6 +191,7 @@ export function ProjectTopbar({
         </button>
         </div>
       </div>
+      <AudioIoDrawer onClose={closeAudioIo} open={audioIoOpen} />
       <ProjectReadinessPanel onClose={() => setReadinessOpen(false)} open={readinessOpen} readiness={readiness} />
     </header>
   );

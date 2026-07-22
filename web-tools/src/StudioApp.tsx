@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { EditorWorkspace } from './App';
@@ -34,8 +34,7 @@ function newId(prefix = 'project'): string {
 }
 
 function storedMode(): StudioMode {
-  if (typeof window === 'undefined') return 'simple';
-  return window.localStorage.getItem(MODE_STORAGE_KEY) === 'pro' ? 'pro' : 'simple';
+  return 'simple';
 }
 
 function starterProject(now = new Date().toISOString()): ApgProjectPackage {
@@ -70,7 +69,17 @@ export default function StudioApp() {
   const [error, setError] = useState<string | null>(null);
   const [migrationNotice, setMigrationNotice] = useState<string | null>(null);
   const [mode, setModeState] = useState<StudioMode>(storedMode);
+  const initialPathname = useRef(location.pathname);
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  const [initialRouteNormalized, setInitialRouteNormalized] = useState(() => (
+    initialPathname.current === '/' || initialPathname.current === '/home' || initialPathname.current === '/projects'
+  ));
   const isHome = location.pathname === '/' || location.pathname === '/home';
+
+  useEffect(() => {
+    if (!initialRouteNormalized && location.pathname === '/projects') setInitialRouteNormalized(true);
+  }, [initialRouteNormalized, location.pathname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +130,9 @@ export default function StudioApp() {
         setPersonalUnits(units);
         const lastId = typeof window === 'undefined' ? null : window.localStorage.getItem(LAST_PROJECT_STORAGE_KEY);
         setActiveProject(stored.find(project => project.manifest.id === lastId) ?? stored[0] ?? null);
+        if (initialPathname.current !== '/' && initialPathname.current !== '/home') {
+          navigateRef.current('/projects', { replace: true });
+        }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : 'Unable to open local projects.');
       } finally {
@@ -142,6 +154,8 @@ export default function StudioApp() {
   }, [repository]);
 
   const openProject = useCallback((project: ApgProjectPackage) => {
+    setModeState('simple');
+    window.localStorage.setItem(MODE_STORAGE_KEY, 'simple');
     setActiveProject(project);
     window.localStorage.setItem(LAST_PROJECT_STORAGE_KEY, project.manifest.id);
     navigate('/projects');
@@ -243,10 +257,15 @@ export default function StudioApp() {
     }).catch(caught => setError(caught instanceof Error ? caught.message : 'Unable to delete that preset.'));
   }, [repository]);
 
-  const savePersonalUnit = useCallback((unit: PersonalUnitRecord) => {
-    void repository.savePersonalUnit(unit).then(async () => {
+  const savePersonalUnit = useCallback(async (unit: PersonalUnitRecord) => {
+    try {
+      await repository.savePersonalUnit(unit);
       setPersonalUnits(await repository.listPersonalUnits());
-    }).catch(caught => setError(caught instanceof Error ? caught.message : 'Unable to save that personal unit.'));
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Unable to save that personal unit.';
+      setError(message);
+      throw caught;
+    }
   }, [repository]);
 
   const deletePersonalUnit = useCallback((id: string) => {
@@ -279,13 +298,11 @@ export default function StudioApp() {
         <ProjectHome
           error={error}
           loading={loading}
-          mode={mode}
           onCreate={createProject}
           onDelete={deleteProject}
           onDuplicate={duplicateProject}
           onExport={downloadProject}
           onImport={importProject}
-          onModeChange={setMode}
           onOpen={openProject}
           projects={projects}
         />
@@ -293,7 +310,7 @@ export default function StudioApp() {
     );
   }
 
-  if (loading || !activeProject) {
+  if (loading || !activeProject || !initialRouteNormalized) {
     return (
       <main className="studio-loading">
         <span>Opening project…</span>

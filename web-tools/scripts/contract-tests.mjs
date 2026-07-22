@@ -45,8 +45,14 @@ const viteConfig = read('web-tools/vite.config.ts');
 const pagesWorkflow = read('.github/workflows/deploy-pages.yml');
 const backendSamples = read('web-tools/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
+const projectReadinessPanel = read('web-tools/src/components/ProjectReadinessPanel.tsx');
 const projectSidebar = read('web-tools/src/components/ProjectSidebar.tsx');
 const projectInspector = read('web-tools/src/components/ProjectInspector.tsx');
+const audioIoDrawer = read('web-tools/src/components/AudioIoDrawer.tsx');
+const atomContextInspector = read('web-tools/src/components/AtomContextInspector.tsx');
+const unitSettingsDrawer = read('web-tools/src/components/UnitSettingsDrawer.tsx');
+const modeToggle = read('web-tools/src/components/ModeToggle.tsx');
+const simpleLibrary = read('web-tools/src/components/SimpleLibraryPanel.tsx');
 const structuredUnitEditor = read('web-tools/src/components/StructuredUnitEditor.tsx');
 const projectCanvas = read('web-tools/src/components/ProjectCanvas.tsx');
 const projectNode = read('web-tools/src/components/ProjectNode.tsx');
@@ -119,7 +125,7 @@ includesContent(projectSidebar, "UNIT_DRAG_TYPE = 'application/x-apg-unit'", 'un
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
 includesContent(projectCanvas, 'onAddUnit(unitId', 'project canvas must retain unit drag-and-drop creation');
 includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops must use the atomic route insertion transaction');
-includesContent(projectCanvas, 'nodesDraggable={false}', 'project units must be fixed in Simple and Pro modes');
+includesContent(projectCanvas, 'nodesDraggable={false}', 'Effect Pipeline units must remain fixed');
 assert(!projectCanvas.includes('onNodeDragStop'), 'project canvas must not expose a unit-move interaction');
 includesContent(projectCanvas, 'ROUTE_CORNER_RADIUS = 10', 'project route elbows must use the fixed rounded corner radius');
 includesContent(projectCanvas, '<BaseEdge', 'project routes must render their planned orthogonal geometry');
@@ -206,11 +212,11 @@ includesContent(projectTopbar, 'Unsaved edits', 'dirty workspace state must be v
 includesContent(projectTopbar, 'Saved locally', 'clean workspace state must be visible');
 includesContent(projectInspector, 'Unsaved local edits', 'validation/render should show stale state');
 includesContent(projectInspector, 'Up to date', 'validation/render should show synced state');
-includesContent(projectInspector, 'Engine Diagnostics', 'engine diagnostics should remain available in Pro mode');
+includesContent(projectInspector, 'Engine Diagnostics', 'the retained diagnostics component must keep engine details');
 includes(
   'web-tools/src/components/StructuredUnitEditor.tsx',
   'data-testid="structured-unit-editor"',
-  'Pro mode must expose structured unit editing',
+  'Contract Settings must expose structured unit editing',
 );
 assert(!projectInspector.includes('<textarea\n              aria-label={`Workspace file'), 'raw source editing must not be exposed');
 includesContent(projectInspector, 'commands.validateProject', 'developer diagnostics should expose validation command details');
@@ -233,15 +239,30 @@ includesContent(contractCanvas, 'onEdgesChange={onEdgesChange}', 'controlled con
 includesContent(contractCanvas, 'onReconnect={reconnect}', 'contract edges must support structural moves');
 includesContent(contractCanvas, 'onNodesChange={onNodesChange}', 'contract node positions must remain UI-only state');
 includesContent(app, 'setGraphEditError', 'graph edit failures should be surfaced through workspace error feedback');
-includesContent(app, 'resolveWorkspacePath(project.file, node.unit.file)', 'unit references must resolve against the project path');
+includesContent(app, 'resolveWorkspacePath(projectWorkspaceFile.path, reference.file)', 'unit references must resolve against the project path');
 includesContent(app, 'projectDraftToInspect', 'project UI must derive its model from current YAML');
 includesContent(app, 'lastValidProjectDraft', 'invalid project YAML must retain the last valid canvas model');
 includesContent(projectSidebar, 'onAddInstance(instanceUnit, instanceId)', 'project sidebar must add unit instances structurally');
 includesContent(projectSidebar, 'onAddRoute({ from: routeSource, to: routeTarget })', 'project sidebar must add routes structurally');
 includesContent(projectInspector, 'onRenameInstance', 'project inspector must expose safe instance rename');
 includesContent(projectInspector, 'onRemoveRoute', 'project inspector must expose structural route disconnection');
-includesContent(app, 'createUnitV2({ name })', 'workspace unit creation must use the structured YAML transformer');
 includesContent(projectSidebar, 'onCreateUnit(unitName)', 'workspace sidebar must expose unit creation');
+
+// Effect Pipeline / Effect Contract replace the old mode-specific editor surfaces.
+includesContent(modeToggle, 'Effect Pipeline', 'the primary project view must be named Effect Pipeline');
+includesContent(modeToggle, 'Effect Contract', 'the definition editor must be named Effect Contract');
+includesContent(studioApp, "return 'simple'", 'opening a project must always start in Effect Pipeline');
+includesContent(simpleLibrary, 'Edit Contract', 'library context actions must open Effect Contract');
+includesContent(projectCanvas, 'Edit Contract', 'pipeline instance context actions must open Effect Contract');
+includesContent(app, 'createPersonalUnitCopy', 'built-in effects must clone before contract editing');
+includesContent(app, 'rebindProjectInstanceUnit', 'instance contract editing must rebind the active project to its Personal copy');
+includesContent(app, 'syncProjectUnitContract', 'Personal contract edits must update matching active-project routes and parameters');
+includesContent(app, 'personalUnitWorkspacePath', 'Personal definitions must propagate through stable workspace references');
+includesContent(app, 'contract-empty-state', 'Effect Contract must provide an actionable empty state');
+includesContent(app, '<AtomContextInspector', 'Effect Contract must use the atom-only inspector');
+assert(!atomContextInspector.includes('Unit Inspect'), 'the atom inspector must not render unit inspection');
+includesContent(unitSettingsDrawer, 'Contract Settings', 'unit-level editing must live in the separate Contract Settings drawer');
+includesContent(app, 'assertUserPlaceableUnit(content)', 'Contract edits must preserve the one-input/one-output effect policy');
 
 // AF: WASM preview facade and panel contract state machine.
 assert(render.ok && render.frames === render.output.samples.length, 'render fixture must include deterministic samples');
@@ -309,7 +330,8 @@ includesContent(viteConfig, 'emptyOutDir: true', 'Vite must replace stale build 
 includesContent(viteConfig, 'sourcemap: true', 'production builds must emit supportable source maps');
 includesContent(viteConfig, 'sourcemapExcludeSources: true', 'production source maps must stay within the Pages artifact budget');
 includesContent(buildInfo, 'import.meta.env.VITE_COMMIT_SHA', 'build diagnostics must use the injected commit SHA');
-includesContent(projectInspector, 'data-testid="build-commit-sha"', 'Developer Diagnostics must expose the deployed commit SHA');
+includesContent(projectReadinessPanel, 'data-testid="build-commit-sha"', 'Project readiness must expose the deployed commit SHA');
+includesContent(projectReadinessPanel, 'data-testid="build-base-path"', 'Project readiness must expose the deployment base');
 includesContent(pagesWorkflow, "- 'v2.0-beta[0-9]+'", 'Pages deployment must require a numbered v2.0 beta tag');
 assert(!pagesWorkflow.includes('refs/heads/main'), 'main pushes must not deploy Pages');
 assert(!pagesWorkflow.includes('workflow_dispatch:'), 'manual workflow runs must not deploy Pages');
@@ -354,11 +376,12 @@ includesContent(processorWorklet, 'request.type === "startAudioTrace"', 'AudioWo
 includesContent(processorWorklet, 'request.type === "pollAudioTrace"', 'AudioWorklet must build audio trace reports outside process()');
 includesContent(wasmFacade, 'startAudioTrace()', 'WASM facade must expose audio trace start');
 includesContent(wasmFacade, 'pollAudioTrace()', 'WASM facade must expose audio trace polling');
-includesContent(projectInspector, 'data-testid="audio-trace-profile"', 'Developer Diagnostics must expose microphone profiling');
-includesContent(projectInspector, 'exportAudioTraceReport', 'Developer Diagnostics must export audio trace JSON');
-includesContent(projectInspector, 'data-testid="audio-io-panel"', 'right inspector must expose audio I/O controls');
-includesContent(projectInspector, 'data-testid="audio-calibrate"', 'audio I/O controls must expose calibration');
-includesContent(projectInspector, 'data-testid="audio-latency-chirp"', 'audio I/O controls must expose acoustic latency measurement');
+includesContent(audioIoDrawer, 'data-testid="audio-trace-profile"', 'Audio I/O must expose microphone profiling');
+includesContent(audioIoDrawer, 'exportAudioTraceReport', 'Audio I/O must export audio trace JSON');
+includesContent(projectTopbar, 'data-testid="audio-io-open"', 'project topbar must expose view-independent Audio I/O controls');
+includesContent(audioIoDrawer, 'data-testid="audio-io-panel"', 'Audio I/O drawer must expose device controls');
+includesContent(audioIoDrawer, 'data-testid="audio-calibrate"', 'Audio I/O controls must expose calibration');
+includesContent(audioIoDrawer, 'data-testid="audio-latency-chirp"', 'Audio I/O controls must expose acoustic latency measurement');
 includesContent(processorWorklet, 'request.type === "startLatencyProbe"', 'AudioWorklet must support acoustic latency probes');
 includesContent(wasmFacade, 'measureLatencyProbe()', 'WASM facade must expose acoustic latency measurement');
 assert(!processorWorklet.slice(processorWorklet.indexOf('process(inputs, outputs)')).includes('this.reply('), 'process() must not allocate and post meter messages');

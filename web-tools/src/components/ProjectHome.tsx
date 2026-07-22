@@ -1,16 +1,13 @@
 import { useMemo, useState, type FormEvent } from 'react';
 
-import type { ApgProjectPackage, StudioMode } from '../lib/projectPackage';
+import type { ApgProjectPackage } from '../lib/projectPackage';
 import { parseProjectGraphDraft } from '../lib/projectV2Graph';
 import { AppLogo } from './AppLogo';
-import { ModeToggle } from './ModeToggle';
 
 type Props = {
   projects: ApgProjectPackage[];
   loading: boolean;
-  mode: StudioMode;
   error: string | null;
-  onModeChange: (mode: StudioMode) => void;
   onCreate: (name: string) => void;
   onDelete: (project: ApgProjectPackage) => void;
   onDuplicate: (project: ApgProjectPackage) => void;
@@ -37,9 +34,7 @@ function relativeDate(value: string): string {
 export function ProjectHome({
   projects,
   loading,
-  mode,
   error,
-  onModeChange,
   onCreate,
   onDelete,
   onDuplicate,
@@ -71,7 +66,6 @@ export function ProjectHome({
           <div><strong>Audio Playground</strong><small>Local studio</small></div>
         </div>
         <div className="project-home__header-actions">
-          <ModeToggle mode={mode} onChange={onModeChange} />
           <label className="btn btn--ghost project-home__import">
             Import .apg
             <input

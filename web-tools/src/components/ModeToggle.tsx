@@ -8,22 +8,24 @@ type Props = {
 
 export function ModeToggle({ mode, onChange, compact = false }: Props) {
   return (
-    <div className={`mode-toggle ${compact ? 'mode-toggle--compact' : ''}`} aria-label="Editor mode">
+    <div className={`mode-toggle ${compact ? 'mode-toggle--compact' : ''}`} aria-label="Editor view">
       <button
         aria-pressed={mode === 'simple'}
         className={mode === 'simple' ? 'active' : ''}
+        data-testid="view-effect-pipeline"
         onClick={() => onChange('simple')}
         type="button"
       >
-        Simple
+        Effect Pipeline
       </button>
       <button
         aria-pressed={mode === 'pro'}
         className={mode === 'pro' ? 'active' : ''}
+        data-testid="view-effect-contract"
         onClick={() => onChange('pro')}
         type="button"
       >
-        Pro
+        Effect Contract
       </button>
     </div>
   );

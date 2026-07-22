@@ -13,8 +13,8 @@ const steps = [
   },
   {
     eyebrow: 'Hear it live',
-    title: 'Use your instrument input',
-    body: 'Press Play and choose the microphone or audio interface input. Simple mode stays focused on live mono sound.',
+    title: 'Preview your sound',
+    body: 'Press Play with a microphone, audio interface, or mono audio file. The same transport stays available in both views.',
   },
   {
     eyebrow: 'Shape the sound',

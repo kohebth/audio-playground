@@ -1,4 +1,5 @@
 import type { ProjectReadinessSnapshot, ReadinessStatus } from '../lib/projectPackage';
+import { buildInfo } from '../lib/buildInfo';
 
 type Props = {
   open: boolean;
@@ -34,6 +35,11 @@ export function ProjectReadinessPanel({ open, readiness, onClose }: Props) {
           ))}
         </div>
       ) : <p className="readiness-popover__empty">No readiness issues found.</p>}
+      <div className="readiness-popover__build" data-testid="build-diagnostics">
+        <div><span>Build</span><code data-testid="build-commit-sha">{buildInfo.commitSha}</code></div>
+        <div><span>Base</span><code data-testid="build-base-path">{buildInfo.basePath}</code></div>
+        <div><span>Mode</span><code>{buildInfo.mode}</code></div>
+      </div>
       <small>{readiness.checkedAt ? `Checked ${new Date(readiness.checkedAt).toLocaleTimeString()}` : 'Waiting for the audio engine'}</small>
     </div>
   );

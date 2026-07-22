@@ -23,14 +23,14 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
   await expect(page.getByTestId('project-node-overdrive')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Pro', exact: true }).click();
-  await expect(page.locator('.sidebar-left')).toBeVisible();
+  await page.getByTestId('view-effect-contract').click();
+  await expect(page.getByTestId('contract-empty-state')).toBeVisible();
   await page.getByTitle('All projects').click();
   await expect(page.getByRole('heading', { name: 'Pick up where you left off.' })).toBeVisible();
   await expect(page.locator('.project-card')).toContainText(['Midnight Board', 'Guitar Pedalboard', 'New project']);
 });
 
-test('keeps the Simple workspace usable at phone width', async ({ page }) => {
+test('keeps the Effect Pipeline usable at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
@@ -54,7 +54,7 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   await expect(skipTour).toBeVisible();
   await skipTour.click();
 
-  await expect(page.getByTestId('preview-mode-file')).toHaveCount(0);
+  await expect(page.getByTestId('preview-mode-file')).toBeVisible();
   await expect(page.getByTestId('preview-mode-mic')).toBeVisible();
   await page.getByTestId('project-node-drive1').click();
   await page.getByRole('button', { name: /Warm Push/ }).click();
@@ -94,12 +94,9 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
     expect(alignment.knobs[1] - alignment.knobs[0]).toBeGreaterThan(10);
   }
 
-  await page.getByRole('button', { name: 'Pro', exact: true }).click();
+  await page.getByTestId('view-effect-contract').click();
   await expect(page.getByTestId('preview-mode-file')).toBeVisible();
-  await expect(page.getByTestId('project-unit-item-path_panner_2_unit')).toBeDisabled();
-  await expect(page.getByTestId('project-unit-item-path_mixer_2_unit')).toBeDisabled();
-  await page.getByRole('button', { name: 'Select gate1 for batch editing' }).click();
-  await expect(page.getByTestId('batch-action-bar')).toContainText('2 effects selected');
+  await expect(page.getByTestId('contract-empty-state')).toBeVisible();
   await page.locator('.topbar__status .status-pill').first().click();
   await expect(page.getByTestId('readiness-panel')).toBeVisible();
   await page.getByLabel('Close readiness').click();
@@ -109,20 +106,24 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   expect((await download).suggestedFilename()).toMatch(/\.apg$/);
 });
 
-test('edits a unit through structured Pro controls without exposing raw source', async ({ page }) => {
+test('clones a built-in contract to Personal and propagates edits through the active project', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
   await expect(page.getByRole('button', { name: 'Skip tour' })).toBeVisible();
   await page.getByRole('button', { name: 'Skip tour' }).click();
-  await page.getByRole('button', { name: 'Pro', exact: true }).click();
-  await page.getByTestId('project-instance-item-drive1').dblclick();
+  const drive = page.getByTestId('project-node-drive1');
+  await drive.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Edit Contract' }).click();
 
-  await expect(page).toHaveURL(/#\/unit\/overdrive$/);
-  await page.getByTestId('inspector-tab-contract').click();
+  await expect(page).toHaveURL(/#\/unit\/overdrive_copy$/);
+  await expect(page.getByTestId('contract-canvas')).toBeVisible();
+  await expect(page.getByTestId('atom-context-inspector')).toBeVisible();
+  await expect(page.locator('.project-inspector')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Contract Settings' }).click();
+  await expect(page.getByTestId('unit-settings-drawer')).toBeVisible();
   await expect(page.getByTestId('structured-unit-editor')).toBeVisible();
   await expect(page.locator('textarea.workspace-editor')).toHaveCount(0);
-  expect((await page.locator('.file-item').allTextContents()).join(' ')).not.toContain('.yaml');
 
   const title = page.getByLabel('Unit display name');
   await title.fill('Studio Overdrive');
@@ -139,10 +140,23 @@ test('edits a unit through structured Pro controls without exposing raw source',
   await inputName.fill('source');
   await inputName.press('Tab');
   await expect(page.getByTestId('unit-boundary-input')).toHaveText('source');
+  await page.getByLabel('outputs 1 name').fill('result');
+  await page.getByLabel('outputs 1 name').press('Tab');
+  await expect(page.getByTestId('unit-boundary-output')).toHaveText('result');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2') ?? ''))
+    .toContain('drive1.source');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2') ?? ''))
+    .toContain('drive1.result');
 
-  await page.getByRole('button', { name: /Save this unit to Personal Library/ }).click();
-  await page.getByRole('button', { name: 'Simple', exact: true }).click();
-  await expect(page.locator('.effect-library-card').filter({ hasText: 'Yours' })).toBeVisible();
+  await page.getByLabel('Close Contract Settings').last().click();
+  await page.getByTestId('view-effect-pipeline').click();
+  await expect(page.getByTestId('project-node-drive1')).toBeVisible();
+  await expect(page.locator('.effect-library-card').filter({ hasText: 'Studio Overdrive' })).toContainText('Yours');
+
+  await page.reload();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  await expect(page.getByTestId('project-canvas')).toBeVisible();
+  await expect(page.getByTestId('contract-canvas')).toHaveCount(0);
 });
 
 test('connects units by click and exposes undoable unit context actions', async ({ page }) => {
@@ -152,16 +166,12 @@ test('connects units by click and exposes undoable unit context actions', async 
   const skipTour = page.getByRole('button', { name: 'Skip tour' });
   await expect(skipTour).toBeVisible();
   await skipTour.click();
-  await page.getByRole('button', { name: 'Pro', exact: true }).click();
 
   const drive = page.getByTestId('project-node-drive1');
   await drive.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: 'drive1 actions' });
   await expect(menu).toBeVisible();
-  await expect(page.getByTestId('inspector-tab-project')).toHaveClass(/inspector-tab--active/);
-  await expect(page.locator('.project-inspector').getByText('Unit Inspector', { exact: true })).toBeVisible();
-  await expect(page.locator('.project-inspector').getByText('Atom Focus', { exact: true })).toHaveCount(0);
-  await expect(menu.getByRole('menuitem')).toContainText(['Turn off', 'Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
+  await expect(menu.getByRole('menuitem')).toContainText(['Turn off', 'Edit Contract', 'Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
   await menu.getByRole('menuitem', { name: 'Copy' }).click();
 
   await drive.click({ button: 'right' });
@@ -180,8 +190,9 @@ test('connects units by click and exposes undoable unit context actions', async 
   await pasted.locator('.project-node__handle--output').click({ force: true });
   await expect(page.getByTestId('project-canvas')).toHaveClass(/flow-shell--connecting/);
   await secondPasted.locator('.project-node__handle--input').click({ force: true });
-  await expect(page.getByTestId('route-item-9')).toContainText('overdrive_copy.output');
-  await expect(page.getByTestId('route-item-9')).toContainText('overdrive_copy_2.input');
+  await expect(page.locator(
+    '.react-flow__edge[data-id*="unit-overdrive_copy-unit-overdrive_copy_2"]',
+  )).toHaveCount(1);
 
   await secondPasted.click({ button: 'right' });
   await page.getByRole('menu', { name: 'overdrive_copy_2 actions' }).getByRole('menuitem', { name: 'Remove' }).click();
@@ -280,12 +291,12 @@ test('offers a Graphviz atom editor with atom-only inspection and safe graph act
   const skipTour = page.getByRole('button', { name: 'Skip tour' });
   await expect(skipTour).toBeVisible();
   await skipTour.click();
-  await page.getByRole('button', { name: 'Pro', exact: true }).click();
-  await page.getByTestId('project-instance-item-drive1').dblclick();
-  await expect(page.getByTestId('contract-auto-layout')).toHaveText('Auto Layout', { timeout: 15_000 });
+  await page.getByTestId('project-node-drive1').click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Edit Contract' }).click();
   const contractCanvas = page.getByTestId('contract-canvas');
   await expect(contractCanvas).toHaveAttribute('data-layout-engine', 'graphviz');
-  await expect(contractCanvas).toHaveAttribute('data-layout-status', 'ready');
+  await expect(contractCanvas).toHaveAttribute('data-layout-status', 'ready', { timeout: 30_000 });
+  await expect(page.getByTestId('contract-auto-layout')).toHaveText('Auto Layout');
   await expect.poll(async () => Number(await contractCanvas.getAttribute('data-routed-edge-count'))).toBeGreaterThan(0);
   const routedPaths = await contractCanvas.locator('.react-flow__edge-path').evaluateAll(paths => (
     paths.map(path => path.getAttribute('d') ?? '')
@@ -297,9 +308,8 @@ test('offers a Graphviz atom editor with atom-only inspection and safe graph act
   await clip.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: 'clip_drive actions' });
   await expect(menu.getByRole('menuitem')).toContainText(['Replace…', 'Cut', 'Copy', 'Paste', 'Remove']);
-  const inspector = page.locator('.project-inspector');
-  await expect(page.getByTestId('inspector-tab-atom')).toHaveClass(/inspector-tab--active/);
-  await expect(inspector.getByTestId('contract-atom-id')).toHaveValue('clip_drive');
+  const inspector = page.getByTestId('atom-context-inspector');
+  await expect(inspector.getByRole('heading', { name: 'clip_drive' })).toBeVisible();
   await expect(inspector.getByTestId('structured-unit-editor')).toHaveCount(0);
   await expect(inspector.getByText('Unit Contract', { exact: true })).toHaveCount(0);
   await expect(inspector.getByText('Unit Inspector', { exact: true })).toHaveCount(0);
@@ -324,6 +334,6 @@ test('offers a Graphviz atom editor with atom-only inspection and safe graph act
   await page.getByTestId('topbar-undo').click();
   await expect(page.getByTestId('contract-node-clip_drive')).toBeVisible();
   await pasted.click();
-  await page.getByTestId('contract-atom-remove').click();
+  await inspector.getByRole('button', { name: 'Remove' }).click();
   await expect(pasted).toHaveCount(0);
 });

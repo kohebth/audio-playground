@@ -7,7 +7,7 @@ type Props = {
   selectedNode: ProjectNodeData | null;
   onDuplicate: (instanceId: string) => void;
   onRemove: (instanceId: string) => void;
-  onOpenPro: () => void;
+  onEditContract: () => void;
   presets: UnitPreset[];
   onApplyPreset: (preset: UnitPreset) => void;
   onDeletePreset: (id: string) => void;
@@ -19,7 +19,7 @@ export function SimpleInspector({
   selectedNode,
   onDuplicate,
   onRemove,
-  onOpenPro,
+  onEditContract,
   presets,
   onApplyPreset,
   onDeletePreset,
@@ -82,7 +82,7 @@ export function SimpleInspector({
       </section>
       <div className="simple-inspector__actions">
         <button onClick={() => onDuplicate(instance.id)} type="button">Duplicate</button>
-        <button onClick={onOpenPro} type="button">Edit details</button>
+        <button onClick={onEditContract} type="button">Edit Contract</button>
         <button onClick={onSaveToLibrary} type="button">Save to library</button>
         <button className="danger" onClick={() => onRemove(instance.id)} type="button">Remove</button>
       </div>

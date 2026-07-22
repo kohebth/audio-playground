@@ -44,7 +44,10 @@ function monitorNetwork(page: Page, configuredBaseUrl: string): NetworkAudit {
 }
 
 async function openWorkspace(page: Page, testInfo: TestInfo, route = '/projects') {
-  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'pro'));
+  await page.addInitScript(() => {
+    localStorage.setItem('apg.studio.mode.v1', 'pro');
+    localStorage.setItem('apg.studio.tour.v1', 'complete');
+  });
   const url = new URL(`#${route}`, baseUrl(testInfo));
   await page.goto(url.href);
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
@@ -73,7 +76,7 @@ function expectHealthyNetwork(audit: NetworkAudit, expectedBasePath: string) {
   for (const path of audit.sameOriginPaths) expect(path.startsWith(expectedBasePath)).toBe(true);
 }
 
-test('serves base-safe project and unit routes with release diagnostics', async ({ page }, testInfo) => {
+test('serves base-safe Effect Pipeline and Contract routes', async ({ page }, testInfo) => {
   const audit = monitorNetwork(page, baseUrl(testInfo));
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
@@ -81,14 +84,10 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await openWorkspace(page, testInfo);
   await expect(page).toHaveURL(/#\/projects$/);
   await expect(page.getByTestId('project-canvas')).toBeVisible();
+  await expect(page.locator('.app')).toHaveClass(/app--simple/);
   const gateNode = page.getByTestId('project-node-gate1');
   await expect(gateNode).toBeVisible();
   await expectProjectNodeLocked(page, 'project-node-gate1');
-  await page.getByRole('button', { name: 'Simple', exact: true }).click();
-  await expect(page.locator('.app')).toHaveClass(/app--simple/);
-  await expectProjectNodeLocked(page, 'project-node-gate1');
-  await page.getByRole('button', { name: 'Pro', exact: true }).click();
-  await expect(page.locator('.app')).toHaveClass(/app--pro/);
   const gateBypass = gateNode.getByTestId('project-node-bypass-gate1');
   await expect(gateBypass).toBeEnabled();
   await expect(gateBypass).toHaveClass(/node-pedal-footer/);
@@ -159,12 +158,16 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   }
   await expect(delayNode.locator('.knob-label')).toHaveText(['Time', 'Feedback', 'Mix']);
   await expect(page.getByTestId('project-node-blend1')).toHaveCount(0);
-  await page.getByTestId('inspector-tab-contract').click();
-  const diagnostics = page.locator('details.developer-diagnostics');
-  await diagnostics.locator(':scope > summary').click();
+
+  await page.getByTestId('view-effect-contract').click();
+  await expect(page.getByTestId('contract-empty-state')).toBeVisible();
+  await page.getByTestId('view-effect-pipeline').click();
+  await expectProjectNodeLocked(page, 'project-node-gate1');
+  await page.locator('.topbar__status .status-pill').first().click();
   await expect(page.getByTestId('build-base-path')).toHaveText(deployedBasePath(testInfo));
   const expectedCommit = process.env.APG_EXPECTED_COMMIT_SHA;
   if (expectedCommit) await expect(page.getByTestId('build-commit-sha')).toHaveText(expectedCommit);
+  await page.getByLabel('Close readiness').click();
 
   const example = await page.evaluate(async () => {
     const response = await fetch(new URL('units/overdrive.unit.v2.yaml', document.baseURI));
@@ -175,23 +178,23 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   expect(example.text).toContain('schema: apg.unit.v2');
   expect(example.text).toContain('wasm_realtime: true');
 
-  await openWorkspace(page, testInfo, '/unit/tone_stack');
-  await expect(page).toHaveURL(/#\/unit\/tone_stack$/);
+  await page.getByTestId('project-node-tone1').click({ button: 'right' });
+  await page.getByRole('menu', { name: 'tone1 actions' }).getByRole('menuitem', { name: 'Edit Contract' }).click();
+  await expect(page).toHaveURL(/#\/unit\/tone_stack_copy$/);
   const contractCanvas = page.getByTestId('contract-canvas');
   await expect(contractCanvas).toBeVisible();
   await expect(contractCanvas).toHaveAttribute('data-atom-count', '21');
   await expect(contractCanvas).toHaveAttribute('data-boundary-count', '2');
   await expect(page.getByTestId('contract-node-mid_bandpass')).toContainText('filter_biquad');
-  await expect(page.getByRole('button', { name: 'preamp_saturation amplitude_clip_soft' })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'power_saturation amplitude_clip_soft' })).toHaveCount(1);
-  await page.getByTestId('inspector-tab-contract').click();
+  await page.getByRole('button', { name: 'Contract Settings' }).click();
   const contractParamNames = page.locator('.structured-param input[aria-label$=" name"]');
   await expect.poll(() => contractParamNames.evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)))
     .toEqual(['gain', 'bass', 'mid', 'treble', 'presence', 'volume']);
   await page.getByTestId('contract-param-volume-up').click();
   await expect.poll(() => contractParamNames.evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)))
     .toEqual(['gain', 'bass', 'mid', 'treble', 'volume', 'presence']);
-  await page.getByRole('button', { name: 'Project graph' }).click();
+  await page.getByLabel('Close Contract Settings').last().click();
+  await page.getByTestId('view-effect-pipeline').click();
   await expect(page).toHaveURL(/#\/projects$/);
   await expect(toneKnobLabels).toHaveText([
     'Preamp Gain',
@@ -204,10 +207,15 @@ test('serves base-safe project and unit routes with release diagnostics', async 
 
   // Keep the boundary-node sizing check on a compact graph: the larger tone
   // stack intentionally virtualizes its far-edge nodes at the minimum zoom.
-  await openWorkspace(page, testInfo, '/unit/overdrive');
-  await expect(page).toHaveURL(/#\/unit\/overdrive$/);
+  await page.getByTestId('project-node-drive1').click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Edit Contract' }).click();
+  await expect(page).toHaveURL(/#\/unit\/overdrive_copy$/);
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  await expect(page).toHaveURL(/#\/projects$/);
+  await expect(page.getByTestId('project-canvas')).toBeVisible();
+  await page.getByTestId('project-node-drive1').click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Edit Contract' }).click();
   const inputBoundary = page.getByTestId('unit-boundary-input');
   const outputBoundary = page.getByTestId('unit-boundary-output');
   await expect(inputBoundary).toBeVisible();
@@ -222,10 +230,12 @@ test('serves base-safe project and unit routes with release diagnostics', async 
   await expect(page.locator('.react-flow__edge.contract-edge--boundary-output')).toHaveCount(1);
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  await expect(contractCanvas).toBeVisible();
+  await expect(page.getByTestId('project-canvas')).toBeVisible();
+  await page.getByTestId('project-node-drive1').click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Edit Contract' }).click();
+  await expect(page.getByTestId('contract-canvas')).toBeVisible();
   await expect(inputBoundary).toBeVisible();
   await expect(outputBoundary).toBeVisible();
-  await page.getByTestId('inspector-tab-contract').click();
   await expect(page.getByTestId('atom-palette-browser-hidden')).toContainText('3 browser-incompatible hidden');
   await page.getByTestId('atom-palette-show-advanced').check();
   await expect(page.getByTestId('atom-palette-item-freq_fft')).toHaveCount(0);
@@ -241,16 +251,13 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   const viewport = page.locator('.react-flow__viewport');
   const initialTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
   const initialStoredWorkspace = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
-  await page.getByTestId('project-unit-item-overdrive_unit').dragTo(page.getByTestId('project-canvas'), {
-    targetPosition: { x: 480, y: 280 },
-  });
+  await page.getByRole('button', { name: 'Add Overdrive', exact: true }).click();
   await expect(unitNodes).toHaveCount(initialCount + 1);
   await expect(viewport).toHaveCSS('transform', initialTransform);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
     .not.toBe(initialStoredWorkspace);
   const storedAfterDrop = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
 
-  await page.getByRole('button', { name: 'Simple', exact: true }).click();
   const simpleTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
   await page.getByRole('button', { name: 'Add Chorus in parallel', exact: true }).click();
   await expect(unitNodes).toHaveCount(initialCount + 4);
@@ -273,6 +280,7 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   await expect(unitNodes).toHaveCount(initialCount + 4);
   await expect(page.getByTestId('topbar-import-input')).toHaveCount(1);
 
+  await page.getByTestId('view-effect-contract').click();
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('topbar-export').click();
   const download = await downloadPromise;
@@ -347,9 +355,13 @@ test('shows microphone permission failure without crashing the editor', async ({
 test('contains and recovers from an invalid structured unit edit', async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
-  await openWorkspace(page, testInfo, '/unit/overdrive');
-  await page.getByTestId('inspector-tab-contract').click();
+  await openWorkspace(page, testInfo);
+  await page.getByTestId('project-node-drive1').click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Edit Contract' }).click();
+  await expect(page).toHaveURL(/#\/unit\/overdrive_copy$/);
+  await page.getByRole('button', { name: 'Contract Settings' }).click();
   const version = page.getByLabel('Unit version');
+  await expect(version).toBeVisible();
   await version.fill('not-a-version');
   await version.press('Tab');
   await expect(page.getByRole('alert')).toContainText('semantic versioning');

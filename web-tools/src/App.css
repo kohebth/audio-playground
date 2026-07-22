@@ -3454,6 +3454,9 @@ body {
 .readiness-popover__diagnostics strong { color: var(--accent-red); font-size: 8px; }
 .readiness-popover__diagnostics span { margin-top: 3px; color: var(--text-secondary); font-size: 9px; line-height: 1.4; }
 .readiness-popover__empty, .readiness-popover > small { color: var(--text-dim); font-size: 8px; }
+.readiness-popover__build { display: grid; gap: 5px; margin: 10px 0; padding-top: 10px; border-top: 1px solid var(--border-subtle); }
+.readiness-popover__build > div { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; color: var(--text-dim); font-size: 8px; }
+.readiness-popover__build code { overflow: hidden; color: var(--text-secondary); font: 8px var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .topbar__status .status-pill { appearance: none; cursor: pointer; font-family: var(--font-sans); }
 
 @media (max-width: 760px) {
@@ -3717,6 +3720,7 @@ body {
 .studio-loading p { color: var(--accent-red); }
 
 .topbar__home,
+.topbar__audio-io,
 .topbar__help {
   display: grid;
   flex: 0 0 auto;
@@ -3730,9 +3734,10 @@ body {
   cursor: pointer;
 }
 .topbar__home:hover,
+.topbar__audio-io:hover,
 .topbar__help:hover { border-color: var(--border-default); color: var(--text-primary); }
 
-/* Simple pedalboard workspace */
+/* Effect Pipeline workspace (legacy storage mode: simple). */
 .app--simple .layout { background: #0e100d; }
 .simple-library {
   display: flex;
@@ -4990,7 +4995,7 @@ body {
   }
 }
 
-/* Structured Pro editor. Source serialization stays internal to the workspace. */
+/* Structured Contract Settings. Source serialization stays internal to the workspace. */
 .structured-unit-editor { display: grid; gap: 12px; margin-bottom: 16px; }
 .structured-unit-editor__error { position: sticky; z-index: 2; top: 0; margin: 0; padding: 9px 10px; border: 1px solid rgba(248,113,113,.28); border-radius: var(--radius-md); background: #2a1515; color: var(--accent-red); font-size: 9px; line-height: 1.4; }
 .structured-card { padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-base); }
@@ -5043,4 +5048,202 @@ body {
 @media (max-width: 1180px) {
   .structured-grid--three { grid-template-columns: 1fr 1fr; }
   .structured-grid--two { grid-template-columns: 1fr; }
+}
+
+/* Effect Contract view */
+.app--simple .topbar__workspace-actions { display: flex; }
+.app--simple .topbar__workspace-actions > label,
+.app--simple .topbar__workspace-actions > [data-testid="topbar-export"],
+.app--simple .topbar__workspace-actions > [data-testid="topbar-reset"] { display: none; }
+.app--pro .layout { background: #151813; }
+.app--pro .canvas-modebar {
+  grid-template-columns: auto minmax(130px, 1fr) minmax(120px, .8fr) auto auto;
+}
+
+.contract-atom-library { overflow: hidden; }
+.contract-atom-library > .inspector-block {
+  min-height: 0;
+  margin: 0 10px 14px;
+  overflow-y: auto;
+  border-color: var(--border-subtle);
+  background: #10120f;
+}
+.contract-atom-library .inspector-block__label { color: var(--text-secondary); }
+
+.contract-empty-state {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  place-items: center;
+  padding: 36px;
+  text-align: center;
+}
+.contract-empty-state > div { max-width: 510px; }
+.contract-empty-state span {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.contract-empty-state h2 { margin: 10px 0 8px; font-size: clamp(24px, 3vw, 38px); letter-spacing: -.04em; }
+.contract-empty-state p { margin: 0 auto 20px; color: var(--text-secondary); font-size: 12px; line-height: 1.65; }
+.contract-empty-state .btn { padding: 10px 16px; }
+
+.atom-context-inspector__fields {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+.atom-context-inspector__fields > strong {
+  margin-top: 5px;
+  color: var(--text-dim);
+  font-size: 8px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.atom-context-inspector__fields label { display: grid; gap: 4px; }
+.atom-context-inspector__fields label span { color: var(--text-muted); font: 9px var(--font-mono); }
+.atom-context-inspector__fields input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  outline: 0;
+  background: #10120f;
+  color: var(--text-primary);
+  font: 10px var(--font-mono);
+}
+.atom-context-inspector__fields input:focus { border-color: var(--accent); }
+.atom-context-inspector__fields small { color: var(--text-dim); font: 9px var(--font-mono); }
+
+.unit-settings-backdrop {
+  position: fixed;
+  z-index: 180;
+  inset: 0;
+  border: 0;
+  background: rgba(4, 7, 6, .66);
+  cursor: default;
+  backdrop-filter: blur(3px);
+}
+.unit-settings-drawer {
+  position: fixed;
+  z-index: 181;
+  top: 0;
+  right: 0;
+  display: flex;
+  width: min(470px, calc(100vw - 42px));
+  height: 100vh;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 14px;
+  border-left: 1px solid var(--border-default);
+  outline: 0;
+  background: #151813;
+  box-shadow: -22px 0 60px rgba(0, 0, 0, .5);
+}
+.unit-settings-drawer > header {
+  position: sticky;
+  z-index: 3;
+  top: -14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -14px -14px 14px;
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(21, 24, 19, .96);
+  backdrop-filter: blur(12px);
+}
+.unit-settings-drawer > header div { display: grid; gap: 3px; }
+.unit-settings-drawer > header span { color: var(--accent); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.unit-settings-drawer > header strong { font-size: 14px; }
+.unit-settings-drawer > header button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 20px;
+}
+.unit-settings-drawer .structured-card__library { display: none; }
+
+.audio-io-drawer {
+  position: fixed;
+  z-index: 181;
+  top: 64px;
+  right: 16px;
+  width: min(390px, calc(100vw - 32px));
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  outline: 0;
+  background: rgba(21, 24, 19, .98);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+  backdrop-filter: blur(16px);
+}
+.audio-io-drawer > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -14px -14px 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.audio-io-drawer > header div { display: grid; gap: 3px; }
+.audio-io-drawer > header span { color: var(--accent-cyan); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.audio-io-drawer > header strong { font-size: 14px; }
+.audio-io-drawer > header button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 20px;
+}
+.audio-io-drawer .audio-io-panel { display: grid; gap: 10px; }
+.audio-io-drawer .audio-io-actions,
+.audio-io-drawer .audio-io-runtime,
+.audio-io-drawer .audio-io-warning,
+.audio-io-drawer .audio-io-result { margin-top: 0 !important; }
+
+@media (max-width: 1100px) {
+  .app--pro .canvas-modebar code { display: none; }
+  .app--pro .canvas-modebar { grid-template-columns: auto minmax(110px, 1fr) auto auto; }
+}
+
+@media (max-width: 760px) {
+  .app--pro { height: 100dvh; overflow-y: auto; }
+  .app--pro .simple-library {
+    position: static;
+    order: 2;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    max-height: 430px;
+    border-top: 1px solid var(--border-default);
+    border-right: 0;
+  }
+  .app--pro .simple-inspector {
+    display: block;
+    order: 3;
+    width: 100%;
+    min-width: 0;
+    border-top: 1px solid var(--border-default);
+    border-left: 0;
+  }
+  .app--pro .canvas-modebar { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .app--pro .canvas-modebar code,
+  .app--pro .canvas-modebar button:last-child { display: none; }
+  .unit-settings-drawer { width: 100vw; }
+  .audio-io-drawer { top: 58px; right: 8px; width: calc(100vw - 16px); max-height: calc(100dvh - 66px); }
 }

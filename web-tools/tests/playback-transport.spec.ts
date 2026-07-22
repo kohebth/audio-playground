@@ -1,21 +1,27 @@
 import { expect, type Page, test } from '@playwright/test';
 
 async function openWorkspace(page: Page) {
-  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'pro'));
+  await page.addInitScript(() => {
+    localStorage.setItem('apg.studio.mode.v1', 'pro');
+    localStorage.setItem('apg.studio.tour.v1', 'complete');
+  });
   await page.goto('/#/projects');
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 15_000 });
   await expect(page.getByTestId('launch-workspace')).toHaveCount(0);
   await expect(page).toHaveURL(/#\/projects$/);
 }
 
-test('keeps project and unit views on stable hash routes', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('apg.studio.mode.v1', 'pro'));
+test('opens projects in Pipeline and keeps Personal Contract routes stable', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('apg.studio.tour.v1', 'complete'));
   await page.goto('/#/unit/overdrive');
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 15_000 });
-  await expect(page).toHaveURL(/#\/unit\/overdrive$/);
+  await expect(page).toHaveURL(/#\/projects$/);
+  await page.getByTestId('project-node-drive1').click({ button: 'right' });
+  await page.getByRole('menu', { name: 'drive1 actions' }).getByRole('menuitem', { name: 'Edit Contract' }).click();
+  await expect(page).toHaveURL(/#\/unit\/overdrive_copy$/);
   await expect(page.getByTestId('contract-canvas')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Project graph' }).click();
+  await page.getByTestId('view-effect-pipeline').click();
   await expect(page).toHaveURL(/#\/projects$/);
   await expect(page.getByTestId('project-canvas')).toBeVisible();
 });
@@ -25,7 +31,6 @@ test('controls file and microphone playback with transport shortcuts', async ({ 
   page.on('pageerror', error => pageErrors.push(error.message));
 
   await openWorkspace(page);
-  await page.locator('.topbar__logo').click();
 
   const state = page.locator('.transport-state');
   const transport = page.getByTestId('preview-start-stop');
@@ -61,7 +66,6 @@ test('reconfigures live audio devices and restores running controls', async ({ p
   page.on('pageerror', error => pageErrors.push(error.message));
 
   await openWorkspace(page);
-  await page.locator('.topbar__logo').click();
   await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 15_000 });
   await page.getByTestId('preview-mode-mic').click();
   await page.getByTestId('preview-start-stop').click();
@@ -69,8 +73,9 @@ test('reconfigures live audio devices and restores running controls', async ({ p
   await page.keyboard.press('m');
   await expect(page.locator('button[title="Unmute output"]')).toBeVisible();
 
+  await page.getByTestId('audio-io-open').click();
   const audioIo = page.getByTestId('audio-io-panel');
-  await audioIo.locator(':scope > summary').click();
+  await expect(audioIo).toBeVisible();
   await expect(page.getByTestId('audio-latency-chirp')).toBeEnabled();
   const input = page.getByTestId('audio-input-device');
   await expect(input.locator('option')).not.toHaveCount(0);
@@ -112,21 +117,18 @@ test('calibrates latency candidates and retains a stable configuration', async (
   page.on('pageerror', error => pageErrors.push(error.message));
 
   await openWorkspace(page);
-  await page.locator('.topbar__logo').click();
   await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 15_000 });
   await page.getByTestId('preview-mode-mic').click();
+  await page.getByTestId('audio-io-open').click();
   const audioIo = page.getByTestId('audio-io-panel');
-  await audioIo.locator(':scope > summary').click();
+  await expect(audioIo).toBeVisible();
   await page.getByTestId('audio-calibrate').click();
   await expect(page.getByTestId('audio-calibrate')).toContainText('Calibrating');
   await expect(audioIo.locator('.audio-io-result')).toBeVisible({ timeout: 45_000 });
-
-  await page.getByTestId('inspector-tab-contract').click();
-  const diagnostics = page.locator('details.developer-diagnostics');
-  await diagnostics.locator(':scope > summary').click();
   await expect(page.getByTestId('audio-calibration-report')).toBeVisible();
   await expect(page.getByTestId('audio-calibration-report').locator('.audio-calibration-table__row')).toHaveCount(5);
-  await page.getByTestId('audio-calibration-report').scrollIntoViewIfNeeded();
+
+  await audioIo.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath('audio-calibration-report.png'), fullPage: true });
 
   await page.getByTestId('preview-start-stop').click();

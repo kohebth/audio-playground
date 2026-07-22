@@ -8,6 +8,7 @@ type Props = {
   catalog: AtomCatalog;
   manifest: Record<string, string>;
   onAddAtom?: (atomName: string) => void;
+  showUnitInspect?: boolean;
 };
 
 export const ATOM_DRAG_TYPE = 'application/x-apg-atom';
@@ -42,7 +43,7 @@ function profileLabel(atom: AtomCatalogAtom): string {
   return enabled.length > 0 ? enabled.join(', ') : 'none';
 }
 
-export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) {
+export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitInspect = true }: Props) {
   const unitAtomNames = unit.graph.nodes.map(node => node.atom);
   const initialPaletteAtom = catalog.atoms.find(
     atom => atom.visibility === 'public' && atom.profiles.wasm_realtime === true,
@@ -175,7 +176,7 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) 
         </div>
       ) : null}
 
-      <div className="unit-inspect">
+      {showUnitInspect ? <div className="unit-inspect">
         <div className="unit-inspect__header">
           <span>Unit Inspect</span>
           <strong>{unit.name}</strong>
@@ -197,7 +198,7 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom }: Props) 
             </button>
           ))}
         </div>
-      </div>
+      </div> : null}
     </details>
   );
 }

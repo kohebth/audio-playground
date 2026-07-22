@@ -73,6 +73,7 @@ type Props = {
   selectedUnitLabel: string;
   selectedAtomId: string | null;
   onBackToProject: () => void;
+  onOpenSettings: () => void;
   onConnectAtoms: (source: UnitConnectionEndpoint, target: UnitConnectionEndpoint) => void;
   onDisconnectAtom: (target: UnitConnectionEndpoint) => void;
   onReconnectAtoms: (
@@ -521,6 +522,7 @@ export function ContractGraphCanvas({
   selectedUnitLabel,
   selectedAtomId,
   onBackToProject,
+  onOpenSettings,
   onConnectAtoms,
   onDisconnectAtom,
   onSelectAtom,
@@ -613,6 +615,8 @@ export function ContractGraphCanvas({
       data: result.routes[edge.id] ? { points: result.routes[edge.id] } : edge.data,
     })));
   }, [onAutoLayout, setFlowEdges, setFlowNodes]);
+  const applyGraphvizResultRef = useRef(applyGraphvizResult);
+  applyGraphvizResultRef.current = applyGraphvizResult;
 
   const postGraphvizRequest = useCallback((
     mode: 'layout' | 'route',
@@ -645,16 +649,23 @@ export function ContractGraphCanvas({
     const worker = new Worker(new URL('../workers/graphviz.worker.ts', import.meta.url), { type: 'module' });
     const requests = graphvizRequests.current;
     graphvizWorker.current = worker;
-    const receive = (event: MessageEvent<GraphvizLayoutResult>) => applyGraphvizResult(event.data);
+    const receive = (event: MessageEvent<GraphvizLayoutResult>) => applyGraphvizResultRef.current(event.data);
+    const fail = (event: ErrorEvent) => {
+      setLayoutBusy(false);
+      setLayoutError(event.message || 'Graphviz worker failed.');
+      requests.clear();
+    };
     worker.addEventListener('message', receive);
+    worker.addEventListener('error', fail);
     return () => {
       worker.removeEventListener('message', receive);
+      worker.removeEventListener('error', fail);
       worker.terminate();
       graphvizWorker.current = null;
       requests.clear();
       autoLayoutTopology.current = null;
     };
-  }, [applyGraphvizResult]);
+  }, []);
 
   const topologySignature = useMemo(() => JSON.stringify({
     nodes: parsed.flow.nodes.map(node => node.id),
@@ -798,13 +809,16 @@ export function ContractGraphCanvas({
     <main className="canvas canvas--contract canvas-area" onKeyDownCapture={openKeyboardMenu}>
       <div className="canvas-modebar">
         <button className="btn btn--ghost" onClick={onBackToProject} type="button">
-          Project graph
+          Effect Pipeline
         </button>
         <div>
-          <span>Atom graph</span>
+          <span>Effect Contract</span>
           <strong>{parsed.unit?.name ?? selectedUnitLabel}</strong>
         </div>
         <code>{workspaceFile.path}</code>
+        <button className="btn btn--ghost" onClick={onOpenSettings} type="button">
+          Contract Settings
+        </button>
         <button
           className="btn btn--ghost"
           data-testid="contract-auto-layout"

@@ -427,6 +427,106 @@ export function replaceProjectInstance(
   return next;
 }
 
+export function rebindProjectInstanceUnit(
+  content: string,
+  ports: ProjectPortCatalog,
+  instanceId: string,
+  nextUnit: string,
+): string {
+  const draft = parseProjectGraphDraft(content);
+  const current = draft.nodes.find(node => node.id === instanceId);
+  if (!current) throw new Error(`Project instance "${instanceId}" was not found.`);
+  if (current.routing) throw new Error('Routing helpers do not expose editable effect contracts.');
+  if (!draft.units.some(unit => unit.id === nextUnit)) throw new Error(`Project unit "${nextUnit}" was not found.`);
+  const currentPorts = ports[current.unit];
+  const nextPorts = ports[nextUnit];
+  if (!isUserPlaceablePorts(currentPorts) || !isUserPlaceablePorts(nextPorts)) {
+    throw new Error('Effect contracts must keep one mono audio input and one mono audio output.');
+  }
+
+  const doc = loadDocument(content);
+  const chain = ensureChain(doc);
+  const node = (chain.nodes as unknown[]).filter(isObject).find(item => String(item.id) === instanceId);
+  if (!node) throw new Error(`Project instance "${instanceId}" was not found.`);
+  node.unit = nextUnit;
+  for (const route of (chain.routes as unknown[]).filter(isObject)) {
+    if (String(route.from) === `${instanceId}.${currentPorts.outputs[0]}`) {
+      route.from = `${instanceId}.${nextPorts.outputs[0]}`;
+    }
+    if (String(route.to) === `${instanceId}.${currentPorts.inputs[0]}`) {
+      route.to = `${instanceId}.${nextPorts.inputs[0]}`;
+    }
+  }
+  const next = dumpDocument(doc);
+  validateProjectRoutes(next, ports);
+  return next;
+}
+
+export function syncProjectUnitContract(
+  content: string,
+  ports: ProjectPortCatalog,
+  unitId: string,
+  previousUnitContent: string,
+  nextUnitContent: string,
+): string {
+  const draft = parseProjectGraphDraft(content);
+  if (!draft.units.some(unit => unit.id === unitId)) throw new Error(`Project unit "${unitId}" was not found.`);
+  const previousPorts = parseUnitPortNames(previousUnitContent);
+  const nextPorts = parseUnitPortNames(nextUnitContent);
+  if (!isUserPlaceablePorts(previousPorts) || !isUserPlaceablePorts(nextPorts)) {
+    throw new Error('Effect contracts must keep one mono audio input and one mono audio output.');
+  }
+
+  const nextParams = parseUnitGraphDraft(nextUnitContent).params;
+  const nextParamNames = new Set(nextParams.map(param => param.name));
+  const doc = loadDocument(content);
+  const chain = ensureChain(doc);
+  const nodes = (chain.nodes as unknown[]).filter(isObject);
+  const matchingNodes = nodes.filter(node => String(node.unit) === unitId);
+  const matchingIds = new Set(matchingNodes.map(node => String(node.id)));
+  for (const node of matchingNodes) {
+    if (parseRoutingSection(node.routing)) throw new Error('Routing helpers cannot use editable effect contracts.');
+    const existing = stringMap(node.params);
+    node.params = Object.fromEntries(nextParams.map(param => [param.name, existing[param.name] ?? param.default]));
+  }
+
+  for (const route of (chain.routes as unknown[]).filter(isObject)) {
+    const from = String(route.from ?? '');
+    const to = String(route.to ?? '');
+    for (const instanceId of matchingIds) {
+      if (from === `${instanceId}.${previousPorts.outputs[0]}`) {
+        route.from = `${instanceId}.${nextPorts.outputs[0]}`;
+      }
+      if (to === `${instanceId}.${previousPorts.inputs[0]}`) {
+        route.to = `${instanceId}.${nextPorts.inputs[0]}`;
+      }
+    }
+  }
+
+  for (const scene of (Array.isArray(doc.scenes) ? doc.scenes : []).filter(isObject)) {
+    const values = stringMap(scene.params);
+    const retained = Object.fromEntries(Object.entries(values).filter(([path]) => {
+      const separator = path.indexOf('.');
+      if (separator < 1) return true;
+      const instanceId = path.slice(0, separator);
+      return !matchingIds.has(instanceId) || nextParamNames.has(path.slice(separator + 1));
+    }));
+    for (const node of matchingNodes) {
+      const instanceId = String(node.id);
+      const instanceParams = stringMap(node.params);
+      for (const param of nextParams) {
+        const path = `${instanceId}.${param.name}`;
+        if (!(path in retained)) retained[path] = instanceParams[param.name] ?? param.default;
+      }
+    }
+    scene.params = retained;
+  }
+
+  const next = dumpDocument(doc);
+  validateProjectRoutes(next, { ...ports, [unitId]: nextPorts });
+  return next;
+}
+
 export function renameProjectInstance(content: string, instanceId: string, nextId: string): string {
   if (!/^[a-z][a-z0-9_]*$/.test(nextId)) throw new Error('Instance id must use lowercase snake_case.');
   const doc = loadDocument(content);

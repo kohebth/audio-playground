@@ -22,10 +22,12 @@ import {
   removeProjectInstanceWithTopology,
   removeProjectRoute,
   removeProjectScene,
+  rebindProjectInstanceUnit,
   renameProjectInstance,
   renameProjectScene,
   replaceProjectInstance,
   replaceProjectRoute,
+  syncProjectUnitContract,
   upsertProjectScene,
   validateProjectRoutes,
   type ProjectPortCatalog,
@@ -144,6 +146,47 @@ assert.throws(
   /already exists/,
 );
 
+const personalRegistered = addProjectUnitReference(
+  project,
+  'overdrive_personal_unit',
+  '../personal/overdrive_copy.unit.v2.yaml',
+);
+const personalPorts: ProjectPortCatalog = {
+  ...ports,
+  overdrive_personal_unit: { inputs: ['source'], outputs: ['result'], userPlaceable: true },
+};
+const rebound = rebindProjectInstanceUnit(personalRegistered, personalPorts, 'drive1', 'overdrive_personal_unit');
+const reboundDraft = parseProjectGraphDraft(rebound);
+assert.equal(reboundDraft.nodes.find(node => node.id === 'drive1')?.unit, 'overdrive_personal_unit');
+assert(reboundDraft.routes.some(route => route.to === 'drive1.source'));
+assert(reboundDraft.routes.some(route => route.from === 'drive1.result'));
+assert.equal(reboundDraft.nodes.find(node => node.id === 'drive1')?.params.drive, '2.2');
+assert.throws(
+  () => rebindProjectInstanceUnit(personalRegistered, {
+    ...personalPorts,
+    overdrive_personal_unit: { inputs: ['left', 'right'], outputs: ['result'], userPlaceable: false },
+  }, 'drive1', 'overdrive_personal_unit'),
+  /one mono audio input and one mono audio output/,
+);
+
+const evolvedOverdrive = overdriveContent
+  .replace('    - name: input\n      type: audio', '    - name: source\n      type: audio')
+  .replace('    - name: output\n      type: audio', '    - name: result\n      type: audio')
+  .replace('  tone:\n', `  presence_extra:
+    type: float
+    default: 0.25
+    min: 0.0
+    max: 1.0
+  tone:
+`);
+const syncedContract = syncProjectUnitContract(project, ports, 'overdrive_unit', overdriveContent, evolvedOverdrive);
+const syncedDraft = parseProjectGraphDraft(syncedContract);
+const syncedDrive = syncedDraft.nodes.find(node => node.id === 'drive1');
+assert.equal(syncedDrive?.params.drive, '2.2');
+assert.equal(syncedDrive?.params.presence_extra, '0.25');
+assert(syncedDraft.routes.some(route => route.to === 'drive1.source'));
+assert(syncedDraft.routes.some(route => route.from === 'drive1.result'));
+
 const added = addProjectInstance(project, 'overdrive_unit', 'drive2', { drive: '2.2' });
 assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.id, 'drive2');
 assert.equal(parseProjectGraphDraft(added.content).nodes.at(-1)?.ui, undefined);
@@ -208,6 +251,10 @@ const parallel = insertProjectParallelOnRoute(
   { drive: '2.4' },
   { path_1_db: '0', path_2_db: '-3' },
   { path_1_db: '-6.0206', path_2_db: '-9' },
+);
+assert.throws(
+  () => rebindProjectInstanceUnit(parallel.content, ports, 'parallel_pan', 'overdrive_unit'),
+  /Routing helpers/,
 );
 const parallelDraft = parseProjectGraphDraft(parallel.content);
 assert.equal(parallelDraft.nodes.length, 3);
