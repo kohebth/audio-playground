@@ -117,6 +117,7 @@ export function ProjectTopbar({
             <span className="tag">{mode === 'simple' ? 'Pipeline' : 'Contract'}</span>
           </div>
         </div>
+        <ModeToggle compact mode={mode} onChange={onModeChange} />
       </div>
 
       <PreviewPanel
@@ -133,7 +134,6 @@ export function ProjectTopbar({
       />
 
       <div className="header-right">
-        <ModeToggle compact mode={mode} onChange={onModeChange} />
         <button
           aria-expanded={audioIoOpen}
           aria-label="Audio I/O"

@@ -48,6 +48,8 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await expect(page.getByText('Build from left to right')).toBeVisible();
   await expect(page.getByTestId('view-effect-pipeline')).toHaveText('Pipeline');
   await expect(page.getByTestId('view-effect-contract')).toHaveText('Contract');
+  await expect(page.locator('.app-header .header-left .mode-toggle')).toHaveCount(1);
+  await expect(page.locator('.app-header .header-right .mode-toggle')).toHaveCount(0);
   await expect(page.locator('.react-flow__edge .project-route__rail')).toHaveCount(1);
   await page.getByRole('button', { name: 'Skip tour' }).click();
 
