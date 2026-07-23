@@ -74,7 +74,7 @@ async function addPipelineEffect(page: Page, effectId: string) {
 }
 
 async function addParallelEffect(page: Page, effect: string) {
-  await page.locator('.react-flow__edge[data-id*="system-output"]').last().hover();
+  await page.locator('.react-flow__edge[data-id*="system-output"] .project-route__rail').last().hover();
   await page.locator('.project-route__action--branch.project-route__action--visible').click();
   await page.getByRole('group', { name: 'Choose an effect for this branch' })
     .getByRole('button', { name: new RegExp(`^${effect}`) }).click();
