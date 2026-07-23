@@ -358,6 +358,9 @@ test('opens a unit for editing with one click in Contract', async ({ page }) => 
   await expect(page).toHaveURL(/#\/unit\/overdrive_copy$/);
   await expect(page.getByTestId('contract-canvas')).toBeVisible();
   await expect(page.getByTestId('contract-atom-library')).toBeVisible();
+  await expect(page.locator('.contract-atom-library > header')).toContainText('Atom palette');
+  await expect(page.locator('.contract-atom-library > .atom-palette')).toHaveCount(1);
+  await expect(page.locator('.contract-atom-library > details')).toHaveCount(0);
   await expect(page.getByTestId('atom-context-inspector')).toBeVisible();
   const catalogInfo = page.getByTestId('atom-palette-catalog-info');
   const catalogDetails = page.getByTestId('atom-palette-catalog-details');

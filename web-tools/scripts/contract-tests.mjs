@@ -111,6 +111,10 @@ includesContent(atomPalette, 'setSelectedCategory(category)', 'atom palette cate
 includesContent(atomPalette, 'atom-palette-category-all', 'atom palette must provide an All category badge');
 assert(!atomPalette.includes('atom-palette-filter'), 'atom palette must not expose a text filter');
 includesContent(atomPalette, 'aria-label="Atom palette"', 'atom palette should expose contract-backed rendering');
+includesContent(atomPalette, 'className="inspector-block atom-palette"', 'atom palette must remain permanently open');
+includesContent(app, '<span>Atom palette</span>', 'Contract sidebar must name the atom palette');
+includesContent(app, 'Click Add atom or drag an atom onto the Contract graph.', 'Contract sidebar must explain how to add atoms');
+includesContent(app, '<AtomCatalogInfo', 'Contract sidebar guidance must expose catalog details');
 includesContent(atomPalette, 'unit.graph.nodes.map', 'unit inspect graph should drive contract view details');
 includesContent(atomPalette, "ATOM_DRAG_TYPE = 'application/x-apg-atom'", 'atom palette must define a drag payload type');
 includesContent(atomPalette, 'event.dataTransfer.setData(ATOM_DRAG_TYPE, atom.name)', 'atom palette items must be draggable');

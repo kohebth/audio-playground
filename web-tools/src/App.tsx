@@ -4,7 +4,7 @@ import { useEdgesState, useNodesState, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { AppLogo } from './components/AppLogo';
-import { AtomCatalogPanel } from './components/AtomCatalogPanel';
+import { AtomCatalogInfo, AtomCatalogPanel } from './components/AtomCatalogPanel';
 import { AtomContextInspector } from './components/AtomContextInspector';
 import { ContractGraphCanvas } from './components/ContractGraphCanvas';
 import { GuidedTour } from './components/GuidedTour';
@@ -1924,12 +1924,14 @@ export function EditorWorkspace({
         ) : (
           <aside className="simple-library contract-atom-library" data-testid="contract-atom-library">
             <header>
-              <div><span>Atom library</span><strong>{backendSamples.atomCatalog.atoms.length}</strong></div>
-              <p>Click Add atom or drag an atom onto the Contract graph.</p>
+              <div><span>Atom palette</span><strong>{backendSamples.atomCatalog.atoms.length}</strong></div>
+              <p>
+                Click Add atom or drag an atom onto the Contract graph.
+                <AtomCatalogInfo catalog={backendSamples.atomCatalog} manifest={backendSamples.atomCatalogManifest} />
+              </p>
             </header>
             <AtomCatalogPanel
               catalog={backendSamples.atomCatalog}
-              manifest={backendSamples.atomCatalogManifest}
               onAddAtom={addAtom}
               showUnitInspect={false}
               unit={backendSamples.unit}

@@ -3179,11 +3179,11 @@ body {
   display: block;
 }
 
-.atom-palette__title { display: inline-flex; align-items: center; gap: 6px; }
 .atom-palette__summary {
   position: relative;
   display: inline-flex;
-  margin-top: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 .atom-palette__summary > button {
@@ -5542,7 +5542,6 @@ body {
   border-color: var(--border-subtle);
   background: #10120f;
 }
-.contract-atom-library .inspector-block__label { color: var(--text-secondary); }
 
 .contract-empty-state {
   display: grid;

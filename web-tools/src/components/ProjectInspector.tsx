@@ -934,7 +934,7 @@ export function ProjectInspector({
             ) : null}
           </details>
 
-          <AtomCatalogPanel unit={unit} catalog={atomCatalog} manifest={atomCatalogManifest} onAddAtom={onAddAtom} />
+          <AtomCatalogPanel unit={unit} catalog={atomCatalog} onAddAtom={onAddAtom} />
 
           <details className="inspector-block" open>
             <summary className="inspector-block__label">Unit Contract</summary>

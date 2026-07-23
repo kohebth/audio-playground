@@ -6,7 +6,6 @@ import { markPerfSpan } from '../lib/perfTelemetry';
 type Props = {
   unit: UnitInspect;
   catalog: AtomCatalog;
-  manifest: Record<string, string>;
   onAddAtom?: (atomName: string) => void;
   showUnitInspect?: boolean;
 };
@@ -43,7 +42,52 @@ function profileLabel(atom: AtomCatalogAtom): string {
   return enabled.length > 0 ? enabled.join(', ') : 'none';
 }
 
-export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitInspect = true }: Props) {
+type AtomCatalogInfoProps = {
+  catalog: AtomCatalog;
+  manifest: Record<string, string>;
+};
+
+export function AtomCatalogInfo({ catalog, manifest }: AtomCatalogInfoProps) {
+  const [open, setOpen] = useState(false);
+  const browserAtomCount = useMemo(
+    () => catalog.atoms.filter(atom => atom.visibility !== 'internal' && atom.profiles.wasm_realtime === true).length,
+    [catalog.atoms],
+  );
+  const hiddenBrowserAtoms = useMemo(
+    () => catalog.atoms.filter(atom => atom.visibility !== 'internal' && atom.profiles.wasm_realtime !== true).length,
+    [catalog.atoms],
+  );
+
+  return (
+    <span
+      className={`atom-palette__summary${open ? ' atom-palette__summary--open' : ''}`}
+      onBlur={event => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        aria-describedby="atom-palette-catalog-details"
+        aria-expanded={open}
+        aria-label="Atom palette catalog details"
+        data-testid="atom-palette-catalog-info"
+        onClick={() => setOpen(true)}
+        onFocus={() => setOpen(true)}
+        title="Atom palette catalog details"
+        type="button"
+      >
+        <i className="fa-solid fa-circle-info" aria-hidden="true" />
+      </button>
+      <span data-testid="atom-palette-catalog-details" id="atom-palette-catalog-details" role="tooltip">
+        <strong>{browserAtomCount} browser-validated / {catalog.atoms.length} backend</strong>
+        <span data-testid="atom-palette-browser-hidden">{hiddenBrowserAtoms} browser-incompatible hidden</span>
+        <span>{manifest.schema} / {manifest.bytes} bytes</span>
+      </span>
+    </span>
+  );
+}
+
+export function AtomCatalogPanel({ unit, catalog, onAddAtom, showUnitInspect = true }: Props) {
   const unitAtomNames = unit.graph.nodes.map(node => node.atom);
   const initialPaletteAtom = catalog.atoms.find(
     atom => atom.visibility !== 'internal' && atom.profiles.wasm_realtime === true,
@@ -51,18 +95,11 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitI
   const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? initialPaletteAtom?.name ?? '');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [draggingAtomName, setDraggingAtomName] = useState<string | null>(null);
-  const [catalogInfoOpen, setCatalogInfoOpen] = useState(false);
   const paletteAtoms = useMemo(
     () => catalog.atoms.filter(atom => (
       atom.profiles.wasm_realtime === true
       && atom.visibility !== 'internal'
     )),
-    [catalog.atoms],
-  );
-  const hiddenBrowserAtoms = useMemo(
-    () => catalog.atoms.filter(atom => (
-      atom.visibility !== 'internal' && atom.profiles.wasm_realtime !== true
-    )).length,
     [catalog.atoms],
   );
   const selectedAtom = catalog.atoms.find(atom => atom.name === selectedAtomName) ?? initialPaletteAtom;
@@ -80,42 +117,7 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitI
   );
 
   return (
-    <details className="inspector-block" open>
-      <summary className="inspector-block__label">
-        <span className="atom-palette__title">
-          <span>Atom Palette</span>
-          <span
-            className={`atom-palette__summary${catalogInfoOpen ? ' atom-palette__summary--open' : ''}`}
-            onBlur={event => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setCatalogInfoOpen(false);
-            }}
-            onMouseLeave={() => setCatalogInfoOpen(false)}
-          >
-            <button
-              aria-describedby="atom-palette-catalog-details"
-              aria-expanded={catalogInfoOpen}
-              aria-label="Atom palette catalog details"
-              data-testid="atom-palette-catalog-info"
-              onClick={event => {
-                event.preventDefault();
-                event.stopPropagation();
-                setCatalogInfoOpen(true);
-              }}
-              onFocus={() => setCatalogInfoOpen(true)}
-              title="Atom palette catalog details"
-              type="button"
-            >
-              <i className="fa-solid fa-circle-info" aria-hidden="true" />
-            </button>
-            <span data-testid="atom-palette-catalog-details" id="atom-palette-catalog-details" role="tooltip">
-              <strong>{paletteAtoms.length} browser-validated / {catalog.atoms.length} backend</strong>
-              <span data-testid="atom-palette-browser-hidden">{hiddenBrowserAtoms} browser-incompatible hidden</span>
-              <span>{manifest.schema} / {manifest.bytes} bytes</span>
-            </span>
-          </span>
-        </span>
-      </summary>
-
+    <section className="inspector-block atom-palette">
       <div className="atom-palette__categories">
         <button
           aria-pressed={selectedCategory === null}
@@ -224,6 +226,6 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitI
           ))}
         </div>
       </div> : null}
-    </details>
+    </section>
   );
 }
