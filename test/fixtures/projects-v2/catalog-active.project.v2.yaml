@@ -1,0 +1,27 @@
+kind: apg.project
+schema: apg.project.v2
+name: catalog-active
+version: 2.0.0
+
+units:
+  - id: gain_unit
+    file: ../units-v2/simple_gain.unit.v2.yaml
+  - id: catalog_only_unit
+    file: missing-catalog-only.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: gain1
+      unit: gain_unit
+      params:
+        gain: 2.0
+  routes:
+    - from: system.input
+      to: gain1.input
+    - from: gain1.output
+      to: system.output
+
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime

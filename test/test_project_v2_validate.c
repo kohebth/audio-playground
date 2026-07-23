@@ -108,6 +108,47 @@ static int expect_valid_empty_fixture(void) {
     return 0;
 }
 
+static int expect_valid_catalog_fixtures(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t resolved;
+    uc_error                  err    = {0};
+    uc_status                 status = apg_project_v2_load_resolved_file(
+        "test/fixtures/projects-v2/catalog-pass-through.project.v2.yaml", &arena, &resolved, &err
+    );
+    if (status != UC_OK) {
+        fprintf(stderr, "catalog pass-through error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("empty project with unused catalog refs did not resolve");
+    }
+    if (resolved.project.units_len != 1u || resolved.units_len != 0u || resolved.project.nodes_len != 0u) {
+        uc_arena_free(&arena);
+        return fail("unused catalog ref was loaded as an active dependency");
+    }
+
+    uc_arena_reset(&arena);
+    memset(&resolved, 0, sizeof(resolved));
+    memset(&err, 0, sizeof(err));
+    status = apg_project_v2_load_resolved_file(
+        "test/fixtures/projects-v2/catalog-active.project.v2.yaml", &arena, &resolved, &err
+    );
+    if (status != UC_OK) {
+        fprintf(stderr, "active catalog project error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("project with an unused missing catalog ref did not resolve");
+    }
+    if (resolved.project.units_len != 2u || resolved.units_len != 1u ||
+        strcmp(resolved.units[0].id, "gain_unit") != 0) {
+        uc_arena_free(&arena);
+        return fail("resolved catalog dependencies did not contain only active units");
+    }
+
+    uc_arena_free(&arena);
+    return 0;
+}
+
 static int expect_valid_pedalboard_fixture(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -210,6 +251,8 @@ int main(void) {
         return 1;
     if (expect_valid_empty_fixture())
         return 1;
+    if (expect_valid_catalog_fixtures())
+        return 1;
     if (expect_valid_pedalboard_fixture())
         return 1;
     if (expect_valid_routing_fixture("test/fixtures/projects-v2/parallel-gain.project.v2.yaml", "parallel", 3u))
@@ -241,6 +284,11 @@ int main(void) {
         return 1;
     if (expect_invalid_resolved_file_contains(
             "test/fixtures/projects-v2/invalid-escaping-unit.project.v2.yaml", "escaping unit file",
+            "escapes workspace root"
+        ))
+        return 1;
+    if (expect_invalid_resolved_file_contains(
+            "test/fixtures/projects-v2/invalid-unused-escaping-unit.project.v2.yaml", "unused escaping unit file",
             "escapes workspace root"
         ))
         return 1;

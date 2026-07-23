@@ -4,6 +4,7 @@ import {
   AUDIO_IO_STORAGE_KEY,
   calibrationCandidate,
   collectAudioDevices,
+  describeAudioIssue,
   loadAudioIoPreference,
   micPathLatencySeverity,
   microphoneConstraints,
@@ -19,6 +20,20 @@ assert.equal(micPathLatencySeverity(20), 'normal');
 assert.equal(micPathLatencySeverity(20.001), 'warning');
 assert.equal(micPathLatencySeverity(30), 'warning');
 assert.equal(micPathLatencySeverity(30.001), 'danger');
+
+const deniedIssue = describeAudioIssue(
+  new DOMException('Injected microphone permission denial', 'NotAllowedError'),
+  'start',
+  'microphone',
+  'audio-1',
+);
+assert.equal(deniedIssue.code, 'NotAllowedError');
+assert.match(deniedIssue.message, /Microphone access was denied/);
+assert.equal(deniedIssue.detail, 'Injected microphone permission denial');
+
+const engineIssue = describeAudioIssue(new Error('Processor failed'), 'control', 'audio-engine', 'audio-2');
+assert.equal(engineIssue.message, 'Processor failed');
+assert.equal(engineIssue.detail, null);
 
 const rawDevices = [
   { deviceId: 'default', groupId: '', kind: 'audioinput', label: 'Default input' },

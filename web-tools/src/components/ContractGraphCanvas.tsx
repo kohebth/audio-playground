@@ -944,7 +944,7 @@ export function ContractGraphCanvas({
               minZoom={atomCount >= 500 ? 0.8 : atomCount >= 100 ? 0.6 : 0.35}
               maxZoom={1.6}
               nodesDraggable
-              onlyRenderVisibleElements
+              onlyRenderVisibleElements={atomCount > 50}
             >
               <Controls />
               {atomCount <= 50 ? (

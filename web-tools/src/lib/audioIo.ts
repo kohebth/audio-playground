@@ -6,6 +6,45 @@ export const AUDIO_CALIBRATION_HINTS = [0.0027, 0.0053, 0.0107, 'interactive'] a
 export type AudioLatencyHint = number | 'interactive';
 export type MicPathLatencySeverity = 'normal' | 'warning' | 'danger';
 
+export type AudioIssue = {
+  id: string;
+  source: 'microphone' | 'audio-engine';
+  phase: string;
+  code: string;
+  message: string;
+  detail: string | null;
+};
+
+export function describeAudioIssue(
+  error: unknown,
+  phase: string,
+  source: AudioIssue['source'],
+  id: string,
+): AudioIssue {
+  const code = error instanceof DOMException || error instanceof Error
+    ? error.name || 'APG_WEB_AUDIO_ERROR'
+    : 'APG_WEB_AUDIO_ERROR';
+  const detail = error instanceof Error ? error.message : String(error);
+  const microphoneMessages: Record<string, string> = {
+    NotAllowedError: 'Microphone access was denied. Allow microphone access for this site and try again.',
+    NotFoundError: 'No microphone was found. Connect an input device and try again.',
+    NotReadableError: 'The microphone is busy or unavailable. Close other audio apps and try again.',
+    OverconstrainedError: 'The selected microphone is unavailable. Choose another input in Audio I/O.',
+    SecurityError: 'Microphone access requires HTTPS or localhost.',
+  };
+  const message = source === 'microphone'
+    ? microphoneMessages[code] ?? detail
+    : detail;
+  return {
+    id,
+    source,
+    phase,
+    code,
+    message: message || 'The audio engine could not complete this action.',
+    detail: detail && detail !== message ? detail : null,
+  };
+}
+
 export function micPathLatencySeverity(latencyMs: number): MicPathLatencySeverity {
   if (latencyMs > 30) return 'danger';
   if (latencyMs > 20) return 'warning';

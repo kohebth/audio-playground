@@ -139,9 +139,36 @@ static uc_status resolve_project_unit_path(
     return arena_strdup_path(arena, real, out_path, err);
 }
 
+static uc_status
+validate_project_unit_path(const char *project_dir, const char *workspace_root, const char *file, uc_error *err) {
+    if (!file || file[0] == '\0')
+        return set_error(err, UC_E_MISSING, "unit file path is empty");
+    if (path_is_absolute(file)) {
+        char msg[128];
+        snprintf(msg, sizeof(msg), "absolute unit file paths are not allowed: '%s'", file);
+        return set_error(err, UC_E_RANGE, msg);
+    }
+    if (relative_path_escapes_root(project_dir, workspace_root, file)) {
+        char msg[128];
+        snprintf(msg, sizeof(msg), "unit file '%s' escapes workspace root", file);
+        return set_error(err, UC_E_RANGE, msg);
+    }
+    return UC_OK;
+}
+
 static bool resolved_unit_path_seen(const apg_project_v2_loaded_unit_t *units, size_t units_len, const char *path) {
     for (size_t i = 0; i < units_len; i++) {
         if (units[i].resolved_path && path && strcmp(units[i].resolved_path, path) == 0)
+            return true;
+    }
+    return false;
+}
+
+static bool unit_ref_is_active(const apg_project_v2_t *project, const char *id) {
+    if (!project || !id)
+        return false;
+    for (size_t i = 0; i < project->nodes_len; i++) {
+        if (project->nodes[i].unit && strcmp(project->nodes[i].unit, id) == 0)
             return true;
     }
     return false;
@@ -212,33 +239,45 @@ apg_project_v2_load_resolved_file(const char *path, uc_arena *arena, apg_project
     if (status != UC_OK)
         return status;
 
-    apg_project_v2_loaded_unit_t *items =
-        uc_arena_alloc(arena, out->project.units_len * sizeof(*items), sizeof(void *));
-    if (!items && out->project.units_len > 0)
+    size_t active_units_len = 0u;
+    for (size_t i = 0; i < out->project.units_len; i++) {
+        if (unit_ref_is_active(&out->project, out->project.units[i].id))
+            active_units_len++;
+    }
+
+    apg_project_v2_loaded_unit_t *items = uc_arena_alloc(arena, active_units_len * sizeof(*items), sizeof(void *));
+    if (!items && active_units_len > 0)
         return set_error(err, UC_E_OOM, "arena OOM");
 
+    size_t loaded_units_len = 0u;
     for (size_t i = 0; i < out->project.units_len; i++) {
         const apg_project_v2_unit_ref_t *ref           = &out->project.units[i];
         const char                      *resolved_path = NULL;
+        status = validate_project_unit_path(project_dir, workspace_root, ref->file, err);
+        if (status != UC_OK)
+            return status;
+        if (!unit_ref_is_active(&out->project, ref->id))
+            continue;
         status = resolve_project_unit_path(project_dir, workspace_root, ref->file, arena, &resolved_path, err);
         if (status != UC_OK)
             return status;
-        if (resolved_unit_path_seen(items, i, resolved_path)) {
+        if (resolved_unit_path_seen(items, loaded_units_len, resolved_path)) {
             char msg[128];
             snprintf(msg, sizeof(msg), "duplicate resolved unit file '%s'", ref->file ? ref->file : "");
             return set_error(err, UC_E_RANGE, msg);
         }
 
-        items[i].id            = ref->id;
-        items[i].file          = ref->file;
-        items[i].resolved_path = resolved_path;
-        status                 = apg_unit_v2_load_file(resolved_path, arena, &items[i].unit, err);
+        items[loaded_units_len].id            = ref->id;
+        items[loaded_units_len].file          = ref->file;
+        items[loaded_units_len].resolved_path = resolved_path;
+        status = apg_unit_v2_load_file(resolved_path, arena, &items[loaded_units_len].unit, err);
         if (status != UC_OK)
             return status;
+        loaded_units_len++;
     }
 
     out->units     = items;
-    out->units_len = out->project.units_len;
+    out->units_len = loaded_units_len;
 
     status = apg_project_v2_validate_resolved(out, err);
     if (status != UC_OK)

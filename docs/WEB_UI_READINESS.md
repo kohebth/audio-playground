@@ -45,7 +45,12 @@ it is not exposed as the normal editing interface.
   as the secondary source, while stereo/multichannel content is rejected with a clear error. Cloud sync, URL imports,
   browser recording, stereo projects, and browser deployment bundles remain outside this scope.
 - The studio adapts to phone-sized viewports, preserves a direct pass-through empty project, and keeps common project
-  terminology user-facing while retaining the existing v2 file contracts internally.
+  terminology user-facing while retaining the existing v2 file contracts internally. An explicit Save/Saved/Retry
+  action remains visible at phone width and persists locally even while validation is blocked.
+- Project, edit, save, microphone, and audio-engine failures render in a persistent responsive issue banner with their
+  source and exact message. Structured project diagnostics retain code/path details and open the readiness panel;
+  microphone/device failures retain the browser detail and open Audio I/O. Corrected revisions clear recovered runtime
+  diagnostics rather than leaving the project visibly blocked.
 
 ## Readiness Declaration
 
@@ -80,7 +85,8 @@ non-modal panel, so the transport remains usable while configuring or calibratin
 feature-detected, microphone constraints request the selected device, mono capture, matching sample rate, and disabled
 voice processing, and the UI reports actual capture/context sample rates plus capture/base/output latency. Device changes
 rebuild the browser backend, rehydrate the same workspace revision, and restore running, mute, bypass, and parameter
-state; a failed rebuild restores the previous known-good configuration.
+state; a failed rebuild restores the previous known-good configuration. Permission, missing-device, busy-device,
+selection, and secure-context failures are mapped to actionable messages while preserving the exact browser error.
 
 The live preview exposes workspace, prepared, active, and failed revisions independently. Worker and processor failures
 render the structured diagnostic code, phase, revision, file, and schema path instead of collapsing the backend result
@@ -167,9 +173,11 @@ Unit Atom CRUD is backed by structured YAML transforms and executable transforme
 unit scaffold, add catalog-derived atoms, rename nodes, edit bindings/configuration, and remove atoms. Removing or cutting
 a one-signal-input/one-signal-output atom bridges its upstream signal to every compatible consumer and public output;
 removing a mixer or other special atom clears incident bindings and leaves explicit disconnected endpoints. The control
-Worker validates
-and compiles every unit draft in a snapshot, including units not yet referenced by the entry project, so incomplete
-forms return file-specific diagnostics without replacing the active runtime.
+Worker validates and compiles only unit references used by entry-project chain nodes. The project keeps unused references
+as its local effect catalog, so incomplete or removed catalog drafts do not block the active Pipeline. Every declared
+reference path is still confined; activating a missing or invalid unit returns a file-specific diagnostic without
+replacing the active runtime. Removing the final placed unit therefore recovers to the direct pass-through route even
+when the project retains catalog references.
 
 Unit connections use structured output/input endpoints. Clicking an output handle arms a connection and clicking an input
 commits it; Escape or a canvas click cancels the armed state. React Flow connect, reconnect, and edge-delete actions
@@ -348,3 +356,5 @@ The first product workflow is delivered:
 - [x] One-click project/atom connections with named handles and cancel state
 - [x] Mono user-effect placement policy with internal multi-port routing exemptions
 - [x] Unit/atom context menus, replacement previews, disconnected paste, topology-aware removal, and Undo
+- [x] Active-unit validation with unused project catalog refs and empty pass-through recovery
+- [x] Persistent project/editor/microphone diagnostics and responsive explicit Save/Saved/Retry

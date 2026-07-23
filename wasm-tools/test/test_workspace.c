@@ -173,12 +173,9 @@ int main(void) {
                                "  desktop_full: true\n";
     if (put_text(control, APG_WASM_FILE_UNIT, "workspace/broken.unit.v2.yaml", invalid_unit))
         return 1;
-    if (apg_wasm_control_validate_workspace(control) != APG_WASM_STATUS_COMPILE_ERROR)
-        return fail(control, "invalid unreferenced unit draft was accepted");
-    diagnostic = apg_wasm_control_last_diagnostic(control);
-    if (!diagnostic || strcmp(diagnostic->file, "workspace/broken.unit.v2.yaml") != 0 ||
-        strcmp(diagnostic->phase, "compile") != 0)
-        return fail(control, "invalid unit draft diagnostic is incomplete");
+    if (apg_wasm_control_validate_workspace(control) != APG_WASM_STATUS_OK ||
+        apg_wasm_control_compile_workspace(control) != APG_WASM_STATUS_OK)
+        return fail(control, "invalid unreferenced unit draft blocked the active project");
 
     if (apg_wasm_control_begin_workspace(control, 5u, entry, strlen(entry)) != APG_WASM_STATUS_OK)
         return fail(control, "cannot begin valid-draft workspace");
@@ -233,8 +230,34 @@ int main(void) {
         apg_wasm_control_compile_workspace(control) != APG_WASM_STATUS_OK)
         return fail(control, "valid unreferenced unit draft did not validate and compile");
 
+    const char *catalog_entry   = "workspace/catalog.project.v2.yaml";
+    const char *catalog_project = "kind: apg.project\n"
+                                  "schema: apg.project.v2\n"
+                                  "name: catalog-pass-through\n"
+                                  "version: 2.0.0\n"
+                                  "units:\n"
+                                  "  - id: catalog_only_unit\n"
+                                  "    file: missing-catalog-only.unit.v2.yaml\n"
+                                  "chain:\n"
+                                  "  nodes: []\n"
+                                  "  routes:\n"
+                                  "    - from: system.input\n"
+                                  "      to: system.output\n"
+                                  "targets:\n"
+                                  "  default: desktop_full\n";
+    if (apg_wasm_control_begin_workspace(control, 6u, catalog_entry, strlen(catalog_entry)) != APG_WASM_STATUS_OK)
+        return fail(control, "cannot begin catalog pass-through workspace");
+    if (put_text(control, APG_WASM_FILE_PROJECT, catalog_entry, catalog_project))
+        return 1;
+    if (apg_wasm_control_validate_workspace(control) != APG_WASM_STATUS_OK ||
+        apg_wasm_control_compile_workspace(control) != APG_WASM_STATUS_OK)
+        return fail(control, "unused missing catalog unit blocked pass-through");
+    summary = apg_wasm_control_workspace_summary(control);
+    if (!summary || summary->unit_count != 0u || summary->instance_count != 0u)
+        return fail(control, "catalog pass-through workspace loaded inactive unit dependencies");
+
     const char *extreme_entry = extreme_atom_files[0].path;
-    if (apg_wasm_control_begin_workspace(control, 6u, extreme_entry, strlen(extreme_entry)) != APG_WASM_STATUS_OK)
+    if (apg_wasm_control_begin_workspace(control, 7u, extreme_entry, strlen(extreme_entry)) != APG_WASM_STATUS_OK)
         return fail(control, "cannot begin 1,000-atom workspace");
     for (size_t i = 0u; i < sizeof(extreme_atom_files) / sizeof(extreme_atom_files[0]); ++i) {
         if (put_fixture(control, &extreme_atom_files[i]))

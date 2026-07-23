@@ -46,6 +46,16 @@ export function AudioIoDrawer({ onClose, open }: Props) {
         <button aria-label="Close Audio I/O" onClick={onClose} type="button">×</button>
       </header>
       <section className="audio-io-panel" data-testid="audio-io-panel">
+        {liveAudio?.audioIssue ? (
+          <div className="audio-io-issue" data-testid="audio-io-issue" role="alert">
+            <div>
+              <strong>{liveAudio.audioIssue.source === 'microphone' ? 'Microphone' : 'Audio engine'}</strong>
+              <span>{liveAudio.audioIssue.message}</span>
+              <small>{liveAudio.audioIssue.code}{liveAudio.audioIssue.detail ? ` · ${liveAudio.audioIssue.detail}` : ''}</small>
+            </div>
+            <button aria-label="Dismiss audio error" onClick={liveAudio.clearAudioIssue} type="button">×</button>
+          </div>
+        ) : null}
         <div className="audio-io-fieldset">
           <label>
             <span>Input</span>

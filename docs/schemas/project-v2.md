@@ -8,7 +8,7 @@
 - `schema`: Must be `apg.project.v2`.
 - `name`: Stable project identifier.
 - `version`: Project definition version.
-- `units`: List of referenced unit files. It may be empty only for an empty pass-through project.
+- `units`: Project-local catalog of unit references. It may be empty.
 - `chain`: Unit instances and routes.
 - `targets`: Default and export target profiles.
 
@@ -24,7 +24,11 @@ units:
     file: ../units-v2/simple_gain.unit.v2.yaml
 ```
 
-`id` values must be unique. `file` is stored as authored by the schema loader. The resolved loader canonicalizes each file relative to the project file directory, loads the referenced `unit.v2.yaml`, rejects absolute paths, rejects missing files, rejects references that escape the current workspace root, and rejects duplicate canonical unit files.
+`id` values must be unique. `file` is stored as authored by the schema loader. Every declared path must remain relative
+and confined to the workspace, including catalog entries that are not currently placed. The resolved loader
+canonicalizes and loads only references used by `chain.nodes`; an active reference rejects missing files and duplicate
+canonical unit files. Unused references remain available to the editor catalog and may point to a draft or missing file
+until a node activates them.
 
 ## Chain Nodes and Routes
 
@@ -110,7 +114,10 @@ Supported profiles:
 
 ## Resolved Loading
 
-Use `apg_project_v2_load_resolved_file(...)` when the caller needs loaded unit definitions in addition to the project schema model. The returned project, canonical unit paths, and loaded units are arena-owned.
+Use `apg_project_v2_load_resolved_file(...)` when the caller needs loaded unit definitions in addition to the project
+schema model. `project.units` retains the full declared catalog, while `units`/`units_len` contains only active
+dependencies referenced by chain nodes. The returned project, canonical active-unit paths, and loaded units are
+arena-owned.
 
 ## Project Compilation
 
@@ -118,9 +125,9 @@ Use `apg_project_v2_compile(...)` to expand a resolved project into a synthetic 
 
 The current compiler accepts mono audio routes from `system.input` through zero or more unit instances and explicit
 routing sections to exactly one `system.output` route. Inter-instance routes such as `gain1.output -> gain2.input` are
-supported. Routing helper instances are compiled as non-bypassable. An empty project must declare `units: []`,
-`chain.nodes: []`, and exactly one direct `system.input -> system.output` route; it compiles to a zero-node pass-through
-runtime plan.
+supported. Routing helper instances are compiled as non-bypassable. An empty project must declare `chain.nodes: []` and
+exactly one direct `system.input -> system.output` route. It may retain unused catalog entries in `units` and still
+compiles to a zero-node pass-through runtime plan.
 
 ## Current Limits
 

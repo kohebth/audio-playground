@@ -247,6 +247,7 @@ test('serves base-safe Pipeline and Contract routes', async ({ page }, testInfo)
 test('persists locked-layout edits and exports the workspace', async ({ page }, testInfo) => {
   await openWorkspace(page, testInfo);
   const unitNodes = page.locator('.react-flow__node[data-id^="unit-"]');
+  await expect(unitNodes).toHaveCount(8);
   const initialCount = await unitNodes.count();
   const viewport = page.locator('.react-flow__viewport');
   const initialTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
@@ -349,6 +350,14 @@ test('shows microphone permission failure without crashing the editor', async ({
     'aria-label',
     /Injected microphone permission denial/,
   );
+  const issueBanner = page.getByTestId('project-issue-banner');
+  await expect(issueBanner).toContainText('Microphone');
+  await expect(issueBanner).toContainText('Microphone access was denied');
+  await expect(issueBanner).toContainText('NotAllowedError');
+  await expect(issueBanner).toContainText('Injected microphone permission denial');
+  await expect(page.locator('.topbar__status button').first()).toHaveText('Ready');
+  await issueBanner.getByRole('button', { name: 'Audio I/O' }).click();
+  await expect(page.getByTestId('audio-io-issue')).toContainText('Injected microphone permission denial');
   await expect(page.getByTestId('project-canvas')).toBeVisible();
 });
 

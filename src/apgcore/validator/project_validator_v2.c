@@ -816,8 +816,6 @@ static uc_status validate_project_routes(const apg_project_v2_resolved_t *projec
     if (!project)
         return UC_OK;
     if (project->project.nodes_len == 0u) {
-        if (project->project.units_len != 0u)
-            return set_error(err, UC_E_RANGE, "empty project must not declare unit refs");
         if (project->project.routes_len != 1u ||
             strcmp(project->project.routes[0].from, APG_PROJECT_SYSTEM_INPUT) != 0 ||
             strcmp(project->project.routes[0].to, APG_PROJECT_SYSTEM_OUTPUT) != 0)

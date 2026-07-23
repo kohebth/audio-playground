@@ -1,0 +1,19 @@
+kind: apg.project
+schema: apg.project.v2
+name: catalog-pass-through
+version: 2.0.0
+
+units:
+  - id: catalog_only_unit
+    file: missing-catalog-only.unit.v2.yaml
+
+chain:
+  nodes: []
+  routes:
+    - from: system.input
+      to: system.output
+
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime

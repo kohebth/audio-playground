@@ -3,6 +3,7 @@ import type { AudioTraceReport, AudioTraceStatus } from '@audio-playground/wasm-
 import type {
   AudioCalibrationState,
   AudioDeviceOption,
+  AudioIssue,
   AudioIoPreference,
   AudioRuntimeSettings,
 } from './audioIo';
@@ -21,9 +22,11 @@ export type LiveBypassController = {
   audioIoPreference: AudioIoPreference;
   audioRuntimeSettings: AudioRuntimeSettings | null;
   audioCalibration: AudioCalibrationState;
+  audioIssue: AudioIssue | null;
   bypassByInstance: Record<string, boolean>;
   setBypass: (instanceId: string, enabled: boolean) => Promise<void>;
   profileAudio: () => Promise<void>;
+  clearAudioIssue: () => void;
   clearAudioTrace: () => void;
   refreshAudioDevices: () => Promise<AudioDeviceOption[]>;
   selectAudioInput: (deviceId: string) => Promise<void>;

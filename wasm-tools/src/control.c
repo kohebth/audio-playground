@@ -239,24 +239,14 @@ report_compile_error(apg_wasm_control_t *control, const char *file, const char *
     );
 }
 
-static apg_wasm_status_t validate_unit_files(apg_wasm_control_t *control) {
-    for (size_t i = 0u; i < control->files_len; ++i) {
-        const apg_wasm_workspace_file_t *file = &control->files[i];
-        if (file->role != APG_WASM_FILE_UNIT)
-            continue;
-        uc_arena_reset(&control->arena);
-        uc_error               error = {0};
-        apg_unit_v2_t          unit  = {0};
-        apg_v2_compiled_unit_t plan  = {0};
-        uc_status status = apg_unit_v2_load_string(file->content, file->content_len, &control->arena, &unit, &error);
-        if (status != UC_OK)
-            return report_uc_error(control, "unit", file->path, "$", &error);
-        status = apg_v2_compile_unit(&unit, &control->arena, &plan, &error);
-        if (status != UC_OK)
-            return report_compile_error(control, file->path, "$.graph", &error);
+static bool project_unit_ref_is_active(const apg_project_v2_t *project, const char *id) {
+    if (!project || !id)
+        return false;
+    for (size_t i = 0u; i < project->nodes_len; ++i) {
+        if (project->nodes[i].unit && strcmp(project->nodes[i].unit, id) == 0)
+            return true;
     }
-    uc_arena_reset(&control->arena);
-    return APG_WASM_STATUS_OK;
+    return false;
 }
 
 static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
@@ -265,10 +255,6 @@ static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
     memset(&control->compiled, 0, sizeof(control->compiled));
     control->validated   = false;
     control->compiled_ok = false;
-
-    apg_wasm_status_t unit_status = validate_unit_files(control);
-    if (unit_status != APG_WASM_STATUS_OK)
-        return unit_status;
 
     const apg_wasm_workspace_file_t *project_file = find_file(control, control->entry_project);
     if (!project_file || project_file->role != APG_WASM_FILE_PROJECT)
@@ -284,7 +270,12 @@ static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
     if (uc != UC_OK)
         return report_uc_error(control, "project", project_file->path, "$", &error);
 
-    const size_t                  unit_count = control->resolved.project.units_len;
+    size_t unit_count = 0u;
+    for (size_t i = 0u; i < control->resolved.project.units_len; ++i) {
+        if (project_unit_ref_is_active(&control->resolved.project, control->resolved.project.units[i].id))
+            unit_count++;
+    }
+
     apg_project_v2_loaded_unit_t *units = uc_arena_alloc(&control->arena, unit_count * sizeof(*units), sizeof(void *));
     if (!units && unit_count > 0u)
         return set_diagnostic(
@@ -294,7 +285,8 @@ static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
     if (unit_count > 0u)
         memset(units, 0, unit_count * sizeof(*units));
 
-    for (size_t i = 0u; i < unit_count; ++i) {
+    size_t loaded_count = 0u;
+    for (size_t i = 0u; i < control->resolved.project.units_len; ++i) {
         const apg_project_v2_unit_ref_t *reference     = &control->resolved.project.units[i];
         char                            *resolved_path = resolve_path(control->entry_project, reference->file);
         if (!resolved_path)
@@ -302,6 +294,10 @@ static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
                 control, APG_WASM_STATUS_VALIDATION_ERROR, "workspace", "APG_PATH_INVALID", project_file->path,
                 "$.units[].file", "unit reference escapes or is invalid for the in-memory workspace"
             );
+        if (!project_unit_ref_is_active(&control->resolved.project, reference->id)) {
+            free(resolved_path);
+            continue;
+        }
         const apg_wasm_workspace_file_t *unit_file = find_file(control, resolved_path);
         if (!unit_file || unit_file->role != APG_WASM_FILE_UNIT) {
             apg_wasm_status_t status = set_diagnostic(
@@ -311,7 +307,7 @@ static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
             free(resolved_path);
             return status;
         }
-        for (size_t previous = 0u; previous < i; ++previous) {
+        for (size_t previous = 0u; previous < loaded_count; ++previous) {
             if (strcmp(units[previous].resolved_path, resolved_path) == 0) {
                 apg_wasm_status_t status = set_diagnostic(
                     control, APG_WASM_STATUS_VALIDATION_ERROR, "workspace", "APG_UNIT_DUPLICATE", resolved_path,
@@ -328,18 +324,19 @@ static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
                 control, APG_WASM_STATUS_OUT_OF_MEMORY, "workspace", "APG_OOM", unit_file->path, "$.units",
                 "arena OOM while copying resolved unit path"
             );
-        units[i].id            = reference->id;
-        units[i].file          = reference->file;
-        units[i].resolved_path = arena_path;
-        uc                     = apg_unit_v2_load_string(
-            unit_file->content, unit_file->content_len, &control->arena, &units[i].unit, &error
+        units[loaded_count].id            = reference->id;
+        units[loaded_count].file          = reference->file;
+        units[loaded_count].resolved_path = arena_path;
+        uc                                = apg_unit_v2_load_string(
+            unit_file->content, unit_file->content_len, &control->arena, &units[loaded_count].unit, &error
         );
         if (uc != UC_OK)
             return report_uc_error(control, "unit", unit_file->path, "$", &error);
+        loaded_count++;
     }
 
     control->resolved.units     = units;
-    control->resolved.units_len = unit_count;
+    control->resolved.units_len = loaded_count;
     uc                          = apg_project_v2_validate_resolved(&control->resolved, &error);
     if (uc != UC_OK)
         return report_uc_error(control, "project", project_file->path, "$.chain", &error);
@@ -347,7 +344,7 @@ static apg_wasm_status_t load_resolved_workspace(apg_wasm_control_t *control) {
     control->validated = true;
     control->summary   = (apg_wasm_workspace_summary_t){
           .revision       = control->revision,
-          .unit_count     = (uint32_t)unit_count,
+          .unit_count     = (uint32_t)loaded_count,
           .instance_count = (uint32_t)control->resolved.project.nodes_len,
     };
     return set_diagnostic(control, APG_WASM_STATUS_OK, "validate", "APG_OK", project_file->path, "$", "");

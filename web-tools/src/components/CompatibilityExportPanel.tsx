@@ -6,12 +6,18 @@ type Props = {
 
 const PROFILES = ['desktop_full', 'wasm_realtime', 'm7_static', 'offline_render'];
 
+function activeUnits(project: ProjectInspect) {
+  const activeUnitIds = new Set(project.nodes.map(node => node.unit));
+  return project.units.filter(unit => activeUnitIds.has(unit.id));
+}
+
 function profileSupported(project: ProjectInspect, profile: string): boolean {
-  return project.units.every(unit => unit.compatibility[profile]);
+  return activeUnits(project).every(unit => unit.compatibility[profile]);
 }
 
 export function CompatibilityExportPanel({ project }: Props) {
   const unavailableReason = 'Not available in this build.';
+  const units = activeUnits(project);
   return (
     <details className="inspector-block" open>
       <summary className="inspector-block__label">Compatibility</summary>
@@ -20,7 +26,7 @@ export function CompatibilityExportPanel({ project }: Props) {
           <span>Unit</span>
           {PROFILES.map(profile => <strong key={profile}>{profile}</strong>)}
         </div>
-        {project.units.map(unit => (
+        {units.map(unit => (
           <div key={unit.id} className="compat-matrix__row">
             <span>{unit.name}</span>
             {PROFILES.map(profile => (
@@ -30,6 +36,7 @@ export function CompatibilityExportPanel({ project }: Props) {
             ))}
           </div>
         ))}
+        {units.length === 0 ? <p className="compat-matrix__empty">No units placed in the Pipeline.</p> : null}
       </div>
 
       <div className="export-readiness">

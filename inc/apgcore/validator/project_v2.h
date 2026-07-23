@@ -73,7 +73,8 @@ typedef struct {
 } apg_project_v2_loaded_unit_t;
 
 typedef struct {
-    apg_project_v2_t              project;
+    apg_project_v2_t project;
+    /* Active unit dependencies referenced by chain nodes; project.units remains the declared catalog. */
     apg_project_v2_loaded_unit_t *units;
     size_t                        units_len;
 } apg_project_v2_resolved_t;

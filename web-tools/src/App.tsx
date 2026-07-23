@@ -1805,11 +1805,17 @@ export function EditorWorkspace({
 
   const updateReadiness = useCallback((update: Partial<ApgProjectPackage['readiness']>) => {
     onProjectPackageChange(current => {
+      const diagnostics = update.diagnostics === undefined
+        ? current.readiness.diagnostics
+        : [
+            ...current.readiness.diagnostics.filter(item => item.code?.startsWith('APG_UI_')),
+            ...update.diagnostics.filter(item => !item.code?.startsWith('APG_UI_')),
+          ];
       const readiness = {
         ...current.readiness,
         ...update,
         targets: update.targets ?? current.readiness.targets,
-        diagnostics: update.diagnostics ?? current.readiness.diagnostics,
+        diagnostics,
       };
       return JSON.stringify(readiness) === JSON.stringify(current.readiness)
         ? current
@@ -1913,6 +1919,8 @@ export function EditorWorkspace({
           readiness={projectPackage.readiness}
           onAudioAssetChange={updatePackagedAudio}
           onReadinessUpdate={updateReadiness}
+          editorError={graphEditError}
+          onDismissEditorError={() => setGraphEditError(null)}
         />
 
       <div className="layout">
@@ -2062,7 +2070,6 @@ export function EditorWorkspace({
           unit={contractUnitGraph}
         />
       ) : null}
-      {graphEditError ? <p className="simple-edit-error" role="alert">{graphEditError}</p> : null}
     </div>
     <GuidedTour
       onClose={() => {

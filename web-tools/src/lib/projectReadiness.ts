@@ -36,10 +36,12 @@ export function evaluateWorkspaceReadiness(
     if (!projectFile) throw new Error(`Entry project "${workspace.entryProject}" is missing.`);
     const project = parseProjectGraphDraft(projectFile.content);
     const desiredTargets = [...new Set([project.targets.default, ...project.targets.export].filter(Boolean))];
+    const activeUnitIds = new Set(project.nodes.map(node => node.unit));
     for (const target of desiredTargets) targets[target] = 'ready';
 
     for (const reference of project.units) {
       const path = resolveWorkspacePath(projectFile.path, reference.file);
+      if (!activeUnitIds.has(reference.id)) continue;
       const file = workspace.files.find(item => item.path === path && item.role === 'unit');
       if (!file) {
         validation = 'blocked';

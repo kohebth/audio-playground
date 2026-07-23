@@ -42,6 +42,24 @@ const emptyReadiness = evaluateWorkspaceReadiness(empty.workspace);
 assert.equal(emptyReadiness.validation, 'ready');
 assert.equal(emptyReadiness.targets.wasm_realtime, 'ready');
 
+const catalogOnly = structuredClone(empty);
+catalogOnly.workspace.files[0].content = catalogOnly.workspace.files[0].content.replace(
+  'units: []',
+  'units:\n  - id: catalog_only\n    file: missing-catalog-only.unit.v2.yaml',
+);
+const catalogReadiness = evaluateWorkspaceReadiness(catalogOnly.workspace);
+assert.equal(catalogReadiness.validation, 'ready');
+assert.equal(catalogReadiness.diagnostics.length, 0);
+
+const activeMissing = structuredClone(catalogOnly);
+activeMissing.workspace.files[0].content = activeMissing.workspace.files[0].content.replace(
+  '  nodes: []',
+  '  nodes:\n    - id: active_missing\n      unit: catalog_only',
+);
+const activeMissingReadiness = evaluateWorkspaceReadiness(activeMissing.workspace);
+assert.equal(activeMissingReadiness.validation, 'blocked');
+assert.equal(activeMissingReadiness.diagnostics[0].code, 'APG_UI_MISSING_UNIT');
+
 const templateCopy = createWorkspaceTemplateProjectPackage({
   id: 'template-1',
   name: 'Template Copy',

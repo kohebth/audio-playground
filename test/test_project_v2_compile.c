@@ -89,13 +89,13 @@ static int expect_meter_near(
     return 0;
 }
 
-static int test_empty_project_compiles_and_passes_through(void) {
+static int test_empty_project_compiles_and_passes_through(const char *path) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
         return fail("arena init failed");
 
     apg_project_v2_resolved_t project;
-    if (load_resolved_project("test/fixtures/projects-v2/empty-passthrough.project.v2.yaml", &arena, &project)) {
+    if (load_resolved_project(path, &arena, &project)) {
         uc_arena_free(&arena);
         return 1;
     }
@@ -614,7 +614,10 @@ static int test_compile_rejects_bad_port_route(void) {
 }
 
 int main(void) {
-    if (test_empty_project_compiles_and_passes_through())
+    if (test_empty_project_compiles_and_passes_through("test/fixtures/projects-v2/empty-passthrough.project.v2.yaml"))
+        return 1;
+    const char *catalog_pass_through = "test/fixtures/projects-v2/catalog-pass-through.project.v2.yaml";
+    if (test_empty_project_compiles_and_passes_through(catalog_pass_through))
         return 1;
     if (test_simple_project_compiles_and_runs())
         return 1;

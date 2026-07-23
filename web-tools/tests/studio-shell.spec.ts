@@ -52,13 +52,14 @@ test('creates a project from the eight-effect rail template', async ({ page }) =
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
   const tour = page.getByRole('button', { name: 'Skip tour' });
-  if (await tour.isVisible()) await tour.click();
+  await expect(tour).toBeVisible();
+  await tour.click();
 
   await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(8);
   await expect(page.locator('.react-flow__edge .project-route__rail')).toHaveCount(9);
   await expect(page.locator('.react-flow__edge[data-id*="system-input"] .project-route__rail')).toHaveCount(1);
   await expect(page.locator('.header-project-name strong')).toHaveText('Eight Rail');
-  await expect(page.getByText('Saved locally', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('topbar-save')).toContainText('Saved');
 
   const railAnchors = await page.locator('.react-flow__node').evaluateAll(nodes => nodes.flatMap(node => {
     const handle = node.querySelector('.project-node__handle');
@@ -72,6 +73,33 @@ test('creates a project from the eight-effect rail template', async ({ page }) =
     return [route.getPointAtLength(0).y, route.getPointAtLength(route.getTotalLength()).y];
   }));
   expect(Math.max(...routeEndpointYs) - Math.min(...routeEndpointYs)).toBeLessThan(1);
+});
+
+test('removing every placed unit recovers to a valid pass-through rail', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New project', exact: true }).first().click();
+  await page.getByRole('radio', { name: /8 effects/ }).check();
+  await page.getByPlaceholder('Midnight pedalboard').fill('Empty Recovery');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  const tour = page.getByRole('button', { name: 'Skip tour' });
+  await expect(tour).toBeVisible();
+  await tour.click();
+
+  for (const instanceId of ['gate1', 'phaser1', 'drive1', 'tone1', 'trem1', 'chorus1', 'delay1', 'reverb1']) {
+    const node = page.getByTestId(`project-node-${instanceId}`);
+    await node.click({ button: 'right' });
+    await page.getByRole('menu', { name: `${instanceId} actions` }).getByRole('menuitem', { name: 'Remove' }).click();
+    await expect(node).toHaveCount(0);
+  }
+
+  await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(0);
+  await expect(page.locator('.react-flow__edge[data-id*="system-input-system-output"] .project-route__rail')).toHaveCount(1);
+  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 20_000 });
+  await page.getByTestId('preview-compile').click();
+  await expect(page.locator('.transport-state')).toHaveText('ready', { timeout: 20_000 });
+  await expect(page.getByTestId('project-issue-banner')).toHaveCount(0);
+  await expect(page.locator('.topbar__status button').first()).toHaveText('Ready');
 });
 
 test('drags effect units onto the Pipeline and a specific rail', async ({ page }) => {
@@ -216,13 +244,23 @@ test('keeps the Pipeline usable at phone width', async ({ page }) => {
   await page.getByRole('button', { name: /Guitar Pedalboard/ }).click();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
   const tour = page.getByRole('button', { name: 'Skip tour' });
-  if (await tour.isVisible()) await tour.click();
+  await expect(tour).toBeVisible();
+  await tour.click();
 
   await expect(page.locator('.simple-library')).toBeVisible();
   await expect(page.locator('.simple-library__list')).toHaveCSS('overflow-x', 'auto');
   await expect(page.getByTestId('project-canvas')).toBeVisible();
   await expect(page.locator('.canvas--project .react-flow__minimap')).toBeHidden();
   await expect(page.locator('.app--simple .header-project')).toBeHidden();
+  const save = page.getByTestId('topbar-save');
+  await expect(save).toBeVisible();
+  await expect(save).toContainText('Saved');
+  await page.getByRole('button', { name: 'Add Overdrive', exact: true }).click();
+  await expect(save).toBeEnabled();
+  await expect(save).toContainText('Save');
+  await save.click();
+  await expect(save).toBeDisabled();
+  await expect(save).toContainText('Saved');
   const libraryBox = await page.locator('.simple-library').boundingBox();
   expect(libraryBox?.width).toBeGreaterThanOrEqual(380);
   expect(libraryBox?.height).toBeLessThanOrEqual(200);

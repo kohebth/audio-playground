@@ -8,10 +8,12 @@ The middleware is split into two modules:
 - `apg_control`: in-memory workspace validation, compilation, diagnostics, and prepared runtime images.
 - `apg_processor`: prepared-image hydration, real-time processing, controls, runtime swapping, and measurements.
 
-The control module currently accepts a revisioned in-memory workspace, confines and resolves relative project unit
-paths within that workspace, validates all YAML through APGCore, and compiles the entry project. It exposes structured
-diagnostics and a compiled-workspace summary. Processor operations are added as independent vertical slices without
-adding browser dependencies to `inc/apgcore/` or `src/apgcore/`.
+The control module currently accepts a revisioned in-memory workspace, confines every declared relative project unit
+path, resolves and validates only unit references used by entry-project chain nodes, and compiles the entry project.
+Unused references remain project catalog entries and do not block the active runtime; activating a missing or invalid
+unit still returns its structured diagnostic. The compiled-workspace summary counts active dependencies. Processor
+operations are added as independent vertical slices without adding browser dependencies to `inc/apgcore/` or
+`src/apgcore/`.
 
 `prepare` lowers the compiled registry into a checksummed, little-endian, pointer-free image. The processor hydrates
 that image in an inactive arena, resolves atom names against its own compiled registry, and constructs a separate
