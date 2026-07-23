@@ -50,6 +50,7 @@ const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
 const projectReadinessPanel = read('web-tools/src/components/ProjectReadinessPanel.tsx');
 const projectSidebar = read('web-tools/src/components/ProjectSidebar.tsx');
 const projectInspector = read('web-tools/src/components/ProjectInspector.tsx');
+const simpleInspector = read('web-tools/src/components/SimpleInspector.tsx');
 const audioIoDrawer = read('web-tools/src/components/AudioIoDrawer.tsx');
 const atomContextInspector = read('web-tools/src/components/AtomContextInspector.tsx');
 const unitSettingsDrawer = read('web-tools/src/components/UnitSettingsDrawer.tsx');
@@ -107,8 +108,9 @@ includesContent(atomPalette, 'atom-palette-browser-hidden', 'browser atom palett
 includesContent(atomPalette, "atom.visibility === 'public'", 'atom palette must show public atoms by default');
 includesContent(atomPalette, "atom.visibility === 'advanced'", 'atom palette must make advanced atoms opt-in');
 includesContent(atomPalette, 'atom-palette-show-advanced', 'atom palette must expose its advanced visibility control');
-includesContent(atomPalette, 'atom.name.toLowerCase().includes(query)', 'atom palette filtering must match atom names');
-includesContent(atomPalette, 'atom.category.toLowerCase().includes(query)', 'atom palette filtering must match atom categories');
+includesContent(atomPalette, 'setSelectedCategory(category)', 'atom palette categories must filter the catalog');
+includesContent(atomPalette, 'atom-palette-category-all', 'atom palette must provide an All category badge');
+assert(!atomPalette.includes('atom-palette-filter'), 'atom palette must not expose a text filter');
 includesContent(atomPalette, 'aria-label="Atom palette"', 'atom palette should expose contract-backed rendering');
 includesContent(atomPalette, 'unit.graph.nodes.map', 'unit inspect graph should drive contract view details');
 includesContent(atomPalette, "ATOM_DRAG_TYPE = 'application/x-apg-atom'", 'atom palette must define a drag payload type');
@@ -276,6 +278,7 @@ includesContent(app, 'lastValidProjectDraft', 'invalid project YAML must retain 
 includesContent(projectSidebar, 'onAddInstance(instanceUnit, instanceId)', 'project sidebar must add unit instances structurally');
 includesContent(projectSidebar, 'onAddRoute({ from: routeSource, to: routeTarget })', 'project sidebar must add routes structurally');
 includesContent(projectInspector, 'onRenameInstance', 'project inspector must expose safe instance rename');
+includesContent(simpleInspector, 'Unit instance name', 'Pipeline inspector must expose instance naming');
 includesContent(projectInspector, 'onRemoveRoute', 'project inspector must expose structural route disconnection');
 includesContent(projectSidebar, 'onCreateUnit(unitName)', 'workspace sidebar must expose unit creation');
 

@@ -1366,11 +1366,10 @@ test.describe('Contract graph atom scalability', () => {
       await runAndAssertBudget(page, 'contract.add.atom', 1);
     }
 
-    const filter = page.getByTestId('atom-palette-filter');
-    await filter.fill('clip_soft');
+    await page.getByTestId('atom-palette-category-amplitude').click();
     const filteredAtom = page.getByTestId('atom-palette-item-amplitude_clip_soft');
     await expect(filteredAtom).toBeVisible();
-    await expect(page.locator('[data-testid^="atom-palette-item-"]')).toHaveCount(1);
+    await expect(page.getByTestId('atom-palette-category-amplitude')).toHaveAttribute('aria-pressed', 'true');
 
     await clearPerfSpans(page);
     await filteredAtom.dragTo(canvas, { targetPosition: { x: 420, y: 260 } });

@@ -2747,7 +2747,7 @@ body {
   font-size: 9px;
   font-weight: 800;
   text-align: center;
-  cursor: ns-resize;
+  cursor: ew-resize;
   outline: none;
   box-shadow: inset 0 0 0 1px #0a0e1a;
 }
@@ -3324,31 +3324,17 @@ body {
 
 .atom-palette__category {
   padding: 4px 6px;
-  border: 1px solid var(--category-color);
+  border: 1px solid var(--category-color, var(--border-subtle));
   border-radius: 999px;
-  background: color-mix(in srgb, var(--category-color) 18%, transparent);
-  color: var(--text-primary);
-  font-size: 10px;
-  font-weight: 700;
+  background: transparent;
+  color: var(--text-muted);
+  font: 600 9px var(--font-sans);
+  text-transform: capitalize;
+  cursor: pointer;
 }
 
-.atom-palette__filter {
-  width: 100%;
-  height: 32px;
-  margin-top: 12px;
-  padding: 0 9px;
-  border: 1px solid #1f2d45;
-  border-radius: 6px;
-  outline: none;
-  background: #0a0e1a;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-.atom-palette__filter:focus {
-  border-color: var(--accent-blue);
-}
+.atom-palette__category--active { border-color: var(--category-color, var(--accent)); background: color-mix(in srgb, var(--category-color, var(--accent)) 18%, transparent); color: var(--text-primary); }
+.atom-palette__category:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
 
 .atom-palette__list {
   display: grid;
@@ -4082,6 +4068,13 @@ body {
 .simple-inspector h2 { margin: 9px 0 2px; font-size: 20px; letter-spacing: -.03em; text-transform: capitalize; }
 .simple-inspector p { margin-top: 14px; color: var(--text-muted); font-size: 11px; line-height: 1.6; }
 .simple-inspector__instance { margin-top: 0 !important; color: var(--text-dim) !important; font: 500 10px var(--font-mono) !important; }
+.simple-inspector__instance-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: end; margin-top: 14px; }
+.simple-inspector__instance-form label { display: grid; gap: 4px; min-width: 0; }
+.simple-inspector__instance-form label > span { color: var(--text-dim); font: 8px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.simple-inspector__instance-form input { width: 100%; min-width: 0; padding: 7px 8px; border: 1px solid var(--border-subtle); border-radius: 6px; outline: none; background: #10120f; color: var(--text-primary); font: 10px var(--font-mono); }
+.simple-inspector__instance-form input:focus { border-color: var(--accent); }
+.simple-inspector__instance-form button { min-height: 30px; padding: 0 8px; border: 1px solid var(--border-subtle); border-radius: 6px; background: transparent; color: var(--text-secondary); font: 600 9px var(--font-sans); cursor: pointer; }
+.simple-inspector__instance-form button:disabled { opacity: .45; cursor: not-allowed; }
 .simple-inspector ol { display: grid; gap: 11px; margin-top: 24px; list-style: none; }
 .simple-inspector li { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 11px; }
 .simple-inspector li i { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--border-default); border-radius: 50%; color: var(--accent); font-size: 9px; font-style: normal; }
@@ -4286,6 +4279,7 @@ body {
 
 .transport-island { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; padding: 3px; gap: 2px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-base); box-shadow: inset 0 1px 3px rgba(0,0,0,.3); }
 .transport-group { display: flex; align-items: center; min-width: 0; gap: 2px; padding: 0 8px; }
+.transport-group--running { margin: -1px; border: 1px solid rgba(52, 211, 153, .78); border-radius: calc(var(--radius-md) + 1px); box-shadow: 0 0 10px rgba(52, 211, 153, .28), inset 0 0 8px rgba(52, 211, 153, .09); }
 .transport-group + .transport-group { border-left: 1px solid var(--border-subtle); }
 .transport-btn { display: inline-flex; width: 34px; min-width: 34px; height: 34px; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; transition: all .15s ease; }
 .transport-btn i { font-size: 13px; }
@@ -4686,7 +4680,7 @@ body {
   position: relative;
   width: 40px;
   height: 40px;
-  cursor: ns-resize;
+  cursor: ew-resize;
   outline: none;
 }
 

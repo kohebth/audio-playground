@@ -1200,7 +1200,7 @@ export function PreviewPanel({
               </label>
             )}
           </div>
-          <div className="transport-group">
+          <div className={`transport-group${transportPhase === 'running' ? ' transport-group--running' : ''}`}>
             <span
               aria-label={`Audio engine ${transportPhase}`}
               className={`transport-state transport-state--${transportPhase}`}

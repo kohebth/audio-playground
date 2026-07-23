@@ -49,6 +49,7 @@ import {
   removeProjectInstanceWithTopology,
   removeProjectScene,
   rebindProjectInstanceUnit,
+  renameProjectInstance,
   renameProjectScene,
   replaceProjectInstance,
   syncProjectUnitContract,
@@ -1399,6 +1400,13 @@ export function EditorWorkspace({
     setActiveScene(current => current === name ? null : current);
   }, [updateProjectFile]);
 
+  const renameProjectNode = useCallback((instanceId: string, nextId: string) => {
+    const normalizedId = nextId.trim();
+    if (!normalizedId || normalizedId === instanceId) return;
+    if (!updateProjectFile(content => renameProjectInstance(content, instanceId, normalizedId))) return;
+    setSelectedId(`unit-${normalizedId}`);
+  }, [updateProjectFile]);
+
   const selectedUnitName = selectedNode?.kind === 'unit'
     ? selectedUnitGraph?.name ?? selectedNode.unit.name.replace(/_unit$/, '')
     : null;
@@ -1998,7 +2006,7 @@ export function EditorWorkspace({
           </Profiler>
         )}
 
-        {mode === 'simple' ? (
+        {mode === 'simple' || canvasMode === 'project' ? (
           <SimpleInspector
             onApplyPreset={applyPreset}
             onDeletePreset={onDeletePreset}
@@ -2007,6 +2015,7 @@ export function EditorWorkspace({
               if (selectedNode?.kind === 'unit') void editInstanceContract(selectedNode.instance.id);
             }}
             onRemove={removeProjectNode}
+            onRename={renameProjectNode}
             onSavePreset={savePreset}
             onSaveToLibrary={saveSelectedUnitToLibrary}
             presets={selectedUnitPresets}

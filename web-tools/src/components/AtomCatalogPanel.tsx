@@ -49,7 +49,7 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitI
     atom => atom.visibility === 'public' && atom.profiles.wasm_realtime === true,
   ) ?? catalog.atoms[0];
   const [selectedAtomName, setSelectedAtomName] = useState(unitAtomNames[0] ?? initialPaletteAtom?.name ?? '');
-  const [filter, setFilter] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [draggingAtomName, setDraggingAtomName] = useState<string | null>(null);
   const paletteAtoms = useMemo(
@@ -67,10 +67,9 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitI
   );
   const selectedAtom = catalog.atoms.find(atom => atom.name === selectedAtomName) ?? initialPaletteAtom;
   const filteredAtoms = useMemo(() => {
-    const query = filter.trim().toLowerCase();
-    if (!query) return paletteAtoms;
-    return paletteAtoms.filter(atom => atom.name.toLowerCase().includes(query) || atom.category.toLowerCase().includes(query));
-  }, [filter, paletteAtoms]);
+    if (!selectedCategory) return paletteAtoms;
+    return paletteAtoms.filter(atom => atom.category === selectedCategory);
+  }, [paletteAtoms, selectedCategory]);
   const categoryCounts = useMemo(
     () =>
       paletteAtoms.reduce<Record<string, number>>((counts, atom) => {
@@ -100,26 +99,29 @@ export function AtomCatalogPanel({ unit, catalog, manifest, onAddAtom, showUnitI
       </label>
 
       <div className="atom-palette__categories">
+        <button
+          aria-pressed={selectedCategory === null}
+          className={`atom-palette__category${selectedCategory === null ? ' atom-palette__category--active' : ''}`}
+          data-testid="atom-palette-category-all"
+          onClick={() => setSelectedCategory(null)}
+          type="button"
+        >
+          All {paletteAtoms.length}
+        </button>
         {Object.entries(categoryCounts).map(([category, count]) => (
-          <span
+          <button
+            aria-pressed={selectedCategory === category}
             key={category}
-            className="atom-palette__category"
+            className={`atom-palette__category${selectedCategory === category ? ' atom-palette__category--active' : ''}`}
+            data-testid={`atom-palette-category-${category}`}
+            onClick={() => setSelectedCategory(category)}
             style={{ '--category-color': categoryColor(category) } as CSSProperties}
+            type="button"
           >
             {category} {count}
-          </span>
+          </button>
         ))}
       </div>
-
-      <input
-        aria-label="Filter atom palette"
-        className="atom-palette__filter"
-        data-testid="atom-palette-filter"
-        onChange={event => setFilter(event.target.value)}
-        placeholder="Filter atoms"
-        type="search"
-        value={filter}
-      />
 
       <div className="atom-palette__list" aria-label="Atom palette">
         {filteredAtoms.map(atom => (

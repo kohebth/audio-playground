@@ -63,12 +63,16 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await expect(page.getByTestId('project-node-overdrive')).toHaveCount(0);
 
   await page.getByTestId('effect-library-item-built-in-overdrive').dragTo(page.getByTestId('project-canvas'));
+  await page.getByTestId('simple-inspector-instance-name').fill('midnight_drive');
+  await page.getByTestId('simple-inspector-instance-name').press('Enter');
+  await expect(page.getByTestId('project-node-overdrive')).toHaveCount(0);
+  await expect(page.getByTestId('project-node-midnight_drive')).toBeVisible();
   await page.keyboard.press('Control+s');
   await expect(page.getByTestId('topbar-save')).toContainText('Saved');
 
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
-  await expect(page.getByTestId('project-node-overdrive')).toBeVisible();
+  await expect(page.getByTestId('project-node-midnight_drive')).toBeVisible();
 
   await page.getByTestId('view-effect-contract').click();
   await expect(page.getByTestId('contract-empty-state')).toBeVisible();

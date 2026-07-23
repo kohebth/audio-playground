@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import type { ProjectNodeData } from '../lib/projectGraph';
 import type { UnitPreset } from '../lib/presetLibrary';
@@ -6,6 +6,7 @@ import type { UnitPreset } from '../lib/presetLibrary';
 type Props = {
   selectedNode: ProjectNodeData | null;
   onDuplicate: (instanceId: string) => void;
+  onRename: (instanceId: string, nextId: string) => void;
   onRemove: (instanceId: string) => void;
   onEditContract: () => void;
   presets: UnitPreset[];
@@ -18,6 +19,7 @@ type Props = {
 export function SimpleInspector({
   selectedNode,
   onDuplicate,
+  onRename,
   onRemove,
   onEditContract,
   presets,
@@ -27,6 +29,10 @@ export function SimpleInspector({
   onSaveToLibrary,
 }: Props) {
   const [presetName, setPresetName] = useState('');
+  const [instanceName, setInstanceName] = useState('');
+  useEffect(() => {
+    setInstanceName(selectedNode?.kind === 'unit' ? selectedNode.instance.id : '');
+  }, [selectedNode]);
   const savePreset = (event: FormEvent) => {
     event.preventDefault();
     const name = presetName.trim();
@@ -55,6 +61,26 @@ export function SimpleInspector({
       <span className="simple-inspector__eyebrow">Selected effect</span>
       <h2>{unit.name.replace(/_/g, ' ')}</h2>
       <p className="simple-inspector__instance">{instance.id}</p>
+      <form
+        className="simple-inspector__instance-form"
+        onSubmit={event => {
+          event.preventDefault();
+          const nextId = instanceName.trim();
+          if (nextId && nextId !== instance.id) onRename(instance.id, nextId);
+        }}
+      >
+        <label>
+          <span>Unit instance name</span>
+          <input
+            aria-label="Unit instance name"
+            data-testid="simple-inspector-instance-name"
+            onChange={event => setInstanceName(event.target.value)}
+            spellCheck={false}
+            value={instanceName}
+          />
+        </label>
+        <button disabled={!instanceName.trim() || instanceName === instance.id} type="submit">Rename</button>
+      </form>
       <div className="simple-inspector__summary">
         <div><strong>{paramControls?.length ?? 0}</strong><span>controls</span></div>
         <div><strong>{unit.compatibility.wasm_realtime ? 'Live' : 'Offline'}</strong><span>preview</span></div>
