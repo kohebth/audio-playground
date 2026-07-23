@@ -127,6 +127,124 @@ test('drags effect units onto the Pipeline and a specific rail', async ({ page }
   await expect(inputRail).toHaveCount(0);
 });
 
+test('touch dragging exposes in-line and branch rail drop choices', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New project', exact: true }).first().click();
+  await page.getByPlaceholder('Midnight pedalboard').fill('Touch Rail');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Skip tour' }).click();
+
+  const overdrive = page.getByTestId('effect-library-item-built-in-overdrive');
+  const overdriveBox = await overdrive.boundingBox();
+  const blankRailTarget = page.locator('[data-project-route-index="0"]');
+  const blankRailBox = await blankRailTarget.boundingBox();
+  expect(overdriveBox).not.toBeNull();
+  expect(blankRailBox).not.toBeNull();
+  await overdrive.dispatchEvent('pointerdown', {
+    bubbles: true,
+    buttons: 1,
+    clientX: overdriveBox!.x + overdriveBox!.width / 2,
+    clientY: overdriveBox!.y + overdriveBox!.height / 2,
+    isPrimary: true,
+    pointerId: 41,
+    pointerType: 'touch',
+  });
+  await overdrive.dispatchEvent('pointermove', {
+    bubbles: true,
+    buttons: 1,
+    clientX: blankRailBox!.x + blankRailBox!.width / 2,
+    clientY: blankRailBox!.y + blankRailBox!.height / 2,
+    isPrimary: true,
+    pointerId: 41,
+    pointerType: 'touch',
+  });
+
+  const inlineChoice = page.getByTestId('project-route-drop-inline-0');
+  const branchChoice = page.getByTestId('project-route-drop-branch-0');
+  await expect(inlineChoice).toBeVisible();
+  await expect(branchChoice).toBeVisible();
+  await expect(inlineChoice).toContainText('In line');
+  await expect(branchChoice).toContainText('Branch');
+  const inlineBox = await inlineChoice.boundingBox();
+  expect(inlineBox).not.toBeNull();
+  expect(inlineBox!.width).toBeGreaterThanOrEqual(74);
+  expect(inlineBox!.height).toBeGreaterThanOrEqual(44);
+  expect(inlineBox!.x).toBeGreaterThanOrEqual(0);
+  expect(inlineBox!.x + inlineBox!.width).toBeLessThanOrEqual(390);
+  await overdrive.dispatchEvent('pointermove', {
+    bubbles: true,
+    buttons: 1,
+    clientX: inlineBox!.x + inlineBox!.width / 2,
+    clientY: inlineBox!.y + inlineBox!.height / 2,
+    isPrimary: true,
+    pointerId: 41,
+    pointerType: 'touch',
+  });
+  await overdrive.dispatchEvent('pointerup', {
+    bubbles: true,
+    buttons: 0,
+    clientX: inlineBox!.x + inlineBox!.width / 2,
+    clientY: inlineBox!.y + inlineBox!.height / 2,
+    isPrimary: true,
+    pointerId: 41,
+    pointerType: 'touch',
+  });
+  await expect(page.getByTestId('project-node-overdrive')).toBeVisible();
+
+  const chorus = page.getByTestId('effect-library-item-built-in-chorus');
+  const chorusBox = await chorus.boundingBox();
+  const outputRailTarget = page.locator('[data-project-route-index="1"]');
+  const outputRailBox = await outputRailTarget.boundingBox();
+  expect(chorusBox).not.toBeNull();
+  expect(outputRailBox).not.toBeNull();
+  await chorus.dispatchEvent('pointerdown', {
+    bubbles: true,
+    buttons: 1,
+    clientX: chorusBox!.x + chorusBox!.width / 2,
+    clientY: chorusBox!.y + chorusBox!.height / 2,
+    isPrimary: true,
+    pointerId: 42,
+    pointerType: 'touch',
+  });
+  await chorus.dispatchEvent('pointermove', {
+    bubbles: true,
+    buttons: 1,
+    clientX: outputRailBox!.x + outputRailBox!.width / 2,
+    clientY: outputRailBox!.y + outputRailBox!.height / 2,
+    isPrimary: true,
+    pointerId: 42,
+    pointerType: 'touch',
+  });
+  const branchDrop = page.getByTestId('project-route-drop-branch-1');
+  await expect(branchDrop).toBeVisible();
+  const branchBox = await branchDrop.boundingBox();
+  expect(branchBox).not.toBeNull();
+  await chorus.dispatchEvent('pointermove', {
+    bubbles: true,
+    buttons: 1,
+    clientX: branchBox!.x + branchBox!.width / 2,
+    clientY: branchBox!.y + branchBox!.height / 2,
+    isPrimary: true,
+    pointerId: 42,
+    pointerType: 'touch',
+  });
+  await chorus.dispatchEvent('pointerup', {
+    bubbles: true,
+    buttons: 0,
+    clientX: branchBox!.x + branchBox!.width / 2,
+    clientY: branchBox!.y + branchBox!.height / 2,
+    isPrimary: true,
+    pointerId: 42,
+    pointerType: 'touch',
+  });
+
+  await expect(page.getByTestId('project-node-chorus')).toBeVisible();
+  await expect(page.locator('[data-testid^="project-node-path_panner_2"]')).toBeVisible();
+  await expect(page.locator('[data-testid^="project-node-path_mixer_2"]')).toBeVisible();
+});
+
 test('moves placed effects between rail positions without enabling free layout', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'New project', exact: true }).first().click();

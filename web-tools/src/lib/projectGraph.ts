@@ -45,7 +45,7 @@ export type ProjectRouteEdgeData = {
   routeIndex: number;
   branchHintVisible?: boolean;
   branchInteractionDisabled?: boolean;
-  insertTarget?: boolean;
+  dropChoicesVisible?: boolean;
   moveTarget?: 'available' | 'current';
   onOpenBranchPicker?: (routeIndex: number, point: { x: number; y: number }) => void;
   onMoveHere?: (routeIndex: number) => void;

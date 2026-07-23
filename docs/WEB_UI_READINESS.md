@@ -32,7 +32,9 @@ it is not exposed as the normal editing interface.
   the single rail. Effects can be appended with the + action, dragged onto the Pipeline, inserted on a specific rail, or
   moved between main, branch, and nested-branch rails without free-position dragging. Every rail exposes a hover, click,
   and keyboard fork hint that creates the existing Pan 2/effect/Mix 2 topology on that exact route. Panner and mixer
-  positions remain system-controlled. Connection handles appear only while interacting. Contract is the Graphviz
+  positions remain system-controlled. On touch screens, dragging an effect near a rail opens screen-sized **In line**
+  and **Branch** targets that remain at least 44px even when the graph is zoomed out; releasing on Branch creates the
+  same panner/effect/mixer topology. Connection handles appear only while interacting. Contract is the Graphviz
   atom editor for one Personal effect definition; atoms can be added by button or dragged onto the graph or a connection.
   The legacy `simple`/`pro` values remain serialization details only.
 - Scenes capture parameter values and per-instance bypass state. Built-in and personal presets can be applied from the
@@ -49,8 +51,9 @@ it is not exposed as the normal editing interface.
   action remains visible at phone width and persists locally even while validation is blocked.
 - Project, edit, save, microphone, and audio-engine failures render in a persistent responsive issue banner with their
   source and exact message. Structured project diagnostics retain code/path details and open the readiness panel;
-  microphone/device failures retain the browser detail and open Audio I/O. Corrected revisions clear recovered runtime
-  diagnostics rather than leaving the project visibly blocked.
+  microphone/device failures retain the browser detail and open Audio I/O. The compact transport error badge also exposes
+  the mapped message, exact browser detail, code, phase, file, and path on hover, keyboard focus, or tap. Corrected
+  revisions clear recovered runtime diagnostics rather than leaving the project visibly blocked.
 
 ## Readiness Declaration
 

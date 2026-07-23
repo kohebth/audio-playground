@@ -39,6 +39,7 @@ test('controls file and microphone playback with transport shortcuts', async ({ 
   await expect(page.getByRole('group', { name: 'Audio input mode' }).getByRole('button')).toHaveText(['Mic', 'Audio File']);
   await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'false');
+  await expect(transport).toBeEnabled();
   await page.keyboard.press('Space');
   await expect(state).toHaveText('running', { timeout: 15_000 });
   await page.keyboard.press('m');

@@ -129,6 +129,7 @@ export function PreviewPanel({
   const [audioRuntimeSettings, setAudioRuntimeSettings] = useState<AudioRuntimeSettings | null>(null);
   const [audioCalibration, setAudioCalibration] = useState<AudioCalibrationState>(EMPTY_AUDIO_CALIBRATION);
   const [audioIssue, setAudioIssue] = useState<AudioIssue | null>(null);
+  const [errorDetailsOpen, setErrorDetailsOpen] = useState(false);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -163,6 +164,10 @@ export function PreviewPanel({
   const mutedRef = useRef(muted);
   const paramOverridesRef = useRef(paramOverrides);
   const firstOverride = paramOverrides[0];
+
+  useEffect(() => {
+    if (phase !== 'error') setErrorDetailsOpen(false);
+  }, [phase]);
 
   const refreshBackendState = useCallback((clearDiagnostic = false) => {
     const instance = backendRef.current;
@@ -865,7 +870,7 @@ export function PreviewPanel({
           : 'Processing microphone input.',
       );
     } catch (error) {
-      await stopPlayback();
+      await stopPlayback().catch(() => undefined);
       reportError(error, 'start');
     }
   }, [audioBuffer, audioFileName, backend, clearAudioIssue, inputMode, refreshAudioDevices, refreshBackendState, refreshRuntimeSettings, reportError, stopPlayback, syncWorkspace]);
@@ -1078,44 +1083,58 @@ export function PreviewPanel({
     onSaveWorkspace?.();
   }, [backend, compile, onSaveWorkspace]);
 
+  const shortcutActionsRef = useRef({
+    buildAndSave: handleBuildAndSave,
+    mute: toggleMute,
+    save: onSaveWorkspace,
+    togglePlayback,
+  });
+  shortcutActionsRef.current = {
+    buildAndSave: handleBuildAndSave,
+    mute: toggleMute,
+    save: onSaveWorkspace,
+    togglePlayback,
+  };
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
 
       const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (target.isContentEditable || target.closest('[contenteditable="true"]')) return;
-      const tag = target.tagName.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'option') return;
+      if (target instanceof HTMLElement) {
+        if (target.isContentEditable || target.closest('[contenteditable="true"]')) return;
+        const tag = target.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'option') return;
+      }
 
       const key = event.key.toLowerCase();
       if ((event.ctrlKey || event.metaKey) && key === 's') {
         event.preventDefault();
-        onSaveWorkspace?.();
+        shortcutActionsRef.current.save?.();
         return;
       }
 
       if (key === ' ' || event.code === 'Space') {
         event.preventDefault();
-        togglePlayback();
+        shortcutActionsRef.current.togglePlayback();
         return;
       }
 
       if (key === 'm') {
         event.preventDefault();
-        void toggleMute();
+        void shortcutActionsRef.current.mute();
         return;
       }
 
       if (key === 'b') {
         event.preventDefault();
-        void handleBuildAndSave();
+        void shortcutActionsRef.current.buildAndSave();
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleBuildAndSave, onSaveWorkspace, toggleMute, togglePlayback]);
+  }, []);
 
   return (
     <section className={compact ? 'transport-island preview-panel--compact' : 'inspector-block'}>
@@ -1173,13 +1192,62 @@ export function PreviewPanel({
                 <span key={index} className={`mini-viz-bar ${running ? 'active' : ''}`} />
               ))}
             </div>
-            <span
-              aria-label={phase === 'error' ? `Audio engine error: ${diagnostic}` : `Audio engine ${phase}`}
-              className={`transport-state transport-state--${phase}`}
-              title={phase === 'error' ? diagnostic : undefined}
-            >
-              {phase}
-            </span>
+            {phase === 'error' ? (
+              <div
+                className={`transport-error-inspector${errorDetailsOpen ? ' transport-error-inspector--open' : ''}`}
+                onBlur={event => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setErrorDetailsOpen(false);
+                }}
+              >
+                <button
+                  aria-describedby="preview-error-details"
+                  aria-expanded={errorDetailsOpen}
+                  aria-label={`Audio engine error: ${diagnostic}. View error details`}
+                  className={`transport-state transport-state--${phase}`}
+                  data-testid="preview-error-badge"
+                  onClick={() => setErrorDetailsOpen(true)}
+                  onFocus={() => setErrorDetailsOpen(true)}
+                  title="View error details"
+                  type="button"
+                >
+                  {phase}
+                  <i className="fa-solid fa-circle-info" aria-hidden="true" />
+                </button>
+                <div
+                  className="transport-error-details"
+                  data-testid="preview-error-details"
+                  id="preview-error-details"
+                  role="tooltip"
+                >
+                  <strong>{audioIssue?.source === 'microphone' ? 'Microphone start failed' : 'Audio engine error'}</strong>
+                  <p>{audioIssue?.message ?? diagnostic}</p>
+                  {audioIssue?.detail ? <code>{audioIssue.detail}</code> : null}
+                  <dl>
+                    <div>
+                      <dt>Code</dt>
+                      <dd>{audioIssue?.code ?? backendDiagnostic?.code ?? 'APG_WEB_AUDIO_ERROR'}</dd>
+                    </div>
+                    <div>
+                      <dt>Phase</dt>
+                      <dd>{audioIssue?.phase ?? backendDiagnostic?.phase ?? 'runtime'}</dd>
+                    </div>
+                    {backendDiagnostic?.file ? (
+                      <div><dt>File</dt><dd>{backendDiagnostic.file}</dd></div>
+                    ) : null}
+                    {backendDiagnostic?.path ? (
+                      <div><dt>Path</dt><dd>{backendDiagnostic.path}</dd></div>
+                    ) : null}
+                  </dl>
+                </div>
+              </div>
+            ) : (
+              <span
+                aria-label={`Audio engine ${phase}`}
+                className={`transport-state transport-state--${phase}`}
+              >
+                {phase}
+              </span>
+            )}
             <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} title={muted ? 'Unmute output' : 'Mute output'} type="button">
               <i className={`fa-solid ${muted ? 'fa-volume-xmark' : 'fa-volume-high'}`} aria-hidden="true" />
             </button>

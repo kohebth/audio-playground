@@ -350,6 +350,17 @@ test('shows microphone permission failure without crashing the editor', async ({
     'aria-label',
     /Injected microphone permission denial/,
   );
+  const errorBadge = page.getByTestId('preview-error-badge');
+  const errorDetails = page.getByTestId('preview-error-details');
+  await errorBadge.hover();
+  await expect(errorDetails).toBeVisible();
+  await expect(errorDetails).toContainText('Microphone access was denied');
+  await expect(errorDetails).toContainText('NotAllowedError');
+  await expect(errorDetails).toContainText('Injected microphone permission denial');
+  await errorBadge.click();
+  await expect(errorBadge).toHaveAttribute('aria-expanded', 'true');
+  await page.mouse.move(2, 2);
+  await expect(errorDetails).toBeVisible();
   const issueBanner = page.getByTestId('project-issue-banner');
   await expect(issueBanner).toContainText('Microphone');
   await expect(issueBanner).toContainText('Microphone access was denied');

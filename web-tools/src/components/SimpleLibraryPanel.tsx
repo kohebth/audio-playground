@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { UNIT_DRAG_TYPE } from '../lib/graphDragTypes';
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { UNIT_DRAG_TYPE, type ProjectLibraryPointerDrag } from '../lib/graphDragTypes';
 import { markPerfSpan } from '../lib/perfTelemetry';
 import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
 
@@ -19,6 +19,7 @@ type Props = {
   onAddParallel: (item: EffectLibraryItem) => void;
   onDeletePersonal: (recordId: string) => void;
   onEditContract: (item: EffectLibraryItem) => void;
+  onPointerDrag: (drag: ProjectLibraryPointerDrag) => void;
   purpose: 'pipeline' | 'contract';
 };
 
@@ -31,10 +32,28 @@ const categoryColor: Record<string, string> = {
   reverb: 'cyan',
 };
 
-export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePersonal, onEditContract, purpose }: Props) {
+type PointerDragSession = {
+  pointerId: number;
+  item: EffectLibraryItem;
+  itemKey: string;
+  startX: number;
+  startY: number;
+  active: boolean;
+};
+
+export function SimpleLibraryPanel({
+  items,
+  onAdd,
+  onAddParallel,
+  onDeletePersonal,
+  onEditContract,
+  onPointerDrag,
+  purpose,
+}: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [draggingItemKey, setDraggingItemKey] = useState<string | null>(null);
+  const pointerDragRef = useRef<PointerDragSession | null>(null);
   const picksContract = purpose === 'contract';
   const categories = useMemo(() => ['All', ...new Set(items.map(item => item.category))], [items]);
   const filtered = useMemo(() => items.filter(item => (
@@ -42,6 +61,69 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
     && `${item.title} ${item.description}`.toLowerCase().includes(query.toLowerCase())
   )), [category, items, query]);
   const [menu, setMenu] = useState<(ContextMenuPoint & { item: EffectLibraryItem }) | null>(null);
+
+  const startPointerDrag = (event: ReactPointerEvent<HTMLElement>, item: EffectLibraryItem) => {
+    if (event.pointerType === 'mouse' || picksContract || item.placementError) return;
+    if (event.target instanceof Element && event.target.closest('.effect-library-card__actions')) return;
+    const itemKey = `${item.scope}-${item.id}`;
+    pointerDragRef.current = {
+      pointerId: event.pointerId,
+      item,
+      itemKey,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+    };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic test pointers and older touch browsers may not support pointer capture.
+    }
+  };
+
+  const movePointerDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const session = pointerDragRef.current;
+    if (!session || session.pointerId !== event.pointerId) return;
+    if (!session.active) {
+      const distance = Math.hypot(event.clientX - session.startX, event.clientY - session.startY);
+      if (distance < 8) return;
+      session.active = true;
+      setDraggingItemKey(session.itemKey);
+      markPerfSpan('ui.dragStart.projectUnit', () => undefined, { unit: session.item.id, input: 'touch' });
+    }
+    event.preventDefault();
+    onPointerDrag({
+      phase: 'dragging',
+      unitId: session.item.id,
+      title: session.item.title,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+  };
+
+  const finishPointerDrag = (
+    event: ReactPointerEvent<HTMLElement>,
+    phase: ProjectLibraryPointerDrag['phase'],
+  ) => {
+    const session = pointerDragRef.current;
+    if (!session || session.pointerId !== event.pointerId) return;
+    pointerDragRef.current = null;
+    setDraggingItemKey(null);
+    if (session.active) {
+      onPointerDrag({
+        phase,
+        unitId: session.item.id,
+        title: session.item.title,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    }
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture may already have been released by the browser.
+    }
+  };
 
   return (
     <aside className="simple-library" data-tour="library">
@@ -71,7 +153,7 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
           <article
             aria-disabled={picksContract && item.placementError ? true : undefined}
             aria-label={picksContract ? `Edit ${item.title} Contract` : undefined}
-            className={`effect-library-card${picksContract ? ' effect-library-card--contract' : ''}${draggingItemKey === `${item.scope}-${item.id}` ? ' effect-library-card--dragging' : ''}`}
+            className={`effect-library-card${picksContract ? ' effect-library-card--contract' : ' effect-library-card--touch-enabled'}${draggingItemKey === `${item.scope}-${item.id}` ? ' effect-library-card--dragging' : ''}`}
             data-testid={`effect-library-item-${item.scope}-${item.id}`}
             draggable={!picksContract && !item.placementError}
             key={`${item.scope}-${item.id}`}
@@ -110,6 +192,10 @@ export function SimpleLibraryPanel({ items, onAdd, onAddParallel, onDeletePerson
                 setDraggingItemKey(`${item.scope}-${item.id}`);
               }, { unit: item.id });
             }}
+            onPointerCancel={event => finishPointerDrag(event, 'cancel')}
+            onPointerDown={event => startPointerDrag(event, item)}
+            onPointerMove={movePointerDrag}
+            onPointerUp={event => finishPointerDrag(event, 'drop')}
             title={item.placementError ?? (picksContract ? `Edit ${item.title} Contract` : 'Drag onto the Pipeline or a rail')}
           >
             <i className={`effect-library-card__icon effect-library-card__icon--${categoryColor[item.category] ?? 'blue'}`}>

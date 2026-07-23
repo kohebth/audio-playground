@@ -108,6 +108,7 @@ import {
   markPerfSpan,
   markRenderPerfSpan,
 } from './lib/perfTelemetry';
+import type { ProjectLibraryPointerDrag } from './lib/graphDragTypes';
 import './App.css';
 
 function findUnitNode(nodes: Node<ProjectNodeData>[], id: string | null): ProjectNodeData | null {
@@ -430,6 +431,8 @@ export function EditorWorkspace({
   const [atomClipboard, setAtomClipboard] = useState<UnitGraphNode | null>(null);
   const [unitClipboard, setUnitClipboard] = useState<ProjectInstanceClipboard | null>(null);
   const [graphEditError, setGraphEditError] = useState<string | null>(null);
+  const [libraryPointerDrag, setLibraryPointerDrag] = useState<ProjectLibraryPointerDrag | null>(null);
+  const finishLibraryPointerDrag = useCallback(() => setLibraryPointerDrag(null), []);
   const [paramDrafts, setParamDrafts] = useState(() => buildParamDrafts(initialProjectInspect));
   const [paramOriginals, setParamOriginals] = useState(() => buildParamOriginals(initialProjectInspect));
   const [entryProject, setEntryProject] = useState(initialWorkspace.entryProject);
@@ -1931,6 +1934,7 @@ export function EditorWorkspace({
             onAddParallel={addSimpleParallelEffect}
             onDeletePersonal={onDeletePersonalUnit}
             onEditContract={item => { void editLibraryContract(item); }}
+            onPointerDrag={setLibraryPointerDrag}
             purpose={mode === 'pro' ? 'contract' : 'pipeline'}
           />
         ) : (
@@ -2009,6 +2013,8 @@ export function EditorWorkspace({
               onReplaceUnit={replaceProjectNode}
               onMoveUnitToRoute={moveProjectNodeToRoute}
               onAddParallelAtRoute={addParallelEffectAtRoute}
+              libraryPointerDrag={libraryPointerDrag}
+              onLibraryPointerDragHandled={finishLibraryPointerDrag}
               canPasteUnit={canPasteUnit}
               parallelOptions={projectParallelOptions}
               replacementOptions={projectReplacementOptions}
