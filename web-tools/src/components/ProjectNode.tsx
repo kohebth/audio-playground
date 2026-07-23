@@ -24,8 +24,9 @@ function portTop(offset: number | undefined, index: number, count: number): stri
 }
 
 function routingLabel(instanceId: string, role: 'panner' | 'mixer' | undefined): string | null {
-  if (role !== 'panner') return null;
-  return `auto pan${instanceId.match(/(\d+)(?:_\d+)?$/)?.[1] ?? ''}`;
+  if (!role) return null;
+  const number = instanceId.match(/(\d+)(?:_\d+)?$/)?.[1] ?? '';
+  return `${role === 'panner' ? 'Pan' : 'Mix'}${number}`;
 }
 
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
@@ -128,7 +129,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   return (
     <div
       data-testid={`project-node-${data.instance.id}`}
-      className={`project-node node-card nopan ${routing ? 'project-node--routing' : 'project-node--movable'}${routingContract?.role === 'panner' ? ' project-node--routing-panner' : ''} ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
+      className={`project-node node-card nopan ${routing ? 'project-node--routing' : 'project-node--movable'}${flexibleRouting ? ' project-node--routing-helper' : ''} ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
       draggable={movable}
       onDragEnd={() => { moveDragBlocked.current = false; }}
       onDragStart={startMoveDrag}
@@ -159,7 +160,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
         />
       ))}
       <div
-        className={`node-pedal${wide ? ' wide' : ''}${flexibleRouting ? ' node-pedal--routing' : ''}${routingContract?.role === 'panner' ? ' node-pedal--routing-panner' : ''}`}
+        className={`node-pedal${wide ? ' wide' : ''}${flexibleRouting ? ' node-pedal--routing node-pedal--routing-helper' : ''}`}
         style={{ width: '100%', height: '100%' }}
       >
         <div className="node-pedal-header">

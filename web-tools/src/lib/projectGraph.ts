@@ -67,7 +67,7 @@ export type ProjectNodeVisualLayout = {
 
 const UNIT_NODE_COMPACT_WIDTH = 140;
 const UNIT_NODE_WIDE_WIDTH = 190;
-const ROUTING_PANNER_WIDTH = 104;
+const ROUTING_HELPER_WIDTH = 88;
 // Keep Dagre's card model identical to the rendered pedal. The previous smaller
 // values made React Flow attach edges several pixels away from Dagre's rail.
 const UNIT_NODE_EMPTY_HEIGHT = 147;
@@ -226,7 +226,7 @@ function routingNodeHeight(pathCount: number): number {
 }
 
 function routingNodeWidth(role: ProjectRoutingRole | undefined): number {
-  return role === 'panner' ? ROUTING_PANNER_WIDTH : UNIT_NODE_COMPACT_WIDTH;
+  return role === 'panner' || role === 'mixer' ? ROUTING_HELPER_WIDTH : UNIT_NODE_COMPACT_WIDTH;
 }
 
 function unitNodeDimensions(

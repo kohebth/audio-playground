@@ -4564,8 +4564,8 @@ body {
   width: 140px;
   flex-direction: column;
 }
-.node-pedal--routing-panner { width: 104px; }
-.project-node--routing-panner .node-pedal-header { justify-content: center; padding-inline: 8px; }
+.node-pedal--routing-helper { width: 88px; }
+.project-node--routing-helper .node-pedal-header { justify-content: center; padding-inline: 6px; }
 
 .node-pedal-header {
   position: relative;
