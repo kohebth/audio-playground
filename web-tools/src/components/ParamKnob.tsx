@@ -59,7 +59,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
   })();
   const dragState = useRef<{
     pointerId: number;
-    lastY: number;
+    lastX: number;
     value: number;
     integer: boolean;
   } | null>(null);
@@ -76,7 +76,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
     event.currentTarget.setPointerCapture(event.pointerId);
     dragState.current = {
       pointerId: event.pointerId,
-      lastY: event.clientY,
+      lastX: event.clientX,
       value: parsed,
       integer,
     };
@@ -85,19 +85,19 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
   const updateDrag = (event: PointerEvent<HTMLElement>) => {
     const state = dragState.current;
     if (!state) return;
-    const dy = state.lastY - event.clientY;
+    const dx = event.clientX - state.lastX;
     const range = minValue !== null && maxValue !== null && maxValue > minValue
       ? maxValue - minValue
       : Math.max(Math.abs(state.value), 1);
     const next = clampValue(
       state.integer
-        ? Math.round(state.value + dy * range * RANGE_FRACTION_PER_DRAG_PIXEL)
-        : state.value + dy * range * RANGE_FRACTION_PER_DRAG_PIXEL,
+        ? Math.round(state.value + dx * range * RANGE_FRACTION_PER_DRAG_PIXEL)
+        : state.value + dx * range * RANGE_FRACTION_PER_DRAG_PIXEL,
       minValue,
       maxValue,
     );
     const formatted = formatValue(next);
-    state.lastY = event.clientY;
+    state.lastX = event.clientX;
     state.value = Number(formatted);
     setDraft(formatted);
     onChange(formatted);
@@ -139,6 +139,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
       role="slider"
       style={{ '--knob-percent': `${percent}%`, '--knob-angle': `${percent * 2.7 - 135}deg` } as CSSProperties}
       tabIndex={0}
+      title="Drag left or right to adjust"
       {...pointerEvents}
     >
       <div className="knob-ring" />
@@ -173,6 +174,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
           role="slider"
           style={{ '--knob-percent': `${percent}%`, '--knob-angle': `${percent * 2.7 - 135}deg` } as CSSProperties}
           tabIndex={0}
+          title="Drag left or right to adjust"
           {...pointerEvents}
         >
           <div className="knob-ring" />

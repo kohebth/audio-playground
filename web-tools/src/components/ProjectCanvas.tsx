@@ -148,38 +148,6 @@ function railActionPoint(points: ProjectRoutePoint[]): ProjectRoutePoint {
   return longestHorizontal?.point ?? longestSegment?.point ?? points[0] ?? { x: 0, y: 0 };
 }
 
-function ProjectRouteDropChoices({ routeIndex }: { routeIndex: number }) {
-  return (
-    <div
-      aria-label={`Place effect on route ${routeIndex + 1}`}
-      className="project-route__drop-choices"
-      data-testid={`project-route-drop-choices-${routeIndex}`}
-      role="group"
-    >
-      <button
-        aria-label={`Place effect in line on route ${routeIndex + 1}`}
-        data-project-drop-mode="inline"
-        data-testid={`project-route-drop-inline-${routeIndex}`}
-        tabIndex={-1}
-        type="button"
-      >
-        <i className="fa-solid fa-plus" aria-hidden="true" />
-        <span>In line</span>
-      </button>
-      <button
-        aria-label={`Place effect as a branch on route ${routeIndex + 1}`}
-        data-project-drop-mode="branch"
-        data-testid={`project-route-drop-branch-${routeIndex}`}
-        tabIndex={-1}
-        type="button"
-      >
-        <i className="fa-solid fa-code-branch" aria-hidden="true" />
-        <span>Branch</span>
-      </button>
-    </div>
-  );
-}
-
 const ProjectRoute = memo(({
   data,
   id,
@@ -198,7 +166,6 @@ const ProjectRoute = memo(({
   const path = routePath(points);
   const actionPoint = railActionPoint(points);
   const moveTarget = data?.moveTarget;
-  const dropChoicesVisible = data?.dropChoicesVisible;
   return (
     <>
       <BaseEdge
@@ -210,10 +177,10 @@ const ProjectRoute = memo(({
         path={path}
         style={style}
       />
-      {data?.routeIndex !== undefined && (moveTarget || dropChoicesVisible || data.onOpenBranchPicker) ? (
+      {data?.routeIndex !== undefined && (moveTarget || data.onOpenBranchPicker) ? (
         <EdgeLabelRenderer>
           <div
-            className={`project-route__action-anchor${moveTarget ? ' project-route__action-anchor--move' : ''}${dropChoicesVisible ? ' project-route__action-anchor--drop' : ''}`}
+            className={`project-route__action-anchor${moveTarget ? ' project-route__action-anchor--move' : ''}`}
             data-project-route-index={data.routeIndex}
             style={{
               transform: `translate(-50%, -50%) translate(${actionPoint.x}px, ${actionPoint.y}px)`,
@@ -238,29 +205,26 @@ const ProjectRoute = memo(({
             ) : (
               <>
                 <button
-                  aria-disabled={data.branchInteractionDisabled || dropChoicesVisible || undefined}
+                  aria-disabled={data.branchInteractionDisabled || undefined}
                   aria-label={`Add branch on route ${data.routeIndex + 1}`}
-                  className={`project-route__action project-route__action--branch${data.branchHintVisible ? ' project-route__action--visible' : ''}${data.branchInteractionDisabled ? ' project-route__action--suppressed' : ''}${dropChoicesVisible ? ' project-route__action--under-drop' : ''}`}
+                  className={`project-route__action project-route__action--branch${data.branchHintVisible ? ' project-route__action--visible' : ''}${data.branchInteractionDisabled ? ' project-route__action--suppressed' : ''}`}
                   data-testid={`project-route-branch-${data.routeIndex}`}
                   onClick={event => {
                     event.preventDefault();
                     event.stopPropagation();
-                    if (data.branchInteractionDisabled || dropChoicesVisible) return;
+                    if (data.branchInteractionDisabled) return;
                     const bounds = event.currentTarget.getBoundingClientRect();
                     data.onOpenBranchPicker?.(data.routeIndex, {
                       x: bounds.left + bounds.width / 2,
                       y: bounds.top + bounds.height / 2,
                     });
                   }}
-                  tabIndex={data.branchInteractionDisabled || dropChoicesVisible ? -1 : 0}
+                  tabIndex={data.branchInteractionDisabled ? -1 : 0}
                   title="Add branch"
                   type="button"
                 >
                   <i className="fa-solid fa-code-branch" aria-hidden="true" />
                 </button>
-                {dropChoicesVisible ? (
-                  <ProjectRouteDropChoices routeIndex={data.routeIndex} />
-                ) : null}
               </>
             )}
           </div>
@@ -289,7 +253,7 @@ type Props = {
   onCopyUnit: (instanceId: string) => void;
   onCutUnit: (instanceId: string) => void;
   onPasteUnit: () => void;
-  onRemoveUnit: (instanceId: string) => void;
+  onRemoveUnit: (instanceId: string) => boolean;
   onReplaceUnit: (instanceId: string, unitId: string) => void;
   onMoveUnitToRoute: (instanceId: string, routeIndex: number) => void;
   onAddParallelAtRoute: (unitId: string, routeIndex: number) => void;
@@ -393,33 +357,6 @@ function routeIndexAtClientPoint(
     ?? routeIndexNearClientPoint(clientX, clientY, edges);
 }
 
-function dropModeFromEventTarget(target: EventTarget | null): 'inline' | 'branch' | null {
-  if (!(target instanceof Element)) return null;
-  const choice = target.closest<HTMLElement>('[data-project-drop-mode]');
-  return choice?.dataset.projectDropMode === 'branch'
-    ? 'branch'
-    : choice?.dataset.projectDropMode === 'inline' ? 'inline' : null;
-}
-
-function dropModeAtClientPoint(
-  target: EventTarget | null,
-  clientX: number,
-  clientY: number,
-): 'inline' | 'branch' | null {
-  const direct = dropModeFromEventTarget(target);
-  if (direct) return direct;
-  for (const element of document.elementsFromPoint(clientX, clientY)) {
-    const mode = dropModeFromEventTarget(element);
-    if (mode) return mode;
-  }
-  for (const choice of document.querySelectorAll<HTMLElement>('[data-project-drop-mode]')) {
-    const bounds = choice.getBoundingClientRect();
-    if (clientX < bounds.left || clientX > bounds.right || clientY < bounds.top || clientY > bounds.bottom) continue;
-    return choice.dataset.projectDropMode === 'branch' ? 'branch' : 'inline';
-  }
-  return null;
-}
-
 function projectEndpoint(nodeId: string | null, handleId: string | null, direction: 'source' | 'target'): string | null {
   if (!nodeId || !handleId) return null;
   if (nodeId === 'system-input' && direction === 'source') return 'system.input';
@@ -455,12 +392,6 @@ function ProjectFlow({
   const [draggedInstanceId, setDraggedInstanceId] = useState<string | null>(null);
   const [hoveredRouteIndex, setHoveredRouteIndex] = useState<number | null>(null);
   const [dropRouteIndex, setDropRouteIndex] = useState<number | null>(null);
-  const [touchDropMenu, setTouchDropMenu] = useState<{
-    routeIndex: number;
-    x: number;
-    y: number;
-    below: boolean;
-  } | null>(null);
   const handledPointerDropRef = useRef<ProjectLibraryPointerDrag | null>(null);
 
   const resetDrag = useCallback(() => {
@@ -468,7 +399,6 @@ function ProjectFlow({
     setDragKind(null);
     setDraggedInstanceId(null);
     setDropRouteIndex(null);
-    setTouchDropMenu(null);
   }, []);
 
   useEffect(() => {
@@ -510,7 +440,6 @@ function ProjectFlow({
       const instanceId = event.dataTransfer.getData(PROJECT_INSTANCE_DRAG_TYPE);
       const unitId = event.dataTransfer.getData(UNIT_DRAG_TYPE);
       const routeIndex = routeIndexFromEventTarget(event.target, displayedEdges);
-      const dropMode = dropModeAtClientPoint(event.target, event.clientX, event.clientY);
       resetDrag();
       if (instanceId) {
         const edge = routeIndex === null
@@ -523,8 +452,7 @@ function ProjectFlow({
         return;
       }
       if (!unitId) return;
-      if (routeIndex !== null && dropMode === 'branch') onAddParallelAtRoute(unitId, routeIndex);
-      else if (routeIndex !== null) onInsertUnitAtRoute(unitId, routeIndex);
+      if (routeIndex !== null) onInsertUnitAtRoute(unitId, routeIndex);
       else onAddUnit(unitId);
     }, { valid: dragType(event) !== 'reject' });
   };
@@ -545,20 +473,6 @@ function ProjectFlow({
       setDragKind('library');
       setDropRouteIndex(routeIndex);
       setDropState(routeIndex !== null || overCanvas ? 'valid' : 'reject');
-      if (routeIndex === null) {
-        setTouchDropMenu(null);
-      } else {
-        setTouchDropMenu(current => {
-          if (current?.routeIndex === routeIndex) return current;
-          const below = libraryPointerDrag.clientY < 82;
-          return {
-            routeIndex,
-            x: Math.min(window.innerWidth - 88, Math.max(88, libraryPointerDrag.clientX)),
-            y: libraryPointerDrag.clientY + (below ? 12 : -12),
-            below,
-          };
-        });
-      }
       return;
     }
 
@@ -567,12 +481,7 @@ function ProjectFlow({
     resetDrag();
     onLibraryPointerDragHandled();
     if (libraryPointerDrag.phase === 'cancel') return;
-    if (
-      routeIndex !== null
-      && dropModeAtClientPoint(target, libraryPointerDrag.clientX, libraryPointerDrag.clientY) === 'branch'
-    ) {
-      onAddParallelAtRoute(libraryPointerDrag.unitId, routeIndex);
-    } else if (routeIndex !== null) {
+    if (routeIndex !== null) {
       onInsertUnitAtRoute(libraryPointerDrag.unitId, routeIndex);
     } else if (overCanvas) {
       onAddUnit(libraryPointerDrag.unitId);
@@ -610,7 +519,6 @@ function ProjectFlow({
           && routeIndex !== null
           && (routeIndex === selectedRouteIndex || routeIndex === hoveredRouteIndex),
         branchInteractionDisabled: connectionArmed,
-        dropChoicesVisible: dragKind === 'library' && !libraryPointerDrag && dropTarget,
         moveTarget: activeMovingInstanceId ? (currentPosition ? 'current' : 'available') : undefined,
         onOpenBranchPicker: activeMovingInstanceId ? undefined : onOpenBranchPicker,
         onMoveHere: movingInstanceId && !currentPosition
@@ -646,15 +554,6 @@ function ProjectFlow({
         >
           <i className="fa-solid fa-wave-square" />
           <span>{libraryPointerDrag.title}</span>
-        </div>
-      ) : null}
-      {libraryPointerDrag && libraryPointerDrag.phase !== 'cancel' && touchDropMenu ? (
-        <div
-          className={`project-touch-drop-target${touchDropMenu.below ? ' project-touch-drop-target--below' : ''}`}
-          data-project-route-index={touchDropMenu.routeIndex}
-          style={{ left: touchDropMenu.x, top: touchDropMenu.y }}
-        >
-          <ProjectRouteDropChoices routeIndex={touchDropMenu.routeIndex} />
         </div>
       ) : null}
       <ReactFlow
@@ -933,7 +832,13 @@ export function ProjectCanvas({
           <GraphMenuButton disabled={Boolean(currentRouting)} icon="fa-scissors" onClick={() => { onCutUnit(unitData.instance.id); closeContextMenu(); }} title={currentRouting ? 'Routing helpers are removed as a complete split/join pair.' : undefined}>Cut</GraphMenuButton>
           <GraphMenuButton disabled={Boolean(currentRouting)} icon="fa-copy" onClick={() => { onCopyUnit(unitData.instance.id); closeContextMenu(); }} title={currentRouting ? 'Routing helpers are created through Add in parallel.' : undefined}>Copy</GraphMenuButton>
           <GraphMenuButton disabled={!canPasteUnit} icon="fa-paste" onClick={() => { onPasteUnit(); closeContextMenu(); }}>Paste</GraphMenuButton>
-          <GraphMenuButton danger icon="fa-trash" onClick={() => { onRemoveUnit(unitData.instance.id); closeContextMenu(); }}>{currentRouting ? 'Remove split/join' : 'Remove'}</GraphMenuButton>
+          <GraphMenuButton
+            danger
+            icon="fa-trash"
+            onClick={() => {
+              if (onRemoveUnit(unitData.instance.id)) closeContextMenu();
+            }}
+          >{currentRouting ? 'Remove split/join' : 'Remove'}</GraphMenuButton>
         </GraphContextMenu>
       ) : null}
       {routeMenu ? (

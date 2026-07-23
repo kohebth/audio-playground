@@ -1283,9 +1283,15 @@ export function EditorWorkspace({
     });
   }, [project.nodes, projectUnitPlacement, projectWorkspaceFile.content, updateProjectFile]);
 
-  const removeProjectNode = useCallback((instanceId: string) => {
-    markPerfSpan('graph.remove.projectNode', () => {
-      const instance = projectDraft.nodes.find(node => node.id === instanceId);
+  const removeProjectNode = useCallback((instanceId: string): boolean => {
+    const instance = projectDraft.nodes.find(node => node.id === instanceId);
+    if (!instance) return false;
+    const message = instance.routing
+      ? `Remove the split/join section containing “${instanceId}”? You can undo this after removal.`
+      : `Remove “${instanceId}” from the Pipeline? You can undo this after removal.`;
+    if (!window.confirm(message)) return false;
+
+    return markPerfSpan('graph.remove.projectNode', () => {
       const sectionIds = instance?.routing
         ? projectDraft.nodes.filter(node => node.routing?.section === instance.routing?.section).map(node => node.id)
         : [instanceId];
@@ -1293,12 +1299,25 @@ export function EditorWorkspace({
         instance?.routing
           ? removeEmptyProjectRoutingSection(content, projectPorts, instanceId).content
           : removeProjectInstanceWithTopology(content, projectPorts, instanceId).content
-      ))) return;
+      ))) return false;
       setParamDrafts(values => sectionIds.reduce(withoutInstanceValues, values));
       setParamOriginals(values => sectionIds.reduce(withoutInstanceValues, values));
       setSelectedId(null);
+      return true;
     });
   }, [projectDraft.nodes, projectPorts, updateProjectFile]);
+
+  useEffect(() => {
+    const removeSelectedWithDelete = (event: KeyboardEvent) => {
+      if (mode !== 'simple' || event.key !== 'Delete' || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.target instanceof Element && event.target.closest('input, textarea, select, button, [contenteditable="true"], [role="menu"]')) return;
+      if (selectedNode?.kind !== 'unit') return;
+      event.preventDefault();
+      removeProjectNode(selectedNode.instance.id);
+    };
+    window.addEventListener('keydown', removeSelectedWithDelete, true);
+    return () => window.removeEventListener('keydown', removeSelectedWithDelete, true);
+  }, [mode, removeProjectNode, selectedNode]);
 
   const copyProjectNode = useCallback((instanceId: string) => {
     try {
@@ -1930,8 +1949,6 @@ export function EditorWorkspace({
         {mode === 'simple' || !activeContractUnit ? (
           <SimpleLibraryPanel
             items={simpleEffectLibrary}
-            onAdd={addSimpleEffect}
-            onAddParallel={addSimpleParallelEffect}
             onDeletePersonal={onDeletePersonalUnit}
             onEditContract={item => { void editLibraryContract(item); }}
             onPointerDrag={setLibraryPointerDrag}

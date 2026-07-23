@@ -69,6 +69,17 @@ async function expectProjectNodeLocked(page: Page, testId: string) {
   expect(after!.y).toBeCloseTo(before!.y, 1);
 }
 
+async function addPipelineEffect(page: Page, effectId: string) {
+  await page.getByTestId(`effect-library-item-built-in-${effectId}`).dragTo(page.getByTestId('project-canvas'));
+}
+
+async function addParallelEffect(page: Page, effect: string) {
+  await page.locator('.react-flow__edge[data-id*="system-output"]').last().hover();
+  await page.locator('.project-route__action--branch.project-route__action--visible').click();
+  await page.getByRole('group', { name: 'Choose an effect for this branch' })
+    .getByRole('button', { name: new RegExp(`^${effect}`) }).click();
+}
+
 function expectHealthyNetwork(audit: NetworkAudit, expectedBasePath: string) {
   expect(audit.failedRequests).toEqual([]);
   expect(audit.badResponses).toEqual([]);
@@ -252,7 +263,7 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   const viewport = page.locator('.react-flow__viewport');
   const initialTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
   const initialStoredWorkspace = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
-  await page.getByRole('button', { name: 'Add Overdrive', exact: true }).click();
+  await addPipelineEffect(page, 'overdrive');
   await expect(unitNodes).toHaveCount(initialCount + 1);
   await expect(viewport).toHaveCSS('transform', initialTransform);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
@@ -260,7 +271,7 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   const storedAfterDrop = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
 
   const simpleTransform = await viewport.evaluate(element => getComputedStyle(element).transform);
-  await page.getByRole('button', { name: 'Add Chorus in parallel', exact: true }).click();
+  await addParallelEffect(page, 'Chorus');
   await expect(unitNodes).toHaveCount(initialCount + 4);
   await expect(viewport).toHaveCSS('transform', simpleTransform);
   const routePaths = await page.locator('.react-flow__edge-path').evaluateAll(paths => (

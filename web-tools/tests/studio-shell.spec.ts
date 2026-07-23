@@ -1,4 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function confirmNextDialog(page: Page, action: () => Promise<void>) {
+  const dialog = page.waitForEvent('dialog');
+  await action();
+  await (await dialog).accept();
+}
+
+async function addParallelEffect(page: Page, effect: string) {
+  await page.locator('.react-flow__edge[data-id*="system-output"]').last().hover();
+  await page.locator('.project-route__action--branch.project-route__action--visible').click();
+  await page.getByRole('group', { name: 'Choose an effect for this branch' })
+    .getByRole('button', { name: new RegExp(`^${effect}`) }).click();
+}
 
 test('creates and restores a visual-first local project', async ({ page }) => {
   await page.goto('/');
@@ -28,7 +41,7 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await expect(page.locator('.react-flow__edge .project-route__rail')).toHaveCount(1);
   await page.getByRole('button', { name: 'Skip tour' }).click();
 
-  await page.getByRole('button', { name: 'Add Overdrive', exact: true }).click();
+  await page.getByTestId('effect-library-item-built-in-overdrive').dragTo(page.getByTestId('project-canvas'));
   await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(1);
   await expect(page.getByTestId('project-node-overdrive')).toBeVisible();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'))).not.toBeNull();
@@ -89,7 +102,7 @@ test('removing every placed unit recovers to a valid pass-through rail', async (
   for (const instanceId of ['gate1', 'phaser1', 'drive1', 'tone1', 'trem1', 'chorus1', 'delay1', 'reverb1']) {
     const node = page.getByTestId(`project-node-${instanceId}`);
     await node.click({ button: 'right' });
-    await page.getByRole('menu', { name: `${instanceId} actions` }).getByRole('menuitem', { name: 'Remove' }).click();
+    await confirmNextDialog(page, () => page.getByRole('menu', { name: `${instanceId} actions` }).getByRole('menuitem', { name: 'Remove' }).click());
     await expect(node).toHaveCount(0);
   }
 
@@ -100,6 +113,30 @@ test('removing every placed unit recovers to a valid pass-through rail', async (
   await expect(page.locator('.transport-state')).toHaveText('ready', { timeout: 20_000 });
   await expect(page.getByTestId('project-issue-banner')).toHaveCount(0);
   await expect(page.locator('.topbar__status button').first()).toHaveText('Ready');
+});
+
+test('confirms Pipeline removal from the context menu and Delete key', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New project', exact: true }).first().click();
+  await page.getByPlaceholder('Midnight pedalboard').fill('Delete Guard');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Skip tour' }).click();
+
+  const node = page.getByTestId('project-node-overdrive');
+  await page.getByTestId('effect-library-item-built-in-overdrive').dragTo(page.getByTestId('project-canvas'));
+  await node.click({ button: 'right' });
+  const menu = page.getByRole('menu', { name: 'overdrive actions' });
+  const dismissed = page.waitForEvent('dialog');
+  await menu.getByRole('menuitem', { name: 'Remove' }).click();
+  await (await dismissed).dismiss();
+  await expect(menu).toBeVisible();
+  await expect(node).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await node.click();
+  await confirmNextDialog(page, () => page.keyboard.press('Delete'));
+  await expect(node).toHaveCount(0);
 });
 
 test('drags effect units onto the Pipeline and a specific rail', async ({ page }) => {
@@ -127,7 +164,7 @@ test('drags effect units onto the Pipeline and a specific rail', async ({ page }
   await expect(inputRail).toHaveCount(0);
 });
 
-test('touch dragging exposes in-line and branch rail drop choices', async ({ page }) => {
+test('touch dragging inserts an effect inline on the targeted rail', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('button', { name: 'New project', exact: true }).first().click();
@@ -161,88 +198,18 @@ test('touch dragging exposes in-line and branch rail drop choices', async ({ pag
     pointerType: 'touch',
   });
 
-  const inlineChoice = page.getByTestId('project-route-drop-inline-0');
-  const branchChoice = page.getByTestId('project-route-drop-branch-0');
-  await expect(inlineChoice).toBeVisible();
-  await expect(branchChoice).toBeVisible();
-  await expect(inlineChoice).toContainText('In line');
-  await expect(branchChoice).toContainText('Branch');
-  const inlineBox = await inlineChoice.boundingBox();
-  expect(inlineBox).not.toBeNull();
-  expect(inlineBox!.width).toBeGreaterThanOrEqual(74);
-  expect(inlineBox!.height).toBeGreaterThanOrEqual(44);
-  expect(inlineBox!.x).toBeGreaterThanOrEqual(0);
-  expect(inlineBox!.x + inlineBox!.width).toBeLessThanOrEqual(390);
-  await overdrive.dispatchEvent('pointermove', {
-    bubbles: true,
-    buttons: 1,
-    clientX: inlineBox!.x + inlineBox!.width / 2,
-    clientY: inlineBox!.y + inlineBox!.height / 2,
-    isPrimary: true,
-    pointerId: 41,
-    pointerType: 'touch',
-  });
   await overdrive.dispatchEvent('pointerup', {
     bubbles: true,
     buttons: 0,
-    clientX: inlineBox!.x + inlineBox!.width / 2,
-    clientY: inlineBox!.y + inlineBox!.height / 2,
+    clientX: blankRailBox!.x + blankRailBox!.width / 2,
+    clientY: blankRailBox!.y + blankRailBox!.height / 2,
     isPrimary: true,
     pointerId: 41,
     pointerType: 'touch',
   });
   await expect(page.getByTestId('project-node-overdrive')).toBeVisible();
 
-  const chorus = page.getByTestId('effect-library-item-built-in-chorus');
-  const chorusBox = await chorus.boundingBox();
-  const outputRailTarget = page.locator('[data-project-route-index="1"]');
-  const outputRailBox = await outputRailTarget.boundingBox();
-  expect(chorusBox).not.toBeNull();
-  expect(outputRailBox).not.toBeNull();
-  await chorus.dispatchEvent('pointerdown', {
-    bubbles: true,
-    buttons: 1,
-    clientX: chorusBox!.x + chorusBox!.width / 2,
-    clientY: chorusBox!.y + chorusBox!.height / 2,
-    isPrimary: true,
-    pointerId: 42,
-    pointerType: 'touch',
-  });
-  await chorus.dispatchEvent('pointermove', {
-    bubbles: true,
-    buttons: 1,
-    clientX: outputRailBox!.x + outputRailBox!.width / 2,
-    clientY: outputRailBox!.y + outputRailBox!.height / 2,
-    isPrimary: true,
-    pointerId: 42,
-    pointerType: 'touch',
-  });
-  const branchDrop = page.getByTestId('project-route-drop-branch-1');
-  await expect(branchDrop).toBeVisible();
-  const branchBox = await branchDrop.boundingBox();
-  expect(branchBox).not.toBeNull();
-  await chorus.dispatchEvent('pointermove', {
-    bubbles: true,
-    buttons: 1,
-    clientX: branchBox!.x + branchBox!.width / 2,
-    clientY: branchBox!.y + branchBox!.height / 2,
-    isPrimary: true,
-    pointerId: 42,
-    pointerType: 'touch',
-  });
-  await chorus.dispatchEvent('pointerup', {
-    bubbles: true,
-    buttons: 0,
-    clientX: branchBox!.x + branchBox!.width / 2,
-    clientY: branchBox!.y + branchBox!.height / 2,
-    isPrimary: true,
-    pointerId: 42,
-    pointerType: 'touch',
-  });
-
-  await expect(page.getByTestId('project-node-chorus')).toBeVisible();
-  await expect(page.locator('[data-testid^="project-node-path_panner_2"]')).toBeVisible();
-  await expect(page.locator('[data-testid^="project-node-path_mixer_2"]')).toBeVisible();
+  await expect(page.getByTestId('project-route-drop-choices-0')).toHaveCount(0);
 });
 
 test('moves placed effects between rail positions without enabling free layout', async ({ page }) => {
@@ -262,10 +229,19 @@ test('moves placed effects between rail positions without enabling free layout',
   const driveKnob = page.getByTestId('param-knob-drive1-drive');
   const knobBounds = await driveKnob.boundingBox();
   expect(knobBounds).not.toBeNull();
+  const knobValue = driveKnob.locator('xpath=..').locator('.knob-value');
+  const initialValue = Number((await knobValue.textContent())?.split(' ')[0]);
+  await page.mouse.move(knobBounds!.x + knobBounds!.width / 2, knobBounds!.y + knobBounds!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(knobBounds!.x + knobBounds!.width / 2 + 18, knobBounds!.y + knobBounds!.height / 2, { steps: 4 });
+  await page.mouse.up();
+  const horizontalValue = Number((await knobValue.textContent())?.split(' ')[0]);
+  expect(horizontalValue).toBeGreaterThan(initialValue);
   await page.mouse.move(knobBounds!.x + knobBounds!.width / 2, knobBounds!.y + knobBounds!.height / 2);
   await page.mouse.down();
   await page.mouse.move(knobBounds!.x + knobBounds!.width / 2, knobBounds!.y - 18, { steps: 4 });
   await page.mouse.up();
+  expect(Number((await knobValue.textContent())?.split(' ')[0])).toBe(horizontalValue);
   await expect(page.getByTestId('project-canvas')).not.toHaveClass(/flow-shell--dragging-instance/);
   await expect(page.locator(
     '.react-flow__edge[data-id="route-2-unit-phaser1-unit-drive1"] .project-route__rail',
@@ -373,7 +349,7 @@ test('keeps the Pipeline usable at phone width', async ({ page }) => {
   const save = page.getByTestId('topbar-save');
   await expect(save).toBeVisible();
   await expect(save).toContainText('Saved');
-  await page.getByRole('button', { name: 'Add Overdrive', exact: true }).click();
+  await page.getByTestId('effect-library-item-built-in-overdrive').dragTo(page.getByTestId('project-canvas'));
   await expect(save).toBeEnabled();
   await expect(save).toContainText('Save');
   await save.click();
@@ -412,7 +388,7 @@ test('recalls presets and scenes, builds a real parallel path, and exports .apg'
   await page.locator('.scene-bar__create button[type="submit"]').click();
   await expect(page.getByTestId('scene-apply-Browser Scene')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Add Chorus in parallel' }).click();
+  await addParallelEffect(page, 'Chorus');
   await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(11);
   await expect(page.locator('[data-testid^="project-node-path_panner_2"]')).toBeVisible();
   await expect(page.locator('[data-testid^="project-node-path_mixer_2"]')).toBeVisible();
@@ -543,7 +519,7 @@ test('connects units by click and exposes undoable unit context actions', async 
   )).toHaveCount(1);
 
   await secondPasted.click({ button: 'right' });
-  await page.getByRole('menu', { name: 'overdrive_copy_2 actions' }).getByRole('menuitem', { name: 'Remove' }).click();
+  await confirmNextDialog(page, () => page.getByRole('menu', { name: 'overdrive_copy_2 actions' }).getByRole('menuitem', { name: 'Remove' }).click());
   await expect(secondPasted).toHaveCount(0);
   await page.getByTestId('topbar-undo').click();
   await expect(page.getByTestId('project-node-overdrive_copy_2')).toBeVisible();
@@ -562,7 +538,7 @@ test('collapses an empty split and join without exposing routing containers', as
   await expect(skipTour).toBeVisible();
   await skipTour.click();
 
-  await page.getByRole('button', { name: 'Add Chorus in parallel' }).click();
+  await addParallelEffect(page, 'Chorus');
   const panner = page.locator('[data-testid^="project-node-path_panner_2"]');
   const mixer = page.locator('[data-testid^="project-node-path_mixer_2"]');
   const branchEffect = page.getByTestId('project-node-chorus');
@@ -571,7 +547,7 @@ test('collapses an empty split and join without exposing routing containers', as
   await expect(page.getByText('Parallel section')).toHaveCount(0);
 
   await branchEffect.click({ button: 'right' });
-  await page.getByRole('menu', { name: 'chorus actions' }).getByRole('menuitem', { name: 'Remove' }).click();
+  await confirmNextDialog(page, () => page.getByRole('menu', { name: 'chorus actions' }).getByRole('menuitem', { name: 'Remove' }).click());
   await expect(branchEffect).toHaveCount(0);
   const directRails = page.locator('.react-flow__edge[data-id*="unit-path_panner_2-unit-path_mixer_2"]');
   await expect(directRails).toHaveCount(2);
@@ -584,7 +560,7 @@ test('collapses an empty split and join without exposing routing containers', as
   await panner.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: /path_panner_2.* actions/ });
   await expect(menu.getByRole('menuitem', { name: 'Remove split/join' })).toBeVisible();
-  await menu.getByRole('menuitem', { name: 'Remove split/join' }).click();
+  await confirmNextDialog(page, () => menu.getByRole('menuitem', { name: 'Remove split/join' }).click());
   await expect(panner).toHaveCount(0);
   await expect(mixer).toHaveCount(0);
   await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(8);
@@ -598,7 +574,7 @@ test('renders nested branches as knob units with separate orthogonal rails', asy
   await expect(skipTour).toBeVisible();
   await skipTour.click();
 
-  await page.getByRole('button', { name: 'Add Chorus in parallel' }).click();
+  await addParallelEffect(page, 'Chorus');
   await page.getByRole('button', { name: 'Fit View' }).click();
   await page.locator('.react-flow__edge[data-id="route-10-unit-path_panner_2-unit-chorus"]')
     .click({ button: 'right', force: true });

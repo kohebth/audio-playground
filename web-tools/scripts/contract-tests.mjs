@@ -138,8 +138,11 @@ includesContent(
 includesContent(projectSidebar, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, unit.id)', 'unit library items must be draggable');
 includesContent(simpleLibrary, 'draggable={!picksContract && !item.placementError}', 'active Pipeline library items must be draggable');
 includesContent(simpleLibrary, 'event.dataTransfer.setData(UNIT_DRAG_TYPE, item.id)', 'active Pipeline library must emit unit drop payloads');
+assert(!simpleLibrary.includes('Add in parallel'), 'effect library cards must not expose a parallel quick-add button');
+includesContent(simpleLibrary, 'Drag an effect onto the Pipeline or a rail to place it inline.', 'effect library must explain inline drag placement');
 includesContent(projectCanvas, 'onAddUnit(unitId', 'project canvas must retain unit drag-and-drop creation');
 includesContent(projectCanvas, 'onInsertUnitAtRoute(unitId', 'project edge drops must use the atomic route insertion transaction');
+assert(!projectCanvas.includes('ProjectRouteDropChoices'), 'Pipeline drops must not expose inline/branch quick choices');
 includesContent(projectCanvas, 'nodesDraggable={false}', 'Pipeline units must remain fixed');
 assert(!projectCanvas.includes('onNodeDragStop'), 'project canvas must not expose a unit-move interaction');
 includesContent(projectCanvas, 'onMoveUnitToRoute', 'Pipeline unit movement must target a deterministic rail');
@@ -319,6 +322,10 @@ includesContent(previewPanel, 'previousOverridesRef', 'live parameter synchroniz
 includesContent(previewPanel, 'override.originalValue', 'removed overrides must restore the original runtime value');
 includesContent(paramKnob, 'clampValue(parsed, minValue, maxValue)', 'typed parameter values must clamp to metadata bounds');
 includesContent(paramKnob, 'RANGE_FRACTION_PER_DRAG_PIXEL', 'knob drags must scale by the parameter range');
+includesContent(paramKnob, 'event.clientX - state.lastX', 'knob tuning must increase when dragged right');
+assert(!paramKnob.includes('lastY'), 'knob tuning must not use vertical drag movement');
+includesContent(app, 'window.confirm(message)', 'Pipeline removal must require confirmation');
+includesContent(app, "event.key !== 'Delete'", 'Pipeline removal must support the Delete key');
 includesContent(projectNode, '<ParamKnob', 'unit cards must render their parameter knobs directly');
 includesContent(projectNode, 'data.onParamChange?.', 'unit card knobs must use the shared YAML parameter update path');
 includesContent(projectNode, "integer={control?.type === 'int'}", 'integer knob stepping must use declared parameter metadata');

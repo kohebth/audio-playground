@@ -15,8 +15,6 @@ export type EffectLibraryItem = {
 
 type Props = {
   items: EffectLibraryItem[];
-  onAdd: (item: EffectLibraryItem) => void;
-  onAddParallel: (item: EffectLibraryItem) => void;
   onDeletePersonal: (recordId: string) => void;
   onEditContract: (item: EffectLibraryItem) => void;
   onPointerDrag: (drag: ProjectLibraryPointerDrag) => void;
@@ -43,8 +41,6 @@ type PointerDragSession = {
 
 export function SimpleLibraryPanel({
   items,
-  onAdd,
-  onAddParallel,
   onDeletePersonal,
   onEditContract,
   onPointerDrag,
@@ -64,7 +60,7 @@ export function SimpleLibraryPanel({
 
   const startPointerDrag = (event: ReactPointerEvent<HTMLElement>, item: EffectLibraryItem) => {
     if (event.pointerType === 'mouse' || picksContract || item.placementError) return;
-    if (event.target instanceof Element && event.target.closest('.effect-library-card__actions')) return;
+    if (event.target instanceof Element && event.target.closest('button')) return;
     const itemKey = `${item.scope}-${item.id}`;
     pointerDragRef.current = {
       pointerId: event.pointerId,
@@ -131,7 +127,7 @@ export function SimpleLibraryPanel({
         <div><span>{picksContract ? 'Unit library' : 'Effect library'}</span><strong>{items.length}</strong></div>
         <p>{picksContract
           ? 'Click a unit to edit its Contract.'
-          : 'Click + to append, or drag an effect onto the Pipeline or a rail.'}</p>
+          : 'Drag an effect onto the Pipeline or a rail to place it inline.'}</p>
       </header>
       <label className="simple-library__search">
         <span aria-hidden="true">⌕</span>
@@ -181,7 +177,7 @@ export function SimpleLibraryPanel({
             }}
             onDragEnd={() => setDraggingItemKey(null)}
             onDragStart={event => {
-              if (event.target instanceof Element && event.target.closest('.effect-library-card__actions')) {
+              if (event.target instanceof Element && event.target.closest('button')) {
                 event.preventDefault();
                 return;
               }
@@ -205,25 +201,14 @@ export function SimpleLibraryPanel({
               <strong>{item.title}{item.scope === 'personal' ? <b>Yours</b> : null}</strong>
               <small>{item.description}</small>
             </span>
-            {!picksContract ? <div className="effect-library-card__actions">
+            {item.scope === 'personal' && item.recordId && !picksContract ? (
               <button
-                aria-label={`Add ${item.title}`}
-                disabled={Boolean(item.placementError)}
-                onClick={() => onAdd(item)}
-                title={item.placementError ?? 'Add in series'}
+                aria-label={`Delete ${item.title} from personal library`}
+                onClick={() => onDeletePersonal(item.recordId!)}
+                title="Remove from personal library"
                 type="button"
-              >+</button>
-              <button
-                aria-label={`Add ${item.title} in parallel`}
-                disabled={Boolean(item.placementError)}
-                onClick={() => onAddParallel(item)}
-                title={item.placementError ?? 'Add as a wet/dry parallel path'}
-                type="button"
-              >∥</button>
-              {item.scope === 'personal' && item.recordId ? (
-                <button aria-label={`Delete ${item.title} from personal library`} onClick={() => onDeletePersonal(item.recordId!)} title="Remove from personal library" type="button">×</button>
-              ) : null}
-            </div> : null}
+              >×</button>
+            ) : null}
           </article>
         ))}
         {filtered.length === 0 ? (

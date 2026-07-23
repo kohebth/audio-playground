@@ -54,6 +54,7 @@ const thresholds: PerfThresholdMap = JSON.parse(
 );
 
 test.beforeEach(async ({ browserName, page }, testInfo) => {
+  page.on('dialog', dialog => { void dialog.accept(); });
   const requestedRate = Number(process.env.APG_CPU_THROTTLE ?? '1');
   const throttleRate = Number.isFinite(requestedRate) && requestedRate >= 1 ? requestedRate : 1;
   if (throttleRate > 1) {
