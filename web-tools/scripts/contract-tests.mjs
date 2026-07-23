@@ -368,7 +368,7 @@ assert(!app.includes('launch-workspace'), 'launch screen must not require a manu
 includesContent(app, '<AppLogo />', 'launch screen must use the stable application logo');
 includesContent(projectTopbar, '<AppLogo />', 'project header must use the stable application logo');
 includesContent(appLogo, 'icon.svg', 'application logo component must load the bundled SVG');
-includes('web-tools/public/icon.svg', 'M0 0h1v1H0zM2 0h1v2H2zM4 0h1v4H4zM0 2h3v1H0zM0 4h5v1H0z', 'application logo must preserve the supplied 5x5 mark');
+includes('web-tools/public/icon.svg', 'M0 0h1v1H0z M0 2h1v3H0z M2 0h3v1H2z M2 2h3v1H2z M2 4h1v1H2z', 'application logo must preserve the supplied 5x5 mark');
 includesContent(main, '<HashRouter>', 'application entry point must use Pages-safe hash routing');
 includesContent(app, "const PROJECT_ROUTE = '/projects'", 'project workspace must expose a stable hash route');
 includesContent(app, '`/unit/${encodeURIComponent(unitRouteId(path))}`', 'unit workspaces must expose stable hash routes');
