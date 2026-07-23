@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 
 import {
   AUDIO_IO_STORAGE_KEY,
+  MICROPHONE_INSECURE_CONTEXT_CODE,
+  MICROPHONE_UNAVAILABLE_CODE,
   calibrationCandidate,
   collectAudioDevices,
   describeAudioIssue,
+  inspectMicrophoneCapability,
   loadAudioIoPreference,
   micPathLatencySeverity,
   microphoneConstraints,
@@ -20,6 +23,36 @@ assert.equal(micPathLatencySeverity(20), 'normal');
 assert.equal(micPathLatencySeverity(20.001), 'warning');
 assert.equal(micPathLatencySeverity(30), 'warning');
 assert.equal(micPathLatencySeverity(30.001), 'danger');
+
+const supportedMicrophone = inspectMicrophoneCapability({
+  isSecureContext: true,
+  origin: 'https://192.168.1.20:5173',
+  hasGetUserMedia: true,
+});
+assert.equal(supportedMicrophone.available, true);
+assert.equal(supportedMicrophone.issue, null);
+
+const insecureMicrophone = inspectMicrophoneCapability({
+  isSecureContext: false,
+  origin: 'http://192.168.1.20:5173',
+  hasGetUserMedia: false,
+});
+assert.equal(insecureMicrophone.available, false);
+assert.equal(insecureMicrophone.issue?.code, MICROPHONE_INSECURE_CONTEXT_CODE);
+assert.equal(insecureMicrophone.issue?.phase, 'capability');
+assert.match(insecureMicrophone.issue?.message ?? '', /http:\/\/192\.168\.1\.20:5173/);
+assert.match(insecureMicrophone.issue?.message ?? '', /trusted HTTPS/);
+assert.match(insecureMicrophone.issue?.detail ?? '', /window\.isSecureContext=false/);
+
+const unavailableMicrophone = inspectMicrophoneCapability({
+  isSecureContext: true,
+  origin: 'https://audio.example.test',
+  hasGetUserMedia: false,
+});
+assert.equal(unavailableMicrophone.available, false);
+assert.equal(unavailableMicrophone.issue?.code, MICROPHONE_UNAVAILABLE_CODE);
+assert.match(unavailableMicrophone.issue?.message ?? '', /current Chrome, Safari, or Firefox/);
+assert.match(unavailableMicrophone.issue?.detail ?? '', /navigator\.mediaDevices\.getUserMedia/);
 
 const deniedIssue = describeAudioIssue(
   new DOMException('Injected microphone permission denial', 'NotAllowedError'),

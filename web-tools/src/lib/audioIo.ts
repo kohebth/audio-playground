@@ -2,6 +2,8 @@ import type { AudioTraceSnapshot } from '@audio-playground/wasm-tools';
 
 export const AUDIO_IO_STORAGE_KEY = 'apg.audio-io.v1';
 export const AUDIO_CALIBRATION_HINTS = [0.0027, 0.0053, 0.0107, 'interactive'] as const;
+export const MICROPHONE_INSECURE_CONTEXT_CODE = 'APG_WEB_MIC_INSECURE_CONTEXT';
+export const MICROPHONE_UNAVAILABLE_CODE = 'APG_WEB_MIC_UNAVAILABLE';
 
 export type AudioLatencyHint = number | 'interactive';
 export type MicPathLatencySeverity = 'normal' | 'warning' | 'danger';
@@ -14,6 +16,76 @@ export type AudioIssue = {
   message: string;
   detail: string | null;
 };
+
+export type MicrophoneCapabilityProbe = {
+  isSecureContext: boolean;
+  origin: string;
+  hasGetUserMedia: boolean;
+};
+
+export type MicrophoneCapability = {
+  available: boolean;
+  issue: AudioIssue | null;
+};
+
+export function inspectMicrophoneCapability(probe: MicrophoneCapabilityProbe): MicrophoneCapability {
+  const origin = probe.origin || 'this page';
+  if (!probe.isSecureContext) {
+    return {
+      available: false,
+      issue: {
+        id: 'microphone-capability',
+        source: 'microphone',
+        phase: 'capability',
+        code: MICROPHONE_INSECURE_CONTEXT_CODE,
+        message: `Microphone access is blocked on ${origin}. Open this address over trusted HTTPS, then reload.`,
+        detail: 'The browser reports window.isSecureContext=false. For LAN development, run npm run dev:https and trust its development CA on this device.',
+      },
+    };
+  }
+  if (!probe.hasGetUserMedia) {
+    return {
+      available: false,
+      issue: {
+        id: 'microphone-capability',
+        source: 'microphone',
+        phase: 'capability',
+        code: MICROPHONE_UNAVAILABLE_CODE,
+        message: `This browser does not provide microphone capture on ${origin}. Open the trusted HTTPS site in a current Chrome, Safari, or Firefox browser.`,
+        detail: 'navigator.mediaDevices.getUserMedia is unavailable. Avoid embedded or in-app browsers.',
+      },
+    };
+  }
+  return { available: true, issue: null };
+}
+
+export function browserMicrophoneCapability(): MicrophoneCapability {
+  const mediaDevices = navigator.mediaDevices;
+  return inspectMicrophoneCapability({
+    isSecureContext: window.isSecureContext,
+    origin: window.location.origin,
+    hasGetUserMedia: typeof mediaDevices?.getUserMedia === 'function',
+  });
+}
+
+export async function requestMicrophoneStream(
+  preference: AudioIoPreference,
+  sampleRate: number,
+): Promise<MediaStream> {
+  const capability = browserMicrophoneCapability();
+  const mediaDevices = navigator.mediaDevices;
+  if (!capability.available || typeof mediaDevices?.getUserMedia !== 'function') {
+    const issue = capability.issue ?? inspectMicrophoneCapability({
+      isSecureContext: window.isSecureContext,
+      origin: window.location.origin,
+      hasGetUserMedia: false,
+    }).issue!;
+    throw new DOMException(issue.detail ?? issue.message, issue.code);
+  }
+  return mediaDevices.getUserMedia({
+    audio: microphoneConstraints(preference, sampleRate),
+  });
+}
 
 export function describeAudioIssue(
   error: unknown,
@@ -31,6 +103,8 @@ export function describeAudioIssue(
     NotReadableError: 'The microphone is busy or unavailable. Close other audio apps and try again.',
     OverconstrainedError: 'The selected microphone is unavailable. Choose another input in Audio I/O.',
     SecurityError: 'Microphone access requires HTTPS or localhost.',
+    [MICROPHONE_INSECURE_CONTEXT_CODE]: 'Microphone access is blocked because this page is not a secure context. Open it over trusted HTTPS, then reload.',
+    [MICROPHONE_UNAVAILABLE_CODE]: 'This browser does not provide microphone capture. Open the trusted HTTPS site in a current Chrome, Safari, or Firefox browser.',
   };
   const message = source === 'microphone'
     ? microphoneMessages[code] ?? detail

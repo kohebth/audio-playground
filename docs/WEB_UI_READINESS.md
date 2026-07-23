@@ -46,6 +46,11 @@ it is not exposed as the normal editing interface.
 - Microphone is the first and default preview source in both workspaces. Packaged/selected mono files remain available
   as the secondary source, while stereo/multichannel content is rejected with a clear error. Cloud sync, URL imports,
   browser recording, stereo projects, and browser deployment bundles remain outside this scope.
+- Microphone capability is checked before capture. On an insecure LAN HTTP origin, Mic remains visibly selected while
+  Start, input-device, and calibration controls are disabled; the transport and project issue surfaces show
+  `APG_WEB_MIC_INSECURE_CONTEXT`, the current origin, and the trusted-HTTPS remedy. Audio File and Compile remain usable.
+  `npm run dev:https` provides an opt-in Vite LAN mode using developer-supplied certificate/key paths; local certificates
+  stay ignored and normal localhost, build, preview, and Pages behavior is unchanged.
 - The studio adapts to phone-sized viewports, preserves a direct pass-through empty project, and keeps common project
   terminology user-facing while retaining the existing v2 file contracts internally. An explicit Save/Saved/Retry
   action remains visible at phone width and persists locally even while validation is blocked.
@@ -90,6 +95,9 @@ voice processing, and the UI reports actual capture/context sample rates plus ca
 rebuild the browser backend, rehydrate the same workspace revision, and restore running, mute, bypass, and parameter
 state; a failed rebuild restores the previous known-good configuration. Permission, missing-device, busy-device,
 selection, and secure-context failures are mapped to actionable messages while preserving the exact browser error.
+All microphone start, device-reconfiguration, and calibration capture paths use the same guarded capability helper, so
+missing `navigator.mediaDevices` produces `APG_WEB_MIC_INSECURE_CONTEXT` or `APG_WEB_MIC_UNAVAILABLE` instead of a
+property-access exception. The browser's ordinary permission-denied result remains a distinct `NotAllowedError`.
 
 The live preview exposes workspace, prepared, active, and failed revisions independently. Worker and processor failures
 render the structured diagnostic code, phase, revision, file, and schema path instead of collapsing the backend result

@@ -20,6 +20,16 @@ export function AudioIoDrawer({ onClose, open }: Props) {
   const audioOutputs = liveAudio?.audioDevices.filter(device => device.kind === 'audiooutput') ?? [];
   const audioRuntime = liveAudio?.audioRuntimeSettings ?? null;
   const calibrationRunning = liveAudio?.audioCalibration.status === 'running';
+  const microphoneAvailable = liveAudio?.microphoneCapability.available ?? false;
+  const transientAudioIssue = liveAudio?.audioIssue ?? null;
+  const visibleTransientAudioIssue = transientAudioIssue?.source === 'microphone'
+    && liveAudio?.inputMode !== 'microphone'
+    ? null
+    : transientAudioIssue;
+  const audioIssue = visibleTransientAudioIssue ?? (
+    liveAudio?.inputMode === 'microphone' ? liveAudio.microphoneCapability.issue : null
+  );
+  const audioIssueDismissible = audioIssue !== null && audioIssue === transientAudioIssue;
 
   useEffect(() => {
     if (!open) return;
@@ -46,14 +56,16 @@ export function AudioIoDrawer({ onClose, open }: Props) {
         <button aria-label="Close Audio I/O" onClick={onClose} type="button">×</button>
       </header>
       <section className="audio-io-panel" data-testid="audio-io-panel">
-        {liveAudio?.audioIssue ? (
+        {audioIssue ? (
           <div className="audio-io-issue" data-testid="audio-io-issue" role="alert">
             <div>
-              <strong>{liveAudio.audioIssue.source === 'microphone' ? 'Microphone' : 'Audio engine'}</strong>
-              <span>{liveAudio.audioIssue.message}</span>
-              <small>{liveAudio.audioIssue.code}{liveAudio.audioIssue.detail ? ` · ${liveAudio.audioIssue.detail}` : ''}</small>
+              <strong>{audioIssue.source === 'microphone' ? 'Microphone' : 'Audio engine'}</strong>
+              <span>{audioIssue.message}</span>
+              <small>{audioIssue.code}{audioIssue.detail ? ` · ${audioIssue.detail}` : ''}</small>
             </div>
-            <button aria-label="Dismiss audio error" onClick={liveAudio.clearAudioIssue} type="button">×</button>
+            {audioIssueDismissible ? (
+              <button aria-label="Dismiss audio error" onClick={liveAudio?.clearAudioIssue} type="button">×</button>
+            ) : null}
           </div>
         ) : null}
         <div className="audio-io-fieldset">
@@ -61,8 +73,9 @@ export function AudioIoDrawer({ onClose, open }: Props) {
             <span>Input</span>
             <select
               data-testid="audio-input-device"
-              disabled={!liveAudio || calibrationRunning}
+              disabled={!liveAudio || !microphoneAvailable || calibrationRunning}
               onChange={event => void liveAudio?.selectAudioInput(event.target.value)}
+              title={!microphoneAvailable ? 'Microphone controls require a trusted HTTPS address' : undefined}
               value={liveAudio?.audioIoPreference.inputDeviceId ?? 'default'}
             >
               {audioInputs.length > 0
@@ -88,17 +101,18 @@ export function AudioIoDrawer({ onClose, open }: Props) {
           <button
             aria-label="Refresh audio devices"
             className="icon-button"
-            disabled={!liveAudio || calibrationRunning}
+            disabled={!liveAudio || !microphoneAvailable || calibrationRunning}
             onClick={() => void liveAudio?.refreshAudioDevices()}
-            title="Refresh audio devices"
+            title={microphoneAvailable ? 'Refresh audio devices' : 'Microphone controls require a trusted HTTPS address'}
             type="button"
           >
             <i className="fa-solid fa-rotate" aria-hidden="true" />
           </button>
           <button
             data-testid="audio-calibrate"
-            disabled={!liveAudio || liveAudio.inputMode !== 'microphone' || calibrationRunning}
+            disabled={!liveAudio || !microphoneAvailable || liveAudio.inputMode !== 'microphone' || calibrationRunning}
             onClick={() => void liveAudio?.calibrateAudio()}
+            title={!microphoneAvailable ? 'Microphone calibration requires a trusted HTTPS address' : undefined}
             type="button"
           >
             <i className="fa-solid fa-gauge-high" aria-hidden="true" />

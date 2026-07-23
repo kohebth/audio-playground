@@ -34,6 +34,7 @@ const atomCatalog = json('test/golden/v2-inspect-atoms.json');
 const project = json('test/golden/v2-inspect-project-guitar-pedalboard.json');
 const unit = json('test/golden/v2-inspect-unit-simple_gain.json');
 const render = json('test/golden/v2-render-project-guitar-pedalboard.json');
+const webPackage = json('web-tools/package.json');
 
 const app = read('web-tools/src/App.tsx');
 const studioApp = read('web-tools/src/StudioApp.tsx');
@@ -42,6 +43,7 @@ const main = read('web-tools/src/main.tsx');
 const appLogo = read('web-tools/src/components/AppLogo.tsx');
 const buildInfo = read('web-tools/src/lib/buildInfo.ts');
 const viteConfig = read('web-tools/vite.config.ts');
+const webReadme = read('web-tools/README.md');
 const pagesWorkflow = read('.github/workflows/deploy-pages.yml');
 const backendSamples = read('web-tools/src/lib/backendSamples.ts');
 const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
@@ -299,7 +301,7 @@ includesContent(previewPanel, 'instance.replaceWorkspace', 'workspace revisions 
 includesContent(previewPanel, 'instance.prepare', 'valid revisions must prepare a runtime image');
 includesContent(previewPanel, 'window.setTimeout', 'workspace synchronization must be debounced');
 includesContent(previewPanel, 'revision !== revisionRef.current', 'stale validation results must be ignored');
-includesContent(previewPanel, 'navigator.mediaDevices.getUserMedia', 'live preview must support microphone input');
+includesContent(previewPanel, 'requestMicrophoneStream', 'live preview must use guarded microphone capture');
 includesContent(previewPanel, 'createConfiguredAudioContext', 'live preview must use device-aware audio contexts');
 includesContent(previewPanel, 'AUDIO_CALIBRATION_HINTS', 'live preview must calibrate browser latency hints');
 includesContent(previewPanel, 'decodeAudioData', 'live preview must decode uploaded audio files');
@@ -361,6 +363,10 @@ includesContent(viteConfig, "outDir: 'dist'", 'Vite must emit the Pages artifact
 includesContent(viteConfig, 'emptyOutDir: true', 'Vite must replace stale build output');
 includesContent(viteConfig, 'sourcemap: true', 'production builds must emit supportable source maps');
 includesContent(viteConfig, 'sourcemapExcludeSources: true', 'production source maps must stay within the Pages artifact budget');
+assert(webPackage.scripts['dev:https'] === 'vite --mode lan-https', 'web tools must expose the trusted LAN HTTPS mode');
+includesContent(viteConfig, 'APG_HTTPS_CERT', 'LAN HTTPS mode must require a developer-supplied certificate');
+includesContent(viteConfig, 'APG_HTTPS_KEY', 'LAN HTTPS mode must require a developer-supplied private key');
+includesContent(webReadme, 'mkcert -CAROOT', 'LAN HTTPS docs must explain how to trust the development root');
 includesContent(buildInfo, 'import.meta.env.VITE_COMMIT_SHA', 'build diagnostics must use the injected commit SHA');
 includesContent(projectReadinessPanel, 'data-testid="build-commit-sha"', 'Project readiness must expose the deployed commit SHA');
 includesContent(projectReadinessPanel, 'data-testid="build-base-path"', 'Project readiness must expose the deployment base');
@@ -382,6 +388,8 @@ includesContent(liveLatencyBadge, 'micPathLatencySeverity(totalLatencyMs)', 'mic
 includesContent(liveLatencyBadge, 'Loopback ready', 'live latency badge must show measured loopback results');
 includesContent(audioIo, "latencyHint: 'interactive'", 'live preview must request interactive browser latency');
 includesContent(audioIo, 'latency: { ideal: 0 }', 'microphone preview must request the lowest available capture latency');
+includesContent(audioIo, 'APG_WEB_MIC_INSECURE_CONTEXT', 'microphone capability must identify insecure LAN origins');
+includesContent(audioIo, 'APG_WEB_MIC_UNAVAILABLE', 'microphone capability must identify missing browser capture support');
 includesContent(wasmFacade, 'audioWorklet.addModule(this.options.processorWorkletUrl)', 'facade must load the explicit Worklet module');
 includesContent(wasmFacade, 'fetch(this.options.processorWasmUrl)', 'processor WASM must be fetched outside the audio callback');
 includesContent(wasmFacade, 'processorOptions: { moduleUrl: this.options.processorModuleUrl, wasmBinary }', 'WASM bytes must be transferred during Worklet construction');

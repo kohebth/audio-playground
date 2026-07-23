@@ -330,6 +330,59 @@ test('registers the AudioWorklet and releases repeated audio resources', async (
   expectHealthyNetwork(audit, deployedBasePath(testInfo));
 });
 
+test('keeps Mic selected and explains how to recover on insecure LAN HTTP', async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'isSecureContext', {
+      configurable: true,
+      value: false,
+    });
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: undefined,
+    });
+  });
+  await openWorkspace(page, testInfo);
+
+  const micMode = page.getByTestId('preview-mode-mic');
+  const startStop = page.getByTestId('preview-start-stop');
+  await expect(micMode).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('preview-compile')).toBeEnabled({ timeout: 20_000 });
+  await expect(startStop).toBeDisabled();
+  await expect(page.locator('.transport-state')).toHaveText('error');
+
+  const errorBadge = page.getByTestId('preview-error-badge');
+  const errorDetails = page.getByTestId('preview-error-details');
+  await errorBadge.hover();
+  await expect(errorDetails).toBeVisible();
+  await expect(errorDetails).toContainText('Microphone unavailable');
+  await expect(errorDetails).toContainText('APG_WEB_MIC_INSECURE_CONTEXT');
+  await expect(errorDetails).toContainText(new URL(baseUrl(testInfo)).origin);
+  await expect(errorDetails).toContainText('trusted HTTPS');
+  await expect(errorDetails).toContainText('npm run dev:https');
+
+  const issueBanner = page.getByTestId('project-issue-banner');
+  await expect(issueBanner).toContainText('APG_WEB_MIC_INSECURE_CONTEXT');
+  await issueBanner.getByRole('button', { name: 'Audio I/O' }).click();
+  await expect(page.getByTestId('audio-io-issue')).toContainText('APG_WEB_MIC_INSECURE_CONTEXT');
+  await expect(page.getByTestId('audio-input-device')).toBeDisabled();
+  await expect(page.getByTestId('audio-calibrate')).toBeDisabled();
+  await page.getByRole('button', { name: 'Close Audio I/O' }).click();
+
+  await page.getByTestId('preview-mode-file').click();
+  await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('APG_WEB_MIC_INSECURE_CONTEXT')).toHaveCount(0);
+  await expect(startStop).toBeEnabled();
+  await startStop.click();
+  await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+  await startStop.click();
+  await expect(page.locator('.transport-state')).toHaveText('ready');
+
+  await micMode.click();
+  await expect(micMode).toHaveAttribute('aria-pressed', 'true');
+  await expect(startStop).toBeDisabled();
+  await expect(page.locator('.transport-state')).toHaveText('error');
+});
+
 test('shows microphone permission failure without crashing the editor', async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {

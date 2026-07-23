@@ -7,7 +7,7 @@ import {
   type ValidationResult,
   type WasmDiagnostic,
 } from '@audio-playground/wasm-tools';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WorkspaceFile } from '../lib/backendSamples';
 import { useLiveBypass } from '../lib/liveBypass';
@@ -15,14 +15,15 @@ import { createAudioTraceReport } from '../lib/audioTrace';
 import {
   AUDIO_CALIBRATION_HINTS,
   EMPTY_AUDIO_CALIBRATION,
+  browserMicrophoneCapability,
   calibrationCandidate,
   collectAudioDevices,
   createConfiguredAudioContext,
   describeAudioIssue,
   loadAudioIoPreference,
-  microphoneConstraints,
   readAudioRuntimeSettings,
   recommendedOutputDeviceId,
+  requestMicrophoneStream,
   resolveAudioIoPreference,
   saveAudioIoPreference,
   selectCalibrationCandidate,
@@ -164,10 +165,27 @@ export function PreviewPanel({
   const mutedRef = useRef(muted);
   const paramOverridesRef = useRef(paramOverrides);
   const firstOverride = paramOverrides[0];
+  const microphoneCapability = useMemo(() => browserMicrophoneCapability(), []);
+  const microphoneBlocked = inputMode === 'microphone' && !microphoneCapability.available;
+  const microphoneIssueHidden = inputMode === 'file' && audioIssue?.source === 'microphone';
+  const displayedAudioIssue = microphoneIssueHidden
+    ? null
+    : audioIssue ?? (microphoneBlocked ? microphoneCapability.issue : null);
+  const transportPhase: BackendPhase = displayedAudioIssue
+    ? 'error'
+    : microphoneIssueHidden && phase === 'error'
+      ? backend ? 'ready' : 'idle'
+      : phase;
+  const transportDiagnostic = displayedAudioIssue?.message ?? (
+    microphoneIssueHidden ? 'Audio file input is ready.' : diagnostic
+  );
+  const transportAriaDiagnostic = displayedAudioIssue?.detail
+    ? `${transportDiagnostic} ${displayedAudioIssue.detail}`
+    : transportDiagnostic;
 
   useEffect(() => {
-    if (phase !== 'error') setErrorDetailsOpen(false);
-  }, [phase]);
+    if (transportPhase !== 'error') setErrorDetailsOpen(false);
+  }, [transportPhase]);
 
   const refreshBackendState = useCallback((clearDiagnostic = false) => {
     const instance = backendRef.current;
@@ -629,9 +647,7 @@ export function PreviewPanel({
       if (!synchronized) throw new Error('The current workspace could not be prepared for audio.');
       if (shouldRun) {
         if (mode === 'microphone') {
-          stream = await navigator.mediaDevices.getUserMedia({
-            audio: microphoneConstraints(preference, session.context.sampleRate),
-          });
+          stream = await requestMicrophoneStream(preference, session.context.sampleRate);
           input = session.context.createMediaStreamSource(stream);
         } else {
           if (!audioBuffer) throw new Error('Select an audio file before starting playback.');
@@ -736,9 +752,7 @@ export function PreviewPanel({
     try {
       const synchronized = await synchronizeBackend(session.backend, session.context, true, false, false);
       if (!synchronized) throw new Error('The workspace could not be prepared for calibration.');
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: microphoneConstraints(preference, session.context.sampleRate),
-      });
+      stream = await requestMicrophoneStream(preference, session.context.sampleRate);
       input = session.context.createMediaStreamSource(stream);
       await session.backend.start({ input });
       await applyRuntimeControls(session.backend, true);
@@ -767,7 +781,11 @@ export function PreviewPanel({
   }, [applyRuntimeControls, createBackendSession, synchronizeBackend]);
 
   const calibrateAudio = useCallback(async () => {
-    if (inputMode !== 'microphone' || audioCalibration.status === 'running') return;
+    if (
+      inputMode !== 'microphone'
+      || !microphoneCapability.available
+      || audioCalibration.status === 'running'
+    ) return;
     const token = audioCalibrationTokenRef.current + 1;
     audioCalibrationTokenRef.current = token;
     const previousPreference = audioIoPreferenceRef.current;
@@ -825,10 +843,10 @@ export function PreviewPanel({
         reportError(restoreError, 'audio-calibration-restore');
       }
     }
-  }, [activateSession, audioCalibration.status, clearAudioIssue, createBackendSession, destroyCurrentSession, inputMode, refreshAudioDevices, reportAudioIssue, reportError, runCalibrationCandidate, stopPlayback]);
+  }, [activateSession, audioCalibration.status, clearAudioIssue, createBackendSession, destroyCurrentSession, inputMode, microphoneCapability.available, refreshAudioDevices, reportAudioIssue, reportError, runCalibrationCandidate, stopPlayback]);
 
   const start = useCallback(async () => {
-    if (!backend) return;
+    if (!backend || (inputMode === 'microphone' && !microphoneCapability.available)) return;
     try {
       if (validRevisionRef.current !== revisionRef.current && !(await syncWorkspace(true))) return;
       else if (backend.getState().preparedRevision !== revisionRef.current && !(await syncWorkspace(true))) return;
@@ -843,9 +861,7 @@ export function PreviewPanel({
         fileSourceRef.current = source;
         input = source;
       } else {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: microphoneConstraints(audioIoPreferenceRef.current, context.sampleRate),
-        });
+        const stream = await requestMicrophoneStream(audioIoPreferenceRef.current, context.sampleRate);
         const source = context.createMediaStreamSource(stream);
         streamRef.current = stream;
         inputRef.current = source;
@@ -873,7 +889,7 @@ export function PreviewPanel({
       await stopPlayback().catch(() => undefined);
       reportError(error, 'start');
     }
-  }, [audioBuffer, audioFileName, backend, clearAudioIssue, inputMode, refreshAudioDevices, refreshBackendState, refreshRuntimeSettings, reportError, stopPlayback, syncWorkspace]);
+  }, [audioBuffer, audioFileName, backend, clearAudioIssue, inputMode, microphoneCapability.available, refreshAudioDevices, refreshBackendState, refreshRuntimeSettings, reportError, stopPlayback, syncWorkspace]);
 
   const stop = useCallback(async () => {
     await stopPlayback();
@@ -1016,6 +1032,7 @@ export function PreviewPanel({
       audioRuntimeSettings,
       audioCalibration,
       audioIssue,
+      microphoneCapability,
       bypassByInstance,
       setBypass: setInstanceBypass,
       profileAudio,
@@ -1027,7 +1044,7 @@ export function PreviewPanel({
       calibrateAudio,
       measureAcousticLatency,
     });
-  }, [audioCalibration, audioDevices, audioIoPreference, audioIssue, audioRuntimeSettings, audioTraceProgress, audioTraceReport, audioTraceStatus, bypassByInstance, calibrateAudio, captureLatency, clearAudioIssue, clearAudioTrace, inputMode, latencyMs, measureAcousticLatency, measuredLatencyMs, measuringLatency, profileAudio, refreshAudioDevices, running, selectAudioInput, selectAudioOutput, setController, setInstanceBypass]);
+  }, [audioCalibration, audioDevices, audioIoPreference, audioIssue, audioRuntimeSettings, audioTraceProgress, audioTraceReport, audioTraceStatus, bypassByInstance, calibrateAudio, captureLatency, clearAudioIssue, clearAudioTrace, inputMode, latencyMs, measureAcousticLatency, measuredLatencyMs, measuringLatency, microphoneCapability, profileAudio, refreshAudioDevices, running, selectAudioInput, selectAudioOutput, setController, setInstanceBypass]);
 
   useEffect(() => () => setController(null), [setController]);
 
@@ -1142,10 +1159,16 @@ export function PreviewPanel({
         <>
       <div className="transport-group">
             <button
+              aria-label={running
+                ? 'Stop preview'
+                : microphoneBlocked
+                  ? 'Microphone unavailable. Open Audio Playground over trusted HTTPS.'
+                  : 'Start preview'}
               className={`transport-btn ${running ? 'active' : ''}`}
               data-testid="preview-start-stop"
-              disabled={!backend}
+              disabled={!backend || (!running && microphoneBlocked)}
               onClick={() => void togglePlayback()}
+              title={microphoneBlocked ? 'Microphone requires a trusted HTTPS address' : running ? 'Stop preview' : 'Start preview'}
               type="button"
             >
               <i className={`fa-solid ${running ? 'fa-stop' : 'fa-play'}`} aria-hidden="true" />
@@ -1192,7 +1215,7 @@ export function PreviewPanel({
                 <span key={index} className={`mini-viz-bar ${running ? 'active' : ''}`} />
               ))}
             </div>
-            {phase === 'error' ? (
+            {transportPhase === 'error' ? (
               <div
                 className={`transport-error-inspector${errorDetailsOpen ? ' transport-error-inspector--open' : ''}`}
                 onBlur={event => {
@@ -1202,15 +1225,15 @@ export function PreviewPanel({
                 <button
                   aria-describedby="preview-error-details"
                   aria-expanded={errorDetailsOpen}
-                  aria-label={`Audio engine error: ${diagnostic}. View error details`}
-                  className={`transport-state transport-state--${phase}`}
+                  aria-label={`Audio engine error: ${transportAriaDiagnostic}. View error details`}
+                  className={`transport-state transport-state--${transportPhase}`}
                   data-testid="preview-error-badge"
                   onClick={() => setErrorDetailsOpen(true)}
                   onFocus={() => setErrorDetailsOpen(true)}
                   title="View error details"
                   type="button"
                 >
-                  {phase}
+                  {transportPhase}
                   <i className="fa-solid fa-circle-info" aria-hidden="true" />
                 </button>
                 <div
@@ -1219,17 +1242,21 @@ export function PreviewPanel({
                   id="preview-error-details"
                   role="tooltip"
                 >
-                  <strong>{audioIssue?.source === 'microphone' ? 'Microphone start failed' : 'Audio engine error'}</strong>
-                  <p>{audioIssue?.message ?? diagnostic}</p>
-                  {audioIssue?.detail ? <code>{audioIssue.detail}</code> : null}
+                  <strong>{displayedAudioIssue?.phase === 'capability'
+                    ? 'Microphone unavailable'
+                    : displayedAudioIssue?.source === 'microphone'
+                      ? 'Microphone start failed'
+                      : 'Audio engine error'}</strong>
+                  <p>{transportDiagnostic}</p>
+                  {displayedAudioIssue?.detail ? <code>{displayedAudioIssue.detail}</code> : null}
                   <dl>
                     <div>
                       <dt>Code</dt>
-                      <dd>{audioIssue?.code ?? backendDiagnostic?.code ?? 'APG_WEB_AUDIO_ERROR'}</dd>
+                      <dd>{displayedAudioIssue?.code ?? backendDiagnostic?.code ?? 'APG_WEB_AUDIO_ERROR'}</dd>
                     </div>
                     <div>
                       <dt>Phase</dt>
-                      <dd>{audioIssue?.phase ?? backendDiagnostic?.phase ?? 'runtime'}</dd>
+                      <dd>{displayedAudioIssue?.phase ?? backendDiagnostic?.phase ?? 'runtime'}</dd>
                     </div>
                     {backendDiagnostic?.file ? (
                       <div><dt>File</dt><dd>{backendDiagnostic.file}</dd></div>
@@ -1242,10 +1269,10 @@ export function PreviewPanel({
               </div>
             ) : (
               <span
-                aria-label={`Audio engine ${phase}`}
-                className={`transport-state transport-state--${phase}`}
+                aria-label={`Audio engine ${transportPhase}`}
+                className={`transport-state transport-state--${transportPhase}`}
               >
-                {phase}
+                {transportPhase}
               </span>
             )}
             <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} title={muted ? 'Unmute output' : 'Mute output'} type="button">
@@ -1257,11 +1284,11 @@ export function PreviewPanel({
         <>
       <div className="inspector-block__label">Live Preview</div>
       <div className="preview-panel__state">
-        <strong>{phase}</strong>
+        <strong>{transportPhase}</strong>
         <span>Live engine</span>
       </div>
-      <p className={`diagnostic-empty${phase === 'error' ? ' diagnostic-empty--error' : ''}`}>{diagnostic}</p>
-      {backendDiagnostic && (
+      <p className={`diagnostic-empty${transportPhase === 'error' ? ' diagnostic-empty--error' : ''}`}>{transportDiagnostic}</p>
+      {backendDiagnostic && !microphoneIssueHidden && (
         <dl className="wasm-diagnostic" aria-label="WASM diagnostic">
           <div><dt>Code</dt><dd>{backendDiagnostic.code}</dd></div>
           <div><dt>Phase</dt><dd>{backendDiagnostic.phase}</dd></div>
@@ -1310,8 +1337,9 @@ export function PreviewPanel({
         <button
           className="btn btn--ghost"
           data-testid="preview-start-stop"
-          disabled={!backend}
+          disabled={!backend || (!running && microphoneBlocked)}
           onClick={() => void togglePlayback()}
+          title={microphoneBlocked ? 'Microphone requires a trusted HTTPS address' : undefined}
           type="button"
         >
           {running ? 'Stop' : 'Start'}

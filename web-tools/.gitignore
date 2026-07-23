@@ -14,6 +14,7 @@ playwright-report
 test-results
 *.local
 public/wasm/
+.cert/
 
 # Editor directories and files
 .vscode/*

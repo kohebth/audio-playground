@@ -85,7 +85,15 @@ export function ProjectTopbar({
     .find(diagnostic => !diagnostic.code?.startsWith('APG_UI_'))
     ?? readiness.diagnostics[0];
   const readinessBlocked = readiness.validation === 'blocked' || readiness.preview === 'blocked';
-  const audioIssue = liveAudio?.audioIssue ?? null;
+  const transientAudioIssue = liveAudio?.audioIssue ?? null;
+  const visibleTransientAudioIssue = transientAudioIssue?.source === 'microphone'
+    && liveAudio?.inputMode !== 'microphone'
+    ? null
+    : transientAudioIssue;
+  const audioIssue = visibleTransientAudioIssue ?? (
+    liveAudio?.inputMode === 'microphone' ? liveAudio.microphoneCapability.issue : null
+  );
+  const audioIssueDismissible = audioIssue !== null && audioIssue === transientAudioIssue;
   const saveLabel = workspaceSaveError ? 'Retry' : hasDirtyParamDrafts ? 'Save' : 'Saved';
 
   return (
@@ -268,7 +276,9 @@ export function ProjectTopbar({
               >
                 Audio I/O
               </button>
-              <button aria-label="Dismiss audio error" onClick={liveAudio?.clearAudioIssue} type="button">Dismiss</button>
+              {audioIssueDismissible ? (
+                <button aria-label="Dismiss audio error" onClick={liveAudio?.clearAudioIssue} type="button">Dismiss</button>
+              ) : null}
             </div>
           ) : null}
         </section>

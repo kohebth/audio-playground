@@ -6,6 +6,7 @@ import type {
   AudioIssue,
   AudioIoPreference,
   AudioRuntimeSettings,
+  MicrophoneCapability,
 } from './audioIo';
 
 export type LiveBypassController = {
@@ -23,6 +24,7 @@ export type LiveBypassController = {
   audioRuntimeSettings: AudioRuntimeSettings | null;
   audioCalibration: AudioCalibrationState;
   audioIssue: AudioIssue | null;
+  microphoneCapability: MicrophoneCapability;
   bypassByInstance: Record<string, boolean>;
   setBypass: (instanceId: string, enabled: boolean) => Promise<void>;
   profileAudio: () => Promise<void>;

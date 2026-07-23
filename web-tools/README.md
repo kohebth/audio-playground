@@ -1,54 +1,62 @@
-# React + TypeScript + Vite
+# Audio Playground web tools
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The web editor is a React/Vite client for the Audio Playground v2 project and unit contracts.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Install dependencies and start the ordinary localhost server:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```sh
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Browsers treat `http://localhost` and `http://127.0.0.1` as secure contexts. A phone opening the same server through a
+LAN address such as `http://192.168.1.20:5173` is not in a secure context, so the browser does not expose microphone
+capture there. Use the trusted HTTPS setup below whenever another device needs the microphone.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Trusted HTTPS on a LAN
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+Install [mkcert](https://github.com/FiloSottile/mkcert), find the development computer's LAN IP, and create a certificate
+that includes that exact IP:
+
+```sh
+mkdir -p .cert
+mkcert -install
+mkcert -cert-file .cert/lan-cert.pem -key-file .cert/lan-key.pem localhost 127.0.0.1 ::1 192.168.1.20
 ```
+
+Replace `192.168.1.20` with the address the phone will open. Create `.env.lan-https.local` inside `web-tools/`:
+
+```dotenv
+APG_HTTPS_CERT=.cert/lan-cert.pem
+APG_HTTPS_KEY=.cert/lan-key.pem
+```
+
+The `.cert/` directory and `*.local` environment files are ignored by Git. No private key or local certificate belongs
+in the repository.
+
+Run the HTTPS server:
+
+```sh
+npm run dev:https
+```
+
+Then open `https://192.168.1.20:5173` on the phone. The phone must trust mkcert's development root CA; merely bypassing a
+certificate warning does not create a browser secure context. `mkcert -CAROOT` prints the directory containing
+`rootCA.pem`. Transfer only that root certificate to the phone, install it as a trusted user CA, and follow the device
+vendor's certificate-trust steps. Never transfer `rootCA-key.pem`.
+
+After loading the page, `window.isSecureContext` should be `true` in the browser console and the Mic transport will be
+enabled. If the LAN IP changes, issue a new certificate containing the new address.
+
+## Verification
+
+```sh
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+The production GitHub Pages deployment already uses HTTPS and is unaffected by the opt-in LAN development mode.
