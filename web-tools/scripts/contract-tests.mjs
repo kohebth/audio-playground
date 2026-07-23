@@ -397,9 +397,9 @@ assert(
   publicOverdrive === read('test/fixtures/units-v2/overdrive.unit.v2.yaml'),
   'public overdrive YAML must remain synchronized with its v2 contract fixture',
 );
-includesContent(liveLatencyBadge, "'Mic path est.'", 'live latency badge must distinguish microphone path estimates');
+includesContent(liveLatencyBadge, 'microphonePath', 'live latency badge must distinguish microphone path estimates in its tooltip');
 includesContent(liveLatencyBadge, 'micPathLatencySeverity(totalLatencyMs)', 'microphone path estimate must expose latency severity');
-includesContent(liveLatencyBadge, 'Loopback ready', 'live latency badge must show measured loopback results');
+includesContent(liveLatencyBadge, 'controller.measuredLatencyMs.toFixed(1)', 'live latency badge must show measured loopback results');
 includesContent(audioIo, "latencyHint: 'interactive'", 'live preview must request interactive browser latency');
 includesContent(audioIo, 'latency: { ideal: 0 }', 'microphone preview must request the lowest available capture latency');
 includesContent(audioIo, 'APG_WEB_MIC_INSECURE_CONTEXT', 'microphone capability must identify insecure LAN origins');

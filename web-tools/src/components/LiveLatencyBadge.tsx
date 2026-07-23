@@ -11,7 +11,6 @@ export function LiveLatencyBadge() {
         className={`live-latency-badge live-latency-badge--${passing ? 'passing' : 'high'}`}
         title="Acoustic loopback result from the test chirp. It includes speaker-to-microphone air travel."
       >
-        <span>{passing ? 'Loopback ready' : 'Loopback high'}</span>
         <strong>{controller.measuredLatencyMs.toFixed(1)} ms</strong>
       </output>
     );
@@ -31,7 +30,6 @@ export function LiveLatencyBadge() {
           : 'Browser-estimated render and output latency. Microphone capture latency is unavailable from this browser.'
       }
     >
-      <span>{microphonePath ? 'Mic path est.' : 'Output path'}</span>
       <strong>{totalLatencyMs.toFixed(1)} ms</strong>
     </output>
   );
