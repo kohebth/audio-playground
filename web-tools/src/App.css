@@ -4027,8 +4027,9 @@ body {
 .simple-library__search { display: flex; align-items: center; gap: 7px; margin: 0 14px 12px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: 8px; background: #0f110e; color: var(--text-dim); }
 .simple-library__search input { width: 100%; padding: 9px 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: 500 11px var(--font-sans); }
 .simple-library__categories { display: flex; gap: 5px; padding: 0 14px 12px; overflow-x: auto; scrollbar-width: none; }
-.simple-library__categories button { padding: 5px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; background: transparent; color: var(--text-muted); font: 600 9px var(--font-sans); text-transform: capitalize; cursor: pointer; }
-.simple-library__categories button.active { border-color: var(--accent); background: var(--accent-green-dim); color: var(--accent); }
+.simple-library__categories button { padding: 5px 8px; border: 1px solid color-mix(in srgb, var(--library-category-color) 58%, var(--border-subtle)); border-radius: 999px; background: transparent; color: color-mix(in srgb, var(--library-category-color) 72%, var(--text-muted)); font: 600 9px var(--font-sans); text-transform: capitalize; cursor: pointer; }
+.simple-library__categories button:hover { border-color: var(--library-category-color); color: var(--library-category-color); }
+.simple-library__categories button.active { border-color: var(--library-category-color); background: color-mix(in srgb, var(--library-category-color) 18%, transparent); color: var(--library-category-color); box-shadow: inset 0 0 9px color-mix(in srgb, var(--library-category-color) 12%, transparent); }
 .simple-library__list { flex: 1; overflow-y: auto; padding: 0 10px 14px; }
 .effect-library-card { display: flex; width: 100%; align-items: center; gap: 10px; margin-bottom: 5px; padding: 9px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--text-primary); cursor: default; text-align: left; transition: border-color .15s ease, background .15s ease, opacity .15s ease, transform .15s ease; }
 .effect-library-card:hover { border-color: var(--border-default); background: var(--bg-elevated); }

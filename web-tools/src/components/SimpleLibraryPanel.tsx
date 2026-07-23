@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { UNIT_DRAG_TYPE, type ProjectLibraryPointerDrag } from '../lib/graphDragTypes';
 import { markPerfSpan } from '../lib/perfTelemetry';
 import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
@@ -28,6 +28,16 @@ const categoryColor: Record<string, string> = {
   amp: 'amber',
   delay: 'blue',
   reverb: 'cyan',
+};
+
+const categoryBadgeColor: Record<string, string> = {
+  all: '#34d399',
+  dynamics: '#9be6bf',
+  modulation: '#c4a7ff',
+  drive: '#ff9b75',
+  amp: '#f1c56e',
+  delay: '#a9c7ff',
+  reverb: '#83e6d1',
 };
 
 type PointerDragSession = {
@@ -139,7 +149,13 @@ export function SimpleLibraryPanel({
       </label>
       <div className="simple-library__categories" aria-label={picksContract ? 'Unit categories' : 'Effect categories'}>
         {categories.map(item => (
-          <button className={category === item ? 'active' : ''} key={item} onClick={() => setCategory(item)} type="button">
+          <button
+            className={category === item ? 'active' : ''}
+            key={item}
+            onClick={() => setCategory(item)}
+            style={{ '--library-category-color': categoryBadgeColor[item.toLowerCase()] ?? '#a9c7ff' } as CSSProperties}
+            type="button"
+          >
             {item}
           </button>
         ))}
