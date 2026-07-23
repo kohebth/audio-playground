@@ -3317,9 +3317,12 @@ body {
 
 .atom-palette__categories {
   display: flex;
-  flex-wrap: wrap;
+  min-width: 0;
+  flex-wrap: nowrap;
   gap: 5px;
   margin-top: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .atom-palette__category {
@@ -3331,6 +3334,7 @@ body {
   font: 600 9px var(--font-sans);
   text-transform: capitalize;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .atom-palette__category--active { border-color: var(--category-color, var(--accent)); background: color-mix(in srgb, var(--category-color, var(--accent)) 18%, transparent); color: var(--text-primary); }
