@@ -258,7 +258,6 @@ test('serves base-safe Pipeline and Contract routes', async ({ page }, testInfo)
   await expect(inputBoundary).toBeVisible();
   await expect(outputBoundary).toBeVisible();
   await expect(page.getByTestId('atom-palette-browser-hidden')).toContainText('3 browser-incompatible hidden');
-  await page.getByTestId('atom-palette-show-advanced').check();
   await expect(page.getByTestId('atom-palette-item-freq_fft')).toHaveCount(0);
 
   expect(pageErrors).toEqual([]);

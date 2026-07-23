@@ -105,9 +105,8 @@ includes('web-tools/src/components/ProjectInspector.tsx', '<strong>{atomCatalog.
 includesContent(atomPalette, 'filteredAtoms.map(', 'atom palette must render its filtered backend atoms');
 includesContent(atomPalette, 'atom.profiles.wasm_realtime === true', 'browser atom palette must require WASM validation');
 includesContent(atomPalette, 'atom-palette-browser-hidden', 'browser atom palette must report hidden incompatible atoms');
-includesContent(atomPalette, "atom.visibility === 'public'", 'atom palette must show public atoms by default');
-includesContent(atomPalette, "atom.visibility === 'advanced'", 'atom palette must make advanced atoms opt-in');
-includesContent(atomPalette, 'atom-palette-show-advanced', 'atom palette must expose its advanced visibility control');
+includesContent(atomPalette, "atom.visibility !== 'internal'", 'atom palette must show every browser-compatible atom');
+assert(!atomPalette.includes('atom-palette-show-advanced'), 'atom palette must not require an Advanced filter');
 includesContent(atomPalette, 'setSelectedCategory(category)', 'atom palette categories must filter the catalog');
 includesContent(atomPalette, 'atom-palette-category-all', 'atom palette must provide an All category badge');
 assert(!atomPalette.includes('atom-palette-filter'), 'atom palette must not expose a text filter');

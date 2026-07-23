@@ -359,6 +359,12 @@ test('opens a unit for editing with one click in Contract', async ({ page }) => 
   await expect(page.getByTestId('contract-canvas')).toBeVisible();
   await expect(page.getByTestId('contract-atom-library')).toBeVisible();
   await expect(page.getByTestId('atom-context-inspector')).toBeVisible();
+  const catalogInfo = page.getByTestId('atom-palette-catalog-info');
+  const catalogDetails = page.getByTestId('atom-palette-catalog-details');
+  await catalogInfo.hover();
+  await expect(catalogDetails).toBeVisible();
+  await catalogInfo.click();
+  await expect(catalogInfo).toHaveAttribute('aria-expanded', 'true');
 });
 
 test('keeps the Pipeline usable at phone width', async ({ page }) => {
