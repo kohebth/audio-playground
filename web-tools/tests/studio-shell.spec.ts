@@ -329,8 +329,9 @@ test('reveals branch hints on every rail and keeps routing helpers fixed', async
   await expect(mixer).toHaveAttribute('draggable', 'false');
   await expect(panner.locator('.pedal-type-name')).toHaveText('Pan2');
   await expect(mixer.locator('.pedal-type-name')).toHaveText('Mix2');
-  await expect(panner).toHaveCSS('width', '88px');
-  await expect(mixer).toHaveCSS('width', '88px');
+  await expect(panner).toHaveCSS('width', '80px');
+  await expect(mixer).toHaveCSS('width', '80px');
+  await expect(panner.locator('.node-pedal-footer--always-on')).toContainText('ROUTING');
   await expect(page.getByTestId('project-node-overdrive')).toHaveAttribute('draggable', 'true');
   await expect(page.locator('[data-testid^="project-route-branch-"]')).toHaveCount(5);
   await expect(page.getByText('Parallel section')).toHaveCount(0);

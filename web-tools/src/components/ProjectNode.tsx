@@ -204,7 +204,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
         {routing ? (
           <div className="node-pedal-footer node-pedal-footer--always-on" title="Routing helpers are always active">
             <span className="node-pedal-footer__indicator" aria-hidden="true" />
-            <span>ROUTING ON</span>
+            <span>ROUTING</span>
           </div>
         ) : (
           <button
