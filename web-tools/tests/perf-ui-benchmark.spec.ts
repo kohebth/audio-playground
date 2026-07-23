@@ -1694,7 +1694,7 @@ test.describe('Live WASM runtime performance', () => {
     page.on('pageerror', error => pageErrors.push(error.message));
     await page.getByTestId('preview-mode-mic').click();
     await page.getByTestId('preview-start-stop').click();
-    await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+    await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.valid ?? false, { timeout: 10_000 }).toBe(true);
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.frames ?? 0, { timeout: 10_000 }).toBeGreaterThan(0);
     const baselineUnderruns = (await getRuntimeSnapshot(page))?.meter.underruns ?? 0;
@@ -1739,7 +1739,7 @@ test.describe('Live WASM runtime performance', () => {
     page.on('pageerror', error => pageErrors.push(error.message));
     await page.getByTestId('preview-mode-mic').click();
     await page.getByTestId('preview-start-stop').click();
-    await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+    await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.valid ?? false, { timeout: 10_000 }).toBe(true);
     const baseline = await getRuntimeSnapshot(page);
 
@@ -1798,7 +1798,7 @@ test.describe('Live WASM runtime performance', () => {
     page.on('pageerror', error => pageErrors.push(error.message));
     await page.getByTestId('preview-mode-mic').click();
     await page.getByTestId('preview-start-stop').click();
-    await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+    await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.meter.valid ?? false, { timeout: 10_000 }).toBe(true);
     const baselineUnderruns = (await getRuntimeSnapshot(page))?.meter.underruns ?? 0;
     const baselineDeadlineMisses = (await getRuntimeSnapshot(page))?.meter.callbackDeadlineMisses ?? 0;
@@ -1806,7 +1806,7 @@ test.describe('Live WASM runtime performance', () => {
     const waitForHotSwap = async (action: string) => {
       const prepareMs = await runAndAssertBudget(page, 'runtime.prepare.workspace', 1);
       const commitMs = await runAndAssertBudget(page, 'runtime.commit.workspace', 1);
-      await expect(page.locator('.transport-state')).toHaveText('running');
+      await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/);
       await expect.poll(async () => {
         const snapshot = await getRuntimeSnapshot(page);
         return snapshot?.activeRevision === snapshot?.preparedRevision && (snapshot?.activeRevision ?? 0) > 0;
@@ -1882,7 +1882,7 @@ test.describe('Live WASM runtime performance', () => {
       const mode = modes[cycle % modes.length];
       await page.getByTestId(`preview-mode-${mode}`).click();
       await page.getByTestId('preview-start-stop').click();
-      await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+      await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
       await expect.poll(async () => {
         const snapshot = await getRuntimeSnapshot(page);
         return Boolean(

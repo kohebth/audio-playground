@@ -340,7 +340,7 @@ test('registers the AudioWorklet and releases repeated audio resources', async (
   for (const mode of ['file', 'mic', 'file', 'mic'] as const) {
     await page.getByTestId(`preview-mode-${mode}`).click();
     await page.getByTestId('preview-start-stop').click();
-    await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+    await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
     await page.getByTestId('preview-start-stop').click();
     await expect(page.locator('.transport-state')).toHaveText('ready');
   }
@@ -391,7 +391,7 @@ test('keeps Mic selected and explains how to recover on insecure LAN HTTP', asyn
   await expect(page.getByText('APG_WEB_MIC_INSECURE_CONTEXT')).toHaveCount(0);
   await expect(startStop).toBeEnabled();
   await startStop.click();
-  await expect(page.locator('.transport-state')).toHaveText('running', { timeout: 20_000 });
+  await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
   await startStop.click();
   await expect(page.locator('.transport-state')).toHaveText('ready');
 

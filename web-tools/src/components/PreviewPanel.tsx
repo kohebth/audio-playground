@@ -1203,7 +1203,7 @@ export function PreviewPanel({
             )}
           </div>
           <div className="transport-group">
-            {transportPhase !== 'idle' ? (
+            {transportPhase !== 'idle' && transportPhase !== 'running' ? (
               <span
                 aria-label={`Audio engine ${transportPhase}`}
                 className={`transport-state transport-state--${transportPhase}`}
