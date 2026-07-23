@@ -1,7 +1,7 @@
 import type { Edge, Node } from '@xyflow/react';
 import dagre from 'dagre';
 import type { ProjectInspect, ProjectInstance, ProjectRoute, ProjectUnit } from './backendSamples';
-import type { ProjectPortCatalog, ProjectUnitPorts } from './projectV2Graph';
+import type { ProjectPortCatalog, ProjectRoutingRole, ProjectUnitPorts } from './projectV2Graph';
 
 export type ProjectNodeData =
   | {
@@ -67,6 +67,7 @@ export type ProjectNodeVisualLayout = {
 
 const UNIT_NODE_COMPACT_WIDTH = 140;
 const UNIT_NODE_WIDE_WIDTH = 190;
+const ROUTING_PANNER_WIDTH = 104;
 // Keep Dagre's card model identical to the rendered pedal. The previous smaller
 // values made React Flow attach edges several pixels away from Dagre's rail.
 const UNIT_NODE_EMPTY_HEIGHT = 147;
@@ -224,9 +225,17 @@ function routingNodeHeight(pathCount: number): number {
   return ROUTING_PATH_PADDING * 2 + Math.max(0, pathCount - 1) * ROUTING_PATH_GAP;
 }
 
-function unitNodeDimensions(paramCount: number, routingPathCount = 0): { width: number; height: number } {
+function routingNodeWidth(role: ProjectRoutingRole | undefined): number {
+  return role === 'panner' ? ROUTING_PANNER_WIDTH : UNIT_NODE_COMPACT_WIDTH;
+}
+
+function unitNodeDimensions(
+  paramCount: number,
+  routingPathCount = 0,
+  routingRole?: ProjectRoutingRole,
+): { width: number; height: number } {
   if (routingPathCount > 0) {
-    return { width: UNIT_NODE_COMPACT_WIDTH, height: routingNodeHeight(routingPathCount) };
+    return { width: routingNodeWidth(routingRole), height: routingNodeHeight(routingPathCount) };
   }
   const rows = Math.ceil(paramCount / KNOBS_PER_ROW);
   return {
@@ -385,7 +394,7 @@ export function buildProjectGraph(
     if (!unit) return;
     const unitPorts = ports[instance.unit];
     const routingPathCount = unitPorts?.routing?.paths.length ?? 0;
-    const dimensions = unitNodeDimensions(instance.params.length, routingPathCount);
+    const dimensions = unitNodeDimensions(instance.params.length, routingPathCount, unitPorts?.routing?.role);
 
     const node: Node<ProjectNodeData> = {
       id: `unit-${instance.id}`,
@@ -450,7 +459,7 @@ export function buildProjectGraph(
     const dimensions = node.data.kind === 'system'
       ? node.data.visualLayout
       : routingLayout
-        ? { width: UNIT_NODE_COMPACT_WIDTH, height: routingLayout.height }
+        ? { width: routingNodeWidth(node.data.ports?.routing?.role), height: routingLayout.height }
         : node.data.visualLayout;
     node.position = {
       x: position.x - dimensions.width / 2,

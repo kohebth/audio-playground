@@ -23,6 +23,11 @@ function portTop(offset: number | undefined, index: number, count: number): stri
   return offset === undefined ? `${((index + 1) * 100) / (count + 1)}%` : `${offset}px`;
 }
 
+function routingLabel(instanceId: string, role: 'panner' | 'mixer' | undefined): string | null {
+  if (role !== 'panner') return null;
+  return `auto pan${instanceId.match(/(\d+)(?:_\d+)?$/)?.[1] ?? ''}`;
+}
+
 export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>) => {
   const moveDragBlocked = useRef(false);
   const renderId = data.kind === 'system' ? data.id : data.instance.id;
@@ -80,6 +85,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   const routing = Boolean(data.instance.routing || routingContract);
   const movable = !routing;
   const flexibleRouting = Boolean(routingContract);
+  const helperLabel = routingLabel(data.instance.id, routingContract?.role);
   const routingParamKeys = new Set(routingContract?.paths.map(path => path.levelParam) ?? []);
   const params = routingContract ? [
     ...routingContract.paths.flatMap(path => {
@@ -122,7 +128,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
   return (
     <div
       data-testid={`project-node-${data.instance.id}`}
-      className={`project-node node-card nopan ${routing ? 'project-node--routing' : 'project-node--movable'} ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
+      className={`project-node node-card nopan ${routing ? 'project-node--routing' : 'project-node--movable'}${routingContract?.role === 'panner' ? ' project-node--routing-panner' : ''} ${bypassed ? 'project-node--bypassed' : ''} ${selected ? 'project-node--selected selected' : ''}`}
       draggable={movable}
       onDragEnd={() => { moveDragBlocked.current = false; }}
       onDragStart={startMoveDrag}
@@ -153,12 +159,12 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
         />
       ))}
       <div
-        className={`node-pedal${wide ? ' wide' : ''}${flexibleRouting ? ' node-pedal--routing' : ''}`}
+        className={`node-pedal${wide ? ' wide' : ''}${flexibleRouting ? ' node-pedal--routing' : ''}${routingContract?.role === 'panner' ? ' node-pedal--routing-panner' : ''}`}
         style={{ width: '100%', height: '100%' }}
       >
         <div className="node-pedal-header">
-          <span className="pedal-type-name">{data.unit.name}</span>
-          {routing ? <span className="project-node__routing-badge">Always active</span> : null}
+          <span className="pedal-type-name">{helperLabel ?? data.unit.name}</span>
+          {routing && !flexibleRouting ? <span className="project-node__routing-badge">Always active</span> : null}
           {movable ? (
             <span aria-hidden="true" className="project-node__move-grip" title="Drag to another rail">
               <i className="fa-solid fa-grip-lines" />
@@ -166,7 +172,7 @@ export const ProjectNode = memo(({ data, selected }: NodeProps<ProjectFlowNode>)
           ) : null}
         </div>
         <div className={`node-pedal-body${flexibleRouting ? ' node-pedal-body--routing' : ''}`}>
-          <span className="pedal-instance">{data.instance.id}</span>
+          {!flexibleRouting ? <span className="pedal-instance">{data.instance.id}</span> : null}
           {!flexibleRouting && params.length > 0 ? (
             <div className="project-node__knobs knobs-row" aria-label={`${data.instance.id} controls`}>
               {params.map(renderKnob)}
