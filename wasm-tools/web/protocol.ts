@@ -25,7 +25,6 @@ export type ProcessorRequest =
   | { id: number; type: 'commit'; revision: number }
   | { id: number; type: 'setParam'; index: number; value: number }
   | { id: number; type: 'setBypass'; index: number; enabled: boolean }
-  | { id: number; type: 'setMute'; enabled: boolean }
   | { id: number; type: 'reset' }
   | { id: number; type: 'startLatencyProbe' }
   | { id: number; type: 'startAudioTrace' }

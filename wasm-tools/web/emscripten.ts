@@ -47,7 +47,6 @@ export type ProcessorModule = {
   _apg_wasm_processor_process: (processor: number, frames: number) => number;
   _apg_wasm_processor_set_param: (processor: number, index: number, value: number) => number;
   _apg_wasm_processor_set_bypass: (processor: number, index: number, enabled: number) => number;
-  _apg_wasm_processor_set_mute: (processor: number, enabled: number) => number;
   _apg_wasm_processor_reset: (processor: number) => number;
   _apg_wasm_processor_output_meter: (processor: number) => number;
 };

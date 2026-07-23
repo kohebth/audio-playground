@@ -128,10 +128,6 @@ class ApgWasmProcessor extends AudioWorkletProcessor {
       );
       return;
     }
-    if (request.type === "setMute") {
-      this.command(request.id, this.module._apg_wasm_processor_set_mute(this.processor, request.enabled ? 1 : 0));
-      return;
-    }
     if (request.type === "reset") {
       this.command(request.id, this.module._apg_wasm_processor_reset(this.processor));
       return;

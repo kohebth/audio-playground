@@ -42,8 +42,6 @@ test('controls file and microphone playback with transport shortcuts', async ({ 
   await expect(transport).toBeEnabled();
   await page.keyboard.press('Space');
   await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 15_000 });
-  await page.keyboard.press('m');
-  await expect(page.locator('button[title="Unmute output"]')).toBeVisible();
   await page.keyboard.press('Space');
   await expect(state).toHaveAttribute('data-transport-phase', 'ready');
 
@@ -75,8 +73,6 @@ test('reconfigures live audio devices and restores running controls', async ({ p
   await page.getByTestId('preview-mode-mic').click();
   await page.getByTestId('preview-start-stop').click();
   await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 15_000 });
-  await page.keyboard.press('m');
-  await expect(page.locator('button[title="Unmute output"]')).toBeVisible();
 
   await page.getByTestId('audio-io-open').click();
   const audioIo = page.getByTestId('audio-io-panel');
@@ -87,7 +83,6 @@ test('reconfigures live audio devices and restores running controls', async ({ p
   const selectedInput = await input.inputValue();
   await input.selectOption(selectedInput);
   await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
-  await expect(page.locator('button[title="Unmute output"]')).toBeVisible();
   await expect(audioIo).toContainText('Context');
 
   await page.evaluate(() => {
@@ -107,7 +102,6 @@ test('reconfigures live audio devices and restores running controls', async ({ p
   });
   await input.selectOption(selectedInput);
   await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
-  await expect(page.locator('button[title="Unmute output"]')).toBeVisible();
   await audioIo.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath('audio-io-running.png'), fullPage: true });
 

@@ -132,7 +132,6 @@ export function PreviewPanel({
   const [audioCalibration, setAudioCalibration] = useState<AudioCalibrationState>(EMPTY_AUDIO_CALIBRATION);
   const [audioIssue, setAudioIssue] = useState<AudioIssue | null>(null);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
-  const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
   const [inputMode, setInputMode] = useState<InputMode>('microphone');
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -162,7 +161,6 @@ export function PreviewPanel({
   const previousOverridesRef = useRef<Map<string, ParamOverride>>(new Map());
   const paramControlQueueRef = useRef<Map<string, { draining: boolean; pendingValue: number | null }>>(new Map());
   const bypassByInstanceRef = useRef(bypassByInstance);
-  const mutedRef = useRef(muted);
   const paramOverridesRef = useRef(paramOverrides);
   const firstOverride = paramOverrides[0];
   const microphoneCapability = useMemo(() => browserMicrophoneCapability(), []);
@@ -286,10 +284,6 @@ export function PreviewPanel({
   useEffect(() => {
     bypassByInstanceRef.current = bypassByInstance;
   }, [bypassByInstance]);
-
-  useEffect(() => {
-    mutedRef.current = muted;
-  }, [muted]);
 
   useEffect(() => {
     paramOverridesRef.current = paramOverrides;
@@ -604,7 +598,7 @@ export function PreviewPanel({
     if (context && context.state !== 'closed') await context.close();
   }, []);
 
-  const applyRuntimeControls = useCallback(async (instance: WasmBackend, forceMute?: boolean) => {
+  const applyRuntimeControls = useCallback(async (instance: WasmBackend) => {
     for (const override of paramOverridesRef.current) {
       const value = Number(override.value);
       if (Number.isFinite(value)) await instance.setParam(override.path, value);
@@ -612,8 +606,6 @@ export function PreviewPanel({
     for (const [instanceId, enabled] of Object.entries(bypassByInstanceRef.current)) {
       await instance.setBypass(instanceId, enabled);
     }
-    const nextMute = forceMute ?? mutedRef.current;
-    if (nextMute) await instance.setMute(true);
     previousOverridesRef.current = new Map(paramOverridesRef.current.map(override => [override.path, override]));
   }, []);
 
@@ -747,7 +739,7 @@ export function PreviewPanel({
       stream = await requestMicrophoneStream(preference, session.context.sampleRate);
       input = session.context.createMediaStreamSource(stream);
       await session.backend.start({ input });
-      await applyRuntimeControls(session.backend, true);
+      await applyRuntimeControls(session.backend);
       await new Promise(resolve => window.setTimeout(resolve, 500));
       if (audioCalibrationTokenRef.current !== token) throw new Error('Calibration cancelled.');
       await session.backend.startAudioTrace();
@@ -1068,18 +1060,6 @@ export function PreviewPanel({
     });
   }, [audioTraceStatus, backend, meter, phase, running]);
 
-  const toggleMute = useCallback(async () => {
-    if (!backend || !running) return;
-    const next = !muted;
-    try {
-      await backend.setMute(next);
-      setMuted(next);
-      setDiagnostic(`Project output ${next ? 'muted' : 'unmuted'}.`);
-    } catch (error) {
-      reportError(error, 'control');
-    }
-  }, [backend, muted, reportError, running]);
-
   const togglePlayback = useCallback(() => {
     void (running ? stop() : start());
   }, [running, start, stop]);
@@ -1094,13 +1074,11 @@ export function PreviewPanel({
 
   const shortcutActionsRef = useRef({
     buildAndSave: handleBuildAndSave,
-    mute: toggleMute,
     save: onSaveWorkspace,
     togglePlayback,
   });
   shortcutActionsRef.current = {
     buildAndSave: handleBuildAndSave,
-    mute: toggleMute,
     save: onSaveWorkspace,
     togglePlayback,
   };
@@ -1126,12 +1104,6 @@ export function PreviewPanel({
       if (key === ' ' || event.code === 'Space') {
         event.preventDefault();
         shortcutActionsRef.current.togglePlayback();
-        return;
-      }
-
-      if (key === 'm') {
-        event.preventDefault();
-        void shortcutActionsRef.current.mute();
         return;
       }
 
@@ -1215,9 +1187,6 @@ export function PreviewPanel({
                 {transportPhase}
               </span>
             ) : null}
-            <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} title={muted ? 'Unmute output' : 'Mute output'} type="button">
-              <i className={`fa-solid ${muted ? 'fa-volume-xmark' : 'fa-volume-high'}`} aria-hidden="true" />
-            </button>
             <LiveLatencyBadge />
           </div>
         </>
@@ -1329,9 +1298,6 @@ export function PreviewPanel({
       <div className="preview-panel__actions">
         <button className="btn btn--ghost" disabled={!running || !firstOverride} onClick={() => void sendFirstParam()} type="button">
           Send param
-        </button>
-        <button className="btn btn--ghost" data-testid="preview-mute" disabled={!running} onClick={() => void toggleMute()} type="button">
-          {muted ? 'Unmute output' : 'Mute output'}
         </button>
       </div>
         </>

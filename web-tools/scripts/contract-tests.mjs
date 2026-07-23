@@ -418,9 +418,8 @@ includesContent(previewPanel, 'backendDiagnostic.code', 'preview must expose str
 includesContent(previewPanel, 'backendDiagnostic.file', 'preview must expose diagnostic file paths');
 includesContent(previewPanel, 'backendDiagnostic.path', 'preview must expose diagnostic schema paths');
 includesContent(wasmFacade, 'bypassShadows', 'bypass controls must survive prepared runtime swaps');
-includesContent(wasmFacade, 'muteShadow', 'mute control must survive prepared runtime swaps');
-includesContent(previewPanel, 'backend.setMute(next)', 'preview must expose the runtime mute control');
-includesContent(previewPanel, "'Mute output'", 'preview mute action is missing');
+assert(!wasmFacade.includes('setMute('), 'web runtime must not expose a mute control');
+assert(!previewPanel.includes('Mute output'), 'preview must stop output instead of offering a mute control');
 includesContent(previewPanel, "transportPhase === 'error'", 'only transport errors may display a text badge');
 includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');
 includesContent(processorWorklet, 'request.type === "commit"', 'Worklet must commit only through an explicit message');
