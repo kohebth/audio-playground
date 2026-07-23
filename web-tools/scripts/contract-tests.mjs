@@ -361,7 +361,7 @@ includesContent(previewPanel, 'outputLatencyMs', 'live preview must calculate br
 includesContent(previewPanel, 'captureLatencyMs', 'live preview must read microphone latency when the browser exposes it');
 includesContent(previewPanel, 'measureAcousticLatency', 'live preview must expose an acoustic latency calibration action');
 includesContent(previewPanel, "'Latency chirp'", 'live preview latency calibration button is missing');
-includesContent(app, '<LiveLatencyBadge />', 'live output latency must remain visible outside the inspector');
+includesContent(previewPanel, '<LiveLatencyBadge />', 'live output latency must remain visible in the compact transport');
 includesContent(app, '{!runtimeReady && (', 'launch screen must dismiss automatically when the runtime is ready');
 includesContent(app, 'Audio Playground <span>v2.0</span>', 'launch screen must use v2 branding');
 assert(!app.includes('launch-workspace'), 'launch screen must not require a manual launch action');
@@ -421,7 +421,7 @@ includesContent(wasmFacade, 'bypassShadows', 'bypass controls must survive prepa
 includesContent(wasmFacade, 'muteShadow', 'mute control must survive prepared runtime swaps');
 includesContent(previewPanel, 'backend.setMute(next)', 'preview must expose the runtime mute control');
 includesContent(previewPanel, "'Mute output'", 'preview mute action is missing');
-includesContent(previewPanel, "transportPhase !== 'running'", 'running state must use the transport border instead of a text badge');
+includesContent(previewPanel, "transportPhase === 'error'", 'only transport errors may display a text badge');
 includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');
 includesContent(processorWorklet, 'request.type === "commit"', 'Worklet must commit only through an explicit message');
 includesContent(processorWorklet, 'request.type === "pollMeters"', 'meter snapshots must be copied outside process()');

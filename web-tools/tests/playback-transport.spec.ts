@@ -32,10 +32,10 @@ test('controls file and microphone playback with transport shortcuts', async ({ 
 
   await openWorkspace(page);
 
-  const state = page.locator('.transport-state');
+  const state = page.locator('.transport-island');
   const transport = page.getByTestId('preview-start-stop');
 
-  await expect(state).toHaveText(/idle|ready/, { timeout: 15_000 });
+  await expect(state).toHaveAttribute('data-transport-phase', /idle|ready/, { timeout: 15_000 });
   await expect(page.getByRole('group', { name: 'Audio input mode' }).getByRole('button')).toHaveText(['Mic', 'Audio File']);
   await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'false');
@@ -45,7 +45,7 @@ test('controls file and microphone playback with transport shortcuts', async ({ 
   await page.keyboard.press('m');
   await expect(page.locator('button[title="Unmute output"]')).toBeVisible();
   await page.keyboard.press('Space');
-  await expect(state).toHaveText('ready');
+  await expect(state).toHaveAttribute('data-transport-phase', 'ready');
 
   await page.evaluate(() => localStorage.removeItem('apg.unit-editor.workspace.v2'));
   await page.keyboard.press('Control+s');
@@ -54,14 +54,14 @@ test('controls file and microphone playback with transport shortcuts', async ({ 
   await page.evaluate(() => localStorage.removeItem('apg.unit-editor.workspace.v2'));
   await page.keyboard.press('b');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'))).not.toBeNull();
-  await expect(state).toHaveText('ready');
+  await expect(state).toHaveAttribute('data-transport-phase', 'ready');
 
   await page.getByTestId('preview-mode-file').click();
   await expect(page.getByTestId('preview-mode-file')).toHaveAttribute('aria-pressed', 'true');
   await transport.click();
   await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 15_000 });
   await transport.click();
-  await expect(state).toHaveText('ready');
+  await expect(state).toHaveAttribute('data-transport-phase', 'ready');
 
   expect(pageErrors).toEqual([]);
 });
@@ -71,7 +71,7 @@ test('reconfigures live audio devices and restores running controls', async ({ p
   page.on('pageerror', error => pageErrors.push(error.message));
 
   await openWorkspace(page);
-  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 15_000 });
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', /idle|ready/, { timeout: 15_000 });
   await page.getByTestId('preview-mode-mic').click();
   await page.getByTestId('preview-start-stop').click();
   await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 15_000 });
@@ -112,7 +112,7 @@ test('reconfigures live audio devices and restores running controls', async ({ p
   await page.screenshot({ path: testInfo.outputPath('audio-io-running.png'), fullPage: true });
 
   await page.getByTestId('preview-start-stop').click();
-  await expect(page.locator('.transport-state')).toHaveText('ready');
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready');
   expect(pageErrors).toEqual([]);
 });
 
@@ -122,7 +122,7 @@ test('calibrates latency candidates and retains a stable configuration', async (
   page.on('pageerror', error => pageErrors.push(error.message));
 
   await openWorkspace(page);
-  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 15_000 });
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', /idle|ready/, { timeout: 15_000 });
   await page.getByTestId('preview-mode-mic').click();
   await page.getByTestId('audio-io-open').click();
   const audioIo = page.getByTestId('audio-io-panel');
@@ -139,6 +139,6 @@ test('calibrates latency candidates and retains a stable configuration', async (
   await page.getByTestId('preview-start-stop').click();
   await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 15_000 });
   await page.getByTestId('preview-start-stop').click();
-  await expect(page.locator('.transport-state')).toHaveText('ready');
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready');
   expect(pageErrors).toEqual([]);
 });

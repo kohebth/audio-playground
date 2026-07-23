@@ -8,7 +8,6 @@ import { AtomCatalogInfo, AtomCatalogPanel } from './components/AtomCatalogPanel
 import { AtomContextInspector } from './components/AtomContextInspector';
 import { ContractGraphCanvas } from './components/ContractGraphCanvas';
 import { GuidedTour } from './components/GuidedTour';
-import { LiveLatencyBadge } from './components/LiveLatencyBadge';
 import { ProjectCanvas } from './components/ProjectCanvas';
 import type { ProjectParallelOption, ProjectReplacementOption } from './components/ProjectCanvas';
 import { ProjectTopbar } from './components/ProjectTopbar';
@@ -2071,7 +2070,6 @@ export function EditorWorkspace({
       }}
       open={tourOpen}
     />
-    <LiveLatencyBadge />
     </LiveBypassContext.Provider>
   );
 }

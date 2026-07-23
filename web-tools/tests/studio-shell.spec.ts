@@ -132,9 +132,9 @@ test('removing every placed unit recovers to a valid pass-through rail', async (
 
   await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(0);
   await expect(page.locator('.react-flow__edge[data-id*="system-input-system-output"] .project-route__rail')).toHaveCount(1);
-  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 20_000 });
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', /idle|ready/, { timeout: 20_000 });
   await page.getByTestId('preview-compile').click();
-  await expect(page.locator('.transport-state')).toHaveText('ready', { timeout: 20_000 });
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready', { timeout: 20_000 });
   await expect(page.getByTestId('project-issue-banner')).toHaveCount(0);
   await expect(page.locator('.topbar__status button').first()).toHaveText('Ready');
 });

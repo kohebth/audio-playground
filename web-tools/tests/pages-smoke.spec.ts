@@ -342,7 +342,7 @@ test('registers the AudioWorklet and releases repeated audio resources', async (
     await page.getByTestId('preview-start-stop').click();
     await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
     await page.getByTestId('preview-start-stop').click();
-    await expect(page.locator('.transport-state')).toHaveText('ready');
+    await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready');
   }
 
   const lifecycle = await page.evaluate(() => (
@@ -393,7 +393,7 @@ test('keeps Mic selected and explains how to recover on insecure LAN HTTP', asyn
   await startStop.click();
   await expect(page.locator('.transport-island')).toHaveClass(/transport-island--running/, { timeout: 20_000 });
   await startStop.click();
-  await expect(page.locator('.transport-state')).toHaveText('ready');
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready');
 
   await micMode.click();
   await expect(micMode).toHaveAttribute('aria-pressed', 'true');
@@ -409,9 +409,9 @@ test('shows microphone permission failure without crashing the editor', async ({
     });
   });
   await openWorkspace(page, testInfo);
-  await expect(page.locator('.transport-state')).toHaveText(/idle|ready/, { timeout: 20_000 });
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', /idle|ready/, { timeout: 20_000 });
   await page.getByTestId('preview-compile').click();
-  await expect(page.locator('.transport-state')).toHaveText('ready', { timeout: 20_000 });
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready', { timeout: 20_000 });
 
   await page.getByTestId('preview-mode-mic').click();
   await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');

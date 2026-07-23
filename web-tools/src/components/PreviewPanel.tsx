@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WorkspaceFile } from '../lib/backendSamples';
 import { useLiveBypass } from '../lib/liveBypass';
+import { LiveLatencyBadge } from './LiveLatencyBadge';
 import { createAudioTraceReport } from '../lib/audioTrace';
 import {
   AUDIO_CALIBRATION_HINTS,
@@ -1145,9 +1146,12 @@ export function PreviewPanel({
   }, []);
 
   return (
-    <section className={compact
-      ? `transport-island preview-panel--compact${transportPhase === 'running' ? ' transport-island--running' : ''}`
-      : 'inspector-block'}>
+    <section
+      className={compact
+        ? `transport-island preview-panel--compact${transportPhase === 'running' ? ' transport-island--running' : ''}`
+        : 'inspector-block'}
+      data-transport-phase={transportPhase}
+    >
       {compact ? (
         <>
       <div className="transport-group">
@@ -1203,7 +1207,7 @@ export function PreviewPanel({
             )}
           </div>
           <div className="transport-group">
-            {transportPhase !== 'idle' && transportPhase !== 'running' ? (
+            {transportPhase === 'error' ? (
               <span
                 aria-label={`Audio engine ${transportPhase}`}
                 className={`transport-state transport-state--${transportPhase}`}
@@ -1214,6 +1218,7 @@ export function PreviewPanel({
             <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} title={muted ? 'Unmute output' : 'Mute output'} type="button">
               <i className={`fa-solid ${muted ? 'fa-volume-xmark' : 'fa-volume-high'}`} aria-hidden="true" />
             </button>
+            <LiveLatencyBadge />
           </div>
         </>
       ) : (

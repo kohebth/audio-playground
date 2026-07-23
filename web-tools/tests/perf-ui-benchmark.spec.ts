@@ -1720,7 +1720,7 @@ test.describe('Live WASM runtime performance', () => {
     expect(runningSnapshot?.resources.streamTracks).toBe(1);
 
     await page.getByTestId('preview-start-stop').click();
-    await expect(page.locator('.transport-state')).toHaveText('ready');
+    await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready');
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.resources.workletActive ?? true).toBe(false);
     const stoppedSnapshot = await getRuntimeSnapshot(page);
     expect(stoppedSnapshot?.resources.workerActive).toBe(true);
@@ -1781,7 +1781,7 @@ test.describe('Live WASM runtime performance', () => {
     await expect(page.getByTestId('audio-trace-status')).toHaveText('running');
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.resources.audioTracePollingActive ?? false).toBe(true);
     await page.getByTestId('preview-start-stop').click();
-    await expect(page.locator('.transport-state')).toHaveText('ready');
+    await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready');
     await expect(page.getByTestId('audio-trace-status')).toHaveText('idle');
     await expect.poll(async () => (await getRuntimeSnapshot(page))?.resources.audioTracePollingActive ?? true).toBe(false);
     const stopped = await getRuntimeSnapshot(page);
@@ -1865,7 +1865,7 @@ test.describe('Live WASM runtime performance', () => {
     expect(finalSnapshot?.resources.workletActive).toBe(true);
     expect(pageErrors).toEqual([]);
     await page.getByTestId('preview-start-stop').click();
-    await expect(page.locator('.transport-state')).toHaveText('ready');
+    await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready');
     testInfo.annotations.push({ type: 'live-hot-swaps', description: JSON.stringify(swaps) });
   });
 
@@ -1893,7 +1893,7 @@ test.describe('Live WASM runtime performance', () => {
       }).toBe(true);
 
       await page.getByTestId('preview-start-stop').click();
-      await expect(page.locator('.transport-state')).toHaveText('ready');
+      await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'ready');
       await expect.poll(async () => {
         const snapshot = await getRuntimeSnapshot(page);
         if (!snapshot) return false;
