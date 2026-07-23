@@ -772,6 +772,14 @@ body {
   display: none;
 }
 
+.topbar__import {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
 .topbar__save {
   display: inline-flex;
   align-items: center;

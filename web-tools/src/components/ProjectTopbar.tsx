@@ -202,7 +202,7 @@ export function ProjectTopbar({
           <i className={`fa-solid ${workspaceSaveError ? 'fa-rotate' : hasDirtyParamDrafts ? 'fa-floppy-disk' : 'fa-check'}`} aria-hidden="true" />
           <span>{saveLabel}</span>
         </button>
-        <label className="btn btn--ghost">
+        <label className="btn btn--ghost topbar__import">
           Import
           <input
             data-testid="topbar-import-input"
