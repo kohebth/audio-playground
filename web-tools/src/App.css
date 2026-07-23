@@ -4315,8 +4315,6 @@ body {
 .preview-panel--compact .preview-panel__mode button[aria-pressed="true"] { background: var(--bg-surface); color: var(--text-primary); }
 .transport-file { display: block; max-width: 92px; padding: 0 4px; overflow: hidden; color: var(--text-dim); font: 10px var(--font-mono); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .transport-file input { display: none; }
-.transport-state { padding: 3px 6px; border-radius: 99px; color: #8b9ab0; font: 9px var(--font-mono); text-transform: uppercase; }
-.transport-state--error { background: #4a1c1c; color: #f87171; }
 .header-right .status-pill { border-radius: 999px; font-size: 11px; }
 .header-right .btn { min-height: 30px; padding: 5px 9px; border-radius: 6px; font-size: 11px; }
 .topbar__icon-btn {

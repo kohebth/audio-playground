@@ -1178,17 +1178,11 @@ export function PreviewPanel({
               </label>
             )}
           </div>
-          <div className="transport-group">
-            {transportPhase === 'error' ? (
-              <span
-                aria-label={`Audio engine ${transportPhase}`}
-                className={`transport-state transport-state--${transportPhase}`}
-              >
-                {transportPhase}
-              </span>
-            ) : null}
-            <LiveLatencyBadge />
-          </div>
+          {running ? (
+            <div className="transport-group">
+              <LiveLatencyBadge />
+            </div>
+          ) : null}
         </>
       ) : (
         <>

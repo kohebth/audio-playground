@@ -571,7 +571,7 @@ async function waitForWorkspaceQuiescence(page: Page) {
   await expect.poll(async () => (await getSpans(page, 'workspace.autosave.persist')).length, {
     timeout: 12_000,
   }).toBeGreaterThanOrEqual(1);
-  await expect(page.locator('.transport-state')).not.toHaveText(/validating|preparing/, { timeout: 12_000 });
+  await expect(page.locator('.transport-island')).not.toHaveAttribute('data-transport-phase', /validating|preparing/, { timeout: 12_000 });
 }
 
 async function installAutosaveProbe(page: Page): Promise<void> {
@@ -1288,8 +1288,8 @@ test.describe('Contract graph atom scalability', () => {
     page.on('pageerror', error => pageErrors.push(error.message));
 
     await importPerfWorkspaceFixture(page, fixture, 1);
-    await expect(page.locator('.transport-state')).toHaveText('error', { timeout: 12_000 });
-    await expect(page.locator('.transport-state')).toHaveAttribute('title', /missing_signal/);
+    await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'error', { timeout: 12_000 });
+    await expect(page.getByTestId('project-issue-banner')).toContainText('missing_signal');
     await openLoadedContract(page, meta.atoms);
     await expect(page.getByTestId('contract-canvas')).toHaveAttribute('data-atom-count', String(meta.atoms));
     expect(pageErrors).toEqual([]);

@@ -423,7 +423,7 @@ includesContent(previewPanel, 'backendDiagnostic.path', 'preview must expose dia
 includesContent(wasmFacade, 'bypassShadows', 'bypass controls must survive prepared runtime swaps');
 assert(!wasmFacade.includes('setMute('), 'web runtime must not expose a mute control');
 assert(!previewPanel.includes('Mute output'), 'preview must stop output instead of offering a mute control');
-includesContent(previewPanel, "transportPhase === 'error'", 'only transport errors may display a text badge');
+assert(!previewPanel.includes('transport-state'), 'compact transport must leave errors to the project issue banner');
 includesContent(processorWorklet, "import createApgProcessorModule from './apg_processor.mjs'", 'Worklet must use a static Emscripten import');
 includesContent(processorWorklet, 'request.type === "commit"', 'Worklet must commit only through an explicit message');
 includesContent(processorWorklet, 'request.type === "pollMeters"', 'meter snapshots must be copied outside process()');

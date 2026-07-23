@@ -374,9 +374,8 @@ test('keeps Mic selected and explains how to recover on insecure LAN HTTP', asyn
   await expect(micMode).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('preview-compile')).toBeEnabled({ timeout: 20_000 });
   await expect(startStop).toBeDisabled();
-  await expect(page.locator('.transport-state')).toHaveText('error');
-  await expect(page.getByTestId('preview-error-badge')).toHaveCount(0);
-  await expect(page.getByTestId('preview-error-details')).toHaveCount(0);
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'error');
+  await expect(page.locator('.transport-state')).toHaveCount(0);
 
   const issueBanner = page.getByTestId('project-issue-banner');
   await expect(issueBanner).toContainText('APG_WEB_MIC_INSECURE_CONTEXT');
@@ -398,7 +397,8 @@ test('keeps Mic selected and explains how to recover on insecure LAN HTTP', asyn
   await micMode.click();
   await expect(micMode).toHaveAttribute('aria-pressed', 'true');
   await expect(startStop).toBeDisabled();
-  await expect(page.locator('.transport-state')).toHaveText('error');
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'error');
+  await expect(issueBanner).toContainText('APG_WEB_MIC_INSECURE_CONTEXT');
 });
 
 test('shows microphone permission failure without crashing the editor', async ({ page }, testInfo) => {
@@ -416,9 +416,8 @@ test('shows microphone permission failure without crashing the editor', async ({
   await page.getByTestId('preview-mode-mic').click();
   await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
   await page.getByTestId('preview-start-stop').click();
-  await expect(page.locator('.transport-state')).toHaveText('error');
-  await expect(page.getByTestId('preview-error-badge')).toHaveCount(0);
-  await expect(page.getByTestId('preview-error-details')).toHaveCount(0);
+  await expect(page.locator('.transport-island')).toHaveAttribute('data-transport-phase', 'error');
+  await expect(page.locator('.transport-state')).toHaveCount(0);
   const issueBanner = page.getByTestId('project-issue-banner');
   await expect(issueBanner).toContainText('Microphone');
   await expect(issueBanner).toContainText('Microphone access was denied');
