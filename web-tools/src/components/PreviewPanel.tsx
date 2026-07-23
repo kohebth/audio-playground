@@ -130,7 +130,6 @@ export function PreviewPanel({
   const [audioRuntimeSettings, setAudioRuntimeSettings] = useState<AudioRuntimeSettings | null>(null);
   const [audioCalibration, setAudioCalibration] = useState<AudioCalibrationState>(EMPTY_AUDIO_CALIBRATION);
   const [audioIssue, setAudioIssue] = useState<AudioIssue | null>(null);
-  const [errorDetailsOpen, setErrorDetailsOpen] = useState(false);
   const [bypassByInstance, setBypassByInstance] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -179,14 +178,6 @@ export function PreviewPanel({
   const transportDiagnostic = displayedAudioIssue?.message ?? (
     microphoneIssueHidden ? 'Audio file input is ready.' : diagnostic
   );
-  const transportAriaDiagnostic = displayedAudioIssue?.detail
-    ? `${transportDiagnostic} ${displayedAudioIssue.detail}`
-    : transportDiagnostic;
-
-  useEffect(() => {
-    if (transportPhase !== 'error') setErrorDetailsOpen(false);
-  }, [transportPhase]);
-
   const refreshBackendState = useCallback((clearDiagnostic = false) => {
     const instance = backendRef.current;
     if (!instance) return;
@@ -1210,71 +1201,12 @@ export function PreviewPanel({
             )}
           </div>
           <div className="transport-group">
-            <div className="mini-viz" aria-hidden="true">
-              {[0, 1, 2, 3, 4].map(index => (
-                <span key={index} className={`mini-viz-bar ${running ? 'active' : ''}`} />
-              ))}
-            </div>
-            {transportPhase === 'error' ? (
-              <div
-                className={`transport-error-inspector${errorDetailsOpen ? ' transport-error-inspector--open' : ''}`}
-                onBlur={event => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setErrorDetailsOpen(false);
-                }}
-              >
-                <button
-                  aria-describedby="preview-error-details"
-                  aria-expanded={errorDetailsOpen}
-                  aria-label={`Audio engine error: ${transportAriaDiagnostic}. View error details`}
-                  className={`transport-state transport-state--${transportPhase}`}
-                  data-testid="preview-error-badge"
-                  onClick={() => setErrorDetailsOpen(true)}
-                  onFocus={() => setErrorDetailsOpen(true)}
-                  title="View error details"
-                  type="button"
-                >
-                  {transportPhase}
-                  <i className="fa-solid fa-circle-info" aria-hidden="true" />
-                </button>
-                <div
-                  className="transport-error-details"
-                  data-testid="preview-error-details"
-                  id="preview-error-details"
-                  role="tooltip"
-                >
-                  <strong>{displayedAudioIssue?.phase === 'capability'
-                    ? 'Microphone unavailable'
-                    : displayedAudioIssue?.source === 'microphone'
-                      ? 'Microphone start failed'
-                      : 'Audio engine error'}</strong>
-                  <p>{transportDiagnostic}</p>
-                  {displayedAudioIssue?.detail ? <code>{displayedAudioIssue.detail}</code> : null}
-                  <dl>
-                    <div>
-                      <dt>Code</dt>
-                      <dd>{displayedAudioIssue?.code ?? backendDiagnostic?.code ?? 'APG_WEB_AUDIO_ERROR'}</dd>
-                    </div>
-                    <div>
-                      <dt>Phase</dt>
-                      <dd>{displayedAudioIssue?.phase ?? backendDiagnostic?.phase ?? 'runtime'}</dd>
-                    </div>
-                    {backendDiagnostic?.file ? (
-                      <div><dt>File</dt><dd>{backendDiagnostic.file}</dd></div>
-                    ) : null}
-                    {backendDiagnostic?.path ? (
-                      <div><dt>Path</dt><dd>{backendDiagnostic.path}</dd></div>
-                    ) : null}
-                  </dl>
-                </div>
-              </div>
-            ) : (
-              <span
-                aria-label={`Audio engine ${transportPhase}`}
-                className={`transport-state transport-state--${transportPhase}`}
-              >
-                {transportPhase}
-              </span>
-            )}
+            <span
+              aria-label={`Audio engine ${transportPhase}`}
+              className={`transport-state transport-state--${transportPhase}`}
+            >
+              {transportPhase}
+            </span>
             <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} title={muted ? 'Unmute output' : 'Mute output'} type="button">
               <i className={`fa-solid ${muted ? 'fa-volume-xmark' : 'fa-volume-high'}`} aria-hidden="true" />
             </button>

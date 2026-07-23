@@ -99,7 +99,7 @@ export function ProjectHome({
       <section className="project-home__projects" aria-busy={loading}>
         <div className="project-home__section-title">
           <div><span>Projects</span><strong>{projects.length}</strong></div>
-          <small>Saved automatically in this browser</small>
+          <small>Press Save to keep changes on this device</small>
         </div>
 
         {loading ? (

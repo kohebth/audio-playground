@@ -193,7 +193,7 @@ includesContent(projectTopbar, 'title="Undo"', 'topbar must expose undo control'
 includesContent(projectTopbar, 'title="Redo"', 'topbar must expose redo control');
 assert(
   /localStorage\.getItem\(WORKSPACE_STORAGE_KEY\)/.test(app),
-  'workspace autosave restore must read from localStorage',
+  'workspace restore must read from localStorage',
 );
 includes(
   'web-tools/src/lib/backendSamples.ts',
@@ -201,7 +201,7 @@ includes(
   'frozen backend contract source path should be explicit',
 );
 
-// AD: Workspace and autosave behavior remains draft-driven.
+// AD: Workspace behavior remains draft-driven until an explicit save.
 assert(project.units.length === 8, 'pedalboard workspace fixture should include eight referenced units');
 assert(
   project.routes.some(route => route.from === 'trem1.output' && route.to === 'chorus1.input') &&
@@ -213,12 +213,13 @@ assert(
   (backendSamples.match(/role: 'unit'/g) ?? []).length === project.units.length + 3,
   'workspace bundle must include referenced units, legacy migration input, and both explicit routing helpers',
 );
-includesContent(app, 'apg.unit-editor.workspace.v2', 'versioned workspace autosave key is missing');
+includesContent(app, 'apg.unit-editor.workspace.v2', 'versioned workspace storage key is missing');
 includesContent(app, 'apg.unit-editor.workspace.v1', 'legacy workspace migration key is missing');
 includesContent(workspacePersistence, "WORKSPACE_SCHEMA = 'apg.ui.workspace.v2'", 'workspace export schema is missing');
 includesContent(workspacePersistence, 'WORKSPACE_FORMAT_VERSION = 2', 'workspace format version is missing');
-includesContent(app, 'parseWorkspacePayload(saved)', 'autosave restore must validate versioned workspace payloads');
+includesContent(app, 'parseWorkspacePayload(saved)', 'workspace restore must validate versioned workspace payloads');
 includesContent(app, 'hydrateWorkspaceFiles(result.workspace, initialWorkspaceFiles)', 'workspace restore must hydrate migrated files');
+assert(!app.includes('workspace.autosave.persist'), 'workspace edits must not persist automatically');
 includesContent(projectCanvas, 'onEdgeContextMenu', 'project routes must expose the guided parallel action');
 includesContent(projectCanvas, 'Add in parallel', 'project route actions must name the explicit parallel transaction');
 includesContent(app, 'pathPanner2WorkspaceFile', 'parallel insertion must include the system panner helper');

@@ -277,6 +277,9 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   await expect(unitNodes).toHaveCount(initialCount + 1);
   await expect(viewport).toHaveCSS('transform', initialTransform);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
+    .toBe(initialStoredWorkspace);
+  await page.getByTestId('topbar-save').click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
     .not.toBe(initialStoredWorkspace);
   const storedAfterDrop = await page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'));
 
@@ -294,6 +297,9 @@ test('persists locked-layout edits and exports the workspace', async ({ page }, 
   ).locator('.react-flow__edge-path').evaluateAll(paths => paths.map(path => path.getAttribute('d') ?? ''));
   expect(routingPaths).toHaveLength(5);
   expect(routingPaths.every(path => !path.includes('Q') && !path.includes('C'))).toBe(true);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
+    .toBe(storedAfterDrop);
+  await page.getByTestId('topbar-save').click();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2')))
     .not.toBe(storedAfterDrop);
 
@@ -370,16 +376,8 @@ test('keeps Mic selected and explains how to recover on insecure LAN HTTP', asyn
   await expect(page.getByTestId('preview-compile')).toBeEnabled({ timeout: 20_000 });
   await expect(startStop).toBeDisabled();
   await expect(page.locator('.transport-state')).toHaveText('error');
-
-  const errorBadge = page.getByTestId('preview-error-badge');
-  const errorDetails = page.getByTestId('preview-error-details');
-  await errorBadge.hover();
-  await expect(errorDetails).toBeVisible();
-  await expect(errorDetails).toContainText('Microphone unavailable');
-  await expect(errorDetails).toContainText('APG_WEB_MIC_INSECURE_CONTEXT');
-  await expect(errorDetails).toContainText(new URL(baseUrl(testInfo)).origin);
-  await expect(errorDetails).toContainText('trusted HTTPS');
-  await expect(errorDetails).toContainText('npm run dev:https');
+  await expect(page.getByTestId('preview-error-badge')).toHaveCount(0);
+  await expect(page.getByTestId('preview-error-details')).toHaveCount(0);
 
   const issueBanner = page.getByTestId('project-issue-banner');
   await expect(issueBanner).toContainText('APG_WEB_MIC_INSECURE_CONTEXT');
@@ -420,21 +418,8 @@ test('shows microphone permission failure without crashing the editor', async ({
   await expect(page.getByTestId('preview-mode-mic')).toHaveAttribute('aria-pressed', 'true');
   await page.getByTestId('preview-start-stop').click();
   await expect(page.locator('.transport-state')).toHaveText('error');
-  await expect(page.locator('.transport-state')).toHaveAttribute(
-    'aria-label',
-    /Injected microphone permission denial/,
-  );
-  const errorBadge = page.getByTestId('preview-error-badge');
-  const errorDetails = page.getByTestId('preview-error-details');
-  await errorBadge.hover();
-  await expect(errorDetails).toBeVisible();
-  await expect(errorDetails).toContainText('Microphone access was denied');
-  await expect(errorDetails).toContainText('NotAllowedError');
-  await expect(errorDetails).toContainText('Injected microphone permission denial');
-  await errorBadge.click();
-  await expect(errorBadge).toHaveAttribute('aria-expanded', 'true');
-  await page.mouse.move(2, 2);
-  await expect(errorDetails).toBeVisible();
+  await expect(page.getByTestId('preview-error-badge')).toHaveCount(0);
+  await expect(page.getByTestId('preview-error-details')).toHaveCount(0);
   const issueBanner = page.getByTestId('project-issue-banner');
   await expect(issueBanner).toContainText('Microphone');
   await expect(issueBanner).toContainText('Microphone access was denied');

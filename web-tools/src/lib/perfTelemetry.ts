@@ -50,7 +50,6 @@ export type PerfRuntimeSnapshot = {
 
 const MAX_SAMPLES = 240;
 const MAX_RENDER_SAMPLES = 240;
-const AUTOSAVE_DEBOUNCE_MS = 350;
 const TRACE_WINDOW = '__apgPerfTrace';
 
 type PerfStore = {
@@ -203,5 +202,3 @@ export function clearPerfSpans(): void {
   store.samples = [];
   store.counters = {};
 }
-
-export const PERFORMANCE_DEBOUNCE_MS = AUTOSAVE_DEBOUNCE_MS;

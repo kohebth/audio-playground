@@ -95,19 +95,13 @@ import {
   createWorkspacePayload,
   hydrateWorkspaceFiles,
   parseWorkspacePayload,
-  persistSerializedWorkspace,
   persistWorkspacePayload,
   validateWorkspacePayload,
   WORKSPACE_FORMAT_VERSION,
   WORKSPACE_SCHEMA,
   type WorkspacePayload,
 } from './lib/workspacePersistence';
-import {
-  PERFORMANCE_DEBOUNCE_MS,
-  incrementPerfCounter,
-  markPerfSpan,
-  markRenderPerfSpan,
-} from './lib/perfTelemetry';
+import { incrementPerfCounter, markPerfSpan, markRenderPerfSpan } from './lib/perfTelemetry';
 import type { ProjectLibraryPointerDrag } from './lib/graphDragTypes';
 import './App.css';
 
@@ -448,8 +442,6 @@ export function EditorWorkspace({
   const undoStack = useRef<WorkspaceHistoryEntry[]>([]);
   const redoStack = useRef<WorkspaceHistoryEntry[]>([]);
   const personalUnitSaveQueue = useRef<Promise<void>>(Promise.resolve());
-  const autosaveTimeout = useRef<number | null>(null);
-  const lastSavedWorkspace = useRef<string>(JSON.stringify(createWorkspacePayload(initialWorkspace.entryProject, initialWorkspace.files)));
   const [workspaceSaveError, setWorkspaceSaveError] = useState<string | null>(null);
   const [historyCounts, setHistoryCounts] = useState({ undo: 0, redo: 0 });
   const persistPersonalUnit = useCallback((unit: PersonalUnitRecord) => {
@@ -916,39 +908,6 @@ export function EditorWorkspace({
       });
     });
   }, [graphTopologySignature, nodeBypassAvailable, nodeBypassByInstance, project, projectParamControls, projectPorts, setEdges, setNodes, setProjectNodeBypass, updateParamDraft]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    if (autosaveTimeout.current) {
-      window.clearTimeout(autosaveTimeout.current);
-    }
-
-    autosaveTimeout.current = window.setTimeout(() => {
-      try {
-        markPerfSpan('workspace.autosave.persist', () => {
-          const payload = createWorkspacePayload(entryProject, workspaceFiles);
-          const serialized = JSON.stringify(payload);
-          if (serialized !== lastSavedWorkspace.current) {
-            lastSavedWorkspace.current = persistSerializedWorkspace(WORKSPACE_STORAGE_KEY, serialized, window.localStorage);
-            onWorkspaceChange(payload);
-          }
-        });
-        setWorkspaceSaveError(null);
-      } catch (error) {
-        setWorkspaceSaveError(error instanceof Error ? error.message : 'Unable to persist the workspace.');
-      } finally {
-        autosaveTimeout.current = null;
-      }
-    }, PERFORMANCE_DEBOUNCE_MS);
-
-    return () => {
-      if (autosaveTimeout.current) {
-        window.clearTimeout(autosaveTimeout.current);
-        autosaveTimeout.current = null;
-      }
-    };
-  }, [entryProject, onWorkspaceChange, workspaceFiles]);
 
   const selectProjectNode = useCallback((id: string) => {
     markPerfSpan('ui.select.projectNode', () => {
@@ -1757,7 +1716,7 @@ export function EditorWorkspace({
       markPerfSpan('workspace.save', () => {
         const payload = createWorkspacePayload(entryProject, workspaceFiles);
         if (typeof window === 'undefined') return;
-        lastSavedWorkspace.current = persistWorkspacePayload(WORKSPACE_STORAGE_KEY, payload, window.localStorage);
+        persistWorkspacePayload(WORKSPACE_STORAGE_KEY, payload, window.localStorage);
         onWorkspaceChange(payload);
         setParamOriginals(values => ({ ...values, ...paramDrafts }));
         setWorkspaceFiles(files =>

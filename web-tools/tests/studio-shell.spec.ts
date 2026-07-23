@@ -54,7 +54,17 @@ test('creates and restores a visual-first local project', async ({ page }) => {
   await page.getByTestId('effect-library-item-built-in-overdrive').dragTo(page.getByTestId('project-canvas'));
   await expect(page.locator('.react-flow__node[data-id^="unit-"]')).toHaveCount(1);
   await expect(page.getByTestId('project-node-overdrive')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('apg.unit-editor.workspace.v2'))).not.toBeNull();
+  await expect(page.getByTestId('topbar-save')).toContainText('Save');
+
+  await page.getByTitle('All projects').click();
+  await expect(page.getByRole('heading', { name: 'Pick up where you left off.' })).toBeVisible();
+  await page.getByRole('button', { name: /Midnight Board/ }).click();
+  await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
+  await expect(page.getByTestId('project-node-overdrive')).toHaveCount(0);
+
+  await page.getByTestId('effect-library-item-built-in-overdrive').dragTo(page.getByTestId('project-canvas'));
+  await page.keyboard.press('Control+s');
+  await expect(page.getByTestId('topbar-save')).toContainText('Saved');
 
   await page.reload();
   await expect(page.locator('.launch-screen')).toBeHidden({ timeout: 20_000 });
