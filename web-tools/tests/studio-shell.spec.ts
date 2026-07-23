@@ -253,6 +253,10 @@ test('moves placed effects between rail positions without enabling free layout',
   const targetRail = page.locator('[data-project-route-index="6"]');
   await expect(drive).toHaveAttribute('draggable', 'true');
   const driveKnob = page.getByTestId('param-knob-drive1-drive');
+  const initialSweep = await driveKnob.evaluate(element =>
+    Number.parseFloat(getComputedStyle(element).getPropertyValue('--knob-sweep')),
+  );
+  await expect(driveKnob.locator('.knob-ring')).toHaveCSS('background-image', /conic-gradient/);
   const knobBounds = await driveKnob.boundingBox();
   expect(knobBounds).not.toBeNull();
   const knobValue = driveKnob.locator('xpath=..').locator('.knob-value');
@@ -262,7 +266,11 @@ test('moves placed effects between rail positions without enabling free layout',
   await page.mouse.move(knobBounds!.x + knobBounds!.width / 2 + 18, knobBounds!.y + knobBounds!.height / 2, { steps: 4 });
   await page.mouse.up();
   const horizontalValue = Number((await knobValue.textContent())?.split(' ')[0]);
+  const adjustedSweep = await driveKnob.evaluate(element =>
+    Number.parseFloat(getComputedStyle(element).getPropertyValue('--knob-sweep')),
+  );
   expect(horizontalValue).toBeGreaterThan(initialValue);
+  expect(adjustedSweep).toBeGreaterThan(initialSweep);
   await page.mouse.move(knobBounds!.x + knobBounds!.width / 2, knobBounds!.y + knobBounds!.height / 2);
   await page.mouse.down();
   await page.mouse.move(knobBounds!.x + knobBounds!.width / 2, knobBounds!.y - 18, { steps: 4 });

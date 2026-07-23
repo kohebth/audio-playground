@@ -137,7 +137,11 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
       className="knob"
       data-testid={`param-knob-${toTestId(ariaLabel)}`}
       role="slider"
-      style={{ '--knob-percent': `${percent}%`, '--knob-angle': `${percent * 2.7 - 135}deg` } as CSSProperties}
+      style={{
+        '--knob-percent': `${percent}%`,
+        '--knob-sweep': `${percent * 2.7}deg`,
+        '--knob-angle': `${percent * 2.7 - 135}deg`,
+      } as CSSProperties}
       tabIndex={0}
       title="Drag left or right to adjust"
       {...pointerEvents}
@@ -154,7 +158,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
       data-testid={`param-knob-${toTestId(ariaLabel)}-dial`}
       inputMode="decimal"
       readOnly
-      style={{ '--knob-percent': `${percent}%` } as CSSProperties}
+      style={{ '--knob-percent': `${percent}%`, '--knob-sweep': `${percent * 2.7}deg` } as CSSProperties}
       value={`${Math.round(percent)}%`}
       {...pointerEvents}
     />
@@ -172,7 +176,11 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
           className="knob"
           data-testid={knobTestId}
           role="slider"
-          style={{ '--knob-percent': `${percent}%`, '--knob-angle': `${percent * 2.7 - 135}deg` } as CSSProperties}
+          style={{
+            '--knob-percent': `${percent}%`,
+            '--knob-sweep': `${percent * 2.7}deg`,
+            '--knob-angle': `${percent * 2.7 - 135}deg`,
+          } as CSSProperties}
           tabIndex={0}
           title="Drag left or right to adjust"
           {...pointerEvents}

@@ -330,6 +330,9 @@ includesContent(previewPanel, 'override.originalValue', 'removed overrides must 
 includesContent(paramKnob, 'clampValue(parsed, minValue, maxValue)', 'typed parameter values must clamp to metadata bounds');
 includesContent(paramKnob, 'RANGE_FRACTION_PER_DRAG_PIXEL', 'knob drags must scale by the parameter range');
 includesContent(paramKnob, 'event.clientX - state.lastX', 'knob tuning must increase when dragged right');
+includesContent(paramKnob, "'--knob-sweep'", 'knob value must drive its visible border sweep');
+includesContent(appStyles, 'conic-gradient(', 'knob border must render as a value arc');
+includesContent(appStyles, 'transparent 270deg 360deg', 'knob border must leave its unreachable bottom arc transparent');
 assert(!paramKnob.includes('lastY'), 'knob tuning must not use vertical drag movement');
 includesContent(app, 'window.confirm(message)', 'Pipeline removal must require confirmation');
 includesContent(app, "event.key !== 'Delete'", 'Pipeline removal must support the Delete key');
