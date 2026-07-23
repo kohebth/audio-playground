@@ -5534,7 +5534,11 @@ body {
   grid-template-columns: auto minmax(130px, 1fr) minmax(120px, .8fr) auto auto;
 }
 
-.contract-atom-library { overflow: hidden; }
+.contract-atom-library {
+  position: relative;
+  z-index: 300;
+  overflow: visible;
+}
 .contract-atom-library > .inspector-block {
   min-height: 0;
   margin: 0 10px 14px;
