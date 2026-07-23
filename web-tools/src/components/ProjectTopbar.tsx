@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { AppLogo } from './AppLogo';
 import { PreviewPanel } from './PreviewPanel';
@@ -78,6 +78,7 @@ export function ProjectTopbar({
   const { controller: liveAudio } = useLiveBypass();
   const [readinessOpen, setReadinessOpen] = useState(false);
   const [audioIoOpen, setAudioIoOpen] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const closeAudioIo = useCallback(() => setAudioIoOpen(false), []);
   const draftStateClass = workspaceSaveError ? 'status-pill--bad' : hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
   const readinessOk = readiness.validation === 'ready' && readiness.preview !== 'blocked';
@@ -202,19 +203,25 @@ export function ProjectTopbar({
           <i className={`fa-solid ${workspaceSaveError ? 'fa-rotate' : hasDirtyParamDrafts ? 'fa-floppy-disk' : 'fa-check'}`} aria-hidden="true" />
           <span>{saveLabel}</span>
         </button>
-        <label className="btn btn--ghost topbar__import">
+        <button
+          className="btn btn--ghost topbar__import"
+          data-testid="topbar-import"
+          onClick={() => importInputRef.current?.click()}
+          type="button"
+        >
           Import
-          <input
-            data-testid="topbar-import-input"
-            accept=".apg,application/json"
-            onChange={event => {
-              const file = event.target.files?.[0];
-              if (file) onImportWorkspace(file);
-              event.target.value = '';
-            }}
-            type="file"
-          />
-        </label>
+        </button>
+        <input
+          ref={importInputRef}
+          data-testid="topbar-import-input"
+          accept=".apg,application/json"
+          onChange={event => {
+            const file = event.target.files?.[0];
+            if (file) onImportWorkspace(file);
+            event.target.value = '';
+          }}
+          type="file"
+        />
         <button className="btn btn--ghost" data-testid="topbar-export" onClick={onExportWorkspace} type="button">
           Export .apg
         </button>

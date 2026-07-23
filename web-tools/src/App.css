@@ -4151,7 +4151,7 @@ body {
   .effect-library-card { width: 170px; min-width: 170px; height: 72px; margin: 0; background: var(--bg-elevated); }
   .effect-library-card small { max-width: 90px; }
   .simple-inspector { display: none; }
-  .topbar__workspace-actions > label,
+  .topbar__workspace-actions > [data-testid="topbar-import"],
   .topbar__workspace-actions > [data-testid="topbar-export"],
   .topbar__workspace-actions > [data-testid="topbar-reset"] { display: none; }
   .project-issue-banner { max-height: 142px; padding: 7px 9px; }
@@ -5502,7 +5502,7 @@ body {
 
 /* Contract view */
 .app--simple .topbar__workspace-actions { display: flex; }
-.app--simple .topbar__workspace-actions > label,
+.app--simple .topbar__workspace-actions > [data-testid="topbar-import"],
 .app--simple .topbar__workspace-actions > [data-testid="topbar-export"],
 .app--simple .topbar__workspace-actions > [data-testid="topbar-reset"] { display: none; }
 .app--pro .layout { background: #151813; }
