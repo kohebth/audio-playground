@@ -1145,7 +1145,9 @@ export function PreviewPanel({
   }, []);
 
   return (
-    <section className={compact ? 'transport-island preview-panel--compact' : 'inspector-block'}>
+    <section className={compact
+      ? `transport-island preview-panel--compact${transportPhase === 'running' ? ' transport-island--running' : ''}`
+      : 'inspector-block'}>
       {compact ? (
         <>
       <div className="transport-group">
@@ -1200,13 +1202,15 @@ export function PreviewPanel({
               </label>
             )}
           </div>
-          <div className={`transport-group${transportPhase === 'running' ? ' transport-group--running' : ''}`}>
-            <span
-              aria-label={`Audio engine ${transportPhase}`}
-              className={`transport-state transport-state--${transportPhase}`}
-            >
-              {transportPhase}
-            </span>
+          <div className="transport-group">
+            {transportPhase !== 'idle' ? (
+              <span
+                aria-label={`Audio engine ${transportPhase}`}
+                className={`transport-state transport-state--${transportPhase}`}
+              >
+                {transportPhase}
+              </span>
+            ) : null}
             <button className="transport-btn" disabled={!running} onClick={() => void toggleMute()} title={muted ? 'Unmute output' : 'Mute output'} type="button">
               <i className={`fa-solid ${muted ? 'fa-volume-xmark' : 'fa-volume-high'}`} aria-hidden="true" />
             </button>

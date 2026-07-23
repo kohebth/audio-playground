@@ -4279,8 +4279,8 @@ body {
 .header-project-name .tag { padding: 2px 6px; border-radius: var(--radius-sm); background: var(--accent-blue-dim); color: var(--accent-blue); font: 9px var(--font-mono); }
 
 .transport-island { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; padding: 3px; gap: 2px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-base); box-shadow: inset 0 1px 3px rgba(0,0,0,.3); }
+.transport-island.transport-island--running { border-color: rgba(52, 211, 153, .78); box-shadow: 0 0 14px rgba(52, 211, 153, .3), inset 0 0 10px rgba(52, 211, 153, .1); }
 .transport-group { display: flex; align-items: center; min-width: 0; gap: 2px; padding: 0 8px; }
-.transport-group--running { margin: -1px; border: 1px solid rgba(52, 211, 153, .78); border-radius: calc(var(--radius-md) + 1px); box-shadow: 0 0 10px rgba(52, 211, 153, .28), inset 0 0 8px rgba(52, 211, 153, .09); }
 .transport-group + .transport-group { border-left: 1px solid var(--border-subtle); }
 .transport-btn { display: inline-flex; width: 34px; min-width: 34px; height: 34px; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; transition: all .15s ease; }
 .transport-btn i { font-size: 13px; }
