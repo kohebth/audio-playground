@@ -14,9 +14,8 @@ on:
       - 'test/golden/v2-inspect-atoms.json'
       - 'test/golden/v2-inspect-atoms.manifest.txt'
   push:
-    branches:
-      - main
-      - atom/enhance
+    tags:
+      - 'v2.0-beta[0-9]+'
 
 jobs:
   benchmark:
