@@ -1,82 +1,94 @@
-# Repository Guidelines
+# Repository Guide
 
-## Project Structure & Module Organization
+## Product Boundaries
 
-This repository contains several independent project areas:
+- Root CMake builds the C11 `apgcore` library, `apg-v2` CLI, native tests, and native `wasm-tools` tests. APGCore modules live in matching `src/apgcore/<layer>/` and `inc/apgcore/<layer>/` directories; atom implementations live under `src/atom/<family>/`.
+- Preserve the `metadata -> parser -> validator -> compiler -> registry -> runtime -> measure -> host` boundary in `core-design.md`. The runtime walks a prebuilt schedule; parsing, compilation, allocation, formatting, and name lookup do not belong in an audio callback.
+- `wasm-tools/` owns the C control/processor ABI and the TypeScript Worker/AudioWorklet facade. Keep browser dependencies out of `src/apgcore/` and `inc/apgcore/`; CTest has boundary checks for both core imports and processor real-time work.
+- `web-tools/` is the React 19/Vite application. Its real entry path is `src/main.tsx -> StudioApp.tsx -> App.tsx`; it consumes `@audio-playground/wasm-tools` through `file:../wasm-tools`.
+- There is no root JavaScript workspace. `wasm-tools/` and `web-tools/` have separate lockfiles and installs. Ignored/local `audio-mcp/`, `search-mcp/`, `.opencode/`, `.codex/`, `analysis/`, `samples/`, and build directories are not product packages.
+- V1 `units/*.unit.yaml` content was deleted. Do not restore or stage local v1 drafts; executable metadata is under `test/fixtures/units-v2/` and `test/fixtures/projects-v2/`.
 
-- `src/`, `inc/`, `test/`, `CMakeLists.txt`: C11 DSP engine, metadata registry, YAML parser helpers, APGCore v2 modules, and CTest targets. APGCore code is grouped by module under `src/apgcore/<module>/` and `inc/apgcore/<module>/`; atom implementations are grouped by family under `src/atom/<family>/`.
-- `core-design.md`: current production architecture target. Keep new core work aligned with the `metadata -> parser -> validator -> compiler -> registry -> runtime -> measure -> host` boundary.
-- `units/`: legacy local v1 YAML drafts only. They are not loaded by the default production build; do not stage modified files here unless the user explicitly decides to port or delete them.
-- `test/fixtures/units-v2/` and `test/fixtures/projects-v2/`: v2 test metadata fixtures for parser/validator/compiler/runtime and UI contract checks. These are not APGCore source paths or production module roots.
-- `test/golden/`: frozen JSON samples for frontend contract tests and mock data.
-- `docs/schemas/unit-v2.md`, `docs/schemas/project-v2.md`, `docs/UNIT_V2_ARCHITECTURE.md`, and `docs/WEB_UI_READINESS.md`: current v2 schemas, compiler/runtime design notes, and web handoff context.
-- `web-tools/`, `audio-mcp/`, `search-mcp/`: separate frontend and MCP packages with their own dependencies.
-- `samples/` and `analysis/`: audio inputs and generated inspection outputs. Commit large generated audio only as intentional fixtures.
+## Contracts And Generated Files
 
-Keep C headers under `inc/` paired with implementation files under `src/` where practical.
+- `test/fixtures/` and `test/golden/` are executable backend/frontend contracts, not production module roots. `web-tools/src/lib/backendSamples.ts` imports selected files directly with `?raw`, and the web contract scripts inspect both fixtures and source files.
+- `schema/atoms/atoms.json` is the source of truth for atom ABI order, registry order, capabilities, field metadata, TypeScript metadata, and the binding schema. Never hand-edit files carrying the `Generated from schema/atoms/atoms.json` banner.
+- Regenerate atom outputs only after configuring `build/`, then verify stale output:
 
-## Build, Test, and Development Commands
+```sh
+cmake --build build --target generate_atom_artifacts
+cmake --build build --target check_atom_artifacts
+```
 
-For C/APGCore work, use the repo-root wrapper:
+- A public atom-catalog change also requires an intentional update to `test/golden/v2-inspect-atoms.json` and `test/golden/v2-inspect-atoms.manifest.txt`, followed by native and web verification.
+- Apply `.clang-format` only to handwritten C/H files you changed. Generated C/H files are byte-for-byte checked and must not be reformatted separately.
+- New ordinary C test files are not auto-registered: add their target to `TEST_TARGETS` in `CMakeLists.txt`. `test_atom_basic` is the exception and aggregates multiple source files explicitly.
+
+## Native Verification
+
+- Native configuration requires a C/C++ toolchain and Perl. The full gate configures, builds, and runs CTest; configure/build output is suppressed, `BUILD_DIR` overrides `./build`, and no npm or Emscripten checks run:
 
 ```sh
 ./build-and-test.sh
+BUILD_DIR=./build-alt ./build-and-test.sh
 ```
 
-It configures CMake under `./build`, suppresses CMake/build stdout, and runs CTest. Use it once per completed implementation slice.
-
-Useful direct commands:
+- After a build is configured, run one C test with:
 
 ```sh
-ctest --test-dir ./build
-cmake --build ./build --target check_v2
-cmake -S . -B ./build-asan -DCMAKE_BUILD_TYPE=Debug -DAPG_ENABLE_SANITIZERS=ON
-cmake --build ./build-asan && ctest --test-dir ./build-asan
-./build/test_unit_v2_runtime
+cmake --build build --target test_unit_v2_runtime
+ctest --test-dir build -R '^test_unit_v2_runtime$' --output-on-failure
 ```
 
-For web and MCP packages, run commands inside their package directories:
+- `check_v2` runs every test carrying the `v2` label, but its target dependencies do not build every labeled executable. Build all targets first:
 
 ```sh
-cd web-tools && npm run build && npm run lint
-cd audio-mcp && python -m pytest tests/ -v
-cd search-mcp && npm run build
+cmake --build build --parallel
+cmake --build build --target check_v2
 ```
 
-## Coding Style & Naming Conventions
-
-C uses LLVM `clang-format` with 4-space indentation and a 120-column limit. The user has approved running `clang-format`; format touched C/H files before committing:
+- Native WASM middleware tests, including boundary checks, use the `wasm-tools` label:
 
 ```sh
-clang-format -i src/**/*.c inc/**/*.h test/**/*.c
+cmake --build build --target test_wasm_tools_abi test_wasm_tools_workspace test_wasm_tools_processor
+ctest --test-dir build -L wasm-tools --output-on-failure
 ```
 
-Name C tests `test_<feature>.c`. Name v2 fixture metadata `<name>.unit.v2.yaml` and `<name>.project.v2.yaml`. Treat v1 `*.unit.yaml` files as legacy drafts only. Keep v2 atom binding keys aligned with `src/apgcore/compiler/unit_compiler_v2.c` metadata.
+- For sanitizer coverage, use a separate build tree:
 
-## Testing Guidelines
+```sh
+cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug -DAPG_ENABLE_SANITIZERS=ON
+cmake --build build-asan --parallel
+ctest --test-dir build-asan --output-on-failure
+```
 
-C tests are CTest targets. Add focused tests under `test/` for atom behavior, parser boundaries, validator contracts, compiler plans, registry layout, runtime execution, and measure/host reads. V2 fixture coverage should load/compile all `test/fixtures/units-v2/*.unit.v2.yaml`, and runtime tests should exercise named signal buffers, params, schedule execution, state buffers, and failure messages.
+- A green default CTest run is not hardware proof. ARM syntax/link gates skip without `APG_M7_C_COMPILER` and `APG_M7_LINKER_SCRIPT`; board timing skips without `APG_M7_BOARD_TIMING_COMMAND`. See `docs/STM32H7_M7_BOARD_INTEGRATION.md` before claiming M7 readiness.
 
-## Commit & Pull Request Guidelines
+## Browser Verification
 
-Use short imperative subjects, preferably Conventional Commit style: `feat:`, `fix:`, `test:`, `docs:`, or `refactor:`. The user has approved `git commit`; commit each completed, verified slice with a message describing the task done.
+- CI uses Node 22 and Emscripten 5.0.1. Reproduce the complete browser dependency/build order from the repository root:
 
-Pull requests should name the changed project area, list commands run, call out audio-file requirements, and include screenshots for unit-editor UI changes.
+```sh
+cd wasm-tools
+npm ci
+npm run build
+cd ..
+./wasm-tools/build-emscripten-docker.sh
+cd web-tools
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
 
-## Agent-Specific Instructions
+- `build-emscripten-docker.sh` uses the pinned Docker image, runs the Node runtime smoke test, and stages generated modules under ignored `web-tools/public/wasm/`. Never commit that directory, `wasm-tools/dist/`, or `web-tools/dist/`.
+- `web-tools`'s `npm test` runs Node contract/transform tests only; it does not run Playwright. Run one Node suite directly with `node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/project-v2-graph-tests.mts`.
+- Stage the WASM artifacts and run `npx playwright install chromium` before browser tests. A focused UI test is `npx playwright test tests/studio-shell.spec.ts --grep 'creates and restores a visual-first local project' --workers=1`; the normal PR performance gate is `npm run perf:ui:pr`.
+- `npm run dev` is suitable for microphone work only on localhost. LAN microphone testing requires `npm run dev:https`, `APG_HTTPS_CERT` and `APG_HTTPS_KEY` in `web-tools/.env.lan-https.local`, and a client that trusts the mkcert CA; see `web-tools/README.md`.
 
-Reread `AGENTS.md` at the start of each new work slice before making repository changes. Before deciding to write new code, choose the shortest clear implementation that preserves the exact intended behavior and remains simple to read. Use fast local search such as `rg` for repository inspection, and use `apply_patch` for manual file edits. Preserve unrelated user changes. Keep dependencies separate across the C engine, web editor, and MCP packages. Do not stage unrelated modified `units/`, generated audio, or local tool directories unless explicitly requested.
+## Release And Workflow
 
-## Continuous Work Protocol
-
-Current milestone: Full Audio Playground v2 MVP phases AC-AJ are complete. The next target is production core hardening from `core-design.md`: make `metadata`, `parser`, `validator`, `compiler`, registry, `runtime`, `measure`, and `host` stay isolated so the real-time path only executes a compact prebuilt schedule over registered contiguous memory. After that, continue STM32H7/M7 export validation and real WASM AudioWorklet preview/export from `problem.md`.
-
-When the user says `continue`, `next`, `go`, or gives broad approval, reread `AGENTS.md`, inspect the current trackers, pick the next unchecked actionable task, and carry it through implementation, tracker updates, build-only verification, and commit. Prefer one coherent module at a time, but continue into the next module in the same turn when the path is clear and no approval or product decision is needed. For broad edits or refactors, complete all closely related changes as one coherent slice instead of fragmenting them into small commits, unless a product decision, risky behavior change, or verification failure requires stopping.
-
-For future phased implementation, keep the AC-AJ lifecycle pattern: implement module slices first, record pending tests while implementation is active, add focused tests after implementation modules are complete, then finish docs.
-
-Keep `plan.md`, `task.md`, `docs/WEB_UI_READINESS.md`, and relevant plan documents aligned as work advances. If a task is blocked by missing design context, record it in `problem.md`, update the trackers, and move to the next actionable item.
-
-For web UI work, start from `docs/WEB_UI_READINESS.md`, fixture metadata such as `test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml`, and the frozen files in `test/golden/`. Treat those samples as frontend data contracts only, not source paths. Build the project-level pedalboard workflow before unit-internals editing, and avoid changing backend JSON contracts unless a tracked UI requirement needs it.
-
-After each slice, stage only the files that belong to that slice and commit with `git commit -m "<which tasks are done>"`. Docs-only tracker updates do not require `./build-and-test.sh`. Web implementation slices require `npm run build` inside `web-tools`; backend implementation slices require `./build-and-test.sh` when compile confidence is needed. Before ending a turn, report the phase, committed slice, verification run, and next planned task.
+- GitHub Pages publishes only numbered `v2.0-beta<number>` tags and uploads only `web-tools/dist/`. Pull requests validate without deploying; normal `main` pushes do not deploy. Use `docs/GITHUB_PAGES_DEPLOY.md` for the base-path build and smoke sequence.
+- `docs/plans/` contains dated implementation records, not an active global tracker. Root `plan.md`, `task.md`, and `problem.md` do not exist; do not select work from historical unchecked boxes unless the user names that plan.
+- Preserve unrelated worktree changes. After a completed verified slice, stage only its files and commit with the repository's usual `feat:`, `fix:`, `test:`, `docs:`, or `refactor:` prefix; never include local build/tool output.
