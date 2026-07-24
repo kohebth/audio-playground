@@ -91,6 +91,10 @@ export function ProjectSidebar({
 
   const submitRoute = (event: FormEvent) => {
     event.preventDefault();
+    if (routeSource === routeTarget) {
+      setRouteError('Source and destination cannot be the same endpoint.');
+      return;
+    }
     try {
       onAddRoute({ from: routeSource, to: routeTarget });
       setRouteError(null);
@@ -270,7 +274,13 @@ export function ProjectSidebar({
           >
             {routeTargets.map(endpoint => <option key={endpoint} value={endpoint}>{endpoint}</option>)}
           </select>
-          <button data-testid="project-route-add" disabled={!routeSource || !routeTarget} type="submit">Connect</button>
+          <button
+            data-testid="project-route-add"
+            disabled={!routeSource || !routeTarget || routeSource === routeTarget}
+            type="submit"
+          >
+            Connect
+          </button>
         </form>
         {routeError ? <p className="workspace-ledger__error">{routeError}</p> : null}
         <div className="route-list__columns" aria-hidden="true">

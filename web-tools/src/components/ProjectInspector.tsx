@@ -196,6 +196,7 @@ export function ProjectInspector({
       return null;
     }
   }, [selectedUnitFile]);
+  const sameRouteEndpoint = routeFrom !== '' && routeTo !== '' && routeFrom === routeTo;
 
   useEffect(() => {
     setRenameDraft(selectedNode?.kind === 'unit' ? selectedNode.instance.id : '');
@@ -444,8 +445,8 @@ export function ProjectInspector({
               <div className="project-edit-actions">
                 <button
                   data-testid="inspector-route-replace"
-                  disabled={selectedRouteIndex === null || !routeFrom || !routeTo}
-                  onClick={() => selectedRouteIndex !== null && onUpdateRoute(selectedRouteIndex, { from: routeFrom, to: routeTo })}
+                  disabled={selectedRouteIndex === null || !routeFrom || !routeTo || sameRouteEndpoint}
+                  onClick={() => selectedRouteIndex !== null && !sameRouteEndpoint && onUpdateRoute(selectedRouteIndex, { from: routeFrom, to: routeTo })}
                   type="button"
                 >Replace</button>
                 <button

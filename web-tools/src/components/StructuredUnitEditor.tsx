@@ -189,6 +189,24 @@ export function StructuredUnitEditor({ file, unit, ports, onChange, onReorderPar
       <section className="structured-card">
         <header><span>Unit ports</span><strong>One mono audio input and output</strong></header>
         <p className="structured-card__hint">Effect audio boundaries stay fixed at one mono input and one mono output. Optional control ports do not change audio routing.</p>
+        <div className="structured-port-endpoints">
+          {(['inputs', 'outputs'] as const).map(direction => (
+            <div className="structured-port-endpoints__row" key={direction}>
+              <div className="structured-port-endpoints__title">{direction === 'inputs' ? 'Input' : 'Output'}</div>
+              <div className="structured-port-endpoints__list">
+                {ports[direction].map(port => (
+                  <span
+                    className={`structured-port-endpoint-dot structured-port-endpoint-dot--${direction.slice(0, -1)}`}
+                    key={`${direction}-${port.name}`}
+                  >
+                    <span aria-hidden="true" />
+                    {port.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
         {(['inputs', 'outputs'] as const).map(direction => (
           <div className="structured-ports" key={direction}>
             <div className="structured-ports__title">

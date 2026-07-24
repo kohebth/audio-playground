@@ -1,13 +1,16 @@
 cmake_minimum_required(VERSION 3.15)
-project(audio_playground)
+project(audio_playground LANGUAGES C CXX)
 enable_testing()
 find_package(Perl REQUIRED)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -D_REENTRANT")
 
 option(APG_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer for debug verification" OFF)
+option(APG_BUILD_TERMINAL_TOOLS "Build the native mouse-interactive terminal editor" OFF)
 if(APG_ENABLE_SANITIZERS)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
         add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
@@ -59,6 +62,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 add_subdirectory(wasm-tools)
+
+if(APG_BUILD_TERMINAL_TOOLS AND NOT EMSCRIPTEN)
+    add_subdirectory(terminal-tools)
+endif()
 
 set(TEST_TARGETS
         test_atom_basic

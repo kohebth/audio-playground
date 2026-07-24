@@ -1,6 +1,7 @@
 bin
 cmake-build-debugs
 build
+build-terminal/
 build-wasm-container/
 .idea
 .vscode
