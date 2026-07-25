@@ -7,7 +7,7 @@
 The first build downloads pinned FTXUI 7.0.1 and yaml-cpp 0.9.0 through CMake FetchContent:
 
 ```sh
-cmake -S . -B build-terminal -DAPG_BUILD_TERMINAL_TOOLS=ON
+cmake -S . -B build-terminal
 cmake --build build-terminal --parallel
 ctest --test-dir build-terminal -L terminal-tools --output-on-failure
 ```

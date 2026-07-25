@@ -26,7 +26,11 @@ target_compile_features(apg_terminal_model PUBLIC cxx_std_20)
 
 add_library(apg_terminal_ui STATIC
         src/pipeline_component.cpp
+        src/pipeline_unit_card.cpp
         src/ui.cpp
+        src/parameter_row.cpp
+        src/parameter_panel.cpp
+        src/unit_tray.cpp
 )
 target_include_directories(apg_terminal_ui PUBLIC include)
 target_link_libraries(apg_terminal_ui PUBLIC ftxui::component ftxui::dom ftxui::screen)
@@ -50,3 +54,14 @@ target_link_libraries(test_terminal_mouse PRIVATE apg_terminal_ui)
 target_compile_features(test_terminal_mouse PRIVATE cxx_std_20)
 add_test(NAME test_terminal_mouse COMMAND test_terminal_mouse)
 set_tests_properties(test_terminal_mouse PROPERTIES LABELS "terminal-tools")
+
+add_executable(test_terminal_card_shape test/test_pipeline_card_shape.cpp)
+target_link_libraries(test_terminal_card_shape PRIVATE apg_terminal_model apg_terminal_ui)
+target_compile_features(test_terminal_card_shape PRIVATE cxx_std_20)
+add_test(NAME test_terminal_card_shape COMMAND test_terminal_card_shape)
+set_tests_properties(
+    test_terminal_card_shape
+    PROPERTIES
+        LABELS "terminal-tools"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)

@@ -8,6 +8,7 @@
 - `web-tools/` is the React 19/Vite application. Its real entry path is `src/main.tsx -> StudioApp.tsx -> App.tsx`; it consumes `@audio-playground/wasm-tools` through `file:../wasm-tools`.
 - There is no root JavaScript workspace. `wasm-tools/` and `web-tools/` have separate lockfiles and installs. Ignored/local `audio-mcp/`, `search-mcp/`, `.opencode/`, `.codex/`, `analysis/`, `samples/`, and build directories are not product packages.
 - V1 `units/*.unit.yaml` content was deleted. Do not restore or stage local v1 drafts; executable metadata is under `test/fixtures/units-v2/` and `test/fixtures/projects-v2/`.
+- `terminal-tools/` is an optional native C++20 terminal editor. It is intentionally outside APGCore; enable it with `-DAPG_BUILD_TERMINAL_TOOLS=ON`. Its current audio session is a null-backend seam, not a live device implementation.
 
 ## Contracts And Generated Files
 
@@ -63,6 +64,13 @@ ctest --test-dir build-asan --output-on-failure
 ```
 
 - A green default CTest run is not hardware proof. ARM syntax/link gates skip without `APG_M7_C_COMPILER` and `APG_M7_LINKER_SCRIPT`; board timing skips without `APG_M7_BOARD_TIMING_COMMAND`. See `docs/STM32H7_M7_BOARD_INTEGRATION.md` before claiming M7 readiness.
+- Terminal UI verification uses a separate build tree because it fetches C++ dependencies through CMake FetchContent:
+
+```sh
+cmake -S . -B build-terminal -DAPG_BUILD_TERMINAL_TOOLS=ON
+cmake --build build-terminal --parallel
+ctest --test-dir build-terminal -L terminal-tools --output-on-failure
+```
 
 ## Browser Verification
 

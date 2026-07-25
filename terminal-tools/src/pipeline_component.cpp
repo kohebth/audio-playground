@@ -1,4 +1,5 @@
 #include "apg_terminal/pipeline_component.hpp"
+#include "apg_terminal/pipeline_unit_card.hpp"
 
 #include <ftxui/component/captured_mouse.hpp>
 #include <ftxui/component/event.hpp>
@@ -38,21 +39,22 @@ class DraggablePipeline final : public ftxui::ComponentBase {
         normalize_selection();
         Elements elements;
         for (std::size_t index = 0; index < items_.size(); ++index) {
-            auto card = text(" " + items_[index].id + " ") | border;
-            if (dragging_ && hover_index_ == index && items_[index].id != dragged_id_)
-                card = card | inverted |
-                       color(drop_position_ == DropPosition::Before ? Color::Yellow : Color::Magenta);
-            if (selected_ && *selected_ == static_cast<int>(index))
-                card = card | bold | color(Color::Cyan);
-            if (dragging_ && items_[index].id == dragged_id_)
-                card = card | dim;
-            card = card | reflect(boxes_[index]);
+            const bool is_hovered = dragging_ && hover_index_ == index && items_[index].id != dragged_id_;
+            const auto card_renderer = PipelineUnitCard{};
+            const auto card = card_renderer.Render(
+                items_[index],
+                selected_ && *selected_ == static_cast<int>(index),
+                dragging_ && items_[index].id == dragged_id_,
+                is_hovered,
+                drop_position_,
+                boxes_[index]
+            );
             elements.push_back(std::move(card));
 
             if (index + 1 < items_.size())
-                elements.push_back(text(" → "));
+                elements.push_back(text("→"));
         }
-        return hbox(std::move(elements));
+        return hflow(std::move(elements));
     }
 
     bool OnEvent(ftxui::Event event) override {
