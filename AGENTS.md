@@ -8,7 +8,7 @@
 - `web-tools/` is the React 19/Vite application. Its real entry path is `src/main.tsx -> StudioApp.tsx -> App.tsx`; it consumes `@audio-playground/wasm-tools` through `file:../wasm-tools`.
 - There is no root JavaScript workspace. `wasm-tools/` and `web-tools/` have separate lockfiles and installs. Ignored/local `audio-mcp/`, `search-mcp/`, `.opencode/`, `.codex/`, `analysis/`, `samples/`, and build directories are not product packages.
 - V1 `units/*.unit.yaml` content was deleted. Do not restore or stage local v1 drafts; executable metadata is under `test/fixtures/units-v2/` and `test/fixtures/projects-v2/`.
-- `terminal-tools/` is an optional native C++20 terminal editor. It is intentionally outside APGCore; enable it with `-DAPG_BUILD_TERMINAL_TOOLS=ON`. Its current audio session is a null-backend seam, not a live device implementation.
+- `terminal-tools/` is an optional native C++20 terminal editor. It is intentionally outside APGCore; enable it with `-DAPG_BUILD_TERMINAL_TOOLS=ON`. Native monitoring uses miniaudio; deterministic tests use its fake audio backend.
 
 ## Contracts And Generated Files
 

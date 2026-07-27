@@ -1,3 +1,4 @@
+#include "apg_terminal/parameter_row.hpp"
 #include "apg_terminal/pipeline_component.hpp"
 #include "apg_terminal/ui.hpp"
 
@@ -8,6 +9,7 @@
 #include <ftxui/screen/screen.hpp>
 
 #include <cassert>
+#include <limits>
 
 namespace {
 
@@ -122,8 +124,8 @@ int main() {
     assert(target == "delay1");
     assert(dropped_position == apg::terminal::DropPosition::After);
 
-    selected        = 0;
-    selected_event  = -1;
+    selected       = 0;
+    selected_event = -1;
     pipeline->OnEvent(Event::Tab);
     assert(selected_event == 1);
     pipeline->OnEvent(Event::TabReverse);
@@ -151,22 +153,20 @@ int main() {
     assert(parameter_changes == 1);
     assert(parameter_delta != 0.0);
 
-    bool        unit_drop_called = false;
-    int         unit_index      = 0;
+    bool                     unit_drop_called = false;
+    int                      unit_index       = 0;
     apg::terminal::DragState unit_drag_state;
-    unit_drag_state.active = true;
+    unit_drag_state.active  = true;
     unit_drag_state.unit_id = "drive_unit";
     auto unit_drop_pipeline = apg::terminal::draggable_pipeline(
         [] {
             return std::vector<apg::terminal::PipelineItem>{
-                {"gate1", "gate"},
+                { "gate1",  "gate"},
                 {"drive1", "drive"},
                 {"delay1", "delay"},
             };
         },
-        &unit_index,
-        [](std::size_t) {},
-        [](const std::string &, const std::string &, apg::terminal::DropPosition) {},
+        &unit_index, [](std::size_t) {}, [](const std::string &, const std::string &, apg::terminal::DropPosition) {},
         [&](const std::string &, const std::string &, apg::terminal::DropPosition) { unit_drop_called = true; },
         &unit_drag_state
     );
@@ -175,5 +175,9 @@ int main() {
     unit_drop_pipeline->OnEvent(mouse_released(99, 4));
     assert(!unit_drag_state.active);
     assert(!unit_drop_called);
+    assert(apg::terminal::ParameterRow::KnobIndex(-1.0) == 0);
+    assert(apg::terminal::ParameterRow::KnobIndex(2.0) == 7);
+    assert(apg::terminal::ParameterRow::KnobIndex(std::numeric_limits<double>::quiet_NaN()) == 0);
+    assert(apg::terminal::ParameterRow::KnobSymbol(1.0) == "◵");
     return 0;
 }

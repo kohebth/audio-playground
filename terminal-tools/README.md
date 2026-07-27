@@ -1,27 +1,68 @@
 # APG Terminal Tools
 
-`apg-tui` is the optional native C++ terminal Pipeline editor. It is intentionally separate from APGCore and `web-tools`.
+`apg-tui` is the optional C++20 terminal counterpart to `web-tools`. It opens and
+saves the same `.apg` package envelope while keeping terminal, FTXUI, and native
+audio dependencies outside APGCore.
 
-## Build
+## Build and run
 
-The first build downloads pinned FTXUI 7.0.1 and yaml-cpp 0.9.0 through CMake FetchContent:
+Terminal tools are off in the default root build. The first terminal build fetches
+the pinned FTXUI, yaml-cpp, nlohmann/json, and miniaudio sources:
 
 ```sh
-cmake -S . -B build-terminal
+cmake -S . -B build-terminal -DAPG_BUILD_TERMINAL_TOOLS=ON
 cmake --build build-terminal --parallel
 ctest --test-dir build-terminal -L terminal-tools --output-on-failure
 ```
 
-Run it with a v2 project path:
+Open the cross-editor fixture:
 
 ```sh
-./build-terminal/terminal-tools/apg-tui test/fixtures/projects-v2/guitar-pedalboard.project.v2.yaml
+./build-terminal/terminal-tools/apg-tui test/fixtures/packages-v1/simple-gain.apg
 ```
 
-Click an effect to select it. The right panel shows compact parameter knobs as `[########]` bars; click the left side of a row to decrease or the right side to increase within the unit's declared range. Drag an ordinary effect onto the left or right half of another effect to place it before or after that target. Projects containing explicit parallel-routing sections reject drag moves until the terminal layout can represent branch rails safely.
+Use `--no-audio` when no native device should be opened. Raw project or unit YAML
+is intentionally rejected; package files preserve their embedded unit sources,
+mono audio assets, and extension data.
 
-Keyboard navigation falls back to Tab (next), Tab-reverse (previous), and the arrow keys for selection. `Enter` toggles transport, and `q` quits.
+## Editing
 
-`--version` and `--self-test` are non-interactive CI entrypoints. The current session is a null-audio seam; native device I/O and staged APGCore runtime swaps are the next implementation slice.
+The UI uses a three-pane studio at 120×32 and larger, compact tabs down to 80×24,
+and a resize guard below that. The route graph is derived from `chain.routes` and
+renders nested panner/mixer sections recursively.
 
-Saving rewrites YAML canonically through a temporary file and atomic rename. Invalid structural documents are not saved.
+- `Tab` / `Shift+Tab`: switch panes
+- Arrow keys or `h`/`j`/`k`/`l`: navigate or adjust the active control
+- `r`: cycle the selected insertion route
+- `Enter`: activate a node, insert a unit, or recall a scene
+- `p`: insert a two-path parallel section from the Units pane
+- `x`: move the selected ordinary effect to the selected route
+- `c`: collapse a selected parallel section after its paths are empty
+- `b` / `d`: bypass or remove the selected ordinary effect
+- `n` / `u` / `e` / `d`: create, update, rename, or delete a scene
+- `Space` / `m`: start or stop monitoring, or toggle mute
+- `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y`: save, undo, and redo
+- `?` or `F1`: in-app help; `q` uses a guarded dirty-project exit
+
+Mouse selection is supported. Drag an ordinary effect or a unit card onto a route
+to move or insert it; dragging a parameter gauge commits one history entry on
+release.
+
+## Data and audio safety
+
+Every structural edit is applied to a candidate revision and accepted only after
+APGCore resolves, validates, compiles, and prepares it. Save writes a unique
+sibling temporary file, flushes it, and atomically replaces the package. The
+readiness snapshot is refreshed without discarding packaged audio or unknown
+project YAML fields.
+
+Native monitoring uses miniaudio full-duplex mono float I/O and always starts
+muted. Runtime graphs and parameter/bypass indices are prepared on the control
+thread. The audio callback performs no parsing, allocation, locking, formatting,
+or name lookup. Structural changes crossfade over 64 frames and retired graphs
+are reclaimed later by the UI thread. Device stops, reroutes, and interruptions
+are reported in the Audio pane.
+
+The deterministic fake backend covers callback behavior in tests. A green test
+run is not proof that a particular host audio device or driver works; verify live
+monitoring on the target machine before relying on it.

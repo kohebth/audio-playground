@@ -81,6 +81,39 @@ static int expect_valid_resolved_fixture(void) {
     return 0;
 }
 
+static int expect_explicit_workspace_root(void) {
+    uc_arena arena;
+    if (uc_arena_init(&arena, 1024 * 1024) != 0)
+        return fail("arena init failed");
+
+    apg_project_v2_resolved_t resolved;
+    uc_error                  err    = {0};
+    uc_status                 status = apg_project_v2_load_resolved_file_with_root(
+        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", "test/fixtures", &arena, &resolved, &err
+    );
+    if (status != UC_OK || resolved.units_len != 1u) {
+        fprintf(stderr, "explicit workspace root error: %s\n", err.msg);
+        uc_arena_free(&arena);
+        return fail("explicit fixture workspace root did not resolve");
+    }
+
+    uc_arena_reset(&arena);
+    memset(&resolved, 0, sizeof(resolved));
+    memset(&err, 0, sizeof(err));
+    status = apg_project_v2_load_resolved_file_with_root(
+        "test/fixtures/projects-v2/simple-gain-board.project.v2.yaml", "test/fixtures/projects-v2", &arena, &resolved,
+        &err
+    );
+    uc_arena_free(&arena);
+    if (status == UC_OK)
+        return fail("explicit workspace root allowed a unit to escape");
+    if (!strstr(err.msg, "escapes workspace root")) {
+        fprintf(stderr, "explicit workspace confinement error was unexpected: %s\n", err.msg);
+        return 1;
+    }
+    return 0;
+}
+
 static int expect_valid_empty_fixture(void) {
     uc_arena arena;
     if (uc_arena_init(&arena, 1024 * 1024) != 0)
@@ -248,6 +281,8 @@ int main(void) {
     if (expect_valid_fixture())
         return 1;
     if (expect_valid_resolved_fixture())
+        return 1;
+    if (expect_explicit_workspace_root())
         return 1;
     if (expect_valid_empty_fixture())
         return 1;

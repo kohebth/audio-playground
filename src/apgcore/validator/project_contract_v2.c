@@ -214,6 +214,17 @@ uc_status
 apg_project_v2_load_resolved_file(const char *path, uc_arena *arena, apg_project_v2_resolved_t *out, uc_error *err) {
     if (!path || !arena || !out || !err)
         return UC_E_TYPE;
+    char workspace_root[PATH_MAX];
+    if (!getcwd(workspace_root, sizeof(workspace_root)))
+        return set_error(err, UC_E_IO, "cannot resolve workspace root");
+    return apg_project_v2_load_resolved_file_with_root(path, workspace_root, arena, out, err);
+}
+
+uc_status apg_project_v2_load_resolved_file_with_root(
+    const char *path, const char *workspace_root, uc_arena *arena, apg_project_v2_resolved_t *out, uc_error *err
+) {
+    if (!path || !workspace_root || !arena || !out || !err)
+        return UC_E_TYPE;
     memset(out, 0, sizeof(*out));
     err->status = UC_OK;
 
@@ -221,8 +232,8 @@ apg_project_v2_load_resolved_file(const char *path, uc_arena *arena, apg_project
     if (status != UC_OK)
         return status;
 
-    char workspace_root[PATH_MAX];
-    if (!getcwd(workspace_root, sizeof(workspace_root)))
+    char workspace_root_real[PATH_MAX];
+    if (!realpath(workspace_root, workspace_root_real))
         return set_error(err, UC_E_IO, "cannot resolve workspace root");
 
     char project_real[PATH_MAX];
@@ -231,7 +242,7 @@ apg_project_v2_load_resolved_file(const char *path, uc_arena *arena, apg_project
         uc_error_set(err, UC_E_IO, loc, "cannot resolve project path '%s'", path);
         return UC_E_IO;
     }
-    if (!path_is_under_root(workspace_root, project_real))
+    if (!path_is_under_root(workspace_root_real, project_real))
         return set_error(err, UC_E_RANGE, "project path escapes workspace root");
 
     char project_dir[PATH_MAX];
@@ -253,12 +264,12 @@ apg_project_v2_load_resolved_file(const char *path, uc_arena *arena, apg_project
     for (size_t i = 0; i < out->project.units_len; i++) {
         const apg_project_v2_unit_ref_t *ref           = &out->project.units[i];
         const char                      *resolved_path = NULL;
-        status = validate_project_unit_path(project_dir, workspace_root, ref->file, err);
+        status = validate_project_unit_path(project_dir, workspace_root_real, ref->file, err);
         if (status != UC_OK)
             return status;
         if (!unit_ref_is_active(&out->project, ref->id))
             continue;
-        status = resolve_project_unit_path(project_dir, workspace_root, ref->file, arena, &resolved_path, err);
+        status = resolve_project_unit_path(project_dir, workspace_root_real, ref->file, arena, &resolved_path, err);
         if (status != UC_OK)
             return status;
         if (resolved_unit_path_seen(items, loaded_units_len, resolved_path)) {

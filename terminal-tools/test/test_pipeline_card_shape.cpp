@@ -1,20 +1,17 @@
 #include "apg_terminal/pipeline_component.hpp"
-#include "apg_terminal/project_document.hpp"
 
 #include <ftxui/screen/screen.hpp>
 
 #include <algorithm>
 #include <cassert>
-#include <filesystem>
-#include <iostream>
 #include <vector>
 
 namespace {
 
 void assert_full_card_shapes(const ftxui::Screen &screen, std::size_t expected_cards) {
-    const auto width  = screen.dimx();
-    const auto height = screen.dimy();
-    int         detected_cards = 0;
+    const auto width          = screen.dimx();
+    const auto height         = screen.dimy();
+    int        detected_cards = 0;
 
     for (int y = 0; y + 2 < height; ++y) {
         for (int x = 0; x < width; ++x) {
@@ -40,26 +37,20 @@ void assert_full_card_shapes(const ftxui::Screen &screen, std::size_t expected_c
     assert(static_cast<std::size_t>(detected_cards) == expected_cards);
 }
 
-void validate_fixture(const std::filesystem::path &fixture_path) {
-    const auto document = apg::terminal::ProjectDocument::load(fixture_path.string());
+void validate_count(std::size_t item_count) {
     std::vector<apg::terminal::PipelineItem> items;
-    items.reserve(document.nodes().size());
-    for (const auto &node : document.nodes())
-        items.push_back({node.id, node.unit});
-
-    int selected = 0;
+    for (std::size_t index = 0; index < item_count; ++index)
+        items.push_back({"node_" + std::to_string(index), "unit"});
+    int  selected = 0;
     auto pipeline = apg::terminal::draggable_pipeline(
-        [items] { return items; },
-        &selected,
-        [](std::size_t) {},
+        [items] { return items; }, &selected, [](std::size_t) {},
         [](const std::string &, const std::string &, apg::terminal::DropPosition) {},
-        [](const std::string &, const std::string &, apg::terminal::DropPosition) {},
-        nullptr
+        [](const std::string &, const std::string &, apg::terminal::DropPosition) {}, nullptr
     );
 
-    const std::vector widths = {40, 80};
+    const std::vector widths = {24, 40, 80};
     for (const auto width : widths) {
-        const int height = std::max(12, static_cast<int>(items.size() * 3 + 12));
+        const int     height = std::max(12, static_cast<int>(items.size() * 3 + 3));
         ftxui::Screen screen(width, height);
         ftxui::Render(screen, pipeline->Render());
         assert_full_card_shapes(screen, items.size());
@@ -69,18 +60,8 @@ void validate_fixture(const std::filesystem::path &fixture_path) {
 } // namespace
 
 int main() {
-    std::vector<std::filesystem::path> fixture_paths;
-    for (const auto &entry : std::filesystem::recursive_directory_iterator("test/fixtures/projects-v2")) {
-        if (!entry.is_regular_file())
-            continue;
-        if (entry.path().extension() == ".yaml" && entry.path().string().find(".project.v2.yaml") != std::string::npos)
-            fixture_paths.push_back(entry.path());
-    }
-    std::sort(fixture_paths.begin(), fixture_paths.end());
-    assert(!fixture_paths.empty());
-
-    for (const auto &fixture_path : fixture_paths)
-        validate_fixture(fixture_path);
-
+    validate_count(1);
+    validate_count(3);
+    validate_count(8);
     return 0;
 }

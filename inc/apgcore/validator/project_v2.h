@@ -92,5 +92,12 @@ uc_status
 apg_project_v2_load_string(const char *src, size_t src_len, uc_arena *arena, apg_project_v2_t *out, uc_error *err);
 uc_status
 apg_project_v2_load_resolved_file(const char *path, uc_arena *arena, apg_project_v2_resolved_t *out, uc_error *err);
+/*
+ * Resolve a project and its unit references under an explicit workspace root.
+ * Both the project and every resolved unit must remain under workspace_root.
+ */
+uc_status apg_project_v2_load_resolved_file_with_root(
+    const char *path, const char *workspace_root, uc_arena *arena, apg_project_v2_resolved_t *out, uc_error *err
+);
 
 #endif // AUDIO_PLAYGROUND_APGCORE_PROJECT_V2_H

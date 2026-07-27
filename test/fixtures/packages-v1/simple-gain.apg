@@ -1,0 +1,48 @@
+{
+  "schema": "apg.project.package.v1",
+  "version": 1,
+  "manifest": {
+    "id": "simple-gain-terminal-fixture",
+    "name": "Simple Gain",
+    "description": "Cross-editor APG package fixture.",
+    "createdAt": "2026-07-25T00:00:00.000Z",
+    "updatedAt": "2026-07-25T00:00:00.000Z",
+    "lastMode": "pro"
+  },
+  "workspace": {
+    "schema": "apg.ui.workspace.v2",
+    "version": 2,
+    "entryProject": "projects-v2/simple-gain-board.project.v2.yaml",
+    "files": [
+      {
+        "path": "projects-v2/simple-gain-board.project.v2.yaml",
+        "role": "project",
+        "content": "kind: apg.project\nschema: apg.project.v2\nname: simple-gain-board\nversion: 2.0.0\n\nunits:\n  - id: gain_unit\n    file: ../units-v2/simple_gain.unit.v2.yaml\n\nchain:\n  nodes:\n    - id: gain1\n      unit: gain_unit\n      params:\n        gain: 2.0\n      ui:\n        position:\n          x: 120\n          y: 80\n\n  routes:\n    - from: system.input\n      to: gain1.input\n    - from: gain1.output\n      to: system.output\n\nscenes:\n  - name: Unity\n    params:\n      gain1.gain: 1.0\n    bypass:\n      gain1: false\n  - name: Boost\n    params:\n      gain1.gain: 3.0\n    bypass:\n      gain1: true\n\ntargets:\n  default: desktop_full\n  export:\n    - wasm_realtime\n    - offline_render\n"
+      },
+      {
+        "path": "units-v2/simple_gain.unit.v2.yaml",
+        "role": "unit",
+        "content": "kind: apg.unit\nschema: apg.unit.v2\nname: simple_gain\nversion: 2.0.0\n\nmeta:\n  title: Simple Gain\n  category: utility\n  description: Multiplies mono input by a smoothed gain control.\n\nparams:\n  gain:\n    type: float\n    default: 1.0\n    min: 0.0\n    max: 4.0\n    smoothing_ms: 10\n    ui:\n      label: Gain\n      control: knob\n      unit: x\n\nports:\n  inputs:\n    - name: input\n      type: audio\n      channels: 1\n  outputs:\n    - name: output\n      type: audio\n      channels: 1\n\ngraph:\n  signals:\n    - input\n    - output\n    - gain_value\n\n  nodes:\n    - id: gain_value\n      atom: generation_dc\n      out:\n        signal: gain_value\n      config:\n        value: ${params.gain}\n\n    - id: apply_gain\n      atom: amplitude_multiply\n      in:\n        signal_a: input\n        signal_b: gain_value\n      out:\n        signal: output\n\ncompatibility:\n  desktop_full: true\n  wasm_realtime: true\n  m7_static: true\n  offline_render: true\n"
+      }
+    ]
+  },
+  "audio": [
+    {
+      "id": "preserved-audio",
+      "name": "silence.wav",
+      "mimeType": "audio/wav",
+      "channels": 1,
+      "sampleRate": 48000,
+      "durationSeconds": 0,
+      "encoding": "base64",
+      "data": "UklGRg=="
+    }
+  ],
+  "readiness": {
+    "checkedAt": null,
+    "validation": "unknown",
+    "preview": "unknown",
+    "targets": {},
+    "diagnostics": []
+  }
+}

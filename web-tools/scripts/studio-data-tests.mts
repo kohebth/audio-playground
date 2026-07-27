@@ -270,4 +270,15 @@ assert.equal(migratedPackage.migratedSections, 1);
 assert.equal(migratedPackage.project.manifest.id, legacyPackage.manifest.id);
 assert.equal(migratedPackage.project.workspace.files.length, legacyWorkspace.files.length + 2);
 
+const terminalFixture = parseApgProjectPackage(
+  readFileSync(resolve(repo, 'test/fixtures/packages-v1/simple-gain.apg'), 'utf8'),
+);
+assert.equal(terminalFixture.workspace.entryProject, 'projects-v2/simple-gain-board.project.v2.yaml');
+assert.equal(terminalFixture.audio[0].id, 'preserved-audio');
+assert.equal(evaluateWorkspaceReadiness(terminalFixture.workspace).validation, 'ready');
+assert.equal(
+  parseApgProjectPackage(serializeApgProjectPackage(terminalFixture)).manifest.id,
+  'simple-gain-terminal-fixture',
+);
+
 console.log('studio data tests passed');
