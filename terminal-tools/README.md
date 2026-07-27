@@ -44,9 +44,12 @@ renders nested panner/mixer sections recursively.
 - `Ctrl+S`, `Ctrl+Z`, `Ctrl+Y`: save, undo, and redo
 - `?` or `F1`: in-app help; `q` uses a guarded dirty-project exit
 
-Mouse selection is supported. Drag an ordinary effect or a unit card onto a route
-to move or insert it; dragging a parameter gauge commits one history entry on
-release.
+Mouse selection is supported. Drag an ordinary effect onto a visible signal
+line to move it. In the wide layout, drag a unit card onto the line to insert
+it. In the compact layout, click a unit to carry it to Graph, then click a
+signal line; `Escape` cancels placement. Signal lines meet the exact vertical
+center of five-row unit cards, and only the visible line accepts a drop.
+Dragging a parameter gauge commits one history entry on release.
 
 ## Data and audio safety
 

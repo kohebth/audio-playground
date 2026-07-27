@@ -8,9 +8,12 @@
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <utility>
@@ -55,6 +58,28 @@ locate_ascii(const ftxui::Screen &screen, const std::string &needle, bool last =
     return result;
 }
 
+std::optional<std::pair<int, int>> locate_character(const ftxui::Screen &screen, const std::string &character) {
+    for (int y = 0; y < screen.dimy(); ++y) {
+        for (int x = 0; x < screen.dimx(); ++x) {
+            if (screen.CellAt(x, y).character == character)
+                return std::pair{x, y};
+        }
+    }
+    return std::nullopt;
+}
+
+std::vector<std::pair<int, int>> signal_cells(const ftxui::Screen &screen) {
+    std::vector<std::pair<int, int>> result;
+    for (int y = 0; y < screen.dimy(); ++y) {
+        for (int x = 0; x < screen.dimx(); ++x) {
+            const auto &character = screen.CellAt(x, y).character;
+            if (character == "◇" || character == "◆")
+                result.emplace_back(x, y);
+        }
+    }
+    return result;
+}
+
 ftxui::Event left_mouse(int x, int y, ftxui::Mouse::Motion motion) {
     ftxui::Mouse mouse;
     mouse.button = ftxui::Mouse::Left;
@@ -75,25 +100,195 @@ double gain(const apg::terminal::ProjectEditor &editor) {
     return found->value;
 }
 
+std::string read_file(const std::string &path) {
+    std::ifstream input(path, std::ios::binary);
+    assert(input);
+    return {(std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>()};
+}
+
+apg::terminal::ApgPackageDocument parallel_document() {
+    auto package                = nlohmann::ordered_json::parse(read_file("test/fixtures/packages-v1/simple-gain.apg"));
+    package["manifest"]["id"]   = "parallel-layout";
+    package["manifest"]["name"] = "Parallel Layout";
+    package["workspace"]["entryProject"] = "projects-v2/parallel-gain.project.v2.yaml";
+    package["workspace"]["files"]        = nlohmann::ordered_json::array({
+        {
+         {"path", "projects-v2/parallel-gain.project.v2.yaml"},
+         {"role", "project"},
+         {"content", read_file("test/fixtures/projects-v2/parallel-gain.project.v2.yaml")},
+         },
+        {
+         {"path", "units-v2/simple_gain.unit.v2.yaml"},
+         {"role", "unit"},
+         {"content", read_file("test/fixtures/units-v2/simple_gain.unit.v2.yaml")},
+         },
+        {
+         {"path", "units-v2/path_panner_2.unit.v2.yaml"},
+         {"role", "unit"},
+         {"content", read_file("test/fixtures/units-v2/path_panner_2.unit.v2.yaml")},
+         },
+        {
+         {"path", "units-v2/path_mixer_2.unit.v2.yaml"},
+         {"role", "unit"},
+         {"content", read_file("test/fixtures/units-v2/path_mixer_2.unit.v2.yaml")},
+         },
+    });
+    return apg::terminal::ApgPackageDocument::parse(package.dump(), "parallel-layout.apg");
+}
+
+int assert_five_row_card(const ftxui::Screen &screen, const std::string &title, const std::string &id) {
+    const auto title_position = locate_ascii(screen, title, true);
+    const auto id_position    = locate_ascii(screen, id, true);
+    assert(title_position);
+    assert(id_position);
+    assert(id_position->first == title_position->first);
+    assert(id_position->second == title_position->second + 2);
+    assert(title_position->first > 0);
+    assert(screen.CellAt(title_position->first - 1, title_position->second - 1).character == "╭");
+    assert(screen.CellAt(id_position->first - 1, id_position->second + 1).character == "╰");
+    return title_position->second + 1;
+}
+
 void assert_compact_graph_shape(const Rendered &rendered) {
     const auto title = locate_ascii(rendered.screen, "Simple Gain");
     const auto id    = locate_ascii(rendered.screen, "gain1");
     assert(title);
     assert(id);
-    assert(id->second == title->second + 1);
-    bool closes_on_next_row = false;
-    for (int x = 0; x < rendered.screen.dimx(); ++x) {
-        if (rendered.screen.CellAt(x, id->second + 1).character == "╰") {
-            closes_on_next_row = true;
-            break;
-        }
+    const int center = assert_five_row_card(rendered.screen, "Simple Gain", "gain1");
+    for (const auto &[x, y] : signal_cells(rendered.screen)) {
+        (void)x;
+        assert(y == center);
     }
-    assert(closes_on_next_row);
+}
+
+void assert_parallel_alignment() {
+    auto                            document = parallel_document();
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{180, 42};
+    auto       studio   = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; });
+    const auto rendered = render(studio, 180, 42, terminal_size);
+
+    const int  pan_center   = assert_five_row_card(rendered.screen, "Pan 2", "parallel_pan");
+    const int  mix_center   = assert_five_row_card(rendered.screen, "Mix 2", "parallel_mix");
+    const int  boost_center = assert_five_row_card(rendered.screen, "Simple Gain", "boost");
+    const auto pan          = locate_ascii(rendered.screen, "parallel_pan");
+    const auto mix          = locate_ascii(rendered.screen, "parallel_mix");
+    const auto boost        = locate_ascii(rendered.screen, "boost");
+    assert(pan);
+    assert(mix);
+    assert(boost);
+
+    const auto signals = signal_cells(rendered.screen);
+    assert(!signals.empty());
+    const auto before_pan = std::min_element(signals.begin(), signals.end(), [&](const auto &left, const auto &right) {
+        const int left_distance  = left.first < pan->first ? pan->first - left.first : rendered.screen.dimx();
+        const int right_distance = right.first < pan->first ? pan->first - right.first : rendered.screen.dimx();
+        return left_distance < right_distance;
+    });
+    const auto after_mix  = std::min_element(signals.begin(), signals.end(), [&](const auto &left, const auto &right) {
+        const int left_distance  = left.first > mix->first ? left.first - mix->first : rendered.screen.dimx();
+        const int right_distance = right.first > mix->first ? right.first - mix->first : rendered.screen.dimx();
+        return left_distance < right_distance;
+    });
+    assert(before_pan != signals.end());
+    assert(after_mix != signals.end());
+    assert(before_pan->first < pan->first);
+    assert(after_mix->first > mix->first);
+    assert(before_pan->second == pan_center);
+    assert(after_mix->second == mix_center);
+    assert(std::any_of(signals.begin(), signals.end(), [&](const auto &signal) {
+        return signal.first < boost->first && signal.second == boost_center;
+    }));
+    assert(std::any_of(signals.begin(), signals.end(), [&](const auto &signal) {
+        return signal.first > boost->first && signal.second == boost_center;
+    }));
+}
+
+void assert_wide_unit_drag() {
+    auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/simple-gain.apg");
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{120, 32};
+    auto       studio  = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; });
+    const auto initial = render(studio, 120, 32, terminal_size);
+    const auto unit    = locate_ascii(initial.screen, "gain_unit");
+    const auto route   = locate_character(initial.screen, "◇");
+    assert(unit);
+    assert(route);
+
+    assert(studio->OnEvent(left_mouse(unit->first, unit->second, ftxui::Mouse::Pressed)));
+    assert(studio->OnEvent(left_mouse(route->first, route->second, ftxui::Mouse::Moved)));
+    const auto hovered = render(studio, 120, 32, terminal_size);
+    assert(hovered.screen.CellAt(route->first, route->second).character == "◆");
+    assert(studio->OnEvent(left_mouse(route->first, route->second, ftxui::Mouse::Released)));
+    assert(editor.document().nodes().size() == 2);
+    assert(editor.can_undo());
+    assert(editor.undo());
+    assert(editor.document().nodes().size() == 1);
+}
+
+void assert_compact_unit_pickup() {
+    auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/simple-gain.apg");
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{80, 24};
+    bool                            exit_requested = false;
+    auto                            studio =
+        apg::terminal::studio_component(editor, audio, [&] { exit_requested = true; }, [&] { return terminal_size; });
+
+    assert(studio->OnEvent(ftxui::Event::TabReverse));
+    const auto units = render(studio, 80, 24, terminal_size);
+    const auto unit  = locate_ascii(units.screen, "gain_unit");
+    assert(unit);
+    assert(studio->OnEvent(left_mouse(unit->first, unit->second, ftxui::Mouse::Pressed)));
+    assert(studio->OnEvent(left_mouse(unit->first, unit->second, ftxui::Mouse::Released)));
+
+    auto graph = render(studio, 80, 24, terminal_size);
+    assert(graph.text.find("Placing Simple Gain") != std::string::npos);
+    const auto route = locate_character(graph.screen, "◇");
+    assert(route);
+    assert(studio->OnEvent(left_mouse(route->first, route->second + 1, ftxui::Mouse::Pressed)));
+    assert(studio->OnEvent(left_mouse(route->first, route->second + 1, ftxui::Mouse::Released)));
+    assert(editor.document().nodes().size() == 1);
+    graph = render(studio, 80, 24, terminal_size);
+    assert(graph.text.find("Placing Simple Gain") != std::string::npos);
+    assert(studio->OnEvent(left_mouse(route->first, route->second - 1, ftxui::Mouse::Pressed)));
+    assert(studio->OnEvent(left_mouse(route->first, route->second - 1, ftxui::Mouse::Released)));
+    assert(editor.document().nodes().size() == 1);
+    graph = render(studio, 80, 24, terminal_size);
+    assert(graph.text.find("Placing Simple Gain") != std::string::npos);
+    assert(studio->OnEvent(left_mouse(route->first + 3, route->second, ftxui::Mouse::Pressed)));
+    assert(studio->OnEvent(left_mouse(route->first + 3, route->second, ftxui::Mouse::Released)));
+    assert(editor.document().nodes().size() == 1);
+    graph = render(studio, 80, 24, terminal_size);
+    assert(graph.text.find("Placing Simple Gain") != std::string::npos);
+
+    assert(studio->OnEvent(left_mouse(route->first, route->second, ftxui::Mouse::Pressed)));
+    assert(studio->OnEvent(left_mouse(route->first, route->second, ftxui::Mouse::Released)));
+    assert(editor.document().nodes().size() == 2);
+    assert(editor.undo());
+    assert(editor.document().nodes().size() == 1);
+
+    assert(studio->OnEvent(ftxui::Event::TabReverse));
+    const auto units_again = render(studio, 80, 24, terminal_size);
+    const auto unit_again  = locate_ascii(units_again.screen, "gain_unit");
+    assert(unit_again);
+    assert(studio->OnEvent(left_mouse(unit_again->first, unit_again->second, ftxui::Mouse::Pressed)));
+    assert(studio->OnEvent(left_mouse(unit_again->first, unit_again->second, ftxui::Mouse::Released)));
+    assert(studio->OnEvent(ftxui::Event::Escape));
+    assert(!exit_requested);
+    const auto cancelled = render(studio, 80, 24, terminal_size);
+    assert(cancelled.text.find("Placement cancelled") != std::string::npos);
 }
 
 } // namespace
 
 int main() {
+    assert_parallel_alignment();
+    assert_wide_unit_drag();
+    assert_compact_unit_pickup();
+
     auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/simple-gain.apg");
     apg::terminal::ProjectEditor    editor(std::move(document));
     apg::terminal::FakeAudioSession audio;

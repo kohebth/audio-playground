@@ -46,6 +46,7 @@ enum class Modal {
 constexpr std::array<Pane, 6> kPanes{
     Pane::Units, Pane::Graph, Pane::Inspector, Pane::Scenes, Pane::Audio, Pane::Problems,
 };
+constexpr int kGraphNodeHeight = 5;
 
 const char *pane_name(Pane pane) {
     switch (pane) {
@@ -265,6 +266,11 @@ class StudioComponent final : public ftxui::ComponentBase {
             modal_ = Modal::Help;
             return true;
         }
+        if (event == Event::Escape && carried_unit_) {
+            cancel_unit_placement();
+            transient_status_ = "Placement cancelled";
+            return true;
+        }
         if (event == Event::Character("q") || event == Event::Escape) {
             if (editor_.dirty())
                 modal_ = Modal::Quit;
@@ -338,6 +344,30 @@ class StudioComponent final : public ftxui::ComponentBase {
 
     static std::size_t normalize_index(std::size_t index, std::size_t size) {
         return size == 0 ? 0 : std::min(index, size - 1);
+    }
+
+    [[nodiscard]] bool wide_layout() const {
+        const auto [width, height] = size_provider_();
+        return width >= 120 && height >= 32;
+    }
+
+    [[nodiscard]] bool route_drop_active() const {
+        return dragged_node_.has_value() || dragged_unit_.has_value() || carried_unit_.has_value();
+    }
+
+    void cancel_unit_placement() {
+        carried_unit_.reset();
+        dragged_unit_.reset();
+        hovered_route_.reset();
+    }
+
+    void arm_unit_placement(const std::string &unit_id) {
+        carried_unit_ = unit_id;
+        hovered_route_.reset();
+        active_pane_     = Pane::Graph;
+        const auto *unit = editor_.document().find_unit(unit_id);
+        transient_status_ =
+            "Placing " + (unit && !unit->title.empty() ? unit->title : unit_id) + " — click a signal line; Esc cancels";
     }
 
     std::vector<const UnitReference *> placeable_units() const {
@@ -432,7 +462,12 @@ class StudioComponent final : public ftxui::ComponentBase {
         const auto units = placeable_units();
         Elements   rows;
         rows.push_back(
-            text(searching_ ? "Search: " + unit_search_ + "▌" : "/ search · Enter serial · p parallel") | dim
+            text(
+                searching_      ? "Search: " + unit_search_ + "▌"
+                : wide_layout() ? "/ search · drag to signal"
+                                : "/ search · click to place"
+            ) |
+            dim
         );
         if (units.empty()) {
             rows.push_back(text("No matching package units") | dim);
@@ -450,6 +485,8 @@ class StudioComponent final : public ftxui::ComponentBase {
                     if (active_pane_ == Pane::Units)
                         card = card | focus;
                 }
+                if ((dragged_unit_ && *dragged_unit_ == unit->id) || (carried_unit_ && *carried_unit_ == unit->id))
+                    card = card | dim;
                 rows.push_back(card | reflect(unit_hits_.back().box));
             }
         }
@@ -499,13 +536,16 @@ class StudioComponent final : public ftxui::ComponentBase {
                         border
                     );
                 }
-                items.push_back(hbox({
-                    render_node(element.parallel->panner_id, true),
-                    text("≋"),
-                    vbox(std::move(paths)),
-                    text("≋"),
-                    render_node(element.parallel->mixer_id, true),
-                }));
+                items.push_back(
+                    hbox({
+                        render_node(element.parallel->panner_id, true),
+                        text("≋") | vcenter,
+                        vbox(std::move(paths)),
+                        text("≋") | vcenter,
+                        render_node(element.parallel->mixer_id, true),
+                    }) |
+                    vcenter
+                );
             }
         }
         return hbox(std::move(items));
@@ -514,15 +554,21 @@ class StudioComponent final : public ftxui::ComponentBase {
     ftxui::Element render_route(const Route &route) {
         using namespace ftxui;
         route_hits_.push_back({route, {}});
-        auto element = text(selected_route_ && *selected_route_ == route ? "──◆──" : "──◇──");
-        if (selected_route_ && *selected_route_ == route) {
+        const bool hovered  = hovered_route_ && *hovered_route_ == route;
+        const bool selected = selected_route_ && *selected_route_ == route;
+        auto       element  = text(hovered || selected ? "──◆──" : "──◇──");
+        if (hovered) {
+            element = element | color(Color::Green) | bold;
+        } else if (route_drop_active()) {
+            element = element | color(Color::Cyan);
+        } else if (selected) {
             element = element | color(Color::Yellow) | bold;
             if (active_pane_ == Pane::Graph)
                 element = element | focus;
         } else {
             element = element | color(Color::GrayDark);
         }
-        return element | reflect(route_hits_.back().box);
+        return (element | reflect(route_hits_.back().box)) | vcenter;
     }
 
     ftxui::Element render_node(const std::string &node_id, bool helper) {
@@ -533,13 +579,14 @@ class StudioComponent final : public ftxui::ComponentBase {
         const auto  label   = unit && !unit->title.empty() ? unit->title : node_id;
         auto        element = vbox({
                            text(label) | bold,
+                           filler(),
                            text(
                                node_id + (helper                      ? " · routing"
                                                  : editor_.bypassed(node_id) ? " · BYPASS"
                                                                              : "")
                            ) | dim,
                        }) |
-                       border | size(HEIGHT, EQUAL, 4);
+                       border | size(HEIGHT, EQUAL, kGraphNodeHeight);
         if (selected_node_ == node_id) {
             element = element | color(Color::Cyan);
             if (active_pane_ == Pane::Graph)
@@ -547,7 +594,9 @@ class StudioComponent final : public ftxui::ComponentBase {
         }
         if (!helper && editor_.bypassed(node_id))
             element = element | dim;
-        return element | reflect(node_hits_.back().box);
+        if (dragged_node_ && *dragged_node_ == node_id)
+            element = element | dim;
+        return (element | reflect(node_hits_.back().box)) | vcenter;
     }
 
     ftxui::Element render_inspector() {
@@ -686,7 +735,7 @@ class StudioComponent final : public ftxui::ComponentBase {
             content = vbox({
                 text("Tab/Shift-Tab switch panes; arrows navigate the active pane."),
                 text("Graph: r cycles routes, x moves the effect, c collapses an empty parallel section."),
-                text("Units: Enter inserts, p adds nested parallel. Drag a unit/effect onto a route."),
+                text("Units: drag onto a signal line; compact clicks carry a unit to Graph. Enter inserts."),
                 text("Inspector: arrows adjust, Page keys coarse, Home/End bounds, b bypass, d remove."),
                 text("Scenes: Enter recall, n create, u update, e rename, d delete."),
                 text("Audio: Space transport, m mute. Ctrl+S save, Ctrl+Z/Y history, q guarded quit."),
@@ -823,6 +872,13 @@ class StudioComponent final : public ftxui::ComponentBase {
     bool handle_mouse(ftxui::Event event) {
         using namespace ftxui;
         const auto &mouse = event.mouse();
+        if (mouse.motion == Mouse::Moved && route_drop_active()) {
+            if (const auto *route = hit_at(route_hits_, mouse.x, mouse.y))
+                hovered_route_ = route->route;
+            else
+                hovered_route_.reset();
+            return true;
+        }
         if (mouse.button != Mouse::Left)
             return false;
         if (mouse.motion == Mouse::Released && dragged_parameter_) {
@@ -837,6 +893,7 @@ class StudioComponent final : public ftxui::ComponentBase {
         if (mouse.motion == Mouse::Released && dragged_node_) {
             const auto node = *dragged_node_;
             dragged_node_.reset();
+            hovered_route_.reset();
             if (const auto *route = hit_at(route_hits_, mouse.x, mouse.y)) {
                 const auto destination = route->route;
                 act([&] { editor_.move_to_route(node, destination); });
@@ -846,18 +903,51 @@ class StudioComponent final : public ftxui::ComponentBase {
         if (mouse.motion == Mouse::Released && dragged_unit_) {
             const auto unit = *dragged_unit_;
             dragged_unit_.reset();
+            hovered_route_.reset();
             if (const auto *route = hit_at(route_hits_, mouse.x, mouse.y)) {
                 const auto destination = route->route;
-                act([&] { selected_node_ = editor_.insert_on_route(destination, unit); });
+                bool       inserted    = false;
+                act([&] {
+                    selected_node_ = editor_.insert_on_route(destination, unit);
+                    inserted       = true;
+                });
+                if (inserted)
+                    carried_unit_.reset();
+            } else if (!wide_layout()) {
+                const auto *released_unit = hit_at(unit_hits_, mouse.x, mouse.y);
+                if (released_unit && released_unit->id == unit)
+                    arm_unit_placement(unit);
             }
             return true;
         }
-        if (mouse.motion == Mouse::Moved && (dragged_node_ || dragged_unit_))
+        if (mouse.motion == Mouse::Released && carried_unit_) {
+            hovered_route_.reset();
+            if (const auto *route = hit_at(route_hits_, mouse.x, mouse.y)) {
+                const auto unit        = *carried_unit_;
+                const auto destination = route->route;
+                bool       inserted    = false;
+                act([&] {
+                    selected_node_ = editor_.insert_on_route(destination, unit);
+                    inserted       = true;
+                });
+                if (inserted)
+                    carried_unit_.reset();
+            }
             return true;
+        }
         if (mouse.motion != Mouse::Pressed)
             return false;
         if (const auto *tab = hit_at(tab_hits_, mouse.x, mouse.y)) {
             active_pane_ = tab->pane;
+            hovered_route_.reset();
+            return true;
+        }
+        const auto *pressed_unit = hit_at(unit_hits_, mouse.x, mouse.y);
+        if (carried_unit_ && !pressed_unit) {
+            if (const auto *route = hit_at(route_hits_, mouse.x, mouse.y)) {
+                selected_route_ = route->route;
+                hovered_route_  = route->route;
+            }
             return true;
         }
         if (const auto *node = hit_at(node_hits_, mouse.x, mouse.y)) {
@@ -865,8 +955,10 @@ class StudioComponent final : public ftxui::ComponentBase {
             active_pane_         = Pane::Graph;
             selected_parameter_  = 0;
             const auto *selected = editor_.document().find_node(node->id);
-            if (selected && !selected->routing_helper())
+            if (selected && !selected->routing_helper()) {
                 dragged_node_ = node->id;
+                hovered_route_.reset();
+            }
             return true;
         }
         if (const auto *route = hit_at(route_hits_, mouse.x, mouse.y)) {
@@ -874,7 +966,7 @@ class StudioComponent final : public ftxui::ComponentBase {
             active_pane_    = Pane::Graph;
             return true;
         }
-        if (const auto *unit = hit_at(unit_hits_, mouse.x, mouse.y)) {
+        if (const auto *unit = pressed_unit) {
             const auto units = placeable_units();
             const auto found = std::find_if(units.begin(), units.end(), [&](const UnitReference *item) {
                 return item->id == unit->id;
@@ -883,6 +975,7 @@ class StudioComponent final : public ftxui::ComponentBase {
                 selected_unit_ = static_cast<std::size_t>(std::distance(units.begin(), found));
             active_pane_  = Pane::Units;
             dragged_unit_ = unit->id;
+            hovered_route_.reset();
             return true;
         }
         if (const auto *scene = hit_at(scene_hits_, mouse.x, mouse.y)) {
@@ -1174,6 +1267,7 @@ class StudioComponent final : public ftxui::ComponentBase {
         const auto current = found == kPanes.end() ? 0 : static_cast<int>(std::distance(kPanes.begin(), found));
         const auto count   = static_cast<int>(kPanes.size());
         active_pane_       = kPanes[static_cast<std::size_t>((current + direction + count) % count)];
+        hovered_route_.reset();
     }
 
     void toggle_transport() {
@@ -1232,6 +1326,8 @@ class StudioComponent final : public ftxui::ComponentBase {
     std::optional<ParameterHit> dragged_parameter_;
     std::optional<std::string>  dragged_node_;
     std::optional<std::string>  dragged_unit_;
+    std::optional<std::string>  carried_unit_;
+    std::optional<Route>        hovered_route_;
     std::deque<NodeHit>         node_hits_;
     std::deque<RouteHit>        route_hits_;
     std::deque<UnitHit>         unit_hits_;
