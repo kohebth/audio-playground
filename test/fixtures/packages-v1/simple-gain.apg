@@ -6,7 +6,7 @@
     "name": "Simple Gain",
     "description": "Cross-editor APG package fixture.",
     "createdAt": "2026-07-25T00:00:00.000Z",
-    "updatedAt": "2026-07-25T00:00:00.000Z",
+    "updatedAt": "2026-07-27T18:49:06.529Z",
     "lastMode": "pro"
   },
   "workspace": {
@@ -17,7 +17,7 @@
       {
         "path": "projects-v2/simple-gain-board.project.v2.yaml",
         "role": "project",
-        "content": "kind: apg.project\nschema: apg.project.v2\nname: simple-gain-board\nversion: 2.0.0\n\nunits:\n  - id: gain_unit\n    file: ../units-v2/simple_gain.unit.v2.yaml\n\nchain:\n  nodes:\n    - id: gain1\n      unit: gain_unit\n      params:\n        gain: 2.0\n      ui:\n        position:\n          x: 120\n          y: 80\n\n  routes:\n    - from: system.input\n      to: gain1.input\n    - from: gain1.output\n      to: system.output\n\nscenes:\n  - name: Unity\n    params:\n      gain1.gain: 1.0\n    bypass:\n      gain1: false\n  - name: Boost\n    params:\n      gain1.gain: 3.0\n    bypass:\n      gain1: true\n\ntargets:\n  default: desktop_full\n  export:\n    - wasm_realtime\n    - offline_render\n"
+        "content": "kind: apg.project\nschema: apg.project.v2\nname: simple-gain-board\nversion: 2.0.0\nunits:\n  - id: gain_unit\n    file: ../units-v2/simple_gain.unit.v2.yaml\nchain:\n  nodes:\n    - id: gain1\n      unit: gain_unit\n      params:\n        gain: 2.0\n      ui:\n        position:\n          x: 120\n          y: 80\n    - id: simple_gain\n      unit: gain_unit\n      params:\n        gain: 1.0\n  routes:\n    - from: system.input\n      to: gain1.input\n    - from: gain1.output\n      to: simple_gain.input\n    - from: simple_gain.output\n      to: system.output\nscenes:\n  - name: Unity\n    params:\n      gain1.gain: 1.0\n    bypass:\n      gain1: false\n  - name: Boost\n    params:\n      gain1.gain: 3.0\n    bypass:\n      gain1: true\ntargets:\n  default: desktop_full\n  export:\n    - wasm_realtime\n    - offline_render\n"
       },
       {
         "path": "units-v2/simple_gain.unit.v2.yaml",
@@ -39,10 +39,14 @@
     }
   ],
   "readiness": {
-    "checkedAt": null,
-    "validation": "unknown",
-    "preview": "unknown",
-    "targets": {},
+    "checkedAt": "2026-07-27T18:49:06.529Z",
+    "validation": "ready",
+    "preview": "ready",
+    "targets": {
+      "desktop_full": "ready",
+      "wasm_realtime": "ready",
+      "offline_render": "ready"
+    },
     "diagnostics": []
   }
 }
