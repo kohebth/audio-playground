@@ -110,6 +110,12 @@ double ratio_value(const Parameter &parameter, double ratio) {
     return parameter.type == ParameterType::Integer ? std::round(value) : value;
 }
 
+struct ScrollState {
+    int offset = 0;
+    void scroll(int delta) { offset = std::max(0, offset + delta); }
+    void reset() { offset = 0; }
+};
+
 struct NodeHit {
     std::string id;
     ftxui::Box  box;
@@ -321,6 +327,7 @@ class StudioComponent final : public ftxui::ComponentBase {
         scene_hits_.clear();
         parameter_hits_.clear();
         tab_hits_.clear();
+        pane_boxes_.fill({});
     }
 
     void normalize_selection() {
@@ -392,12 +399,17 @@ class StudioComponent final : public ftxui::ComponentBase {
         return result;
     }
 
-    ftxui::Element pane_frame(const std::string &title, ftxui::Element content, Pane pane) const {
+    ftxui::Element pane_frame(const std::string &title, ftxui::Element content, Pane pane) {
         using namespace ftxui;
-        auto element = window(text(" " + title + " ") | bold, std::move(content));
-        if (active_pane_ == pane)
-            element = element | color(Color::Cyan);
-        return element;
+        const auto pane_index = static_cast<std::size_t>(pane);
+        Element element;
+        if (active_pane_ == pane) {
+            element = window(text(" " + title + " ") | bold | color(Color::Cyan), std::move(content) | color(Color::White)) |
+                      color(Color::Cyan);
+        } else {
+            element = window(text(" " + title + " ") | bold, std::move(content));
+        }
+        return element | reflect(pane_boxes_[pane_index]);
     }
 
     ftxui::Element render_wide() {
@@ -490,7 +502,7 @@ class StudioComponent final : public ftxui::ComponentBase {
                 rows.push_back(card | reflect(unit_hits_.back().box));
             }
         }
-        return vbox(std::move(rows)) | yframe | flex;
+        return vbox(std::move(rows)) | focusPosition(0, units_scroll_.offset) | vscroll_indicator | yframe | flex;
     }
 
     ftxui::Element render_graph() {
@@ -502,7 +514,8 @@ class StudioComponent final : public ftxui::ComponentBase {
                        render_sequence(topology, 0),
                        filler(),
                    }) |
-                   xframe | yframe | flex;
+                   focusPosition(graph_scroll_x_.offset, graph_scroll_y_.offset) |
+                   hscroll_indicator | vscroll_indicator | xframe | yframe | flex;
         } catch (const std::exception &error) {
             render_error_ = error.what();
             return vbox({
@@ -637,7 +650,7 @@ class StudioComponent final : public ftxui::ComponentBase {
         }
         if (!node->routing_helper())
             rows.push_back(text("b bypass · d remove · arrows/Page keys adjust") | dim);
-        return vbox(std::move(rows)) | yframe | flex;
+        return vbox(std::move(rows)) | focusPosition(0, inspector_scroll_.offset) | vscroll_indicator | yframe | flex;
     }
 
     ftxui::Element render_scenes() {
@@ -667,7 +680,7 @@ class StudioComponent final : public ftxui::ComponentBase {
                 }
                 chips.push_back(chip | reflect(scene_hits_.back().box));
             }
-            rows.push_back(hbox(std::move(chips)) | xframe);
+            rows.push_back(hbox(std::move(chips)) | focusPosition(scenes_scroll_.offset, 0) | hscroll_indicator | xframe);
         }
         rows.push_back(text("Enter recall · n new · u update · e rename · d delete") | dim);
         return vbox(std::move(rows)) | flex;
@@ -869,9 +882,47 @@ class StudioComponent final : public ftxui::ComponentBase {
         return true;
     }
 
+    Pane pane_at(int x, int y) const {
+        for (std::size_t index = 0; index < pane_boxes_.size(); ++index) {
+            if (!pane_boxes_[index].IsEmpty() && pane_boxes_[index].Contain(x, y))
+                return static_cast<Pane>(index);
+        }
+        return active_pane_;
+    }
+
     bool handle_mouse(ftxui::Event event) {
         using namespace ftxui;
         const auto &mouse = event.mouse();
+        if (mouse.button == Mouse::WheelUp || mouse.button == Mouse::WheelDown) {
+            const int delta = (mouse.button == Mouse::WheelDown) ? 3 : -3;
+            const auto target = pane_at(mouse.x, mouse.y);
+            switch (target) {
+            case Pane::Units:
+                units_scroll_.scroll(delta);
+                break;
+            case Pane::Graph:
+                graph_scroll_y_.scroll(delta);
+                break;
+            case Pane::Inspector:
+                inspector_scroll_.scroll(delta);
+                break;
+            case Pane::Scenes:
+                scenes_scroll_.scroll(delta);
+                break;
+            default:
+                break;
+            }
+            return true;
+        }
+        if (mouse.button == Mouse::WheelLeft || mouse.button == Mouse::WheelRight) {
+            const int delta = (mouse.button == Mouse::WheelRight) ? 3 : -3;
+            const auto target = pane_at(mouse.x, mouse.y);
+            if (target == Pane::Graph)
+                graph_scroll_x_.scroll(delta);
+            else if (target == Pane::Scenes)
+                scenes_scroll_.scroll(delta);
+            return true;
+        }
         if (mouse.motion == Mouse::Moved && route_drop_active()) {
             if (const auto *route = hit_at(route_hits_, mouse.x, mouse.y))
                 hovered_route_ = route->route;
@@ -1334,6 +1385,12 @@ class StudioComponent final : public ftxui::ComponentBase {
     std::deque<SceneHit>        scene_hits_;
     std::deque<ParameterHit>    parameter_hits_;
     std::deque<TabHit>          tab_hits_;
+    std::array<ftxui::Box, 6>   pane_boxes_{};
+    ScrollState                 units_scroll_;
+    ScrollState                 graph_scroll_x_;
+    ScrollState                 graph_scroll_y_;
+    ScrollState                 inspector_scroll_;
+    ScrollState                 scenes_scroll_;
 };
 
 } // namespace
