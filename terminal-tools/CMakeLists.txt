@@ -32,9 +32,9 @@ FetchContent_Declare(
         GIT_SHALLOW TRUE
 )
 FetchContent_GetProperties(miniaudio_source)
-if(NOT miniaudio_source_POPULATED)
+if (NOT miniaudio_source_POPULATED)
     FetchContent_Populate(miniaudio_source)
-endif()
+endif ()
 
 add_library(apg_terminal_model STATIC
         src/project_document.cpp
@@ -58,6 +58,11 @@ add_library(apg_terminal_ui STATIC
         src/pipeline_unit_card.cpp
         src/ui.cpp
         src/studio.cpp
+        src/studio_graph_view.cpp
+        src/studio_inspector_view.cpp
+        src/studio_units_view.cpp
+        src/studio_scenes_view.cpp
+        src/studio_modals.cpp
         src/parameter_row.cpp
         src/parameter_panel.cpp
         src/unit_tray.cpp
@@ -66,11 +71,11 @@ target_include_directories(apg_terminal_ui PUBLIC include)
 target_link_libraries(
         apg_terminal_ui
         PUBLIC
-            apg_terminal_model
-            apg_terminal_audio
-            ftxui::component
-            ftxui::dom
-            ftxui::screen
+        apg_terminal_model
+        apg_terminal_audio
+        ftxui::component
+        ftxui::dom
+        ftxui::screen
 )
 target_compile_features(apg_terminal_ui PUBLIC cxx_std_20)
 
@@ -89,23 +94,23 @@ target_link_libraries(test_terminal_audio PRIVATE apg_terminal_audio)
 target_compile_features(test_terminal_audio PRIVATE cxx_std_20)
 add_test(NAME test_terminal_audio COMMAND test_terminal_audio)
 set_tests_properties(
-    test_terminal_audio
-    PROPERTIES
+        test_terminal_audio
+        PROPERTIES
         LABELS "terminal-tools"
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
 add_test(
-    NAME test_terminal_audio_realtime_boundary
-    COMMAND
+        NAME test_terminal_audio_realtime_boundary
+        COMMAND
         ${CMAKE_COMMAND}
         -DAUDIO_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/src/session.cpp
         -P
         ${CMAKE_CURRENT_SOURCE_DIR}/test/check_audio_realtime.cmake
 )
 set_tests_properties(
-    test_terminal_audio_realtime_boundary
-    PROPERTIES LABELS "terminal-tools"
+        test_terminal_audio_realtime_boundary
+        PROPERTIES LABELS "terminal-tools"
 )
 
 add_test(NAME test_terminal_cli COMMAND apg-tui --self-test)
@@ -113,16 +118,16 @@ set_tests_properties(test_terminal_cli PROPERTIES LABELS "terminal-tools")
 
 add_test(NAME test_terminal_cli_version COMMAND apg-tui --version)
 set_tests_properties(
-    test_terminal_cli_version
-    PROPERTIES
+        test_terminal_cli_version
+        PROPERTIES
         LABELS "terminal-tools"
         PASS_REGULAR_EXPRESSION "apg-tui 0.2.0"
 )
 
 add_test(NAME test_terminal_cli_requires_package COMMAND apg-tui)
 set_tests_properties(
-    test_terminal_cli_requires_package
-    PROPERTIES
+        test_terminal_cli_requires_package
+        PROPERTIES
         LABELS "terminal-tools"
         WILL_FAIL TRUE
 )
@@ -138,8 +143,8 @@ target_link_libraries(test_terminal_studio PRIVATE apg_terminal_ui)
 target_compile_features(test_terminal_studio PRIVATE cxx_std_20)
 add_test(NAME test_terminal_studio COMMAND test_terminal_studio)
 set_tests_properties(
-    test_terminal_studio
-    PROPERTIES
+        test_terminal_studio
+        PROPERTIES
         LABELS "terminal-tools"
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
@@ -149,8 +154,8 @@ target_link_libraries(test_terminal_card_shape PRIVATE apg_terminal_model apg_te
 target_compile_features(test_terminal_card_shape PRIVATE cxx_std_20)
 add_test(NAME test_terminal_card_shape COMMAND test_terminal_card_shape)
 set_tests_properties(
-    test_terminal_card_shape
-    PROPERTIES
+        test_terminal_card_shape
+        PROPERTIES
         LABELS "terminal-tools"
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )

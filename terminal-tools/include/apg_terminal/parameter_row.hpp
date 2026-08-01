@@ -10,9 +10,9 @@ namespace apg::terminal {
 
 class ParameterRow final {
   public:
-    static std::size_t KnobIndex(double ratio);
-    static double       ClampedValueRatio(double value, double min, double max);
-    static std::string  KnobSymbol(double ratio);
+    static std::size_t    KnobIndex(double ratio);
+    static double         ClampedValueRatio(double value, double min, double max);
+    static std::string    KnobSymbol(double ratio);
     static ftxui::Element Render(const ParameterItem &parameter, ftxui::Box &box);
 };
 

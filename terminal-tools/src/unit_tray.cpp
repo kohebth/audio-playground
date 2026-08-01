@@ -35,7 +35,9 @@ class UnitTray final : public ftxui::ComponentBase {
             offset_ = values_.size() - visible;
         Elements cards;
         for (std::size_t index = offset_; index < offset_ + visible; ++index) {
-            auto card = PipelineUnitCard{}.Render("+ " + values_[index].id, false, false, false, DropPosition::Before, boxes_[index]);
+            auto card = PipelineUnitCard{}.Render(
+                "+ " + values_[index].id, false, false, false, DropPosition::Before, boxes_[index]
+            );
             cards.push_back(std::move(card));
             if (index + 1 < offset_ + visible)
                 cards.push_back(text(" "));
@@ -72,7 +74,7 @@ class UnitTray final : public ftxui::ComponentBase {
             for (std::size_t index = offset_; index < boxes_.size() && index < offset_ + 6; ++index) {
                 if (boxes_[index].Contain(mouse.x, mouse.y)) {
                     if (drag_state_) {
-                        drag_state_->active = true;
+                        drag_state_->active  = true;
                         drag_state_->unit_id = values_[index].id;
                     }
                     pressed_index_ = index;
@@ -87,10 +89,10 @@ class UnitTray final : public ftxui::ComponentBase {
     std::function<std::vector<UnitTrayItem>()> units_;
     std::function<void(const std::string &)>   on_add_;
     std::vector<UnitTrayItem>                  values_;
-    std::vector<ftxui::Box>                   boxes_;
+    std::vector<ftxui::Box>                    boxes_;
     std::size_t                                offset_ = 0;
-    DragState                                  *drag_state_;
-    std::optional<std::size_t>                  pressed_index_;
+    DragState                                 *drag_state_;
+    std::optional<std::size_t>                 pressed_index_;
 };
 
 ftxui::Component unit_tray(

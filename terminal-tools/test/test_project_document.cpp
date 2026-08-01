@@ -131,17 +131,15 @@ int main() {
     assert(throws([&] { (void)document.serialize_for_save(" \t "); }));
 
     document.upsert_scene(
-        "Current",
-        {
-            {"gain1", false}
+        "Current", {
+                       {"gain1", false}
     }
     );
     assert(document.find_scene("Current") != nullptr);
     assert(throws([&] {
         document.upsert_scene(
-            "Current",
-            {
-                {"gain1", false}
+            "Current", {
+                           {"gain1", false}
         }
         );
     }));
@@ -259,12 +257,11 @@ int main() {
     assert(throws([&] { (void)ApgPackageDocument::parse(invalid_active_package.dump(), "invalid-active.apg"); }));
 
     auto parallel_package = make_package(
-        "projects-v2/parallel-gain.project.v2.yaml",
-        {
-            "units-v2/simple_gain.unit.v2.yaml",
-            "units-v2/path_panner_2.unit.v2.yaml",
-            "units-v2/path_mixer_2.unit.v2.yaml",
-        }
+        "projects-v2/parallel-gain.project.v2.yaml", {
+                                                         "units-v2/simple_gain.unit.v2.yaml",
+                                                         "units-v2/path_panner_2.unit.v2.yaml",
+                                                         "units-v2/path_mixer_2.unit.v2.yaml",
+                                                     }
     );
     auto parallel = ApgPackageDocument::parse(parallel_package.dump(), "parallel.apg");
     auto topology = parallel.topology();

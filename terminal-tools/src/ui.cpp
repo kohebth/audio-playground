@@ -29,8 +29,10 @@ ftxui::Element render_pipeline_ui(
                vbox({text("Unit definitions") | bold, tray->Render() | frame}) | border,
                separator(),
                text("Selected: " + selected),
-               text("Mouse: drag effect; yellow inserts before, magenta after. "
-                    "Keyboard: Tab/arrows, Enter to toggle transport, q to quit."),
+               text(
+                   "Mouse: drag effect; yellow inserts before, magenta after. "
+                   "Keyboard: Tab/arrows, Enter to toggle transport, q to quit."
+               ),
                text("Audio: " + audio),
                text("Status: " + status),
                text("Validation: " + validation) | color(validation == "OK" ? Color::Green : Color::Red),

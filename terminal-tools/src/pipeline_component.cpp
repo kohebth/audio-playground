@@ -39,15 +39,11 @@ class DraggablePipeline final : public ftxui::ComponentBase {
         normalize_selection();
         Elements elements;
         for (std::size_t index = 0; index < items_.size(); ++index) {
-            const bool is_hovered = dragging_ && hover_index_ == index && items_[index].id != dragged_id_;
+            const bool is_hovered    = dragging_ && hover_index_ == index && items_[index].id != dragged_id_;
             const auto card_renderer = PipelineUnitCard{};
-            const auto card = card_renderer.Render(
-                items_[index],
-                selected_ && *selected_ == static_cast<int>(index),
-                dragging_ && items_[index].id == dragged_id_,
-                is_hovered,
-                drop_position_,
-                boxes_[index]
+            const auto card          = card_renderer.Render(
+                items_[index], selected_ && *selected_ == static_cast<int>(index),
+                dragging_ && items_[index].id == dragged_id_, is_hovered, drop_position_, boxes_[index]
             );
             elements.push_back(std::move(card));
 
@@ -64,10 +60,8 @@ class DraggablePipeline final : public ftxui::ComponentBase {
             return on_mouse(event);
         if (items_.empty() || !selected_)
             return false;
-        const auto item_count = static_cast<int>(items_.size());
-        const auto normalize = [&] {
-            *selected_ = std::clamp(*selected_, 0, item_count - 1);
-        };
+        const auto item_count   = static_cast<int>(items_.size());
+        const auto normalize    = [&] { *selected_ = std::clamp(*selected_, 0, item_count - 1); };
         const auto set_selected = [&](int next) {
             *selected_ = (next + item_count) % item_count;
             on_select_(static_cast<std::size_t>(*selected_));

@@ -953,18 +953,16 @@ std::string ApgPackageDocument::insert_on_route(const Route &route, const std::s
 
     routes.erase(routes.begin() + static_cast<std::ptrdiff_t>(index));
     routes.insert(
-        routes.begin() + static_cast<std::ptrdiff_t>(index),
-        {
-            route.from,
-            id + "." + unit->inputs.front(),
-        }
+        routes.begin() + static_cast<std::ptrdiff_t>(index), {
+                                                                 route.from,
+                                                                 id + "." + unit->inputs.front(),
+                                                             }
     );
     routes.insert(
-        routes.begin() + static_cast<std::ptrdiff_t>(index + 1),
-        {
-            id + "." + unit->outputs.front(),
-            route.to,
-        }
+        routes.begin() + static_cast<std::ptrdiff_t>(index + 1), {
+                                                                     id + "." + unit->outputs.front(),
+                                                                     route.to,
+                                                                 }
     );
     set_yaml_routes(root, routes);
     replace_project_content(emit_yaml(root));
@@ -1000,18 +998,16 @@ void ApgPackageDocument::move_to_route(const std::string &node_id, const Route &
     const auto destination = find_route(routes, route);
     routes.erase(routes.begin() + static_cast<std::ptrdiff_t>(destination));
     routes.insert(
-        routes.begin() + static_cast<std::ptrdiff_t>(destination),
-        {
-            route.from,
-            input,
-        }
+        routes.begin() + static_cast<std::ptrdiff_t>(destination), {
+                                                                       route.from,
+                                                                       input,
+                                                                   }
     );
     routes.insert(
-        routes.begin() + static_cast<std::ptrdiff_t>(destination + 1),
-        {
-            output,
-            route.to,
-        }
+        routes.begin() + static_cast<std::ptrdiff_t>(destination + 1), {
+                                                                           output,
+                                                                           route.to,
+                                                                       }
     );
 
     YAML::Node root = YAML::Load(project_content_);

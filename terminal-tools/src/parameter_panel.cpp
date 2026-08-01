@@ -1,5 +1,5 @@
-#include "apg_terminal/ui.hpp"
 #include "apg_terminal/parameter_row.hpp"
+#include "apg_terminal/ui.hpp"
 
 #include <ftxui/component/captured_mouse.hpp>
 #include <ftxui/component/component_base.hpp>
@@ -45,12 +45,12 @@ class ParameterPanel final : public ftxui::ComponentBase {
                 return true;
             }
             if (mouse.motion == ftxui::Mouse::Moved && drag_index_) {
-                const auto dx = mouse.x - last_x_;
-                last_x_      = mouse.x;
+                const auto dx     = mouse.x - last_x_;
+                last_x_           = mouse.x;
                 const auto values = parameters_();
                 if (*drag_index_ < values.size()) {
-                    const auto &p = values[*drag_index_];
-                    const auto range = std::max(p.max - p.min, 0.0001);
+                    const auto &p     = values[*drag_index_];
+                    const auto  range = std::max(p.max - p.min, 0.0001);
                     on_adjust_(*drag_index_, dx / 40.0 * range);
                 }
                 return true;
@@ -68,9 +68,9 @@ class ParameterPanel final : public ftxui::ComponentBase {
                 return true;
             drag_index_      = index;
             last_x_          = mouse.x;
-            captured_mouse_   = CaptureMouse(event);
-            const auto &p     = values[index];
-            const auto  step  = std::max((p.max - p.min) / 40.0, 0.0001);
+            captured_mouse_  = CaptureMouse(event);
+            const auto &p    = values[index];
+            const auto  step = std::max((p.max - p.min) / 40.0, 0.0001);
             on_adjust_(index, mouse.x < (box.x_min + box.x_max) / 2 ? -step : step);
             return true;
         }
@@ -78,13 +78,13 @@ class ParameterPanel final : public ftxui::ComponentBase {
     }
 
   private:
-    std::function<std::vector<ParameterItem>()>      parameters_;
-    std::function<void(std::size_t, double)>         on_adjust_;
-    std::vector<ParameterItem>                       values_;
-    std::vector<ftxui::Box>                          boxes_;
-    ftxui::CapturedMouse                             captured_mouse_;
-    std::optional<std::size_t>                       drag_index_;
-    int                                              last_x_ = 0;
+    std::function<std::vector<ParameterItem>()> parameters_;
+    std::function<void(std::size_t, double)>    on_adjust_;
+    std::vector<ParameterItem>                  values_;
+    std::vector<ftxui::Box>                     boxes_;
+    ftxui::CapturedMouse                        captured_mouse_;
+    std::optional<std::size_t>                  drag_index_;
+    int                                         last_x_ = 0;
 };
 
 ftxui::Component parameter_panel(

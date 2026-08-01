@@ -73,8 +73,9 @@ class MiniaudioSession final : public AudioSession {
     std::vector<AudioDeviceInfo> devices() const override;
     AudioDeviceConfig            config() const override;
     bool                         configure(const AudioDeviceConfig &config) override;
-    bool synchronize(const ApgPackageDocument &document, const std::map<std::string, bool> &bypass, bool structural)
-        override;
+    bool                         synchronize(
+                                const ApgPackageDocument &document, const std::map<std::string, bool> &bypass, bool structural
+                            ) override;
     bool          start() override;
     void          stop() override;
     bool          running() const override;
@@ -102,8 +103,9 @@ class FakeAudioSession final : public AudioSession {
     std::vector<AudioDeviceInfo> devices() const override;
     AudioDeviceConfig            config() const override;
     bool                         configure(const AudioDeviceConfig &config) override;
-    bool synchronize(const ApgPackageDocument &document, const std::map<std::string, bool> &bypass, bool structural)
-        override;
+    bool                         synchronize(
+                                const ApgPackageDocument &document, const std::map<std::string, bool> &bypass, bool structural
+                            ) override;
     bool          start() override;
     void          stop() override;
     bool          running() const override;
