@@ -548,6 +548,18 @@ bool handle_graph_event(
         active_pane = Pane::Inspector;
         return true;
     }
+    if (event == Event::Character("b") && !selected_node.empty()) {
+        const auto *node = editor.document().find_node(selected_node);
+        if (!node) {
+            transient_status = "Error: selected node not found";
+        } else if (node->routing_helper()) {
+            transient_status = "Error: routing helpers cannot be bypassed";
+        } else {
+            const auto node_id = selected_node;
+            act_fn([&] { editor.toggle_bypass(node_id); });
+        }
+        return true;
+    }
     if (event == Event::Character("x") && selected_route && !selected_node.empty()) {
         const auto node        = selected_node;
         const auto destination = *selected_route;
