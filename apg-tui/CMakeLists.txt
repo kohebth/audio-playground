@@ -1,4 +1,5 @@
-include(FetchContent)
+if(APG_BUILD_TERMINAL_TOOLS AND NOT EMSCRIPTEN)
+    include(FetchContent)
 
 FetchContent_Declare(
         ftxui
@@ -137,7 +138,6 @@ set_tests_properties(
         LABELS "apg-tui"
         PASS_REGULAR_EXPRESSION "apg-tui 0.2.0"
 )
-
 add_test(NAME test_terminal_cli_requires_package COMMAND apg-tui)
 set_tests_properties(
         test_terminal_cli_requires_package
@@ -173,3 +173,11 @@ set_tests_properties(
         LABELS "apg-tui"
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
+else()
+    apg_ide_sources(apg_tui_sources
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/*
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/*
+            ${CMAKE_CURRENT_SOURCE_DIR}/test/*
+            ${CMAKE_CURRENT_SOURCE_DIR}/README.md
+    )
+endif()

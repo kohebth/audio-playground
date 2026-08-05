@@ -322,7 +322,7 @@ ftxui::Element render_sequence_item(
     int  target_port = seq_m.port_row;
 
     if (depth == 0) {
-        auto in_box = vbox({text(" IN ") | bold}) |border;
+        auto in_box = vbox({text(" IN ") | bold}) | border | color(Color::GrayLight);
         items.push_back(pad_top(in_box, target_port - 1));
     }
     for (std::size_t index = 0; index < sequence.elements.size(); ++index) {
@@ -522,7 +522,7 @@ ftxui::Element render_sequence_item(
         auto out_box = vbox({
                            text(" OUT ") | bold,
                        }) |
-                       border | color(Color::Red);
+                       border | color(Color::GrayLight);
         items.push_back(pad_top(out_box, target_port - 1));
     }
     return hbox(std::move(items));

@@ -74,3 +74,15 @@ if(EMSCRIPTEN)
     )
     set_target_properties(apg_processor PROPERTIES SUFFIX ".mjs")
 endif()
+
+apg_ide_sources(apg_wasm_web_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/*
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/*.mjs
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/*
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.json
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.ts
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.mjs
+        ${CMAKE_CURRENT_SOURCE_DIR}/README.md
+)

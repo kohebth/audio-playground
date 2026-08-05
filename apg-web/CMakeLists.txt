@@ -1,0 +1,12 @@
+apg_ide_sources(apg_web_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*
+        ${CMAKE_CURRENT_SOURCE_DIR}/scripts/*
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/*
+        ${CMAKE_CURRENT_SOURCE_DIR}/public/*
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.ts
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.js
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.mjs
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.html
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.json
+        ${CMAKE_CURRENT_SOURCE_DIR}/README.md
+)
