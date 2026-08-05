@@ -1,5 +1,5 @@
 import { createContext, useContext, type Dispatch, type SetStateAction } from 'react';
-import type { AudioTraceReport, AudioTraceStatus } from '@audio-playground/wasm-tools';
+import type { AudioTraceReport, AudioTraceStatus } from '@audio-playground/apg-wasm';
 import type {
   AudioCalibrationState,
   AudioDeviceOption,

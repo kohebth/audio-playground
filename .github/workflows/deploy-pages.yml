@@ -17,8 +17,8 @@ on:
       - "test/fixtures/**"
       - "test/golden/**"
       - "codegen/**"
-      - "wasm-tools/**"
-      - "web-tools/**"
+      - "apg-wasm/**"
+      - "apg-web/**"
 permissions:
   contents: read
 
@@ -44,8 +44,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: |
-            wasm-tools/package-lock.json
-            web-tools/package-lock.json
+            apg-wasm/package-lock.json
+            apg-web/package-lock.json
 
       - name: Set up Emscripten
         uses: emscripten-core/setup-emsdk@v16
@@ -54,61 +54,61 @@ jobs:
           actions-cache-folder: emsdk-cache
 
       - name: Install WASM facade dependencies
-        working-directory: wasm-tools
+        working-directory: apg-wasm
         run: npm ci
 
       - name: Build WASM facade
-        working-directory: wasm-tools
+        working-directory: apg-wasm
         run: npm run build
 
       - name: Build and smoke-test WASM runtime
         run: |
           emcmake cmake -S . -B build/wasm -DCMAKE_BUILD_TYPE=Release
           cmake --build build/wasm --target apg_control apg_processor -j2
-          node wasm-tools/test/emscripten_runtime_smoke.mjs build/wasm/wasm-tools .
-          mkdir -p web-tools/public/wasm
-          cp build/wasm/wasm-tools/apg_control.mjs build/wasm/wasm-tools/apg_control.wasm web-tools/public/wasm/
-          cp build/wasm/wasm-tools/apg_processor.mjs build/wasm/wasm-tools/apg_processor.wasm web-tools/public/wasm/
-          cp wasm-tools/web/processor.worklet.js web-tools/public/wasm/processor.worklet.js
+          node apg-wasm/test/emscripten_runtime_smoke.mjs build/wasm/apg-wasm .
+          mkdir -p apg-web/public/wasm
+          cp build/wasm/apg-wasm/apg_control.mjs build/wasm/apg-wasm/apg_control.wasm apg-web/public/wasm/
+          cp build/wasm/apg-wasm/apg_processor.mjs build/wasm/apg-wasm/apg_processor.wasm apg-web/public/wasm/
+          cp apg-wasm/web/processor.worklet.js apg-web/public/wasm/processor.worklet.js
 
       - name: Install web dependencies
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm ci
 
       - name: Typecheck
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm run typecheck
 
       - name: Lint
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm run lint
 
       - name: Test
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm test
 
       - name: Build Pages application
-        working-directory: web-tools
+        working-directory: apg-web
         env:
           VITE_BASE_PATH: /audio-playground/
           VITE_COMMIT_SHA: ${{ github.sha }}
         run: npm run build
 
       - name: Disable Jekyll processing
-        run: touch web-tools/dist/.nojekyll
+        run: touch apg-web/dist/.nojekyll
 
       - name: Validate Pages artifact
-        working-directory: web-tools
+        working-directory: apg-web
         env:
           VITE_BASE_PATH: /audio-playground/
         run: npm run pages:validate
 
       - name: Install Chromium
-        working-directory: web-tools
+        working-directory: apg-web
         run: npx playwright install --with-deps chromium
 
       - name: Run Pages smoke tests
-        working-directory: web-tools
+        working-directory: apg-web
         env:
           APG_EXPECTED_COMMIT_SHA: ${{ github.sha }}
         run: npm run pages:smoke
@@ -117,7 +117,7 @@ jobs:
         if: github.event_name == 'push' && github.ref_type == 'tag'
         uses: actions/upload-pages-artifact@v5
         with:
-          path: web-tools/dist
+          path: apg-web/dist
 
   deploy:
     name: Deploy

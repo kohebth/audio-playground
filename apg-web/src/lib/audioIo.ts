@@ -1,4 +1,4 @@
-import type { AudioTraceSnapshot } from '@audio-playground/wasm-tools';
+import type { AudioTraceSnapshot } from '@audio-playground/apg-wasm';
 
 export const AUDIO_IO_STORAGE_KEY = 'apg.audio-io.v1';
 export const AUDIO_CALIBRATION_HINTS = [0.0027, 0.0053, 0.0107, 'interactive'] as const;

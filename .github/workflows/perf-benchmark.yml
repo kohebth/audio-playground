@@ -3,8 +3,8 @@ name: Unit Editor Performance Baseline
 on:
   pull_request:
     paths:
-      - 'web-tools/**'
-      - 'wasm-tools/**'
+      - 'apg-web/**'
+      - 'apg-wasm/**'
       - 'src/**'
       - 'inc/**'
       - 'CMakeLists.txt'
@@ -29,14 +29,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web-tools/package-lock.json
+          cache-dependency-path: apg-web/package-lock.json
 
       - name: Install web editor dependencies
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm install
 
       - name: Performance regression check
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm run perf:benchmark:ci
 
   browser-medium:
@@ -51,8 +51,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: |
-            wasm-tools/package-lock.json
-            web-tools/package-lock.json
+            apg-wasm/package-lock.json
+            apg-web/package-lock.json
 
       - name: Set up Emscripten
         uses: emscripten-core/setup-emsdk@v16
@@ -64,24 +64,24 @@ jobs:
         run: |
           emcmake cmake -S . -B build/wasm -DCMAKE_BUILD_TYPE=Release
           cmake --build build/wasm --target apg_control apg_processor -j2
-          node wasm-tools/test/emscripten_runtime_smoke.mjs build/wasm/wasm-tools .
-          mkdir -p web-tools/public/wasm
-          cp build/wasm/wasm-tools/apg_control.mjs build/wasm/wasm-tools/apg_control.wasm web-tools/public/wasm/
-          cp build/wasm/wasm-tools/apg_processor.mjs build/wasm/wasm-tools/apg_processor.wasm web-tools/public/wasm/
-          cp wasm-tools/web/processor.worklet.js web-tools/public/wasm/processor.worklet.js
+          node apg-wasm/test/emscripten_runtime_smoke.mjs build/wasm/apg-wasm .
+          mkdir -p apg-web/public/wasm
+          cp build/wasm/apg-wasm/apg_control.mjs build/wasm/apg-wasm/apg_control.wasm apg-web/public/wasm/
+          cp build/wasm/apg-wasm/apg_processor.mjs build/wasm/apg-wasm/apg_processor.wasm apg-web/public/wasm/
+          cp apg-wasm/web/processor.worklet.js apg-web/public/wasm/processor.worklet.js
 
       - name: Build WASM web facade
-        working-directory: wasm-tools
+        working-directory: apg-wasm
         run: npm install && npm run build
 
       - name: Install web editor dependencies
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm install
 
       - name: Install Chromium
-        working-directory: web-tools
+        working-directory: apg-web
         run: npx playwright install --with-deps chromium
 
       - name: Medium browser performance gate
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm run perf:ui:pr

@@ -1,5 +1,5 @@
 {
-  "name": "@audio-playground/wasm-tools",
+  "name": "@audio-playground/apg-wasm",
   "private": true,
   "version": "0.1.0",
   "type": "module",

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BUILD_DIR="${BUILD_DIR:-./build/native}"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-cmake -S . -B "$BUILD_DIR" >/dev/null
-cmake --build "$BUILD_DIR" >/dev/null
-ctest --test-dir "$BUILD_DIR"
+for script in "${repo_root}"/scripts/build-and-test-*.sh; do
+    if [ -x "$script" ]; then
+        "$script"
+    fi
+done

@@ -61,10 +61,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_test(NAME test_io_test_detector COMMAND io-test --self-test)
 endif()
 
-add_subdirectory(wasm-tools)
+add_subdirectory(apg-wasm)
 
 if(APG_BUILD_TERMINAL_TOOLS AND NOT EMSCRIPTEN)
-    add_subdirectory(terminal-tools)
+    add_subdirectory(apg-tui)
 endif()
 
 set(TEST_TARGETS

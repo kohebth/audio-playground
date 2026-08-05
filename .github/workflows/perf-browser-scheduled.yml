@@ -30,11 +30,11 @@ jobs:
         run: |
           emcmake cmake -S . -B build/wasm -DCMAKE_BUILD_TYPE=Release
           cmake --build build/wasm --target apg_control apg_processor -j2
-          node wasm-tools/test/emscripten_runtime_smoke.mjs build/wasm/wasm-tools .
+          node apg-wasm/test/emscripten_runtime_smoke.mjs build/wasm/apg-wasm .
           mkdir -p browser-wasm
-          cp build/wasm/wasm-tools/apg_control.mjs build/wasm/wasm-tools/apg_control.wasm browser-wasm/
-          cp build/wasm/wasm-tools/apg_processor.mjs build/wasm/wasm-tools/apg_processor.wasm browser-wasm/
-          cp wasm-tools/web/processor.worklet.js browser-wasm/processor.worklet.js
+          cp build/wasm/apg-wasm/apg_control.mjs build/wasm/apg-wasm/apg_control.wasm browser-wasm/
+          cp build/wasm/apg-wasm/apg_processor.mjs build/wasm/apg-wasm/apg_processor.wasm browser-wasm/
+          cp apg-wasm/web/processor.worklet.js browser-wasm/processor.worklet.js
 
       - name: Upload WASM middleware
         uses: actions/upload-artifact@v4
@@ -109,38 +109,38 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web-tools/package-lock.json
+          cache-dependency-path: apg-web/package-lock.json
 
       - name: Download WASM middleware
         uses: actions/download-artifact@v4
         with:
           name: browser-wasm
-          path: web-tools/public/wasm
+          path: apg-web/public/wasm
 
       - name: Install web editor dependencies
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm install
 
       - name: Install browser
-        working-directory: web-tools
+        working-directory: apg-web
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Restore rolling browser baseline
         uses: actions/cache/restore@v4
         with:
-          path: web-tools/perf-history/rolling/${{ matrix.profile }}.json
+          path: apg-web/perf-history/rolling/${{ matrix.profile }}.json
           key: browser-perf-${{ runner.os }}-${{ matrix.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             browser-perf-${{ runner.os }}-${{ matrix.profile }}-
 
       - name: Run full scheduled Chromium suite
         if: matrix.full
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm run perf:ui -- --project=${{ matrix.project }} --reporter=line,json --workers=1
 
       - name: Run throttled or cross-browser medium suite
         if: matrix.full == false
-        working-directory: web-tools
+        working-directory: apg-web
         run: npm run perf:ui -- --project=${{ matrix.project }} --grep @browser-matrix --reporter=line,json --workers=1
 
       - name: Create trend record

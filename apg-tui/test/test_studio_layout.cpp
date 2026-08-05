@@ -74,7 +74,7 @@ std::vector<std::pair<int, int>> signal_cells(const ftxui::Screen &screen) {
     for (int y = 0; y < screen.dimy(); ++y) {
         for (int x = 0; x < screen.dimx(); ++x) {
             const auto &character = screen.CellAt(x, y).character;
-            if (character == "◇" || character == "◆")
+            if (character == ">")
                 result.emplace_back(x, y);
         }
     }
@@ -198,7 +198,7 @@ int assert_five_row_card(const ftxui::Screen &screen, const std::string &title, 
     for (int dy = 1; dy <= 3; ++dy) {
         for (int x = 0; x < screen.dimx(); ++x) {
             const auto &c = screen.CellAt(x, card_position->second + dy).character;
-            if (c == "◇" || c == "◆") {
+            if (c == ">") {
                 return card_position->second + dy;
             }
         }
@@ -270,7 +270,7 @@ void assert_wide_unit_drag() {
     auto       studio  = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; });
     const auto initial = render(studio, 120, 32, terminal_size);
     const auto unit    = locate_ascii(initial.screen, "gain_unit");
-    const auto route   = locate_character(initial.screen, "◇");
+    const auto route   = locate_character(initial.screen, ">");
     assert(unit);
     assert(route);
 
@@ -279,7 +279,7 @@ void assert_wide_unit_drag() {
     render(studio, 120, 32, terminal_size);
     assert(studio->OnEvent(left_mouse(route->first, route->second, ftxui::Mouse::Moved)));
     const auto hovered = render(studio, 120, 32, terminal_size);
-    assert(hovered.screen.CellAt(route->first, route->second).character == "◆");
+    assert(hovered.screen.CellAt(route->first, route->second).character == ">");
     assert(studio->OnEvent(left_mouse(route->first, route->second, ftxui::Mouse::Released)));
     assert(editor.document().nodes().size() == initial_nodes + 1);
     assert(editor.can_undo());
@@ -306,7 +306,7 @@ void assert_compact_unit_pickup() {
 
     auto graph = render(studio, 80, 24, terminal_size);
     assert(graph.text.find("Placing Simple Gain") != std::string::npos);
-    const auto route = locate_character(graph.screen, "◇");
+    const auto route = locate_character(graph.screen, ">");
     assert(route);
     assert(studio->OnEvent(left_mouse(route->first, route->second + 1, ftxui::Mouse::Pressed)));
     assert(studio->OnEvent(left_mouse(route->first, route->second + 1, ftxui::Mouse::Released)));

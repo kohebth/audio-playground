@@ -33,7 +33,7 @@ set(generated_files
         apg-core/src/atom/mix/mix_field_descriptors.c
         apg-core/src/atom/nonlinear/nonlinear_field_descriptors.c
         apg-core/src/apgcore/metadata/atom_catalog_contracts.generated.inc
-        web-tools/src/atoms/atomCatalog.generated.ts
+        apg-web/src/atoms/atomCatalog.generated.ts
         schema/atoms/atom.schema.json
 )
 

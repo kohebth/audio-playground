@@ -6,7 +6,7 @@ import {
   type MeterSnapshot,
   type ValidationResult,
   type WasmDiagnostic,
-} from '@audio-playground/wasm-tools';
+} from '@audio-playground/apg-wasm';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WorkspaceFile } from '../lib/backendSamples';

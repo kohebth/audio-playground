@@ -4,7 +4,7 @@ import { createContext, runInContext } from 'node:vm';
 import { resolve } from 'node:path';
 
 import { createAudioTraceReport, formatAudioTraceBudget } from '../src/lib/audioTrace.ts';
-import type { AudioTraceSnapshot, AudioTraceStageStats } from '@audio-playground/wasm-tools';
+import type { AudioTraceSnapshot, AudioTraceStageStats } from '@audio-playground/apg-wasm';
 
 const emptyStage = (): AudioTraceStageStats => ({
   sampleCount: 3,
@@ -66,7 +66,7 @@ assert.match(schedulingDelayed.message, /Cadence gaps are diagnostic only/);
 assert.equal(formatAudioTraceBudget('schedulingJitter', 312.5), 'n/a');
 assert.equal(formatAudioTraceBudget('callbackTotal', 37.5), '37.5%');
 
-const source = readFileSync(resolve('../wasm-tools/web/processor.worklet.js'), 'utf8')
+const source = readFileSync(resolve('../apg-wasm/web/processor.worklet.js'), 'utf8')
   .replace(/^import createApgProcessorModule[^\n]*\n/, '');
 let clockMs = 0;
 let Processor: new (options: unknown) => {

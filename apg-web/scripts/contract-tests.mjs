@@ -34,50 +34,50 @@ const atomCatalog = json('test/golden/v2-inspect-atoms.json');
 const project = json('test/golden/v2-inspect-project-guitar-pedalboard.json');
 const unit = json('test/golden/v2-inspect-unit-simple_gain.json');
 const render = json('test/golden/v2-render-project-guitar-pedalboard.json');
-const webPackage = json('web-tools/package.json');
+const webPackage = json('apg-web/package.json');
 
-const app = read('web-tools/src/App.tsx');
-const studioApp = read('web-tools/src/StudioApp.tsx');
-const appStyles = read('web-tools/src/App.css');
-const main = read('web-tools/src/main.tsx');
-const appLogo = read('web-tools/src/components/AppLogo.tsx');
-const buildInfo = read('web-tools/src/lib/buildInfo.ts');
-const viteConfig = read('web-tools/vite.config.ts');
-const webReadme = read('web-tools/README.md');
+const app = read('apg-web/src/App.tsx');
+const studioApp = read('apg-web/src/StudioApp.tsx');
+const appStyles = read('apg-web/src/App.css');
+const main = read('apg-web/src/main.tsx');
+const appLogo = read('apg-web/src/components/AppLogo.tsx');
+const buildInfo = read('apg-web/src/lib/buildInfo.ts');
+const viteConfig = read('apg-web/vite.config.ts');
+const webReadme = read('apg-web/README.md');
 const pagesWorkflow = read('.github/workflows/deploy-pages.yml');
-const backendSamples = read('web-tools/src/lib/backendSamples.ts');
-const projectTopbar = read('web-tools/src/components/ProjectTopbar.tsx');
-const projectReadinessPanel = read('web-tools/src/components/ProjectReadinessPanel.tsx');
-const projectSidebar = read('web-tools/src/components/ProjectSidebar.tsx');
-const projectInspector = read('web-tools/src/components/ProjectInspector.tsx');
-const simpleInspector = read('web-tools/src/components/SimpleInspector.tsx');
-const audioIoDrawer = read('web-tools/src/components/AudioIoDrawer.tsx');
-const atomContextInspector = read('web-tools/src/components/AtomContextInspector.tsx');
-const unitSettingsDrawer = read('web-tools/src/components/UnitSettingsDrawer.tsx');
-const modeToggle = read('web-tools/src/components/ModeToggle.tsx');
-const simpleLibrary = read('web-tools/src/components/SimpleLibraryPanel.tsx');
-const structuredUnitEditor = read('web-tools/src/components/StructuredUnitEditor.tsx');
-const projectCanvas = read('web-tools/src/components/ProjectCanvas.tsx');
-const graphDragTypes = read('web-tools/src/lib/graphDragTypes.ts');
-const projectHome = read('web-tools/src/components/ProjectHome.tsx');
-const projectNode = read('web-tools/src/components/ProjectNode.tsx');
-const projectGraph = read('web-tools/src/lib/projectGraph.ts');
-const projectTemplates = read('web-tools/src/lib/projectTemplates.ts');
-const projectV2Graph = read('web-tools/src/lib/projectV2Graph.ts');
-const unitV2Graph = read('web-tools/src/lib/unitV2Graph.ts');
-const graphContextMenu = read('web-tools/src/components/GraphContextMenu.tsx');
-const paramKnob = read('web-tools/src/components/ParamKnob.tsx');
-const atomPalette = read('web-tools/src/components/AtomCatalogPanel.tsx');
-const contractCanvas = read('web-tools/src/components/ContractGraphCanvas.tsx');
-const graphvizWorker = read('web-tools/src/workers/graphviz.worker.ts');
-const previewPanel = read('web-tools/src/components/PreviewPanel.tsx');
-const liveLatencyBadge = read('web-tools/src/components/LiveLatencyBadge.tsx');
-const audioIo = read('web-tools/src/lib/audioIo.ts');
-const wasmFacade = read('wasm-tools/web/facade.ts');
-const processorWorklet = read('wasm-tools/web/processor.worklet.js');
-const compatibility = read('web-tools/src/components/CompatibilityExportPanel.tsx');
-const workspacePersistence = read('web-tools/src/lib/workspacePersistence.ts');
-const publicOverdrive = read('web-tools/public/units/overdrive.unit.v2.yaml');
+const backendSamples = read('apg-web/src/lib/backendSamples.ts');
+const projectTopbar = read('apg-web/src/components/ProjectTopbar.tsx');
+const projectReadinessPanel = read('apg-web/src/components/ProjectReadinessPanel.tsx');
+const projectSidebar = read('apg-web/src/components/ProjectSidebar.tsx');
+const projectInspector = read('apg-web/src/components/ProjectInspector.tsx');
+const simpleInspector = read('apg-web/src/components/SimpleInspector.tsx');
+const audioIoDrawer = read('apg-web/src/components/AudioIoDrawer.tsx');
+const atomContextInspector = read('apg-web/src/components/AtomContextInspector.tsx');
+const unitSettingsDrawer = read('apg-web/src/components/UnitSettingsDrawer.tsx');
+const modeToggle = read('apg-web/src/components/ModeToggle.tsx');
+const simpleLibrary = read('apg-web/src/components/SimpleLibraryPanel.tsx');
+const structuredUnitEditor = read('apg-web/src/components/StructuredUnitEditor.tsx');
+const projectCanvas = read('apg-web/src/components/ProjectCanvas.tsx');
+const graphDragTypes = read('apg-web/src/lib/graphDragTypes.ts');
+const projectHome = read('apg-web/src/components/ProjectHome.tsx');
+const projectNode = read('apg-web/src/components/ProjectNode.tsx');
+const projectGraph = read('apg-web/src/lib/projectGraph.ts');
+const projectTemplates = read('apg-web/src/lib/projectTemplates.ts');
+const projectV2Graph = read('apg-web/src/lib/projectV2Graph.ts');
+const unitV2Graph = read('apg-web/src/lib/unitV2Graph.ts');
+const graphContextMenu = read('apg-web/src/components/GraphContextMenu.tsx');
+const paramKnob = read('apg-web/src/components/ParamKnob.tsx');
+const atomPalette = read('apg-web/src/components/AtomCatalogPanel.tsx');
+const contractCanvas = read('apg-web/src/components/ContractGraphCanvas.tsx');
+const graphvizWorker = read('apg-web/src/workers/graphviz.worker.ts');
+const previewPanel = read('apg-web/src/components/PreviewPanel.tsx');
+const liveLatencyBadge = read('apg-web/src/components/LiveLatencyBadge.tsx');
+const audioIo = read('apg-web/src/lib/audioIo.ts');
+const wasmFacade = read('apg-wasm/web/facade.ts');
+const processorWorklet = read('apg-wasm/web/processor.worklet.js');
+const compatibility = read('apg-web/src/components/CompatibilityExportPanel.tsx');
+const workspacePersistence = read('apg-web/src/lib/workspacePersistence.ts');
+const publicOverdrive = read('apg-web/public/units/overdrive.unit.v2.yaml');
 
 // AC: Contract-accurate web data is sourced from a frozen backend atom catalog fixture.
 assert(atomCatalog.schema === 'apg.atom_catalog.v2', 'atom catalog fixture schema changed');
@@ -96,12 +96,12 @@ assert(
   'atom catalog schema assertion should fail visibly if fixture schema drifts',
 );
 includes(
-  'web-tools/src/lib/backendSamples.ts',
+  'apg-web/src/lib/backendSamples.ts',
   'v2-inspect-atoms.json?raw',
   'backendSamples must load the frozen backend atom catalog JSON',
 );
 assert(!backendSamples.includes('../atoms/atomCatalog'), 'project workbench backend samples must not use the local atom catalog fallback');
-includes('web-tools/src/components/ProjectInspector.tsx', '<strong>{atomCatalog.schema}</strong>', 'contract view must expose atom catalog schema');
+includes('apg-web/src/components/ProjectInspector.tsx', '<strong>{atomCatalog.schema}</strong>', 'contract view must expose atom catalog schema');
 includesContent(atomPalette, 'filteredAtoms.map(', 'atom palette must render its filtered backend atoms');
 includesContent(atomPalette, 'atom.profiles.wasm_realtime === true', 'browser atom palette must require WASM validation');
 includesContent(atomPalette, 'atom-palette-browser-hidden', 'browser atom palette must report hidden incompatible atoms');
@@ -201,7 +201,7 @@ assert(
   'workspace restore must read from localStorage',
 );
 includes(
-  'web-tools/src/lib/backendSamples.ts',
+  'apg-web/src/lib/backendSamples.ts',
   'test/golden/v2-inspect-atoms.json',
   'frozen backend contract source path should be explicit',
 );
@@ -250,7 +250,7 @@ includesContent(projectInspector, 'Unsaved local edits', 'validation/render shou
 includesContent(projectInspector, 'Up to date', 'validation/render should show synced state');
 includesContent(projectInspector, 'Engine Diagnostics', 'the retained diagnostics component must keep engine details');
 includes(
-  'web-tools/src/components/StructuredUnitEditor.tsx',
+  'apg-web/src/components/StructuredUnitEditor.tsx',
   'data-testid="structured-unit-editor"',
   'Contract Settings must expose structured unit editing',
 );
@@ -371,7 +371,7 @@ assert(!app.includes('launch-workspace'), 'launch screen must not require a manu
 includesContent(app, '<AppLogo />', 'launch screen must use the stable application logo');
 includesContent(projectTopbar, '<AppLogo />', 'project header must use the stable application logo');
 includesContent(appLogo, 'icon.svg', 'application logo component must load the bundled SVG');
-includes('web-tools/public/icon.svg', 'M0 0h1v1H0z M0 2h1v3H0z M2 0h3v1H2z M2 2h3v1H2z M2 4h1v1H2z', 'application logo must preserve the supplied 5x5 mark');
+includes('apg-web/public/icon.svg', 'M0 0h1v1H0z M0 2h1v3H0z M2 0h3v1H2z M2 2h3v1H2z M2 4h1v1H2z', 'application logo must preserve the supplied 5x5 mark');
 includesContent(main, '<HashRouter>', 'application entry point must use Pages-safe hash routing');
 includesContent(app, "const PROJECT_ROUTE = '/projects'", 'project workspace must expose a stable hash route');
 includesContent(app, '`/unit/${encodeURIComponent(unitRouteId(path))}`', 'unit workspaces must expose stable hash routes');

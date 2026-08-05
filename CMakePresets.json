@@ -78,7 +78,7 @@
       "configurePreset": "tui",
       "filter": {
         "include": {
-          "label": "terminal-tools"
+          "label": "apg-tui"
         }
       },
       "output": {

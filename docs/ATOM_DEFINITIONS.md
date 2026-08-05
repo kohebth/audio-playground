@@ -20,7 +20,7 @@ Field order is C ABI order. Atom order is canonical registry order. Empty roles 
 - `inc/atom/generated/atom_definitions.generated.h` and `dsp_atoms.generated.h`;
 - all 12 family `*_field_descriptors.c` files;
 - `src/apgcore/metadata/atom_catalog_contracts.generated.inc`;
-- `web-tools/src/atoms/atomCatalog.generated.ts`;
+- `apg-web/src/atoms/atomCatalog.generated.ts`;
 - `schema/atoms/atom.schema.json`.
 
 `inc/atom/atom_definitions.h`, `inc/atom/dsp_atoms.h`, and the TypeScript `atomCatalog.ts` module are thin handwritten

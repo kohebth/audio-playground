@@ -1,4 +1,4 @@
-import type { AudioTraceReport, AudioTraceSnapshot, AudioTraceStageName } from '@audio-playground/wasm-tools';
+import type { AudioTraceReport, AudioTraceSnapshot, AudioTraceStageName } from '@audio-playground/apg-wasm';
 
 export type AudioTraceBrowserLatency = AudioTraceReport['browser'];
 
