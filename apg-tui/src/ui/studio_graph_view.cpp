@@ -36,30 +36,73 @@ ftxui::Element render_node_item(
     return (element | reflect(node_hits.back().box)) | vcenter;
 }
 
+class HorizontalRailNode : public ftxui::Node {
+public:
+    HorizontalRailNode(ftxui::Color color, bool show_arrow) : color_(color), show_arrow_(show_arrow) {}
+    void ComputeRequirement() override {
+        requirement_.min_x = 5;
+        requirement_.min_y = 1;
+        requirement_.flex_grow_x = 1;
+    }
+    void Render(ftxui::Screen &screen) override {
+        for (int x = box_.x_min; x <= box_.x_max; ++x) {
+            auto &pixel            = screen.PixelAt(x, box_.y_min);
+            pixel.character        = "─";
+            pixel.foreground_color = color_;
+        }
+        if (show_arrow_ && box_.x_max >= box_.x_min) {
+            int   mid_x            = box_.x_min + (box_.x_max - box_.x_min) / 2;
+            auto &pixel            = screen.PixelAt(mid_x, box_.y_min);
+            pixel.character        = ">";
+            pixel.foreground_color = color_;
+        }
+    }
+
+private:
+    ftxui::Color color_;
+    bool         show_arrow_;
+};
+
+ftxui::Element horizontal_rail(ftxui::Color color = ftxui::Color::GrayDark, bool show_arrow = true) {
+    return std::make_shared<HorizontalRailNode>(color, show_arrow);
+}
+
 ftxui::Element render_route_item(
     const Route                &route,
     Pane                        active_pane,
     const std::optional<Route> &selected_route,
     const std::optional<Route> &hovered_route,
     bool                        route_drop_active,
-    std::deque<RouteHit>       &route_hits
+    std::deque<RouteHit>       &route_hits,
+    ftxui::Element              custom_element = nullptr
 ) {
     using namespace ftxui;
     route_hits.push_back({route, {}});
     const bool hovered  = hovered_route && *hovered_route == route;
     const bool selected = selected_route && *selected_route == route;
-    auto       element  = text(hovered || selected ? "──>──" : "──>──");
+
+    ftxui::Color color_to_use = Color::GrayDark;
     if (hovered) {
-        element = element | color(Color::Green) | bold;
+        color_to_use = Color::Green;
     } else if (route_drop_active) {
-        element = element | color(Color::Cyan);
+        color_to_use = Color::Cyan;
     } else if (selected) {
-        element = element | color(Color::Yellow) | bold;
-        if (active_pane == Pane::Graph)
-            element = element | focus;
-    } else {
-        element = element | color(Color::GrayDark);
+        color_to_use = Color::Yellow;
     }
+
+    Element element;
+    if (custom_element) {
+        element = custom_element;
+    } else {
+        element = text("──>──");
+    }
+
+    element = element | color(color_to_use);
+    if (hovered || selected)
+        element = element | bold;
+    if (selected && active_pane == Pane::Graph)
+        element = element | focus;
+
     return (element | reflect(route_hits.back().box)) | vcenter;
 }
 
@@ -86,7 +129,126 @@ ftxui::Element render_compact_helper_node(
         if (active_pane == Pane::Graph)
             element = element | focus;
     }
-    return (element | reflect(node_hits.back().box)) | vcenter;
+    return (element | reflect(node_hits.back().box));
+}
+
+constexpr int kCenterRowHeight = 3;
+constexpr int kCenterRowPort   = 1;
+constexpr int kCenterRowBotOffset = kCenterRowHeight - kCenterRowPort;
+
+struct LayoutMetrics {
+    int total_height = 5;
+    int port_row     = 2;
+};
+
+LayoutMetrics compute_element_metrics(const TopologyElement &el);
+LayoutMetrics compute_sequence_metrics(const TopologySequence &sequence);
+
+LayoutMetrics compute_element_metrics(const TopologyElement &el) {
+    LayoutMetrics m{5, 2};
+    if (el.kind == TopologyElement::Kind::Parallel && el.parallel) {
+        const auto &paths = el.parallel->paths;
+        if (paths.size() >= 2) {
+            auto top_m = compute_sequence_metrics(*paths.front().sequence);
+            auto bot_m = compute_sequence_metrics(*paths.back().sequence);
+            int mid_h = 0;
+            for (std::size_t j = 1; j + 1 < paths.size(); ++j) {
+                mid_h += compute_sequence_metrics(*paths[j].sequence).total_height;
+            }
+            m.port_row = top_m.total_height + mid_h + kCenterRowPort;
+            m.total_height = top_m.total_height + mid_h + kCenterRowHeight + bot_m.total_height;
+        }
+    }
+    return m;
+}
+
+LayoutMetrics compute_sequence_metrics(const TopologySequence &sequence) {
+    if (sequence.elements.empty()) {
+        return {3, 0};
+    }
+    int max_height = 1;
+    int max_port   = 0;
+    for (std::size_t i = 0; i < sequence.elements.size(); ++i) {
+        auto m = compute_element_metrics(sequence.elements[i]);
+        max_port   = std::max(max_port, m.port_row);
+        max_height = std::max(max_height, m.total_height);
+    }
+    return {max_height, max_port};
+}
+
+ftxui::Element pad_top(ftxui::Element el, int count) {
+    using namespace ftxui;
+    if (count <= 0) return el;
+    Elements stack;
+    for (int r = 0; r < count; ++r) {
+        stack.push_back(text(""));
+    }
+    stack.push_back(std::move(el));
+    return vbox(std::move(stack));
+}
+
+ftxui::Element make_top_left_connector(int total_height, int port_row) {
+    using namespace ftxui;
+    Elements lines;
+    for (int r = 0; r < total_height; ++r) {
+        if (r < port_row) {
+            lines.push_back(text("    "));
+        } else if (r == port_row) {
+            lines.push_back(text("    ┌") | color(Color::GrayDark));
+        } else {
+            lines.push_back(text("    │") | color(Color::GrayDark));
+        }
+    }
+    return vbox(std::move(lines));
+}
+
+ftxui::Element make_top_right_connector(int total_height, int port_row) {
+    using namespace ftxui;
+    Elements lines;
+    for (int r = 0; r < total_height; ++r) {
+        if (r < port_row) {
+            lines.push_back(text("    "));
+        } else if (r == port_row) {
+            lines.push_back(text("┐    ") | color(Color::GrayDark));
+        } else {
+            lines.push_back(text("│    ") | color(Color::GrayDark));
+        }
+    }
+    return vbox(std::move(lines));
+}
+
+ftxui::Element make_bot_left_connector(int bot_total_height, int bot_port_row) {
+    using namespace ftxui;
+    Elements lines;
+    int target_r = bot_port_row;
+    int max_r    = bot_total_height;
+    for (int r = 0; r < max_r; ++r) {
+        if (r < target_r) {
+            lines.push_back(text("    │") | color(Color::GrayDark));
+        } else if (r == target_r) {
+            lines.push_back(text("    └") | color(Color::GrayDark));
+        } else {
+            lines.push_back(text("    "));
+        }
+    }
+    return vbox(std::move(lines));
+}
+
+ftxui::Element make_bot_right_connector(int bot_total_height, int bot_port_row) {
+    using namespace ftxui;
+    Elements lines;
+    int target_r = bot_port_row;
+    int max_r    = bot_total_height;
+    for (int r = 0; r < max_r; ++r) {
+        if (r < target_r) {
+            lines.push_back(text("│    ") | color(Color::GrayDark));
+        } else if (r == target_r) {
+            lines.push_back(text("┘    ") | color(Color::GrayDark));
+        } else {
+            lines.push_back(text("    "));
+        }
+    }
+    return vbox(std::move(lines));
 }
 
 ftxui::Element render_sequence_item(
@@ -105,15 +267,35 @@ ftxui::Element render_sequence_item(
     if (depth > 32)
         return text("nesting limit") | color(Color::Red);
     Elements items;
-    for (std::size_t index = 0; index < sequence.routes.size(); ++index) {
-        items.push_back(render_route_item(
-            sequence.routes[index], active_pane, selected_route, hovered_route, route_drop_active, route_hits
-        ));
-        if (index >= sequence.elements.size())
-            continue;
+
+    auto seq_m       = compute_sequence_metrics(sequence);
+    int  target_port = seq_m.port_row;
+
+    if (depth == 0) {
+        auto in_box = vbox({
+                          text(" IN ") | bold,
+                      }) |
+                      border | color(Color::Green);
+        items.push_back(pad_top(in_box, target_port - 1));
+    }
+    for (std::size_t index = 0; index < sequence.elements.size(); ++index) {
         const auto &element = sequence.elements[index];
+        if (depth > 0) {
+            auto rail_el = render_route_item(
+                sequence.routes[index], active_pane, selected_route, hovered_route, route_drop_active, route_hits,
+                horizontal_rail()
+            );
+            items.push_back(pad_top(rail_el, target_port) | flex);
+        } else {
+            auto route_el = render_route_item(
+                sequence.routes[index], active_pane, selected_route, hovered_route, route_drop_active, route_hits
+            );
+            items.push_back(pad_top(route_el, target_port));
+        }
+
         if (element.kind == TopologyElement::Kind::Effect) {
-            items.push_back(render_node_item(editor, element.node_id, false, active_pane, selected_node, node_hits));
+            auto node_el = render_node_item(editor, element.node_id, false, active_pane, selected_node, node_hits);
+            items.push_back(pad_top(node_el, target_port - 2));
         } else if (element.parallel) {
             const auto       &panner_id = element.parallel->panner_id;
             const auto       &mixer_id  = element.parallel->mixer_id;
@@ -125,7 +307,7 @@ ftxui::Element render_sequence_item(
 
             if (num_paths < 2) {
                 items.push_back(
-                    hbox({
+                    hbox(
                         pan_card,
                         text("───") | vcenter | color(Color::GrayDark),
                         paths_vec.empty() || !paths_vec[0].sequence
@@ -135,68 +317,90 @@ ftxui::Element render_sequence_item(
                                   hovered_route, route_drop_active, route_hits, node_hits
                               ),
                         text("───") | vcenter | color(Color::GrayDark),
-                        mix_card,
-                    }) |
+                        mix_card
+                    ) |
                     vcenter
                 );
                 continue;
             }
 
             // Top branch (path 0)
-            const auto &top_path = paths_vec[0];
-            auto        top_seq  = top_path.sequence
-                                       ? render_sequence_item(
-                                     editor, *top_path.sequence, depth + 1, active_pane, selected_node, selected_route,
-                                     hovered_route, route_drop_active, route_hits, node_hits
-                                 )
-                                       : text("──────") | dim | vcenter;
+            const auto &top_path     = paths_vec[0];
+            const bool  top_is_empty = !top_path.sequence || (top_path.sequence->elements.empty() && top_path.sequence->routes.size() == 1);
 
-            auto top_left_conn  = vbox({
-                filler(),
-                text("    ┌") | color(Color::GrayDark),
-                text("    │") | color(Color::GrayDark),
-                text("    │") | color(Color::GrayDark),
-            });
-            auto top_right_conn = vbox({
-                filler(),
-                text("┐    ") | color(Color::GrayDark),
-                text("│    ") | color(Color::GrayDark),
-                text("│    ") | color(Color::GrayDark),
-            });
+            Element top_seq;
+            if (top_is_empty) {
+                if (top_path.sequence && !top_path.sequence->routes.empty()) {
+                    auto rail_item = render_route_item(
+                        top_path.sequence->routes[0], active_pane, selected_route, hovered_route, route_drop_active, route_hits,
+                        horizontal_rail()
+                    );
+                    top_seq = vbox(
+                        rail_item,
+                        filler(),
+                        filler()
+                    );
+                } else {
+                    top_seq = vbox(
+                        horizontal_rail(),
+                        filler(),
+                        filler()
+                    );
+                }
+            } else {
+                top_seq = render_sequence_item(
+                    editor, *top_path.sequence, depth + 1, active_pane, selected_node, selected_route,
+                    hovered_route, route_drop_active, route_hits, node_hits
+                );
+            }
+            auto top_m = top_path.sequence ? compute_sequence_metrics(*top_path.sequence) : LayoutMetrics{3, 0};
+            auto top_left_conn  = make_top_left_connector(top_m.total_height, top_m.port_row);
+            auto top_right_conn = make_top_right_connector(top_m.total_height, top_m.port_row);
 
-            auto top_row = hbox({
+            auto top_row = hbox(
                 top_left_conn,
-                top_seq | vcenter,
-                top_right_conn,
-            });
+                top_seq | flex,
+                top_right_conn
+            );
 
-            // Bottom branch (path N-1)
-            const auto &bot_path = paths_vec[num_paths - 1];
-            auto        bot_seq  = bot_path.sequence
-                                       ? render_sequence_item(
-                                     editor, *bot_path.sequence, depth + 1, active_pane, selected_node, selected_route,
-                                     hovered_route, route_drop_active, route_hits, node_hits
-                                 )
-                                       : text("──────") | dim | vcenter;
+            // Bottom branch (path num_paths - 1)
+            const auto &bot_path     = paths_vec[num_paths - 1];
+            const bool  bot_is_empty = !bot_path.sequence || (bot_path.sequence->elements.empty() && bot_path.sequence->routes.size() == 1);
 
-            auto bot_left_conn  = vbox({
-                text("    │") | color(Color::GrayDark),
-                text("    │") | color(Color::GrayDark),
-                text("    └") | color(Color::GrayDark),
-                filler(),
-            });
-            auto bot_right_conn = vbox({
-                text("│    ") | color(Color::GrayDark),
-                text("│    ") | color(Color::GrayDark),
-                text("┘    ") | color(Color::GrayDark),
-                filler(),
-            });
+            Element bot_seq;
+            if (bot_is_empty) {
+                if (bot_path.sequence && !bot_path.sequence->routes.empty()) {
+                    auto rail_item = render_route_item(
+                        bot_path.sequence->routes[0], active_pane, selected_route, hovered_route, route_drop_active, route_hits,
+                        horizontal_rail()
+                    );
+                    bot_seq = vbox(
+                        filler(),
+                        filler(),
+                        rail_item
+                    );
+                } else {
+                    bot_seq = vbox(
+                        filler(),
+                        filler(),
+                        horizontal_rail()
+                    );
+                }
+            } else {
+                bot_seq = render_sequence_item(
+                    editor, *bot_path.sequence, depth + 1, active_pane, selected_node, selected_route,
+                    hovered_route, route_drop_active, route_hits, node_hits
+                );
+            }
+            auto bot_m = (bot_is_empty || !bot_path.sequence) ? LayoutMetrics{3, 2} : compute_sequence_metrics(*bot_path.sequence);
+            auto bot_left_conn  = make_bot_left_connector(bot_m.total_height, bot_m.port_row);
+            auto bot_right_conn = make_bot_right_connector(bot_m.total_height, bot_m.port_row);
 
-            auto bot_row = hbox({
+            auto bot_row = hbox(
                 bot_left_conn,
-                bot_seq | vcenter,
-                bot_right_conn,
-            });
+                bot_seq | flex,
+                bot_right_conn
+            );
 
             // Middle paths (if any)
             Elements mid_rows;
@@ -223,19 +427,19 @@ ftxui::Element render_sequence_item(
                                     }) |
                                     vcenter;
 
-                mid_rows.push_back(hbox({
+                mid_rows.push_back(hbox(
                     m_left_conn,
                     m_seq | vcenter,
-                    m_right_conn,
-                }));
+                    m_right_conn
+                ));
             }
 
             // Center Panner / Mixer row
-            auto center_row = hbox({
+            auto center_row = hbox(
                                   pan_card,
                                   filler(),
-                                  mix_card,
-                              }) |
+                                  mix_card
+                              ) |
                               vcenter;
 
             Elements all_rows;
@@ -245,8 +449,34 @@ ftxui::Element render_sequence_item(
             all_rows.push_back(center_row);
             all_rows.push_back(bot_row);
 
-            items.push_back(vbox(std::move(all_rows)) | vcenter);
+            auto parallel_box = vbox(std::move(all_rows));
+            auto el_m = compute_element_metrics(element);
+            items.push_back(pad_top(parallel_box, target_port - el_m.port_row));
         }
+    }
+
+    if (!sequence.routes.empty()) {
+        const auto &last_route = sequence.routes.back();
+        if (depth > 0) {
+            auto rail_el = render_route_item(
+                last_route, active_pane, selected_route, hovered_route, route_drop_active, route_hits,
+                horizontal_rail()
+            );
+            items.push_back(pad_top(rail_el, target_port) | flex);
+        } else {
+            auto route_el = render_route_item(
+                last_route, active_pane, selected_route, hovered_route, route_drop_active, route_hits
+            );
+            items.push_back(pad_top(route_el, target_port));
+        }
+    }
+
+    if (depth == 0) {
+        auto out_box = vbox({
+                           text(" OUT ") | bold,
+                       }) |
+                       border | color(Color::Red);
+        items.push_back(pad_top(out_box, target_port - 1));
     }
     return hbox(std::move(items));
 }
@@ -321,6 +551,27 @@ bool handle_graph_event(
         const auto node        = selected_node;
         const auto destination = *selected_route;
         act_fn([&] { editor.move_to_route(node, destination); });
+        return true;
+    }
+    if (event == Event::Character("p")) {
+        if (!selected_node.empty()) {
+            const auto *node = editor.document().find_node(selected_node);
+            if (!node) {
+                transient_status = "Error: selected node not found";
+            } else if (node->routing_helper()) {
+                transient_status = "Error: cannot wrap a routing helper in a parallel section";
+            } else {
+                const auto node_id = selected_node;
+                act_fn([&] { editor.wrap_node_in_parallel(node_id); });
+            }
+            return true;
+        }
+        if (selected_route) {
+            const auto route = *selected_route;
+            act_fn([&] { editor.add_parallel_on_route(route, ""); });
+            return true;
+        }
+        transient_status = "Error: select an effect unit or route in graph first";
         return true;
     }
     if (event == Event::Character("c") && !selected_node.empty()) {

@@ -15,19 +15,36 @@ ftxui::Element render_modal_dialog(
     Element     content;
     std::string title;
     switch (modal) {
-    case Modal::Help:
+    case Modal::Help: {
         title   = "Help";
+        auto col1 = vbox({
+            hbox({ text("Tab/S-Tab") | bold | color(Color::Cyan), text(":Switch pane") }),
+            hbox({ text("h/j/k/l") | bold | color(Color::Cyan), text(":Navigate pane") }),
+            hbox({ text("u") | bold | color(Color::Cyan), text(":Undo action") }),
+            hbox({ text("Ctrl+R") | bold | color(Color::Cyan), text(":Redo action") }),
+            hbox({ text("r") | bold | color(Color::Cyan), text(":Cycle routes") }),
+            hbox({ text("x") | bold | color(Color::Cyan), text(":Move effect") }),
+            hbox({ text("b") | bold | color(Color::Cyan), text(":Bypass effect") }),
+            hbox({ text("d") | bold | color(Color::Cyan), text(":Remove item") }),
+            hbox({ text("p") | bold | color(Color::Cyan), text(":Add parallel branch") }),
+        });
+        auto col2 = vbox({
+            hbox({ text("Space") | bold | color(Color::Cyan), text(":Audio transport") }),
+            hbox({ text("m") | bold | color(Color::Cyan), text(":Mute audio") }),
+            hbox({ text("Ctrl+S") | bold | color(Color::Cyan), text(":Save project") }),
+            hbox({ text("q") | bold | color(Color::Cyan), text(":Guarded quit") }),
+            hbox({ text("n") | bold | color(Color::Cyan), text(":New scene") }),
+            hbox({ text("e") | bold | color(Color::Cyan), text(":Rename scene") }),
+            hbox({ text("c") | bold | color(Color::Cyan), text(":Collapse parallel") }),
+            hbox({ text("Ctrl+D") | bold | color(Color::Cyan), text(":Debug snapshot") }),
+        });
         content = vbox({
-            text("Tab/Shift-Tab switch panes; arrows navigate the active pane."),
-            text("Graph: r cycles routes, x moves the effect, c collapses an empty parallel section."),
-            text("Units: drag onto a signal line; compact clicks carry a unit to Graph. Enter inserts."),
-            text("Inspector: arrows adjust, Page keys coarse, Home/End bounds, b bypass, d remove."),
-            text("Scenes: Enter recall, n create, u update, e rename, d delete."),
-            text("Audio: Space transport, m mute. Ctrl+S save, Ctrl+Z/Y history, q guarded quit."),
+            hbox({ col1 | flex, text("   "), col2 | flex }),
             separator(),
-            text("Press Escape or Enter to close.") | dim,
+            text("Press Escape, Enter, or ? to close.") | dim,
         });
         break;
+    }
     case Modal::Quit:
         title   = "Unsaved changes";
         content = vbox({
@@ -63,6 +80,16 @@ ftxui::Element render_modal_dialog(
             text("[y] Remove   [n/Esc] Cancel") | bold,
         });
         break;
+    case Modal::Debug:
+        title   = "Debug Snapshot";
+        content = vbox({
+            text("Copied to OS Clipboard & written to apg-tui-debug.txt") | bold | color(Color::Green),
+            separator(),
+            paragraph(modal_text) | size(HEIGHT, LESS_THAN, 18),
+            separator(),
+            text("Press Escape, Enter, or Ctrl+D to close.") | dim,
+        });
+        break;
     case Modal::None:
         break;
     }
@@ -86,6 +113,14 @@ bool handle_modal_event(
     if (modal == Modal::Help) {
         if (event == Event::Escape || event == Event::Return || event == Event::Character("?"))
             modal = Modal::None;
+        return true;
+    }
+    if (modal == Modal::Debug) {
+        if (event == Event::Escape || event == Event::Return || event == Event::Character("d") ||
+            event == Event::Special("\x04")) {
+            modal = Modal::None;
+            modal_text.clear();
+        }
         return true;
     }
     if (modal == Modal::Quit) {

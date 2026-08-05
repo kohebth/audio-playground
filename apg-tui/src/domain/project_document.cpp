@@ -201,6 +201,258 @@ struct Endpoint {
     std::string port;
 };
 
+constexpr const char *kDefaultPathPanner2Yaml = R"(kind: apg.unit
+schema: apg.unit.v2
+name: path_panner_2
+version: 2.0.0
+
+meta:
+  title: Pan 2
+  category: routing
+  description: Splits one mono signal into two independently levelled paths.
+
+routing:
+  role: panner
+  paths:
+    - port: path_1
+      level_param: path_1_db
+    - port: path_2
+      level_param: path_2_db
+
+params:
+  path_1_db:
+    type: float
+    default: 0.0
+    min: -60.0
+    max: 6.0
+    smoothing_ms: 10
+    ui:
+      label: Path 1
+      control: knob
+      unit: dB
+      scale: linear
+      display_precision: 1
+  path_2_db:
+    type: float
+    default: 0.0
+    min: -60.0
+    max: 6.0
+    smoothing_ms: 10
+    ui:
+      label: Path 2
+      control: knob
+      unit: dB
+      scale: linear
+      display_precision: 1
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: path_1
+      type: audio
+      channels: 1
+    - name: path_2
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - path_1
+    - path_2
+  nodes:
+    - id: level_path_1
+      atom: amplitude_gain_db
+      in:
+        signal: input
+      out:
+        signal: path_1
+      config:
+        gain_db: ${params.path_1_db}
+    - id: level_path_2
+      atom: amplitude_gain_db
+      in:
+        signal: input
+      out:
+        signal: path_2
+      config:
+        gain_db: ${params.path_2_db}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true
+)";
+
+constexpr const char *kDefaultPathMixer2Yaml = R"(kind: apg.unit
+schema: apg.unit.v2
+name: path_mixer_2
+version: 2.0.0
+
+meta:
+  title: Mix 2
+  category: routing
+  description: Sums two mono paths with an independent level for each input.
+
+routing:
+  role: mixer
+  paths:
+    - port: path_1
+      level_param: path_1_db
+    - port: path_2
+      level_param: path_2_db
+
+params:
+  path_1_db:
+    type: float
+    default: -6.0206
+    min: -60.0
+    max: 6.0
+    smoothing_ms: 10
+    ui:
+      label: Path 1
+      control: knob
+      unit: dB
+      scale: linear
+      display_precision: 1
+  path_2_db:
+    type: float
+    default: -6.0206
+    min: -60.0
+    max: 6.0
+    smoothing_ms: 10
+    ui:
+      label: Path 2
+      control: knob
+      unit: dB
+      scale: linear
+      display_precision: 1
+
+ports:
+  inputs:
+    - name: path_1
+      type: audio
+      channels: 1
+    - name: path_2
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - path_1
+    - path_2
+    - path_1_scaled
+    - path_2_scaled
+    - output
+  nodes:
+    - id: level_path_1
+      atom: amplitude_gain_db
+      in:
+        signal: path_1
+      out:
+        signal: path_1_scaled
+      config:
+        gain_db: ${params.path_1_db}
+    - id: level_path_2
+      atom: amplitude_gain_db
+      in:
+        signal: path_2
+      out:
+        signal: path_2_scaled
+      config:
+        gain_db: ${params.path_2_db}
+    - id: sum_paths
+      atom: amplitude_add
+      in:
+        signal_a: path_1_scaled
+        signal_b: path_2_scaled
+      out:
+        signal: output
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true
+)";
+
+void ensure_panner_mixer_pair(std::vector<UnitReference> &units) {
+    bool has_panner = false;
+    bool has_mixer  = false;
+    for (const auto &unit : units) {
+        if (unit.routing.role == RoutingRole::Panner && unit.routing.paths.size() == 2)
+            has_panner = true;
+        if (unit.routing.role == RoutingRole::Mixer && unit.routing.paths.size() == 2)
+            has_mixer = true;
+    }
+    if (!has_panner) {
+        UnitReference panner;
+        panner.id            = "path_panner_2";
+        panner.file          = "../units-v2/path_panner_2.unit.v2.yaml";
+        panner.name          = "path_panner_2";
+        panner.title         = "Pan 2";
+        panner.category      = "routing";
+        panner.routing.role  = RoutingRole::Panner;
+        panner.routing.paths = {{"path_1", "path_1_db"}, {"path_2", "path_2_db"}};
+        panner.inputs        = {"input"};
+        panner.outputs       = {"path_1", "path_2"};
+        Parameter p1;
+        p1.name          = "path_1_db";
+        p1.label         = "Path 1";
+        p1.unit          = "dB";
+        p1.control       = "knob";
+        p1.type          = ParameterType::Float;
+        p1.scale         = ParameterScale::Linear;
+        p1.value         = 0.0;
+        p1.default_value = 0.0;
+        p1.min           = -60.0;
+        p1.max           = 6.0;
+        p1.precision     = 1;
+        Parameter p2     = p1;
+        p2.name          = "path_2_db";
+        p2.label         = "Path 2";
+        panner.parameters = {p1, p2};
+        units.push_back(std::move(panner));
+    }
+    if (!has_mixer) {
+        UnitReference mixer;
+        mixer.id            = "path_mixer_2";
+        mixer.file          = "../units-v2/path_mixer_2.unit.v2.yaml";
+        mixer.name          = "path_mixer_2";
+        mixer.title         = "Mix 2";
+        mixer.category      = "routing";
+        mixer.routing.role  = RoutingRole::Mixer;
+        mixer.routing.paths = {{"path_1", "path_1_db"}, {"path_2", "path_2_db"}};
+        mixer.inputs        = {"path_1", "path_2"};
+        mixer.outputs       = {"output"};
+        Parameter m1;
+        m1.name          = "path_1_db";
+        m1.label         = "Path 1";
+        m1.unit          = "dB";
+        m1.control       = "knob";
+        m1.type          = ParameterType::Float;
+        m1.scale         = ParameterScale::Linear;
+        m1.value         = -6.0206;
+        m1.default_value = -6.0206;
+        m1.min           = -60.0;
+        m1.max           = 6.0;
+        m1.precision     = 1;
+        Parameter m2     = m1;
+        m2.name          = "path_2_db";
+        m2.label         = "Path 2";
+        mixer.parameters = {m1, m2};
+        units.push_back(std::move(mixer));
+    }
+}
+
 Endpoint parse_endpoint(const std::string &value) {
     const auto dot = value.find('.');
     if (dot == std::string::npos || dot == 0 || dot + 1 >= value.size())
@@ -729,6 +981,7 @@ void ApgPackageDocument::refresh_project_view() {
             units_.push_back(std::move(unit));
         }
     }
+    ensure_panner_mixer_pair(units_);
 
     const auto node_nodes = root["chain"]["nodes"];
     if (node_nodes && node_nodes.IsSequence()) {
@@ -815,14 +1068,25 @@ const Scene *ApgPackageDocument::find_scene(const std::string &name) const {
 std::vector<WorkspaceFile> ApgPackageDocument::workspace_files() const {
     std::vector<WorkspaceFile> result;
     const auto                &files = (*package_)["workspace"]["files"];
-    result.reserve(files.size());
+    result.reserve(files.size() + 2);
+    bool has_panner = false;
+    bool has_mixer  = false;
     for (std::size_t index = 0; index < files.size(); ++index) {
+        const auto path = files[index]["path"].get<std::string>();
+        if (path.find("path_panner_2") != std::string::npos)
+            has_panner = true;
+        if (path.find("path_mixer_2") != std::string::npos)
+            has_mixer = true;
         result.push_back({
-            files[index]["path"].get<std::string>(),
+            path,
             files[index]["role"].get<std::string>(),
             index == entry_file_index_ ? project_content_ : files[index]["content"].get<std::string>(),
         });
     }
+    if (!has_panner)
+        result.push_back({"units-v2/path_panner_2.unit.v2.yaml", "unit", kDefaultPathPanner2Yaml});
+    if (!has_mixer)
+        result.push_back({"units-v2/path_mixer_2.unit.v2.yaml", "unit", kDefaultPathMixer2Yaml});
     return result;
 }
 
@@ -1049,10 +1313,28 @@ void ApgPackageDocument::remove_node(const std::string &node_id) {
     replace_project_content(emit_yaml(root));
 }
 
+void ensure_yaml_units_contain(YAML::Node &root, const UnitReference &unit) {
+    auto units = root["units"];
+    if (!units || !units.IsSequence())
+        return;
+    for (const auto &item : units) {
+        if (scalar(item, "id") == unit.id)
+            return;
+    }
+    YAML::Node entry(YAML::NodeType::Map);
+    entry["id"]   = unit.id;
+    entry["file"] = unit.file.empty() ? ("units/" + unit.id + ".unit.v2.yaml") : unit.file;
+    units.push_back(entry);
+}
+
 std::string ApgPackageDocument::add_parallel_on_route(const Route &route, const std::string &effect_unit_id) {
-    const auto *effect = find_unit(effect_unit_id);
-    if (!effect || !effect->user_placeable())
-        fail("Parallel effects must expose exactly one audio input and one audio output.");
+    ensure_panner_mixer_pair(units_);
+    const UnitReference *effect = nullptr;
+    if (!effect_unit_id.empty()) {
+        effect = find_unit(effect_unit_id);
+        if (!effect || !effect->user_placeable())
+            fail("Parallel effects must expose exactly one audio input and one audio output.");
+    }
     (void)find_route(routes_, route);
 
     const UnitReference *panner = nullptr;
@@ -1090,12 +1372,17 @@ std::string ApgPackageDocument::add_parallel_on_route(const Route &route, const 
     };
     const auto panner_id = reserve_id(section + "_pan");
     const auto mixer_id  = reserve_id(section + "_mix");
-    const auto effect_id = reserve_id(effect->name.empty() ? effect->id : effect->name);
+    const auto effect_id = effect ? reserve_id(effect->name.empty() ? effect->id : effect->name) : std::string();
 
     YAML::Node root  = YAML::Load(project_content_);
+    ensure_yaml_units_contain(root, *panner);
+    if (effect)
+        ensure_yaml_units_contain(root, *effect);
+    ensure_yaml_units_contain(root, *mixer);
     auto       nodes = yaml_nodes(root);
     nodes.push_back(make_project_node(*panner, panner_id, section));
-    nodes.push_back(make_project_node(*effect, effect_id));
+    if (effect)
+        nodes.push_back(make_project_node(*effect, effect_id));
     nodes.push_back(make_project_node(*mixer, mixer_id, section));
     set_yaml_nodes(root, nodes);
 
@@ -1104,17 +1391,120 @@ std::string ApgPackageDocument::add_parallel_on_route(const Route &route, const 
     routes.erase(routes.begin() + static_cast<std::ptrdiff_t>(index));
     const auto              &path_1 = panner->routing.paths[0].port;
     const auto              &path_2 = panner->routing.paths[1].port;
-    const std::vector<Route> replacement{
-        {                               route.from, panner_id + "." + panner->inputs.front()},
-        {                 panner_id + "." + path_1,                  mixer_id + "." + path_1},
-        {                 panner_id + "." + path_2, effect_id + "." + effect->inputs.front()},
-        {effect_id + "." + effect->outputs.front(),                  mixer_id + "." + path_2},
-        {  mixer_id + "." + mixer->outputs.front(),                                 route.to},
-    };
+    std::vector<Route> replacement;
+    if (effect) {
+        replacement = {
+            {                               route.from, panner_id + "." + panner->inputs.front()},
+            {                 panner_id + "." + path_1,                  mixer_id + "." + path_1},
+            {                 panner_id + "." + path_2, effect_id + "." + effect->inputs.front()},
+            {effect_id + "." + effect->outputs.front(),                  mixer_id + "." + path_2},
+            {  mixer_id + "." + mixer->outputs.front(),                                 route.to},
+        };
+    } else {
+        replacement = {
+            {                             route.from, panner_id + "." + panner->inputs.front()},
+            {               panner_id + "." + path_1,                mixer_id + "." + path_1},
+            {               panner_id + "." + path_2,                mixer_id + "." + path_2},
+            {mixer_id + "." + mixer->outputs.front(),                               route.to},
+        };
+    }
     routes.insert(routes.begin() + static_cast<std::ptrdiff_t>(index), replacement.begin(), replacement.end());
     set_yaml_routes(root, routes);
     replace_project_content(emit_yaml(root));
-    return effect_id;
+    return effect_id.empty() ? panner_id : effect_id;
+}
+
+std::string ApgPackageDocument::wrap_node_in_parallel(const std::string &node_id) {
+    ensure_panner_mixer_pair(units_);
+    const auto *target_node = find_node(node_id);
+    if (!target_node)
+        fail("Node \"" + node_id + "\" not found.");
+    if (target_node->routing_helper())
+        fail("Cannot wrap a routing helper in a parallel section.");
+
+    const auto *target_unit = find_unit(target_node->unit);
+    if (!target_unit || target_unit->inputs.size() != 1 || target_unit->outputs.size() != 1)
+        fail("Node \"" + node_id + "\" must expose one input and one output.");
+
+    const auto target_input  = node_id + "." + target_unit->inputs.front();
+    const auto target_output = node_id + "." + target_unit->outputs.front();
+
+    const auto incoming_idx = find_single_route_to(routes_, target_input);
+    const auto outgoing_idx = find_single_route_from(routes_, target_output);
+
+    const auto incoming_route = routes_[incoming_idx];
+    const auto outgoing_route = routes_[outgoing_idx];
+
+    const UnitReference *panner = nullptr;
+    const UnitReference *mixer  = nullptr;
+    for (const auto &candidate_panner : units_) {
+        if (candidate_panner.routing.role != RoutingRole::Panner || candidate_panner.routing.paths.size() != 2 ||
+            candidate_panner.inputs.size() != 1 || candidate_panner.outputs.size() != 2)
+            continue;
+        for (const auto &candidate_mixer : units_) {
+            if (candidate_mixer.routing.role != RoutingRole::Mixer || candidate_mixer.inputs.size() != 2 ||
+                candidate_mixer.outputs.size() != 1 || !routing_contracts_match(candidate_panner, candidate_mixer))
+                continue;
+            if (!panner || std::pair{candidate_panner.id, candidate_mixer.id} < std::pair{panner->id, mixer->id}) {
+                panner = &candidate_panner;
+                mixer  = &candidate_mixer;
+            }
+        }
+    }
+    if (!panner || !mixer)
+        fail("The package does not contain a compatible two-path panner/mixer pair.");
+
+    const auto            section = unique_section_id();
+    std::set<std::string> reserved_ids;
+    for (const auto &node : nodes_)
+        reserved_ids.insert(node.id);
+    const auto reserve_id = [&](const std::string &base) {
+        const auto candidate_base = sanitize_identifier(base);
+        if (reserved_ids.insert(candidate_base).second)
+            return candidate_base;
+        for (std::size_t suffix = 2;; ++suffix) {
+            const auto candidate = candidate_base + "_" + std::to_string(suffix);
+            if (reserved_ids.insert(candidate).second)
+                return candidate;
+        }
+    };
+    const auto panner_id = reserve_id(section + "_pan");
+    const auto mixer_id  = reserve_id(section + "_mix");
+
+    YAML::Node root  = YAML::Load(project_content_);
+    ensure_yaml_units_contain(root, *panner);
+    ensure_yaml_units_contain(root, *mixer);
+    auto       nodes = yaml_nodes(root);
+    nodes.push_back(make_project_node(*panner, panner_id, section));
+    nodes.push_back(make_project_node(*mixer, mixer_id, section));
+    set_yaml_nodes(root, nodes);
+
+    const auto &path_1 = panner->routing.paths[0].port;
+    const auto &path_2 = panner->routing.paths[1].port;
+
+    std::set<std::size_t> removals{incoming_idx, outgoing_idx};
+    std::vector<Route> replacement{
+        {         incoming_route.from, panner_id + "." + panner->inputs.front()},
+        {    panner_id + "." + path_1,                             target_input},
+        {               target_output,                 mixer_id + "." + path_1},
+        {    panner_id + "." + path_2,                 mixer_id + "." + path_2},
+        {mixer_id + "." + mixer->outputs.front(),          outgoing_route.to},
+    };
+
+    const auto insertion = *removals.begin();
+    std::vector<Route> next_routes;
+    next_routes.reserve(routes_.size() - removals.size() + replacement.size());
+    for (std::size_t index = 0; index < routes_.size(); ++index) {
+        if (index == insertion) {
+            for (const auto &r : replacement)
+                next_routes.push_back(r);
+        }
+        if (!removals.contains(index))
+            next_routes.push_back(routes_[index]);
+    }
+    set_yaml_routes(root, next_routes);
+    replace_project_content(emit_yaml(root));
+    return panner_id;
 }
 
 void ApgPackageDocument::collapse_parallel(const std::string &section) {
@@ -1468,6 +1858,30 @@ std::string ApgPackageDocument::serialize_for_save(const std::string &timestamp)
     Json package                                                = *package_;
     package["workspace"]["files"][entry_file_index_]["content"] = project_content_;
     package["manifest"]["updatedAt"]                            = timestamp;
+
+    bool has_panner_file = false;
+    bool has_mixer_file  = false;
+    for (const auto &file : package["workspace"]["files"]) {
+        const auto p = file["path"].get<std::string>();
+        if (p.find("path_panner_2") != std::string::npos)
+            has_panner_file = true;
+        if (p.find("path_mixer_2") != std::string::npos)
+            has_mixer_file = true;
+    }
+    if (!has_panner_file) {
+        package["workspace"]["files"].push_back({
+            {"path", "units-v2/path_panner_2.unit.v2.yaml"},
+            {"role", "unit"},
+            {"content", kDefaultPathPanner2Yaml},
+        });
+    }
+    if (!has_mixer_file) {
+        package["workspace"]["files"].push_back({
+            {"path", "units-v2/path_mixer_2.unit.v2.yaml"},
+            {"role", "unit"},
+            {"content", kDefaultPathMixer2Yaml},
+        });
+    }
 
     std::vector<std::string> targets;
     if (!default_target_.empty())

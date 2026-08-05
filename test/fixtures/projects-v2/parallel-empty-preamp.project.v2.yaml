@@ -1,0 +1,49 @@
+kind: apg.project
+schema: apg.project.v2
+name: parallel-empty-preamp
+version: 2.0.0
+
+units:
+  - id: path_panner_2_unit
+    file: ../units-v2/path_panner_2.unit.v2.yaml
+  - id: path_mixer_2_unit
+    file: ../units-v2/path_mixer_2.unit.v2.yaml
+  - id: tone_stack_unit
+    file: ../units-v2/tone_stack.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: parallel_pan
+      unit: path_panner_2_unit
+      routing:
+        section: parallel_1
+    - id: preamp
+      unit: tone_stack_unit
+      params:
+        gain: 1.8
+        bass: 0.6
+        mid: 0.35
+        treble: 0.7
+        presence: 0.2
+        volume: 0.65
+    - id: parallel_mix
+      unit: path_mixer_2_unit
+      routing:
+        section: parallel_1
+  routes:
+    - from: system.input
+      to: parallel_pan.input
+    - from: parallel_pan.path_1
+      to: parallel_mix.path_1
+    - from: parallel_pan.path_2
+      to: preamp.input
+    - from: preamp.output
+      to: parallel_mix.path_2
+    - from: parallel_mix.output
+      to: system.output
+
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render

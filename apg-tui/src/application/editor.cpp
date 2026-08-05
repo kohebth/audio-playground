@@ -118,9 +118,20 @@ std::string ProjectEditor::add_parallel_on_route(const Route &route, const std::
     push_undo();
     current_.document = std::move(candidate);
     initialize_bypass();
-    status_ = "Added nested parallel path with " + id;
+    status_ = effect_unit_id.empty() ? "Split route with parallel section" : "Added parallel path with " + id;
     notify(true);
     return id;
+}
+
+std::string ProjectEditor::wrap_node_in_parallel(const std::string &node_id) {
+    auto       candidate = current_.document;
+    const auto panner_id = candidate.wrap_node_in_parallel(node_id);
+    push_undo();
+    current_.document = std::move(candidate);
+    initialize_bypass();
+    status_ = "Wrapped " + node_id + " in parallel section";
+    notify(true);
+    return panner_id;
 }
 
 void ProjectEditor::collapse_parallel(const std::string &section) {

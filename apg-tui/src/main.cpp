@@ -31,7 +31,7 @@ int self_test() {
 }
 
 void usage(std::ostream &output) {
-    output << "Usage: apg-tui [--no-audio] PROJECT.apg\n"
+    output << "Usage: apg-tui [--no-audio] [--debug] PROJECT.apg\n"
               "       apg-tui --version\n"
               "       apg-tui --self-test\n";
 }
@@ -39,7 +39,8 @@ void usage(std::ostream &output) {
 } // namespace
 
 int main(int argc, char **argv) {
-    bool                  no_audio = false;
+    bool                  no_audio   = false;
+    bool                  debug_mode = false;
     std::filesystem::path package_path;
     for (int index = 1; index < argc; ++index) {
         const std::string argument = argv[index];
@@ -55,6 +56,10 @@ int main(int argc, char **argv) {
             return self_test();
         if (argument == "--no-audio") {
             no_audio = true;
+            continue;
+        }
+        if (argument == "--debug") {
+            debug_mode = true;
             continue;
         }
         if (argument.starts_with('-')) {
@@ -88,10 +93,14 @@ int main(int argc, char **argv) {
 
     auto              screen = ftxui::ScreenInteractive::Fullscreen();
     std::atomic<bool> finished{false};
-    auto              studio = apg::terminal::studio_component(editor, *audio, [&] {
-        finished.store(true, std::memory_order_release);
-        screen.Exit();
-    });
+    auto              studio = apg::terminal::studio_component(
+        editor, *audio,
+        [&] {
+            finished.store(true, std::memory_order_release);
+            screen.Exit();
+        },
+        {}, debug_mode
+    );
     std::jthread      refresh([&](std::stop_token stop) {
         while (!stop.stop_requested() && !finished.load(std::memory_order_acquire)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));

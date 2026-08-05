@@ -228,7 +228,7 @@ int main() {
     auto catalog_only = ApgPackageDocument::parse(
         make_package("projects-v2/catalog-pass-through.project.v2.yaml", {}).dump(), "catalog-only.apg"
     );
-    assert(catalog_only.units().size() == 1);
+    assert(catalog_only.units().size() == 3);
     assert(!catalog_only.units().front().user_placeable());
     assert(catalog_only.nodes().empty());
     assert(catalog_only.validate_core().ok());
@@ -240,7 +240,7 @@ int main() {
         {"content",                                   "not: [valid"},
     });
     auto invalid_unused = ApgPackageDocument::parse(invalid_unused_package.dump(), "invalid-unused.apg");
-    assert(invalid_unused.units().size() == 1);
+    assert(invalid_unused.units().size() == 3);
     assert(!invalid_unused.units().front().user_placeable());
     assert(invalid_unused.validate_core().ok());
 
@@ -248,7 +248,7 @@ int main() {
         make_package("projects-v2/catalog-active.project.v2.yaml", {"units-v2/simple_gain.unit.v2.yaml"}).dump(),
         "active-catalog.apg"
     );
-    assert(active_catalog.units().size() == 2);
+    assert(active_catalog.units().size() == 4);
     assert(active_catalog.nodes().size() == 1);
     assert(active_catalog.validate_core().ok());
 
@@ -307,6 +307,26 @@ int main() {
     for (const auto &node : collision.nodes())
         assert(collision_ids.insert(node.id).second);
     assert(collision_effect != "parallel_2_pan");
+
+    auto empty_split_package = make_package(
+        "projects-v2/simple-gain-board.project.v2.yaml",
+        {"units-v2/simple_gain.unit.v2.yaml", "units-v2/path_panner_2.unit.v2.yaml", "units-v2/path_mixer_2.unit.v2.yaml"}
+    );
+    auto empty_split_doc     = ApgPackageDocument::parse(empty_split_package.dump(), "empty_split.apg");
+    const auto empty_route   = empty_split_doc.routes().front();
+    const auto panner_id     = empty_split_doc.add_parallel_on_route(empty_route, "");
+    assert(!panner_id.empty());
+    assert(empty_split_doc.find_node(panner_id) != nullptr);
+    assert(empty_split_doc.validate_core().ok());
+
+    auto wrap_doc = ApgPackageDocument::parse(empty_split_package.dump(), "wrap.apg");
+    const auto target_node_id = wrap_doc.nodes().front().id;
+    const auto wrap_panner_id = wrap_doc.wrap_node_in_parallel(target_node_id);
+    assert(!wrap_panner_id.empty());
+    assert(wrap_doc.find_node(wrap_panner_id) != nullptr);
+    const auto wrap_topo = wrap_doc.topology();
+    assert(wrap_topo.elements.front().kind == TopologyElement::Kind::Parallel);
+    assert(wrap_doc.validate_core().ok());
 
     return 0;
 }

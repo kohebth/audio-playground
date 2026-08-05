@@ -18,8 +18,11 @@
 #include <array>
 #include <cmath>
 #include <deque>
+#include <fstream>
 #include <functional>
+#include <iostream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,16 +30,57 @@
 namespace apg::terminal {
 namespace {
 
+std::string strip_ansi_codes(const std::string &input) {
+    std::string result;
+    bool        in_escape = false;
+    for (char character : input) {
+        if (character == '\033') {
+            in_escape = true;
+        } else if (in_escape) {
+            if ((character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z')) {
+                in_escape = false;
+            }
+        } else {
+            result += character;
+        }
+    }
+    return result;
+}
+
+std::string base64_encode(const std::string &in) {
+    static const char lookup[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string       out;
+    int               val = 0, valb = -6;
+    for (unsigned char c : in) {
+        val = (val << 8) + c;
+        valb += 8;
+        while (valb >= 0) {
+            out.push_back(lookup[(val >> valb) & 0x3F]);
+            valb -= 6;
+        }
+    }
+    if (valb > -6)
+        out.push_back(lookup[((val << 8) >> (valb + 8)) & 0x3F]);
+    while (out.size() % 4)
+        out.push_back('=');
+    return out;
+}
+
+void copy_to_clipboard_osc52(const std::string &text) {
+    std::cout << "\033]52;c;" << base64_encode(text) << "\007" << std::flush;
+}
+
 class StudioComponent final : public ftxui::ComponentBase {
   public:
     StudioComponent(
         ProjectEditor        &editor,
         AudioSession         &audio,
         std::function<void()> request_exit,
-        TerminalSizeProvider  size_provider
+        TerminalSizeProvider  size_provider = {},
+        bool                  debug_mode    = false
     )
         : editor_(editor), audio_(audio), request_exit_(std::move(request_exit)),
-          size_provider_(std::move(size_provider)) {
+          size_provider_(std::move(size_provider)), debug_mode_(debug_mode) {
         if (!size_provider_)
             size_provider_ = []() -> std::pair<int, int> {
                 auto size = ftxui::Terminal::Size();
@@ -85,6 +129,10 @@ class StudioComponent final : public ftxui::ComponentBase {
             return handle_search(event);
         if (modal_ != Modal::None)
             return handle_modal(event);
+        if (event == Event::Special("\x04") || event == Event::F12 || (debug_mode_ && event == Event::Character("d"))) {
+            trigger_debug_snapshot();
+            return true;
+        }
         if (event == Event::Character("?")) {
             modal_ = Modal::Help;
             return true;
@@ -101,12 +149,16 @@ class StudioComponent final : public ftxui::ComponentBase {
             save();
             return true;
         }
-        if (event == Event::Special("\x1a")) {
+        if (event == Event::Character("u") && active_pane_ != Pane::Scenes && !searching_) {
             act([&] { editor_.undo(); });
             return true;
         }
-        if (event == Event::Special("\x19")) {
+        if ((event == Event::Special("\x12") || event == Event::Special("\x19")) && active_pane_ != Pane::Scenes && !searching_) {
             act([&] { editor_.redo(); });
+            return true;
+        }
+        if (event == Event::Special("\x1a")) {
+            act([&] { editor_.undo(); });
             return true;
         }
         if (event == Event::Character(" ")) {
@@ -782,6 +834,66 @@ class StudioComponent final : public ftxui::ComponentBase {
         } catch (const std::exception &error) { transient_status_ = "Error: " + std::string(error.what()); }
     }
 
+    void trigger_debug_snapshot() {
+        using namespace ftxui;
+        const auto [width, height] = size_provider_();
+        const int w = width > 0 ? width : 120;
+        const int h = height > 0 ? height : 40;
+
+        Screen screen(w, h);
+        ftxui::Render(screen, this->Render());
+        const std::string raw_screen   = screen.ToString();
+        const std::string clean_screen = strip_ansi_codes(raw_screen);
+
+        std::ostringstream ss;
+        ss << "=== APG-TUI DEBUG SNAPSHOT ===\n";
+        ss << "Active Pane: " << pane_name(active_pane_) << "\n";
+
+        if (!selected_node_.empty()) {
+            ss << "Selected Node ID: " << selected_node_ << "\n";
+            const auto *node = editor_.document().find_node(selected_node_);
+            if (node) {
+                ss << "  Unit: " << node->unit << "\n";
+                ss << "  Bypass: "
+                   << (editor_.bypass().contains(selected_node_) && editor_.bypass().at(selected_node_) ? "true"
+                                                                                                         : "false")
+                   << "\n";
+                if (!node->routing_section.empty())
+                    ss << "  Routing Section: " << node->routing_section << "\n";
+                if (!node->params.empty()) {
+                    ss << "  Parameters:\n";
+                    for (const auto &[k, v] : node->params) {
+                        ss << "    " << k << ": " << v << "\n";
+                    }
+                }
+            }
+        }
+        if (!selected_scene_name().empty())
+            ss << "Selected Scene: " << selected_scene_name() << "\n";
+
+        ss << "\n--- C++ EXPECTED TEST ASSERTIONS ---\n";
+        if (!selected_node_.empty()) {
+            ss << "assert(clean.find(\"" << selected_node_ << "\") != std::string::npos);\n";
+        }
+        ss << "/* Rendered Screen Dimension: " << w << "x" << h << " */\n";
+
+        ss << "\n--- CLEAN SCREEN DUMP ---\n";
+        ss << clean_screen << "\n";
+        ss << "=================================\n";
+
+        const std::string snapshot = ss.str();
+
+        copy_to_clipboard_osc52(snapshot);
+
+        std::ofstream out("apg-tui-debug.txt", std::ios::out | std::ios::app);
+        if (out.is_open())
+            out << snapshot << "\n";
+
+        modal_text_       = snapshot;
+        modal_            = Modal::Debug;
+        transient_status_ = "[Debug] Snapshot copied to clipboard & saved to apg-tui-debug.txt";
+    }
+
     std::string selected_scene_name() const {
         const auto &scenes = editor_.document().scenes();
         return scenes.empty() ? std::string{} : scenes[normalize_index(selected_scene_, scenes.size())].name;
@@ -793,6 +905,7 @@ class StudioComponent final : public ftxui::ComponentBase {
     AudioSession               &audio_;
     std::function<void()>       request_exit_;
     TerminalSizeProvider        size_provider_;
+    bool                        debug_mode_  = false;
     Pane                        active_pane_ = Pane::Graph;
     Modal                       modal_       = Modal::None;
     std::string                 modal_text_;
@@ -827,9 +940,15 @@ class StudioComponent final : public ftxui::ComponentBase {
 } // namespace
 
 ftxui::Component studio_component(
-    ProjectEditor &editor, AudioSession &audio, std::function<void()> request_exit, TerminalSizeProvider size_provider
+    ProjectEditor        &editor,
+    AudioSession         &audio,
+    std::function<void()> request_exit,
+    TerminalSizeProvider  size_provider,
+    bool                  debug_mode
 ) {
-    return std::make_shared<StudioComponent>(editor, audio, std::move(request_exit), std::move(size_provider));
+    return std::make_shared<StudioComponent>(
+        editor, audio, std::move(request_exit), std::move(size_provider), debug_mode
+    );
 }
 
 } // namespace apg::terminal

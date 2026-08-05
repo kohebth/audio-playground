@@ -17,7 +17,8 @@ ftxui::Component studio_component(
     ProjectEditor        &editor,
     AudioSession         &audio,
     std::function<void()> request_exit,
-    TerminalSizeProvider  size_provider = {}
+    TerminalSizeProvider  size_provider = {},
+    bool                  debug_mode    = false
 );
 
 } // namespace apg::terminal

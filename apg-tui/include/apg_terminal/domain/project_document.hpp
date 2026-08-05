@@ -184,6 +184,7 @@ class ApgPackageDocument {
     void        move_to_route(const std::string &node_id, const Route &route);
     void        remove_node(const std::string &node_id);
     std::string add_parallel_on_route(const Route &route, const std::string &effect_unit_id);
+    std::string wrap_node_in_parallel(const std::string &node_id);
     void        collapse_parallel(const std::string &section);
     void        set_param(const std::string &node_id, const std::string &parameter, double value);
 

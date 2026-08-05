@@ -32,6 +32,7 @@ enum class Modal {
     RenameScene,
     DeleteScene,
     DeleteNode,
+    Debug,
 };
 
 constexpr std::array<Pane, 6> kPanes{

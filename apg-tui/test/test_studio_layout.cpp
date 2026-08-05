@@ -195,15 +195,17 @@ int assert_five_row_card(const ftxui::Screen &screen, const std::string &title, 
     if (!card_position)
         card_position = locate_graph_ascii(screen, title);
     assert(card_position);
-    for (int dy = 1; dy <= 3; ++dy) {
-        for (int x = 0; x < screen.dimx(); ++x) {
+    for (int dy = 0; dy <= 2; ++dy) {
+        const int min_x = std::max(0, card_position->first - 8);
+        const int max_x = std::min(screen.dimx(), card_position->first + static_cast<int>(title.size()) + 8);
+        for (int x = min_x; x < max_x; ++x) {
             const auto &c = screen.CellAt(x, card_position->second + dy).character;
             if (c == ">") {
                 return card_position->second + dy;
             }
         }
     }
-    return card_position->second + 1;
+    return card_position->second;
 }
 
 void assert_compact_graph_shape(const Rendered &rendered) {
@@ -401,13 +403,125 @@ void assert_screen_dump() {
     }
 }
 
+void assert_debug_snapshot() {
+    auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/parallel-setup.apg");
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{120, 40};
+    auto studio = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; }, true);
+
+    studio->OnEvent(ftxui::Event::Special("\x04"));
+    const auto debug_rendered = render(studio, 120, 40, terminal_size);
+    const auto clean          = strip_ansi_codes(debug_rendered.screen.ToString());
+
+    assert(clean.find("Debug Snapshot") != std::string::npos);
+    assert(clean.find("APG-TUI DEBUG SNAPSHOT") != std::string::npos);
+}
+
+void assert_both_channels_empty_alignment() {
+    auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/parallel-empty-empty.apg");
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{120, 36};
+    auto studio = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; });
+    const auto rendered = render(studio, 120, 36, terminal_size);
+    const auto clean    = strip_ansi_codes(rendered.screen.ToString());
+
+    assert(clean.find("APG Studio parallel-empty-empty v2.0.0") != std::string::npos);
+    assert(clean.find("│ IN │") != std::string::npos);
+    assert(clean.find("│ OUT │") != std::string::npos);
+    assert(clean.find("┌───>────┐") != std::string::npos);
+    assert(clean.find("│ IN │──>──│ Pan 2 │") != std::string::npos);
+    assert(clean.find("│ Mix 2 │──>──│ OUT │") != std::string::npos);
+    assert(clean.find("└───>────┘") != std::string::npos);
+    assert(clean.find("Pan 2") != std::string::npos);
+    assert(clean.find("Mix 2") != std::string::npos);
+}
+
+void assert_one_channel_empty_alignment() {
+    auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/parallel-empty-preamp.apg");
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{120, 36};
+    auto studio = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; });
+    const auto rendered = render(studio, 120, 36, terminal_size);
+    const auto clean    = strip_ansi_codes(rendered.screen.ToString());
+
+    assert(clean.find("APG Studio parallel-empty-preamp v2.0.0") != std::string::npos);
+    assert(clean.find("┌─────────────>──────────────┐") != std::string::npos || clean.find("┌──────────────>─────────────┐") != std::string::npos);
+    assert(clean.find("│ Pan 2 │                    │ Mix 2 │") != std::string::npos);
+    assert(clean.find("└──>──│") != std::string::npos);
+    assert(clean.find("│──>──┘") != std::string::npos);
+    assert(clean.find("Plexi Tone Stage") != std::string::npos);
+}
+
+void assert_drive_chorus_preamp_alignment() {
+    auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/parallel-drive-chorus-preamp.apg");
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{120, 36};
+    auto studio = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; });
+    const auto rendered = render(studio, 120, 36, terminal_size);
+    const auto clean    = strip_ansi_codes(rendered.screen.ToString());
+
+    assert(clean.find("APG Studio parallel-drive-chorus-preamp v2.0.0") != std::string::npos);
+    assert(clean.find("┌──>──│         │──>──│      │──>──┐") != std::string::npos);
+    assert(clean.find("│ IN │──>──│ Pan 2 │") != std::string::npos);
+    assert(clean.find("│ Mix 2 │") != std::string::npos);
+    assert(clean.find("└───>────│") != std::string::npos);
+    assert(clean.find("│───>────┘") != std::string::npos);
+    assert(clean.find("Overdrive") != std::string::npos);
+    assert(clean.find("Chorus") != std::string::npos);
+    assert(clean.find("Plexi Tone Stage") != std::string::npos);
+}
+
+void assert_parallel_followed_by_node_alignment() {
+    auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/simple-gain.apg");
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    editor.add_parallel_on_route(editor.document().routes().front(), "");
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{140, 36};
+    auto studio = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; });
+    const auto rendered = render(studio, 140, 36, terminal_size);
+    const auto clean    = strip_ansi_codes(rendered.screen.ToString());
+
+    assert(clean.find("│ IN │──>──│ Pan 2 │") != std::string::npos);
+    assert(clean.find("│ Mix 2 │──>──│") != std::string::npos);
+    assert(clean.find("Gain") != std::string::npos);
+}
+
+void assert_parallel_nested_chain_alignment() {
+    auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/parallel-nested-chain.apg");
+    apg::terminal::ProjectEditor    editor(std::move(document));
+    apg::terminal::FakeAudioSession audio;
+    std::pair                       terminal_size{184, 45};
+    auto studio = apg::terminal::studio_component(editor, audio, [] {}, [&] { return terminal_size; });
+    const auto rendered = render(studio, 184, 45, terminal_size);
+    const auto clean    = strip_ansi_codes(rendered.screen.ToString());
+
+    assert(clean.find("APG Studio parallel-drive-chorus-preamp v2.0.0") != std::string::npos);
+    assert(clean.find("│ IN │──>──") != std::string::npos);
+    assert(clean.find("Pan 2") != std::string::npos);
+    assert(clean.find("Overdrive") != std::string::npos);
+    assert(clean.find("Chorus") != std::string::npos);
+    assert(clean.find("Plexi Tone Stage") != std::string::npos);
+    assert(clean.find("Mix 2") != std::string::npos);
+    assert(clean.find("└──>──│ Pan 2 │") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
     assert_screen_dump();
     assert_parallel_alignment();
+    assert_both_channels_empty_alignment();
+    assert_one_channel_empty_alignment();
+    assert_drive_chorus_preamp_alignment();
+    assert_parallel_followed_by_node_alignment();
+    assert_parallel_nested_chain_alignment();
     assert_wide_unit_drag();
     assert_compact_unit_pickup();
+    assert_debug_snapshot();
 
     auto document = apg::terminal::ApgPackageDocument::load("test/fixtures/packages-v1/simple-gain.apg");
     apg::terminal::ProjectEditor    editor(std::move(document));
@@ -478,9 +592,11 @@ int main() {
     assert(editor.document().find_scene("Scene 3T") || editor.document().find_scene("T"));
 
     assert(studio->OnEvent(ftxui::Event::Character("?")));
-    const auto help = render(studio, 80, 24, terminal_size);
-    assert(help.text.find("Help") != std::string::npos);
-    assert(help.text.find("Ctrl+Z/Y history") != std::string::npos);
+    const auto help       = render(studio, 80, 24, terminal_size);
+    const auto clean_help = strip_ansi_codes(help.text);
+    assert(clean_help.find("Help") != std::string::npos);
+    assert(clean_help.find("u:Undo action") != std::string::npos);
+    assert(clean_help.find("Ctrl+R:Redo action") != std::string::npos);
     assert(studio->OnEvent(ftxui::Event::Escape));
 
     assert(studio->OnEvent(ftxui::Event::TabReverse));
