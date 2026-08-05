@@ -32,7 +32,8 @@ ftxui::Element render_graph_view(
     const GraphRenderOptions &options,
     std::deque<RouteHit>     &route_hits,
     std::deque<NodeHit>      &node_hits,
-    std::string              &render_error
+    std::string              &render_error,
+    ftxui::Box               &content_box
 );
 
 bool handle_graph_event(

@@ -394,7 +394,7 @@ class StudioComponent final : public ftxui::ComponentBase {
             .width             = width,
             .height            = height,
         };
-        return render_graph_view(editor_, options, route_hits_, node_hits_, render_error_);
+        return render_graph_view(editor_, options, route_hits_, node_hits_, render_error_, graph_content_box_);
     }
 
     ftxui::Element render_inspector() {
@@ -431,7 +431,7 @@ class StudioComponent final : public ftxui::ComponentBase {
             ),
             hbox({
                 text("IN  "),
-                gauge(std::min(1.0f, meter.input_peak)) | flex | color(Color::Blue),
+                gauge(std::min(1.0f, meter.input_peak)) | flex | color(Color::Green),
                 text("  OUT "),
                 gauge(std::min(1.0f, meter.output_peak)) | flex | color(meter.clipped ? Color::Red : Color::Green),
             }),
@@ -536,13 +536,22 @@ class StudioComponent final : public ftxui::ComponentBase {
                 break;
             }
             case Pane::Graph: {
-                active_pane_   = Pane::Graph;
-                const int step = (delta > 0) ? -3 : 3;
-                if (mouse.shift || mouse.button == Mouse::WheelLeft || mouse.button == Mouse::WheelRight) {
-                    graph_scroll_x_.scroll(step);
-                } else {
-                    graph_scroll_y_.scroll(step);
+                active_pane_ = Pane::Graph;
+                std::vector<std::string> ordered;
+                try {
+                    ordered = editor_.document().node_ids_in_route_order();
+                } catch (const std::exception &) {
+                    ordered.clear();
                 }
+                if (ordered.empty())
+                    break;
+                const auto found   = std::find(ordered.begin(), ordered.end(), selected_node_);
+                const auto current = found == ordered.end() ? 0 : static_cast<int>(std::distance(ordered.begin(), found));
+                const int  target  = delta > 0 ? std::min(current + 1, static_cast<int>(ordered.size()) - 1)
+                                               : std::max(current - 1, 0);
+                selected_node_      = ordered[static_cast<std::size_t>(target)];
+                selected_parameter_ = 0;
+                scroll_node_into_view(selected_node_);
                 break;
             }
             default:
@@ -779,14 +788,42 @@ class StudioComponent final : public ftxui::ComponentBase {
             transient_status_ = "Error: " + audio_.diagnostic();
     }
 
+    void scroll_node_into_view(const std::string &node_id) {
+        const auto graph_index = static_cast<std::size_t>(Pane::Graph);
+        if (graph_index >= pane_boxes_.size() || pane_boxes_[graph_index].IsEmpty() || graph_content_box_.IsEmpty())
+            return;
+        const auto hit = std::find_if(node_hits_.begin(), node_hits_.end(),
+                                      [&](const NodeHit &candidate) { return candidate.id == node_id; });
+        if (hit == node_hits_.end())
+            return;
+        const auto &viewport = pane_boxes_[graph_index];
+        const int   dx       = viewport.x_min - graph_content_box_.x_min;
+        const int   dy       = viewport.y_min - graph_content_box_.y_min;
+        const int   center_x = (hit->box.x_min + hit->box.x_max) / 2;
+        const int   center_y = (hit->box.y_min + hit->box.y_max) / 2;
+        graph_scroll_x_.set(center_x + dx - viewport.x_min);
+        graph_scroll_y_.set(center_y + dy - viewport.y_min);
+    }
+
     void cycle_node(int direction) {
-        const auto &nodes = editor_.document().nodes();
-        const auto  found =
-            std::find_if(nodes.begin(), nodes.end(), [&](const Node &node) { return node.id == selected_node_; });
-        const auto current  = found == nodes.end() ? 0 : static_cast<int>(std::distance(nodes.begin(), found));
-        const auto count    = static_cast<int>(nodes.size());
-        selected_node_      = nodes[static_cast<std::size_t>((current + direction + count) % count)].id;
+        std::vector<std::string> ordered;
+        try {
+            ordered = editor_.document().node_ids_in_route_order();
+        } catch (const std::exception &) {
+            ordered.clear();
+        }
+        if (ordered.empty()) {
+            const auto &nodes = editor_.document().nodes();
+            ordered.reserve(nodes.size());
+            for (const auto &node : nodes)
+                ordered.push_back(node.id);
+        }
+        const auto found  = std::find(ordered.begin(), ordered.end(), selected_node_);
+        const auto current = found == ordered.end() ? 0 : static_cast<int>(std::distance(ordered.begin(), found));
+        const auto count   = static_cast<int>(ordered.size());
+        selected_node_     = ordered[static_cast<std::size_t>((current + direction + count) % count)];
         selected_parameter_ = 0;
+        scroll_node_into_view(selected_node_);
     }
 
     void cycle_route(int direction) {
@@ -872,6 +909,25 @@ class StudioComponent final : public ftxui::ComponentBase {
         if (!selected_scene_name().empty())
             ss << "Selected Scene: " << selected_scene_name() << "\n";
 
+        ss << "Graph Scroll: " << graph_scroll_x_.offset << " " << graph_scroll_y_.offset << "\n";
+        const ftxui::Box viewport = pane_boxes_[static_cast<std::size_t>(Pane::Graph)];
+        ss << "Graph Viewport: " << viewport.x_min << " " << viewport.y_min << " " << viewport.x_max << " "
+           << viewport.y_max << "\n";
+        const ftxui::Box pane_inner = ftxui::Box{viewport.x_min + 1, viewport.x_max - 1, viewport.y_min + 1,
+                                                 viewport.y_max - 1};
+        ss << "Graph Pane Box: " << pane_inner.x_min << " " << pane_inner.y_min << " " << pane_inner.x_max << " "
+           << pane_inner.y_max << "\n";
+        ss << "Graph Content Box: " << graph_content_box_.x_min << " " << graph_content_box_.y_min << " "
+           << graph_content_box_.x_max << " " << graph_content_box_.y_max << "\n";
+        if (!selected_node_.empty()) {
+            const auto hit = std::find_if(node_hits_.begin(), node_hits_.end(),
+                                          [&](const NodeHit &n) { return n.id == selected_node_; });
+            if (hit != node_hits_.end()) {
+                ss << "Selected Node Box: " << hit->box.x_min << " " << hit->box.y_min << " " << hit->box.x_max
+                   << " " << hit->box.y_max << "\n";
+            }
+        }
+
         ss << "\n--- C++ EXPECTED TEST ASSERTIONS ---\n";
         if (!selected_node_.empty()) {
             ss << "assert(clean.find(\"" << selected_node_ << "\") != std::string::npos);\n";
@@ -931,6 +987,7 @@ class StudioComponent final : public ftxui::ComponentBase {
     std::deque<ParameterHit>    parameter_hits_;
     std::deque<TabHit>          tab_hits_;
     std::array<ftxui::Box, 6>   pane_boxes_{};
+    ftxui::Box                  graph_content_box_{};
     ScrollState                 units_scroll_;
     ScrollState                 graph_scroll_x_;
     ScrollState                 graph_scroll_y_;

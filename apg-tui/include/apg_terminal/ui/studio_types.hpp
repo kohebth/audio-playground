@@ -105,6 +105,7 @@ inline double ratio_value(const Parameter &parameter, double ratio) {
 struct ScrollState {
     int  offset = 0;
     void scroll(int delta) { offset = std::max(0, offset + delta); }
+    void set(int position) { offset = std::max(0, position); }
     void reset() { offset = 0; }
 };
 

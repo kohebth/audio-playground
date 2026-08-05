@@ -1,7 +1,34 @@
 #include "apg_terminal/ui/studio_graph_view.hpp"
 
+#include <ftxui/screen/screen.hpp>
+
 namespace apg::terminal {
 namespace {
+
+class BoxCapture : public ftxui::Node {
+public:
+    BoxCapture(ftxui::Element child, ftxui::Box &box) : ftxui::Node(ftxui::unpack(std::move(child))), box_(box) {}
+
+    void ComputeRequirement() final {
+        ftxui::Node::ComputeRequirement();
+        requirement_ = children_[0]->requirement();
+    }
+
+    void SetBox(ftxui::Box box) final {
+        box_ = box;
+        ftxui::Node::SetBox(box);
+        children_[0]->SetBox(box);
+    }
+
+    void Render(ftxui::Screen &screen) final { ftxui::Node::Render(screen); }
+
+private:
+    ftxui::Box &box_;
+};
+
+ftxui::Decorator capture(ftxui::Box &box) {
+    return [&](ftxui::Element child) -> ftxui::Element { return std::make_shared<BoxCapture>(std::move(child), box); };
+}
 
 ftxui::Element render_node_item(
     const ProjectEditor &editor,
@@ -20,38 +47,42 @@ ftxui::Element render_node_item(
     const auto bot_str     = node_id;
     Element    bot_line;
     if (helper) {
-        bot_line = hbox({
-            text(bot_str) | dim,
-            filler(),
-            text("● ") | color(Color::GrayDark),
-        });
+        bot_line = text(bot_str) | dim;
     } else if (is_bypassed) {
         bot_line = hbox({
             text(bot_str) | dim,
             filler(),
-            text("○ ") | color(Color::GrayDark),
+            text(" ○ ") | color(Color::Yellow),
         });
     } else {
-        bot_line = text(bot_str) | dim;
+        bot_line = hbox({
+            text(bot_str) | dim,
+            filler(),
+            text(" ● ") | color(Color::Green),
+        });
     }
 
     const bool is_selected = (selected_node == node_id);
-    auto element = vbox({
-                       text(label) | bold,
-                       filler(),
-                       bot_line,
-                   }) |
-                   (is_selected ? borderStyled(DOUBLE) : border) |
+    auto       content     = vbox({
+        text(label) | bold,
+        filler(),
+        bot_line,
+    });
+
+    if (is_bypassed) {
+        content = content | color(Color::GrayLight) | dim;
+    }
+
+    auto element = content | (is_selected ? borderStyled(DOUBLE) : border) |
                    size(HEIGHT, EQUAL, kGraphNodeHeight);
+    if (is_selected) {
+        element = element | color(Color::Cyan);
+    }
 
     if (is_selected && active_pane == Pane::Graph)
         element = element | focus;
 
-    if (is_bypassed) {
-        element = element | color(Color::GrayDark) | dim;
-    }
-
-    return (element | reflect(node_hits.back().box)) | vcenter;
+    return (element | capture(node_hits.back().box)) | vcenter;
 }
 
 class HorizontalRailNode : public ftxui::Node {
@@ -143,9 +174,12 @@ ftxui::Element render_compact_helper_node(
                        text(" " + label + " ") | bold,
                    }) |
                    (is_selected ? borderStyled(DOUBLE) : border);
+    if (is_selected) {
+        element = element | color(Color::Cyan);
+    }
     if (is_selected && active_pane == Pane::Graph)
         element = element | focus;
-    return (element | reflect(node_hits.back().box));
+    return (element | capture(node_hits.back().box));
 }
 
 constexpr int kCenterRowHeight = 3;
@@ -288,10 +322,7 @@ ftxui::Element render_sequence_item(
     int  target_port = seq_m.port_row;
 
     if (depth == 0) {
-        auto in_box = vbox({
-                          text(" IN ") | bold,
-                      }) |
-                      border | color(Color::Green);
+        auto in_box = vbox({text(" IN ") | bold}) |border;
         items.push_back(pad_top(in_box, target_port - 1));
     }
     for (std::size_t index = 0; index < sequence.elements.size(); ++index) {
@@ -504,22 +535,23 @@ ftxui::Element render_graph_view(
     const GraphRenderOptions &options,
     std::deque<RouteHit>     &route_hits,
     std::deque<NodeHit>      &node_hits,
-    std::string              &render_error
+    std::string              &render_error,
+    ftxui::Box               &content_box
 ) {
     using namespace ftxui;
     render_error.clear();
     try {
         const auto topology = editor.document().topology();
-        return vbox({
-                   filler(),
-                   render_sequence_item(
-                       editor, topology, 0, options.active_pane, options.selected_node, options.selected_route,
-                       options.hovered_route, options.route_drop_active, route_hits, node_hits
-                   ),
-                   filler(),
-               }) |
-               focusPosition(options.scroll_x.offset, options.scroll_y.offset) | hscroll_indicator | vscroll_indicator |
-               xframe | yframe | flex;
+        auto       content  = vbox({
+            filler(),
+            render_sequence_item(
+                editor, topology, 0, options.active_pane, options.selected_node, options.selected_route,
+                options.hovered_route, options.route_drop_active, route_hits, node_hits
+            ),
+            filler(),
+        });
+        return (content | capture(content_box) | focusPosition(options.scroll_x.offset, options.scroll_y.offset)) |
+               hscroll_indicator | vscroll_indicator | xframe | yframe | flex;
     } catch (const std::exception &error) {
         render_error = error.what();
         return vbox({

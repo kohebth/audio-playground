@@ -1866,6 +1866,31 @@ TopologySequence ApgPackageDocument::topology() const {
     return result;
 }
 
+std::vector<std::string> ApgPackageDocument::node_ids_in_route_order() const {
+    std::vector<std::string> ordered;
+    const auto              &root = topology();
+
+    const auto visit = [&](const auto &self, const TopologySequence &sequence) -> void {
+        for (const auto &element : sequence.elements) {
+            if (element.kind == TopologyElement::Kind::Effect) {
+                ordered.push_back(element.node_id);
+                continue;
+            }
+            if (!element.parallel)
+                continue;
+            const auto &paths = element.parallel->paths;
+            ordered.push_back(element.parallel->panner_id);
+            for (const auto &path : paths)
+                if (path.sequence)
+                    self(self, *path.sequence);
+            ordered.push_back(element.parallel->mixer_id);
+        }
+    };
+
+    visit(visit, root);
+    return ordered;
+}
+
 std::string ApgPackageDocument::serialize_for_save(const std::string &timestamp) const {
     if (trim(timestamp).empty())
         fail("Save timestamp must be a non-empty string.");

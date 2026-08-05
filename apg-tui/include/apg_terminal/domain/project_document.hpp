@@ -176,6 +176,7 @@ class ApgPackageDocument {
     [[nodiscard]] ValidationReport
     validate_core(float sample_rate = 48000.0f, std::uint32_t maximum_frames = 1024) const;
     [[nodiscard]] TopologySequence topology() const;
+    [[nodiscard]] std::vector<std::string> node_ids_in_route_order() const;
 
     [[nodiscard]] std::string unique_node_id(const std::string &base) const;
     [[nodiscard]] std::string unique_section_id() const;

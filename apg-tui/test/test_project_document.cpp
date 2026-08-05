@@ -332,5 +332,28 @@ int main() {
     assert(!pb_panner.empty());
     assert(pedalboard_doc.find_node(pb_panner) != nullptr);
     assert(pedalboard_doc.validate_core().ok());
+
+    {
+        auto route_doc = ApgPackageDocument::load("test/fixtures/packages-v1/guitar-pedalboard.apg");
+        const auto guitar_order = route_doc.node_ids_in_route_order();
+        const std::vector<std::string> expected_guitar = {
+            "gate1", "phaser", "drive1", "tone1", "trem1", "chorus1", "delay1", "reverb1",
+        };
+        assert(guitar_order == expected_guitar);
+        std::vector<std::string> doc_order;
+        for (const auto &node : route_doc.nodes())
+            doc_order.push_back(node.id);
+        assert(guitar_order != doc_order);
+    }
+    {
+        auto nested_doc = ApgPackageDocument::load("test/fixtures/packages-v1/parallel-nested-chain.apg");
+        const auto nested_order = nested_doc.node_ids_in_route_order();
+        const std::vector<std::string> expected_nested = {
+            "parallel_pan", "drive",      "chorus",       "preamp",         "parallel_mix",
+            "parallel_2_pan", "chorus_3", "parallel_3_pan", "tone_stack",   "parallel_3_mix",
+            "parallel_2_mix",
+        };
+        assert(nested_order == expected_nested);
+    }
     return 0;
 }
