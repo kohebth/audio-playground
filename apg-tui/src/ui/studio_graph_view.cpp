@@ -495,6 +495,7 @@ ftxui::Element render_graph_view(
     try {
         const auto topology = editor.document().topology();
         return vbox({
+                   filler(),
                    render_sequence_item(
                        editor, topology, 0, options.active_pane, options.selected_node, options.selected_route,
                        options.hovered_route, options.route_drop_active, route_hits, node_hits
