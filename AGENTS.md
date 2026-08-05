@@ -30,8 +30,9 @@ cmake --build build --target check_atom_artifacts
 - Native configuration requires a C/C++ toolchain and Perl. The full gate configures, builds, and runs CTest; configure/build output is suppressed, `BUILD_DIR` overrides `./build/native`, and no npm or Emscripten checks run:
 
 ```sh
-./build-and-test.sh
-BUILD_DIR=./build/alt ./build-and-test.sh
+./apg.sh
+./scripts/apg-core.sh
+BUILD_DIR=./build/alt ./scripts/apg-core.sh
 ```
 
 - After a build is configured, run one C test with:
