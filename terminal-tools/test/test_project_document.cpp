@@ -1,5 +1,5 @@
-#include "apg_terminal/editor.hpp"
-#include "apg_terminal/project_document.hpp"
+#include "apg_terminal/application/editor.hpp"
+#include "apg_terminal/domain/project_document.hpp"
 
 #include <nlohmann/json.hpp>
 

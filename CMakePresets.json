@@ -1,0 +1,89 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "native",
+      "displayName": "Native Host Build",
+      "description": "Default C11 host build for APGCore, CLI, and native tests",
+      "binaryDir": "${sourceDir}/build/native"
+    },
+    {
+      "name": "asan",
+      "displayName": "Sanitizer Build (ASan/UBSan)",
+      "description": "AddressSanitizer and UndefinedBehaviorSanitizer coverage build",
+      "binaryDir": "${sourceDir}/build/asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "APG_ENABLE_SANITIZERS": "ON"
+      }
+    },
+    {
+      "name": "tui",
+      "displayName": "Terminal UI Build",
+      "description": "Native C++20 terminal editor build",
+      "binaryDir": "${sourceDir}/build/tui",
+      "cacheVariables": {
+        "APG_BUILD_TERMINAL_TOOLS": "ON"
+      }
+    },
+    {
+      "name": "wasm",
+      "displayName": "WASM Emscripten Build",
+      "description": "Emscripten target build for WebAssembly processor and control modules",
+      "binaryDir": "${sourceDir}/build/wasm",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "native",
+      "configurePreset": "native"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan"
+    },
+    {
+      "name": "tui",
+      "configurePreset": "tui"
+    },
+    {
+      "name": "wasm",
+      "configurePreset": "wasm",
+      "targets": [
+        "apg_control",
+        "apg_processor"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "native",
+      "configurePreset": "native",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "tui",
+      "configurePreset": "tui",
+      "filter": {
+        "include": {
+          "label": "terminal-tools"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

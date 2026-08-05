@@ -21,18 +21,18 @@ if(APG_ENABLE_SANITIZERS)
 endif()
 
 include_directories(
-        ${CMAKE_SOURCE_DIR}/inc/
-        ${CMAKE_SOURCE_DIR}/inc/rte
-        ${CMAKE_SOURCE_DIR}/inc/util
-        ${CMAKE_SOURCE_DIR}/inc/yaml
+        ${CMAKE_SOURCE_DIR}/apg-core/inc/
+        ${CMAKE_SOURCE_DIR}/apg-core/inc/rte
+        ${CMAKE_SOURCE_DIR}/apg-core/inc/util
+        ${CMAKE_SOURCE_DIR}/apg-core/inc/yaml
 )
 
-file(GLOB_RECURSE APGCORE_SOURCES CONFIGURE_DEPENDS src/apgcore/*.c)
-file(GLOB_RECURSE ATOM_SOURCES CONFIGURE_DEPENDS src/atom/*.c)
-set(ATOM_REGISTRY_SOURCE src/rte/atom_register.c)
-set(ATOM_THUNK_SOURCE src/rte/atom_thunk.c)
-file(GLOB UTIL_SOURCES src/util/*.c)
-file(GLOB YAML_SOURCES src/yaml/*.c)
+file(GLOB_RECURSE APGCORE_SOURCES CONFIGURE_DEPENDS apg-core/src/apgcore/*.c)
+file(GLOB_RECURSE ATOM_SOURCES CONFIGURE_DEPENDS apg-core/src/atom/*.c)
+set(ATOM_REGISTRY_SOURCE apg-core/src/rte/atom_register.c)
+set(ATOM_THUNK_SOURCE apg-core/src/rte/atom_thunk.c)
+file(GLOB UTIL_SOURCES apg-core/src/util/*.c)
+file(GLOB YAML_SOURCES apg-core/src/yaml/*.c)
 list(APPEND UTIL_SOURCES ${APGCORE_SOURCES})
 list(APPEND UTIL_SOURCES ${ATOM_SOURCES})
 list(APPEND UTIL_SOURCES ${ATOM_REGISTRY_SOURCE})
@@ -41,22 +41,22 @@ list(APPEND UTIL_SOURCES ${YAML_SOURCES})
 
 add_library(apgcore STATIC ${UTIL_SOURCES})
 target_include_directories(apgcore PUBLIC
-        ${CMAKE_SOURCE_DIR}/inc
-        ${CMAKE_SOURCE_DIR}/inc/rte
-        ${CMAKE_SOURCE_DIR}/inc/util
-        ${CMAKE_SOURCE_DIR}/inc/yaml
+        ${CMAKE_SOURCE_DIR}/apg-core/inc
+        ${CMAKE_SOURCE_DIR}/apg-core/inc/rte
+        ${CMAKE_SOURCE_DIR}/apg-core/inc/util
+        ${CMAKE_SOURCE_DIR}/apg-core/inc/yaml
 )
 target_link_libraries(apgcore PUBLIC m)
 
-add_executable(test_runtime src/test_runtime.c)
+add_executable(test_runtime apg-core/src/test_runtime.c)
 target_link_libraries(test_runtime apgcore)
 
-add_executable(apg-v2 tools/apg_v2_cli.c)
+add_executable(apg-v2 apg-core/cmd/apg_v2_cli.c)
 target_link_libraries(apg-v2 apgcore)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Threads REQUIRED)
-    add_executable(io-test tools/io_test.c)
+    add_executable(io-test apg-core/benchmarks/io_test.c)
     target_link_libraries(io-test PRIVATE m Threads::Threads)
     add_test(NAME test_io_test_detector COMMAND io-test --self-test)
 endif()
@@ -159,14 +159,14 @@ add_executable(test_dsp_headers_c
         test/abi/dsp_headers_c_smoke.c
         ${DSP_HEADER_SMOKE_SOURCES}
 )
-target_include_directories(test_dsp_headers_c PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+target_include_directories(test_dsp_headers_c PRIVATE ${CMAKE_SOURCE_DIR}/apg-core/inc)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(test_dsp_headers_c PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME test_dsp_headers_c COMMAND test_dsp_headers_c)
 
 add_executable(test_dsp_headers_cpp test/abi/dsp_headers_cpp_smoke.cpp)
-target_include_directories(test_dsp_headers_cpp PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+target_include_directories(test_dsp_headers_cpp PRIVATE ${CMAKE_SOURCE_DIR}/apg-core/inc)
 target_compile_features(test_dsp_headers_cpp PRIVATE cxx_std_11)
 target_link_libraries(test_dsp_headers_cpp PRIVATE apgcore)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -175,7 +175,7 @@ endif()
 add_test(NAME test_dsp_headers_cpp COMMAND test_dsp_headers_cpp)
 
 add_executable(test_dsp_atom_symbols test/abi/dsp_atom_symbols.c)
-target_include_directories(test_dsp_atom_symbols PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+target_include_directories(test_dsp_atom_symbols PRIVATE ${CMAKE_SOURCE_DIR}/apg-core/inc)
 target_link_libraries(test_dsp_atom_symbols PRIVATE apgcore)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(test_dsp_atom_symbols PRIVATE -Wall -Wextra -Wpedantic -Werror)
@@ -183,7 +183,7 @@ endif()
 add_test(NAME test_dsp_atom_symbols COMMAND test_dsp_atom_symbols)
 
 add_executable(test_dsp_types_abi_snapshot test/abi/dsp_types_abi_snapshot.c)
-target_include_directories(test_dsp_types_abi_snapshot PRIVATE ${CMAKE_SOURCE_DIR}/inc)
+target_include_directories(test_dsp_types_abi_snapshot PRIVATE ${CMAKE_SOURCE_DIR}/apg-core/inc)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(test_dsp_types_abi_snapshot PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
@@ -205,7 +205,7 @@ endif()
 
 add_custom_target(generate_atom_artifacts
         COMMAND ${PERL_EXECUTABLE}
-                ${CMAKE_SOURCE_DIR}/tools/generate_atom_artifacts.pl
+                ${CMAKE_SOURCE_DIR}/codegen/generate_atom_artifacts.pl
                 ${CMAKE_SOURCE_DIR}/schema/atoms/atoms.json
                 ${CMAKE_SOURCE_DIR}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -214,7 +214,7 @@ add_custom_target(generate_atom_artifacts
 
 add_custom_target(check_atom_artifacts
         COMMAND ${PERL_EXECUTABLE}
-                ${CMAKE_SOURCE_DIR}/tools/generate_atom_artifacts.pl
+                ${CMAKE_SOURCE_DIR}/codegen/generate_atom_artifacts.pl
                 --check
                 ${CMAKE_SOURCE_DIR}/schema/atoms/atoms.json
                 ${CMAKE_SOURCE_DIR}
@@ -226,7 +226,7 @@ add_test(
         NAME test_atom_artifact_generation
         COMMAND ${CMAKE_COMMAND}
                 -DPERL_EXECUTABLE=${PERL_EXECUTABLE}
-                -DGENERATOR=${CMAKE_SOURCE_DIR}/tools/generate_atom_artifacts.pl
+                -DGENERATOR=${CMAKE_SOURCE_DIR}/codegen/generate_atom_artifacts.pl
                 -DSCHEMA=${CMAKE_SOURCE_DIR}/schema/atoms/atoms.json
                 -DSOURCE_ROOT=${CMAKE_SOURCE_DIR}
                 -DOUTPUT_DIR=${CMAKE_BINARY_DIR}/test-artifacts/generated-atoms
@@ -470,7 +470,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_source_static PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_m7_export_object
-        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7.o
+        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/apg-core/inc -I${CMAKE_SOURCE_DIR}/apg-core/inc/rte -I${APG_M7_CLI_TEST_DIR} -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7.o
 )
 set_tests_properties(test_apg_v2_cli_m7_export_object PROPERTIES
         LABELS v2
@@ -498,7 +498,7 @@ endif()
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     add_test(
             NAME test_apg_v2_cli_m7_export_stack_usage
-            COMMAND /bin/sh -c "${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.su"
+            COMMAND /bin/sh -c "${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/apg-core/inc -I${CMAKE_SOURCE_DIR}/apg-core/inc/rte -I${APG_M7_CLI_TEST_DIR} -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.su"
     )
     set_tests_properties(test_apg_v2_cli_m7_export_stack_usage PROPERTIES
             LABELS v2
@@ -518,7 +518,7 @@ endif()
 
 add_test(
         NAME test_apg_v2_cli_m7_export_link_smoke
-        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_bundle_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static_smoke
+        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_SOURCE_DIR}/apg-core/inc -I${CMAKE_SOURCE_DIR}/apg-core/inc/rte -I${APG_M7_CLI_TEST_DIR} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_bundle_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static_smoke
 )
 set_tests_properties(test_apg_v2_cli_m7_export_link_smoke PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -591,7 +591,7 @@ endif()
 if(APG_M7_C_COMPILER)
     add_test(
             NAME test_apg_v2_cli_m7_export_arm_syntax
-            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -fsyntax-only ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c
+            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_SOURCE_DIR}/apg-core/inc -I${CMAKE_SOURCE_DIR}/apg-core/inc/rte -fsyntax-only ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c
     )
     set_tests_properties(test_apg_v2_cli_m7_export_arm_syntax PROPERTIES
             LABELS v2
@@ -599,7 +599,7 @@ if(APG_M7_C_COMPILER)
     )
     add_test(
             NAME test_apg_v2_cli_m7_export_arm_stack_usage
-            COMMAND /bin/sh -c "${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.su"
+            COMMAND /bin/sh -c "${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_SOURCE_DIR}/apg-core/inc -I${CMAKE_SOURCE_DIR}/apg-core/inc/rte -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.su"
     )
     set_tests_properties(test_apg_v2_cli_m7_export_arm_stack_usage PROPERTIES
             LABELS v2
@@ -620,7 +620,7 @@ endif()
 if(APG_M7_C_COMPILER AND APG_M7_LINKER_SCRIPT)
     add_test(
             NAME test_apg_v2_cli_m7_export_arm_link
-            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -D_GNU_SOURCE -DM_PI=3.14159265358979323846 -DM_SQRT1_2=0.70710678118654752440 -ffreestanding -I${CMAKE_SOURCE_DIR}/inc -I${CMAKE_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -T ${APG_M7_LINKER_SCRIPT} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_link_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -Wl,-Map=${APG_M7_CLI_TEST_DIR}/apg_m7_static.map -Wl,--gc-sections -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static.elf
+            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -D_GNU_SOURCE -DM_PI=3.14159265358979323846 -DM_SQRT1_2=0.70710678118654752440 -ffreestanding -I${CMAKE_SOURCE_DIR}/apg-core/inc -I${CMAKE_SOURCE_DIR}/apg-core/inc/rte -I${APG_M7_CLI_TEST_DIR} -T ${APG_M7_LINKER_SCRIPT} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_link_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -Wl,-Map=${APG_M7_CLI_TEST_DIR}/apg_m7_static.map -Wl,--gc-sections -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static.elf
     )
     set_tests_properties(test_apg_v2_cli_m7_export_arm_link PROPERTIES
             LABELS v2
@@ -642,7 +642,7 @@ if(APG_M7_BOARD_TIMING_COMMAND)
     separate_arguments(APG_M7_BOARD_TIMING_COMMAND_LIST NATIVE_COMMAND "${APG_M7_BOARD_TIMING_COMMAND}")
     add_test(
             NAME test_apg_v2_cli_m7_export_board_timing
-            COMMAND /bin/sh ${CMAKE_SOURCE_DIR}/tools/apg_m7_board_timing_gate.sh ${APG_M7_CLI_TEST_DIR} ${APG_M7_BOARD_TIMING_COMMAND_LIST}
+            COMMAND /bin/sh ${CMAKE_SOURCE_DIR}/apg-core/benchmarks/apg_m7_board_timing_gate.sh ${APG_M7_CLI_TEST_DIR} ${APG_M7_BOARD_TIMING_COMMAND_LIST}
     )
     set_tests_properties(test_apg_v2_cli_m7_export_board_timing PROPERTIES
             LABELS v2
@@ -662,7 +662,7 @@ endif()
 
 add_test(
         NAME test_apg_v2_cli_m7_export_board_timing_gate_mock
-        COMMAND /bin/sh ${CMAKE_SOURCE_DIR}/tools/apg_m7_board_timing_gate.sh ${APG_M7_CLI_TEST_DIR} /bin/sh ${CMAKE_SOURCE_DIR}/test/fixtures/m7/mock_board_timing.sh
+        COMMAND /bin/sh ${CMAKE_SOURCE_DIR}/apg-core/benchmarks/apg_m7_board_timing_gate.sh ${APG_M7_CLI_TEST_DIR} /bin/sh ${CMAKE_SOURCE_DIR}/test/fixtures/m7/mock_board_timing.sh
 )
 set_tests_properties(test_apg_v2_cli_m7_export_board_timing_gate_mock PROPERTIES
         LABELS v2

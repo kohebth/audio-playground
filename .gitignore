@@ -1,8 +1,6 @@
 bin
-cmake-build-debugs
-build
-build-terminal/
-build-wasm-container/
+cmake-build-*/
+build/
 .idea
 .vscode
 .codex

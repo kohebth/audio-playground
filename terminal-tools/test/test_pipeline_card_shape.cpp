@@ -1,4 +1,4 @@
-#include "apg_terminal/pipeline_component.hpp"
+#include "apg_terminal/ui/pipeline_component.hpp"
 
 #include <ftxui/screen/screen.hpp>
 

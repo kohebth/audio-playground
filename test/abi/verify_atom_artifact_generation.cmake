@@ -5,34 +5,34 @@ foreach(variable PERL_EXECUTABLE GENERATOR SCHEMA SOURCE_ROOT OUTPUT_DIR)
 endforeach()
 
 set(generated_files
-        inc/atom/types/dsp_type_macros.h
-        inc/atom/types/generation_types.h
-        inc/atom/types/amplitude_types.h
-        inc/atom/types/delay_types.h
-        inc/atom/types/filter_types.h
-        inc/atom/types/detect_types.h
-        inc/atom/types/modulation_types.h
-        inc/atom/types/interpolation_types.h
-        inc/atom/types/math_types.h
-        inc/atom/types/src_types.h
-        inc/atom/types/frequency_types.h
-        inc/atom/types/mix_types.h
-        inc/atom/types/nonlinear_types.h
-        inc/atom/generated/atom_definitions.generated.h
-        inc/atom/generated/dsp_atoms.generated.h
-        src/atom/generation/generation_field_descriptors.c
-        src/atom/amplitude/amplitude_field_descriptors.c
-        src/atom/delay/delay_field_descriptors.c
-        src/atom/filter/filter_field_descriptors.c
-        src/atom/detect/detect_field_descriptors.c
-        src/atom/modulation/modulation_field_descriptors.c
-        src/atom/interpolation/interpolation_field_descriptors.c
-        src/atom/math/math_field_descriptors.c
-        src/atom/source/source_field_descriptors.c
-        src/atom/frequency/frequency_field_descriptors.c
-        src/atom/mix/mix_field_descriptors.c
-        src/atom/nonlinear/nonlinear_field_descriptors.c
-        src/apgcore/metadata/atom_catalog_contracts.generated.inc
+        apg-core/inc/atom/types/dsp_type_macros.h
+        apg-core/inc/atom/types/generation_types.h
+        apg-core/inc/atom/types/amplitude_types.h
+        apg-core/inc/atom/types/delay_types.h
+        apg-core/inc/atom/types/filter_types.h
+        apg-core/inc/atom/types/detect_types.h
+        apg-core/inc/atom/types/modulation_types.h
+        apg-core/inc/atom/types/interpolation_types.h
+        apg-core/inc/atom/types/math_types.h
+        apg-core/inc/atom/types/src_types.h
+        apg-core/inc/atom/types/frequency_types.h
+        apg-core/inc/atom/types/mix_types.h
+        apg-core/inc/atom/types/nonlinear_types.h
+        apg-core/inc/atom/generated/atom_definitions.generated.h
+        apg-core/inc/atom/generated/dsp_atoms.generated.h
+        apg-core/src/atom/generation/generation_field_descriptors.c
+        apg-core/src/atom/amplitude/amplitude_field_descriptors.c
+        apg-core/src/atom/delay/delay_field_descriptors.c
+        apg-core/src/atom/filter/filter_field_descriptors.c
+        apg-core/src/atom/detect/detect_field_descriptors.c
+        apg-core/src/atom/modulation/modulation_field_descriptors.c
+        apg-core/src/atom/interpolation/interpolation_field_descriptors.c
+        apg-core/src/atom/math/math_field_descriptors.c
+        apg-core/src/atom/source/source_field_descriptors.c
+        apg-core/src/atom/frequency/frequency_field_descriptors.c
+        apg-core/src/atom/mix/mix_field_descriptors.c
+        apg-core/src/atom/nonlinear/nonlinear_field_descriptors.c
+        apg-core/src/apgcore/metadata/atom_catalog_contracts.generated.inc
         web-tools/src/atoms/atomCatalog.generated.ts
         schema/atoms/atom.schema.json
 )
@@ -73,7 +73,7 @@ if(NOT source_check_result EQUAL 0)
     message(FATAL_ERROR "Checked-in atom artifacts are stale: ${source_check_error}")
 endif()
 
-set(stale_file "${first_root}/inc/atom/generated/atom_definitions.generated.h")
+set(stale_file "${first_root}/apg-core/inc/atom/generated/atom_definitions.generated.h")
 file(APPEND "${stale_file}" "\n/* stale marker */\n")
 execute_process(
         COMMAND "${PERL_EXECUTABLE}" "${GENERATOR}" --check "${SCHEMA}" "${first_root}"
@@ -83,7 +83,7 @@ execute_process(
 if(stale_check_result EQUAL 0)
     message(FATAL_ERROR "Atom artifact stale check accepted modified output")
 endif()
-string(FIND "${stale_check_error}" "inc/atom/generated/atom_definitions.generated.h" stale_path_position)
+string(FIND "${stale_check_error}" "apg-core/inc/atom/generated/atom_definitions.generated.h" stale_path_position)
 if(stale_path_position EQUAL -1)
     message(FATAL_ERROR "Atom artifact stale check did not identify the modified output: ${stale_check_error}")
 endif()

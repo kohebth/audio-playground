@@ -1,6 +1,6 @@
-#include "apg_terminal/parameter_row.hpp"
-#include "apg_terminal/pipeline_component.hpp"
-#include "apg_terminal/ui.hpp"
+#include "apg_terminal/ui/parameter_row.hpp"
+#include "apg_terminal/ui/pipeline_component.hpp"
+#include "apg_terminal/ui/ui.hpp"
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/event.hpp>

@@ -1,6 +1,6 @@
 file(GLOB_RECURSE APG_CORE_FILES
-        "${APG_ROOT}/inc/apgcore/*.h"
-        "${APG_ROOT}/src/apgcore/*.c"
+        "${APG_ROOT}/apg-core/inc/apgcore/*.h"
+        "${APG_ROOT}/apg-core/src/apgcore/*.c"
 )
 
 foreach(APG_CORE_FILE IN LISTS APG_CORE_FILES)

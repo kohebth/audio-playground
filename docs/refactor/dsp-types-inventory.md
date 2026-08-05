@@ -104,7 +104,7 @@ verification evidence.
 Generate and run the snapshot without linking the DSP implementation:
 
 ```sh
-perl tools/generate_dsp_types_abi_snapshot.pl \
+perl codegen/generate_dsp_types_abi_snapshot.pl \
     test/abi/dsp_types_abi_snapshot.c \
     inc/atom/types/dsp_type_macros.h \
     inc/atom/types/*_types.h

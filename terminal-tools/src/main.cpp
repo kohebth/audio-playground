@@ -1,7 +1,7 @@
-#include "apg_terminal/editor.hpp"
-#include "apg_terminal/project_document.hpp"
-#include "apg_terminal/session.hpp"
-#include "apg_terminal/studio.hpp"
+#include "apg_terminal/application/editor.hpp"
+#include "apg_terminal/domain/project_document.hpp"
+#include "apg_terminal/io/session.hpp"
+#include "apg_terminal/ui/studio.hpp"
 
 #include <ftxui/component/event.hpp>
 #include <ftxui/component/screen_interactive.hpp>

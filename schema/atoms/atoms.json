@@ -2860,36 +2860,36 @@
    "families" : [
       {
          "category" : "generation",
-         "descriptor_source" : "src/atom/generation/generation_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/generation/generation_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_GENERATION_TYPES_H",
-         "header" : "inc/atom/types/generation_types.h",
+         "header" : "apg-core/inc/atom/types/generation_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "generation",
          "table_macro" : "APG_GENERATION_DSP_TYPE_TABLE"
       },
       {
          "category" : "amplitude",
-         "descriptor_source" : "src/atom/amplitude/amplitude_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/amplitude/amplitude_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_AMPLITUDE_TYPES_H",
-         "header" : "inc/atom/types/amplitude_types.h",
+         "header" : "apg-core/inc/atom/types/amplitude_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "amplitude",
          "table_macro" : "APG_AMPLITUDE_DSP_TYPE_TABLE"
       },
       {
          "category" : "delay",
-         "descriptor_source" : "src/atom/delay/delay_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/delay/delay_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_DELAY_TYPES_H",
-         "header" : "inc/atom/types/delay_types.h",
+         "header" : "apg-core/inc/atom/types/delay_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "delay",
          "table_macro" : "APG_DELAY_DSP_TYPE_TABLE"
       },
       {
          "category" : "filter",
-         "descriptor_source" : "src/atom/filter/filter_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/filter/filter_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_FILTER_TYPES_H",
-         "header" : "inc/atom/types/filter_types.h",
+         "header" : "apg-core/inc/atom/types/filter_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "filter",
          "table_macro" : "APG_FILTER_DSP_TYPE_TABLE"
@@ -2906,9 +2906,9 @@
                "value" : "1024u"
             }
          ],
-         "descriptor_source" : "src/atom/detect/detect_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/detect/detect_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_DETECT_TYPES_H",
-         "header" : "inc/atom/types/detect_types.h",
+         "header" : "apg-core/inc/atom/types/detect_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "detect",
          "table_macro" : "APG_DETECT_DSP_TYPE_TABLE"
@@ -2921,63 +2921,63 @@
                "value" : "4096u"
             }
          ],
-         "descriptor_source" : "src/atom/modulation/modulation_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/modulation/modulation_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_MODULATION_TYPES_H",
-         "header" : "inc/atom/types/modulation_types.h",
+         "header" : "apg-core/inc/atom/types/modulation_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "modulation",
          "table_macro" : "APG_MODULATION_DSP_TYPE_TABLE"
       },
       {
          "category" : "interpolation",
-         "descriptor_source" : "src/atom/interpolation/interpolation_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/interpolation/interpolation_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_INTERPOLATION_TYPES_H",
-         "header" : "inc/atom/types/interpolation_types.h",
+         "header" : "apg-core/inc/atom/types/interpolation_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "interpolation",
          "table_macro" : "APG_INTERPOLATION_DSP_TYPE_TABLE"
       },
       {
          "category" : "src",
-         "descriptor_source" : "src/atom/source/source_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/source/source_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_SRC_TYPES_H",
-         "header" : "inc/atom/types/src_types.h",
+         "header" : "apg-core/inc/atom/types/src_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "src",
          "table_macro" : "APG_SRC_DSP_TYPE_TABLE"
       },
       {
          "category" : "freq",
-         "descriptor_source" : "src/atom/frequency/frequency_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/frequency/frequency_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_FREQUENCY_TYPES_H",
-         "header" : "inc/atom/types/frequency_types.h",
+         "header" : "apg-core/inc/atom/types/frequency_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "frequency",
          "table_macro" : "APG_FREQUENCY_DSP_TYPE_TABLE"
       },
       {
          "category" : "mix",
-         "descriptor_source" : "src/atom/mix/mix_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/mix/mix_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_MIX_TYPES_H",
-         "header" : "inc/atom/types/mix_types.h",
+         "header" : "apg-core/inc/atom/types/mix_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "mix",
          "table_macro" : "APG_MIX_DSP_TYPE_TABLE"
       },
       {
          "category" : "nonlinear",
-         "descriptor_source" : "src/atom/nonlinear/nonlinear_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/nonlinear/nonlinear_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_NONLINEAR_TYPES_H",
-         "header" : "inc/atom/types/nonlinear_types.h",
+         "header" : "apg-core/inc/atom/types/nonlinear_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "nonlinear",
          "table_macro" : "APG_NONLINEAR_DSP_TYPE_TABLE"
       },
       {
          "category" : "math",
-         "descriptor_source" : "src/atom/math/math_field_descriptors.c",
+         "descriptor_source" : "apg-core/src/atom/math/math_field_descriptors.c",
          "guard" : "AUDIO_PLAYGROUND_MATH_TYPES_H",
-         "header" : "inc/atom/types/math_types.h",
+         "header" : "apg-core/inc/atom/types/math_types.h",
          "include" : "atom/types/dsp_type_macros.h",
          "name" : "math",
          "table_macro" : "APG_MATH_DSP_TYPE_TABLE"

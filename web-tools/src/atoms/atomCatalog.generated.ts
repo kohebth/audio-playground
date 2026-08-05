@@ -1,4 +1,4 @@
-// Generated from schema/atoms/atoms.json by tools/generate_atom_artifacts.pl. Do not edit.
+// Generated from schema/atoms/atoms.json by codegen/generate_atom_artifacts.pl. Do not edit.
 
 export type AtomVisibility = 'public' | 'advanced' | 'internal';
 export type ParameterValue = number | boolean | string | number[] | number[][];

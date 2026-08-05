@@ -14,7 +14,7 @@
 Field order is C ABI order. Atom order is canonical registry order. Empty roles use the standard one-byte
 `uint8_t _reserved` layout, which is never emitted as a logical contract field.
 
-`tools/generate_atom_artifacts.pl` validates that source and owns these checked-in outputs:
+`codegen/generate_atom_artifacts.pl` validates that source and owns these checked-in outputs:
 
 - `inc/atom/types/dsp_type_macros.h` and all 12 family `*_types.h` headers;
 - `inc/atom/generated/atom_definitions.generated.h` and `dsp_atoms.generated.h`;

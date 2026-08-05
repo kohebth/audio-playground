@@ -11,12 +11,12 @@ on:
       - ".github/workflows/deploy-pages.yml"
       - "CMakeLists.txt"
       - "cmake/**"
-      - "inc/**"
+      - "apg-core/inc/**"
+      - "apg-core/src/**"
       - "schema/**"
-      - "src/**"
       - "test/fixtures/**"
       - "test/golden/**"
-      - "tools/generate_atom_artifacts.py"
+      - "codegen/**"
       - "wasm-tools/**"
       - "web-tools/**"
 permissions:
@@ -63,12 +63,12 @@ jobs:
 
       - name: Build and smoke-test WASM runtime
         run: |
-          emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
-          cmake --build build-wasm --target apg_control apg_processor -j2
-          node wasm-tools/test/emscripten_runtime_smoke.mjs build-wasm/wasm-tools .
+          emcmake cmake -S . -B build/wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/wasm --target apg_control apg_processor -j2
+          node wasm-tools/test/emscripten_runtime_smoke.mjs build/wasm/wasm-tools .
           mkdir -p web-tools/public/wasm
-          cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm web-tools/public/wasm/
-          cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm web-tools/public/wasm/
+          cp build/wasm/wasm-tools/apg_control.mjs build/wasm/wasm-tools/apg_control.wasm web-tools/public/wasm/
+          cp build/wasm/wasm-tools/apg_processor.mjs build/wasm/wasm-tools/apg_processor.wasm web-tools/public/wasm/
           cp wasm-tools/web/processor.worklet.js web-tools/public/wasm/processor.worklet.js
 
       - name: Install web dependencies

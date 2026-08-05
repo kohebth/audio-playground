@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-build_dir="build-wasm-container"
+build_dir="build/wasm"
 image="emscripten/emsdk:5.0.1"
 
 docker run --rm \

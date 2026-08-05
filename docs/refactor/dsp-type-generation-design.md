@@ -43,8 +43,8 @@ Those surfaces contain behavior or policy beyond declarative atom metadata.
 ## Commands
 
 ```sh
-perl tools/generate_atom_artifacts.pl schema/atoms/atoms.json .
-perl tools/generate_atom_artifacts.pl --check schema/atoms/atoms.json .
+perl codegen/generate_atom_artifacts.pl schema/atoms/atoms.json .
+perl codegen/generate_atom_artifacts.pl --check schema/atoms/atoms.json .
 cmake --build build --target generate_atom_artifacts
 cmake --build build --target check_atom_artifacts
 ctest --test-dir build -R '^test_atom_artifact_generation$' --output-on-failure

@@ -28,12 +28,12 @@ jobs:
 
       - name: Build and smoke-test WASM middleware
         run: |
-          emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
-          cmake --build build-wasm --target apg_control apg_processor -j2
-          node wasm-tools/test/emscripten_runtime_smoke.mjs build-wasm/wasm-tools .
+          emcmake cmake -S . -B build/wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/wasm --target apg_control apg_processor -j2
+          node wasm-tools/test/emscripten_runtime_smoke.mjs build/wasm/wasm-tools .
           mkdir -p browser-wasm
-          cp build-wasm/wasm-tools/apg_control.mjs build-wasm/wasm-tools/apg_control.wasm browser-wasm/
-          cp build-wasm/wasm-tools/apg_processor.mjs build-wasm/wasm-tools/apg_processor.wasm browser-wasm/
+          cp build/wasm/wasm-tools/apg_control.mjs build/wasm/wasm-tools/apg_control.wasm browser-wasm/
+          cp build/wasm/wasm-tools/apg_processor.mjs build/wasm/wasm-tools/apg_processor.wasm browser-wasm/
           cp wasm-tools/web/processor.worklet.js browser-wasm/processor.worklet.js
 
       - name: Upload WASM middleware

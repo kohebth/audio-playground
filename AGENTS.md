@@ -2,9 +2,9 @@
 
 ## Product Boundaries
 
-- Root CMake builds the C11 `apgcore` library, `apg-v2` CLI, native tests, and native `wasm-tools` tests. APGCore modules live in matching `src/apgcore/<layer>/` and `inc/apgcore/<layer>/` directories; atom implementations live under `src/atom/<family>/`.
+- Root CMake builds the C11 `apgcore` library, `apg-v2` CLI, native tests, and native `wasm-tools` tests. The C11 core, CLI, and benchmarks live under `apg-core/`; APGCore modules live in matching `apg-core/src/apgcore/<layer>/` and `apg-core/inc/apgcore/<layer>/` directories; atom implementations live under `apg-core/src/atom/<family>/`.
 - Preserve the `metadata -> parser -> validator -> compiler -> registry -> runtime -> measure -> host` boundary in `core-design.md`. The runtime walks a prebuilt schedule; parsing, compilation, allocation, formatting, and name lookup do not belong in an audio callback.
-- `wasm-tools/` owns the C control/processor ABI and the TypeScript Worker/AudioWorklet facade. Keep browser dependencies out of `src/apgcore/` and `inc/apgcore/`; CTest has boundary checks for both core imports and processor real-time work.
+- `wasm-tools/` owns the C control/processor ABI and the TypeScript Worker/AudioWorklet facade. Keep browser dependencies out of `apg-core/src/apgcore/` and `apg-core/inc/apgcore/`; CTest has boundary checks for both core imports and processor real-time work.
 - `web-tools/` is the React 19/Vite application. Its real entry path is `src/main.tsx -> StudioApp.tsx -> App.tsx`; it consumes `@audio-playground/wasm-tools` through `file:../wasm-tools`.
 - There is no root JavaScript workspace. `wasm-tools/` and `web-tools/` have separate lockfiles and installs. Ignored/local `audio-mcp/`, `search-mcp/`, `.opencode/`, `.codex/`, `analysis/`, `samples/`, and build directories are not product packages.
 - V1 `units/*.unit.yaml` content was deleted. Do not restore or stage local v1 drafts; executable metadata is under `test/fixtures/units-v2/` and `test/fixtures/projects-v2/`.
@@ -27,49 +27,49 @@ cmake --build build --target check_atom_artifacts
 
 ## Native Verification
 
-- Native configuration requires a C/C++ toolchain and Perl. The full gate configures, builds, and runs CTest; configure/build output is suppressed, `BUILD_DIR` overrides `./build`, and no npm or Emscripten checks run:
+- Native configuration requires a C/C++ toolchain and Perl. The full gate configures, builds, and runs CTest; configure/build output is suppressed, `BUILD_DIR` overrides `./build/native`, and no npm or Emscripten checks run:
 
 ```sh
 ./build-and-test.sh
-BUILD_DIR=./build-alt ./build-and-test.sh
+BUILD_DIR=./build/alt ./build-and-test.sh
 ```
 
 - After a build is configured, run one C test with:
 
 ```sh
-cmake --build build --target test_unit_v2_runtime
-ctest --test-dir build -R '^test_unit_v2_runtime$' --output-on-failure
+cmake --build build/native --target test_unit_v2_runtime
+ctest --test-dir build/native -R '^test_unit_v2_runtime$' --output-on-failure
 ```
 
 - `check_v2` runs every test carrying the `v2` label, but its target dependencies do not build every labeled executable. Build all targets first:
 
 ```sh
-cmake --build build --parallel
-cmake --build build --target check_v2
+cmake --build build/native --parallel
+cmake --build build/native --target check_v2
 ```
 
 - Native WASM middleware tests, including boundary checks, use the `wasm-tools` label:
 
 ```sh
-cmake --build build --target test_wasm_tools_abi test_wasm_tools_workspace test_wasm_tools_processor
-ctest --test-dir build -L wasm-tools --output-on-failure
+cmake --build build/native --target test_wasm_tools_abi test_wasm_tools_workspace test_wasm_tools_processor
+ctest --test-dir build/native -L wasm-tools --output-on-failure
 ```
 
-- For sanitizer coverage, use a separate build tree:
+- For sanitizer coverage, use the ASan build tree (or `cmake --preset asan`):
 
 ```sh
-cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug -DAPG_ENABLE_SANITIZERS=ON
-cmake --build build-asan --parallel
-ctest --test-dir build-asan --output-on-failure
+cmake -S . -B build/asan -DCMAKE_BUILD_TYPE=Debug -DAPG_ENABLE_SANITIZERS=ON
+cmake --build build/asan --parallel
+ctest --test-dir build/asan --output-on-failure
 ```
 
 - A green default CTest run is not hardware proof. ARM syntax/link gates skip without `APG_M7_C_COMPILER` and `APG_M7_LINKER_SCRIPT`; board timing skips without `APG_M7_BOARD_TIMING_COMMAND`. See `docs/STM32H7_M7_BOARD_INTEGRATION.md` before claiming M7 readiness.
-- Terminal UI verification uses a separate build tree because it fetches C++ dependencies through CMake FetchContent:
+- Terminal UI verification uses a separate build tree because it fetches C++ dependencies through CMake FetchContent (or `cmake --preset tui`):
 
 ```sh
-cmake -S . -B build-terminal -DAPG_BUILD_TERMINAL_TOOLS=ON
-cmake --build build-terminal --parallel
-ctest --test-dir build-terminal -L terminal-tools --output-on-failure
+cmake -S . -B build/tui -DAPG_BUILD_TERMINAL_TOOLS=ON
+cmake --build build/tui --parallel
+ctest --test-dir build/tui -L terminal-tools --output-on-failure
 ```
 
 ## Browser Verification

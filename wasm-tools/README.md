@@ -12,8 +12,8 @@ The control module currently accepts a revisioned in-memory workspace, confines 
 path, resolves and validates only unit references used by entry-project chain nodes, and compiles the entry project.
 Unused references remain project catalog entries and do not block the active runtime; activating a missing or invalid
 unit still returns its structured diagnostic. The compiled-workspace summary counts active dependencies. Processor
-operations are added as independent vertical slices without adding browser dependencies to `inc/apgcore/` or
-`src/apgcore/`.
+operations are added as independent vertical slices without adding browser dependencies to `apg-core/inc/apgcore/` or
+`apg-core/src/apgcore/`.
 
 `prepare` lowers the compiled registry into a checksummed, little-endian, pointer-free image. The processor hydrates
 that image in an inactive arena, resolves atom names against its own compiled registry, and constructs a separate
