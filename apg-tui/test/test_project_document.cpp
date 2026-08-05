@@ -326,7 +326,11 @@ int main() {
     assert(wrap_doc.find_node(wrap_panner_id) != nullptr);
     const auto wrap_topo = wrap_doc.topology();
     assert(wrap_topo.elements.front().kind == TopologyElement::Kind::Parallel);
-    assert(wrap_doc.validate_core().ok());
-
+    auto pedalboard_doc = ApgPackageDocument::load("test/fixtures/packages-v1/guitar-pedalboard.apg");
+    const auto pb_route = pedalboard_doc.routes().front();
+    const auto pb_panner = pedalboard_doc.add_parallel_on_route(pb_route, "");
+    assert(!pb_panner.empty());
+    assert(pedalboard_doc.find_node(pb_panner) != nullptr);
+    assert(pedalboard_doc.validate_core().ok());
     return 0;
 }

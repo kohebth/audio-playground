@@ -883,7 +883,15 @@ void ApgPackageDocument::refresh_project_view() {
             if (unit.id.empty() || unit.file.empty())
                 fail("Project unit references require id and file.");
             const auto resolved = resolve_workspace_path(entry_project_, unit.file);
-            const auto file     = files_by_path.find(resolved);
+            auto file     = files_by_path.find(resolved);
+            if (file == files_by_path.end()) {
+                for (auto it = files_by_path.begin(); it != files_by_path.end(); ++it) {
+                    if (std::filesystem::path(it->first).filename() == std::filesystem::path(resolved).filename()) {
+                        file = it;
+                        break;
+                    }
+                }
+            }
             const bool active   = active_unit_ids.contains(unit.id);
             if (file == files_by_path.end() || file->second.role != "unit") {
                 if (active)
@@ -1083,10 +1091,20 @@ std::vector<WorkspaceFile> ApgPackageDocument::workspace_files() const {
             index == entry_file_index_ ? project_content_ : files[index]["content"].get<std::string>(),
         });
     }
-    if (!has_panner)
-        result.push_back({"units-v2/path_panner_2.unit.v2.yaml", "unit", kDefaultPathPanner2Yaml});
-    if (!has_mixer)
-        result.push_back({"units-v2/path_mixer_2.unit.v2.yaml", "unit", kDefaultPathMixer2Yaml});
+    if (!has_panner) {
+        const auto panner_resolved = resolve_workspace_path(entry_project_, "../units-v2/path_panner_2.unit.v2.yaml");
+        result.push_back({panner_resolved, "unit", kDefaultPathPanner2Yaml});
+        if (panner_resolved != "units-v2/path_panner_2.unit.v2.yaml") {
+            result.push_back({"units-v2/path_panner_2.unit.v2.yaml", "unit", kDefaultPathPanner2Yaml});
+        }
+    }
+    if (!has_mixer) {
+        const auto mixer_resolved = resolve_workspace_path(entry_project_, "../units-v2/path_mixer_2.unit.v2.yaml");
+        result.push_back({mixer_resolved, "unit", kDefaultPathMixer2Yaml});
+        if (mixer_resolved != "units-v2/path_mixer_2.unit.v2.yaml") {
+            result.push_back({"units-v2/path_mixer_2.unit.v2.yaml", "unit", kDefaultPathMixer2Yaml});
+        }
+    }
     return result;
 }
 
