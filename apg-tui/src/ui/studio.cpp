@@ -538,8 +538,9 @@ class StudioComponent final : public ftxui::ComponentBase {
             case Pane::Graph: {
                 active_pane_   = Pane::Graph;
                 const int step = (delta > 0) ? -3 : 3;
-                graph_scroll_x_.scroll(step);
-                if (!mouse.shift && mouse.button != Mouse::WheelLeft && mouse.button != Mouse::WheelRight) {
+                if (mouse.shift || mouse.button == Mouse::WheelLeft || mouse.button == Mouse::WheelRight) {
+                    graph_scroll_x_.scroll(step);
+                } else {
                     graph_scroll_y_.scroll(step);
                 }
                 break;

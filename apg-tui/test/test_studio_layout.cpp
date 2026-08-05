@@ -431,7 +431,7 @@ void assert_both_channels_empty_alignment() {
     assert(clean.find("│ IN │") != std::string::npos);
     assert(clean.find("│ OUT │") != std::string::npos);
     assert(clean.find("┌───>────┐") != std::string::npos);
-    assert(clean.find("│ IN │──>──│ Pan 2 │") != std::string::npos);
+    assert(clean.find("│ IN │──>──║ Pan 2 ║") != std::string::npos);
     assert(clean.find("│ Mix 2 │──>──│ OUT │") != std::string::npos);
     assert(clean.find("└───>────┘") != std::string::npos);
     assert(clean.find("Pan 2") != std::string::npos);
@@ -449,7 +449,7 @@ void assert_one_channel_empty_alignment() {
 
     assert(clean.find("APG Studio parallel-empty-preamp v2.0.0") != std::string::npos);
     assert(clean.find("┌─────────────>──────────────┐") != std::string::npos || clean.find("┌──────────────>─────────────┐") != std::string::npos);
-    assert(clean.find("│ Pan 2 │                    │ Mix 2 │") != std::string::npos);
+    assert(clean.find("║ Pan 2 ║                    │ Mix 2 │") != std::string::npos);
     assert(clean.find("└──>──│") != std::string::npos);
     assert(clean.find("│──>──┘") != std::string::npos);
     assert(clean.find("Plexi Tone Stage") != std::string::npos);
@@ -466,7 +466,7 @@ void assert_drive_chorus_preamp_alignment() {
 
     assert(clean.find("APG Studio parallel-drive-chorus-preamp v2.0.0") != std::string::npos);
     assert(clean.find("┌──>──│         │──>──│      │──>──┐") != std::string::npos);
-    assert(clean.find("│ IN │──>──│ Pan 2 │") != std::string::npos);
+    assert(clean.find("│ IN │──>──║ Pan 2 ║") != std::string::npos);
     assert(clean.find("│ Mix 2 │") != std::string::npos);
     assert(clean.find("└───>────│") != std::string::npos);
     assert(clean.find("│───>────┘") != std::string::npos);
@@ -486,7 +486,7 @@ void assert_parallel_followed_by_node_alignment() {
     const auto clean    = strip_ansi_codes(rendered.screen.ToString());
 
     assert(clean.find("│ IN │──>──│ Pan 2 │") != std::string::npos);
-    assert(clean.find("│ Mix 2 │──>──│") != std::string::npos);
+    assert(clean.find("│ Mix 2 │──>──║") != std::string::npos);
     assert(clean.find("Gain") != std::string::npos);
 }
 

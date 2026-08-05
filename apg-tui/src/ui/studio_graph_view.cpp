@@ -13,26 +13,44 @@ ftxui::Element render_node_item(
 ) {
     using namespace ftxui;
     node_hits.push_back({node_id, {}});
-    const auto *node    = editor.document().find_node(node_id);
-    const auto *unit    = node ? editor.document().find_unit(node->unit) : nullptr;
-    const auto  label   = unit && !unit->title.empty() ? unit->title : node_id;
-    auto        element = vbox({
+    const auto *node        = editor.document().find_node(node_id);
+    const auto *unit        = node ? editor.document().find_unit(node->unit) : nullptr;
+    const auto  label       = unit && !unit->title.empty() ? unit->title : node_id;
+    const bool  is_bypassed = !helper && editor.bypassed(node_id);
+    const auto bot_str     = node_id;
+    Element    bot_line;
+    if (helper) {
+        bot_line = hbox({
+            text(bot_str) | dim,
+            filler(),
+            text("● ") | color(Color::GrayDark),
+        });
+    } else if (is_bypassed) {
+        bot_line = hbox({
+            text(bot_str) | dim,
+            filler(),
+            text("○ ") | color(Color::GrayDark),
+        });
+    } else {
+        bot_line = text(bot_str) | dim;
+    }
+
+    const bool is_selected = (selected_node == node_id);
+    auto element = vbox({
                        text(label) | bold,
                        filler(),
-                       text(
-                           node_id + (helper                     ? " · routing"
-                                             : editor.bypassed(node_id) ? " · BYPASS"
-                                                                        : "")
-                       ) | dim,
+                       bot_line,
                    }) |
-                   border | size(HEIGHT, EQUAL, kGraphNodeHeight);
-    if (selected_node == node_id) {
-        element = element | color(Color::Cyan);
-        if (active_pane == Pane::Graph)
-            element = element | focus;
+                   (is_selected ? borderStyled(DOUBLE) : border) |
+                   size(HEIGHT, EQUAL, kGraphNodeHeight);
+
+    if (is_selected && active_pane == Pane::Graph)
+        element = element | focus;
+
+    if (is_bypassed) {
+        element = element | color(Color::GrayDark) | dim;
     }
-    if (!helper && editor.bypassed(node_id))
-        element = element | dim;
+
     return (element | reflect(node_hits.back().box)) | vcenter;
 }
 
@@ -120,15 +138,13 @@ ftxui::Element render_compact_helper_node(
     const auto *unit  = node ? editor.document().find_unit(node->unit) : nullptr;
     const auto  label = (unit && !unit->title.empty()) ? unit->title : (!node_id.empty() ? node_id : default_label);
 
+    const bool is_selected = (selected_node == node_id);
     auto element = vbox({
                        text(" " + label + " ") | bold,
                    }) |
-                   border;
-    if (selected_node == node_id) {
-        element = element | color(Color::Cyan);
-        if (active_pane == Pane::Graph)
-            element = element | focus;
-    }
+                   (is_selected ? borderStyled(DOUBLE) : border);
+    if (is_selected && active_pane == Pane::Graph)
+        element = element | focus;
     return (element | reflect(node_hits.back().box));
 }
 
