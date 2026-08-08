@@ -57,15 +57,15 @@ struct RuntimeProjectSpec {
     std::map<std::string, bool>      bypass;
 };
 
-class RealtimeProjectEngine {
+class ApgEngine {
   public:
-    explicit RealtimeProjectEngine(AudioDeviceConfig config);
-    ~RealtimeProjectEngine();
+    explicit ApgEngine(AudioDeviceConfig config);
+    ~ApgEngine();
 
-    RealtimeProjectEngine(const RealtimeProjectEngine &)            = delete;
-    RealtimeProjectEngine &operator=(const RealtimeProjectEngine &) = delete;
-    RealtimeProjectEngine(RealtimeProjectEngine &&)                 = delete;
-    RealtimeProjectEngine &operator=(RealtimeProjectEngine &&)      = delete;
+    ApgEngine(const ApgEngine &)            = delete;
+    ApgEngine &operator=(const ApgEngine &) = delete;
+    ApgEngine(ApgEngine &&)                 = delete;
+    ApgEngine &operator=(ApgEngine &&)      = delete;
 
     bool                            configure(const AudioDeviceConfig &config);
     [[nodiscard]] AudioDeviceConfig config() const;

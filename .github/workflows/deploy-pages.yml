@@ -11,7 +11,7 @@ on:
       - ".github/workflows/deploy-pages.yml"
       - "CMakeLists.txt"
       - "cmake/**"
-      - "apg-core/inc/**"
+      - "../../apg-core/include/**"
       - "apg-core/src/**"
       - "schema/**"
       - "test/fixtures/**"

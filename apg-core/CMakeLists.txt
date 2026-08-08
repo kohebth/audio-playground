@@ -1,10 +1,10 @@
 find_package(Perl REQUIRED)
 
 include_directories(
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc/
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc/rte
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc/util
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc/yaml
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/rte
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/util
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml
 )
 
 file(GLOB_RECURSE APGCORE_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/apgcore/*.c)
@@ -21,10 +21,10 @@ list(APPEND UTIL_SOURCES ${YAML_SOURCES})
 
 add_library(apgcore STATIC ${UTIL_SOURCES})
 target_include_directories(apgcore PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc/rte
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc/util
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc/yaml
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/rte
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/util
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml
 )
 target_link_libraries(apgcore PUBLIC m)
 
@@ -68,31 +68,31 @@ set(TEST_TARGETS
 foreach(TEST_TARGET ${TEST_TARGETS})
     if(TEST_TARGET STREQUAL "test_atom_basic")
         set(TEST_ATOM_BASIC_SOURCES
-                ${CMAKE_SOURCE_DIR}/test/test_atom_basic.c
-                ${CMAKE_SOURCE_DIR}/test/test_atom_basic_basics.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_modulation_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_control_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_delay_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_arithmetic_mix_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_amplitude_state_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_generator_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_modulation_remaining_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_remaining_detector_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_remaining_filter_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_remaining_mix_nonlinear_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_remaining_interpolation_src_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_remaining_spectral_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_downsample_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_remaining_overlap_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_process_info_freq_shift_frame_limits.c
-                ${CMAKE_SOURCE_DIR}/test/test_atom_consolidation.c
+                test/test_atom_basic.c
+                test/test_atom_basic_basics.c
+                test/test_process_info_frame_limits.c
+                test/test_process_info_modulation_frame_limits.c
+                test/test_process_info_control_frame_limits.c
+                test/test_process_info_delay_frame_limits.c
+                test/test_process_info_arithmetic_mix_frame_limits.c
+                test/test_process_info_amplitude_state_frame_limits.c
+                test/test_process_info_generator_frame_limits.c
+                test/test_process_info_modulation_remaining_frame_limits.c
+                test/test_process_info_remaining_detector_frame_limits.c
+                test/test_process_info_remaining_filter_frame_limits.c
+                test/test_process_info_remaining_mix_nonlinear_frame_limits.c
+                test/test_process_info_remaining_interpolation_src_frame_limits.c
+                test/test_process_info_remaining_spectral_frame_limits.c
+                test/test_process_info_downsample_frame_limits.c
+                test/test_process_info_remaining_overlap_frame_limits.c
+                test/test_process_info_freq_shift_frame_limits.c
+                test/test_atom_consolidation.c
         )
         add_executable(${TEST_TARGET}
                 ${TEST_ATOM_BASIC_SOURCES}
         )
     else()
-        add_executable(${TEST_TARGET} ${CMAKE_SOURCE_DIR}/test/${TEST_TARGET}.c)
+        add_executable(${TEST_TARGET} test/${TEST_TARGET}.c)
     endif()
     target_link_libraries(${TEST_TARGET} apgcore)
     add_test(NAME ${TEST_TARGET} COMMAND ${TEST_TARGET})
@@ -108,39 +108,39 @@ foreach(TEST_TARGET ${TEST_TARGETS})
 endforeach()
 
 set(DSP_HEADER_SMOKE_SOURCES
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/amplitude_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/delay_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/detect_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/dsp_common_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/dsp_enums.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/dsp_ports.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/dsp_primitives.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/dsp_type_checks.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/dsp_type_macros.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/dsp_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/filter_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/frequency_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/generation_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/interpolation_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/math_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/mix_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/modulation_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/nonlinear_types.c
-        ${CMAKE_SOURCE_DIR}/test/abi/headers/src_types.c
+        test/abi/headers/amplitude_types.c
+        test/abi/headers/delay_types.c
+        test/abi/headers/detect_types.c
+        test/abi/headers/dsp_common_types.c
+        test/abi/headers/dsp_enums.c
+        test/abi/headers/dsp_ports.c
+        test/abi/headers/dsp_primitives.c
+        test/abi/headers/dsp_type_checks.c
+        test/abi/headers/dsp_type_macros.c
+        test/abi/headers/dsp_types.c
+        test/abi/headers/filter_types.c
+        test/abi/headers/frequency_types.c
+        test/abi/headers/generation_types.c
+        test/abi/headers/interpolation_types.c
+        test/abi/headers/math_types.c
+        test/abi/headers/mix_types.c
+        test/abi/headers/modulation_types.c
+        test/abi/headers/nonlinear_types.c
+        test/abi/headers/src_types.c
 )
 
 add_executable(test_dsp_headers_c
-        ${CMAKE_SOURCE_DIR}/test/abi/dsp_headers_c_smoke.c
+        test/abi/dsp_headers_c_smoke.c
         ${DSP_HEADER_SMOKE_SOURCES}
 )
-target_include_directories(test_dsp_headers_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+target_include_directories(test_dsp_headers_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(test_dsp_headers_c PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME test_dsp_headers_c COMMAND test_dsp_headers_c)
 
-add_executable(test_dsp_headers_cpp ${CMAKE_SOURCE_DIR}/test/abi/dsp_headers_cpp_smoke.cpp)
-target_include_directories(test_dsp_headers_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+add_executable(test_dsp_headers_cpp test/abi/dsp_headers_cpp_smoke.cpp)
+target_include_directories(test_dsp_headers_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(test_dsp_headers_cpp PRIVATE cxx_std_11)
 target_link_libraries(test_dsp_headers_cpp PRIVATE apgcore)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -148,16 +148,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 add_test(NAME test_dsp_headers_cpp COMMAND test_dsp_headers_cpp)
 
-add_executable(test_dsp_atom_symbols ${CMAKE_SOURCE_DIR}/test/abi/dsp_atom_symbols.c)
-target_include_directories(test_dsp_atom_symbols PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+add_executable(test_dsp_atom_symbols test/abi/dsp_atom_symbols.c)
+target_include_directories(test_dsp_atom_symbols PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(test_dsp_atom_symbols PRIVATE apgcore)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(test_dsp_atom_symbols PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME test_dsp_atom_symbols COMMAND test_dsp_atom_symbols)
 
-add_executable(test_dsp_types_abi_snapshot ${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_snapshot.c)
-target_include_directories(test_dsp_types_abi_snapshot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+add_executable(test_dsp_types_abi_snapshot test/abi/dsp_types_abi_snapshot.c)
+target_include_directories(test_dsp_types_abi_snapshot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(test_dsp_types_abi_snapshot PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
@@ -166,12 +166,12 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             NAME test_dsp_types_abi
             COMMAND ${CMAKE_COMMAND}
                     -DSNAPSHOT_EXE=$<TARGET_FILE:test_dsp_types_abi_snapshot>
-                    -DEXPECTED_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_c11_lp64.csv
-                    -DBASELINE_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_baseline_lp64.csv
-                    -DEMPTY_EXPECTED_FILE=${CMAKE_SOURCE_DIR}/test/abi/dsp_types_abi_phase1_lp64.csv
+                    -DEXPECTED_FILE=${CMAKE_CURRENT_SOURCE_DIR}/test/abi/dsp_types_abi_c11_lp64.csv
+                    -DBASELINE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/test/abi/dsp_types_abi_baseline_lp64.csv
+                    -DEMPTY_EXPECTED_FILE=${CMAKE_CURRENT_SOURCE_DIR}/test/abi/dsp_types_abi_phase1_lp64.csv
                     -DEXPECTED_EMPTY_TRANSITIONS=46
                     -DACTUAL_FILE=${CMAKE_BINARY_DIR}/test-artifacts/dsp-types-abi-actual.csv
-                    -P ${CMAKE_SOURCE_DIR}/test/abi/verify_dsp_types_abi.cmake
+                    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/abi/verify_dsp_types_abi.cmake
     )
 else()
     add_test(NAME test_dsp_types_abi COMMAND test_dsp_types_abi_snapshot)
@@ -204,7 +204,7 @@ add_test(
                 -DSCHEMA=${CMAKE_SOURCE_DIR}/schema/atoms/atoms.json
                 -DSOURCE_ROOT=${CMAKE_SOURCE_DIR}
                 -DOUTPUT_DIR=${CMAKE_BINARY_DIR}/test-artifacts/generated-atoms
-                -P ${CMAKE_SOURCE_DIR}/test/abi/verify_atom_artifact_generation.cmake
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/test/abi/verify_atom_artifact_generation.cmake
 )
 
 set_tests_properties(
@@ -444,7 +444,7 @@ set_tests_properties(test_apg_v2_cli_m7_export_source_static PROPERTIES
 
 add_test(
         NAME test_apg_v2_cli_m7_export_object
-        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_CURRENT_SOURCE_DIR}/inc -I${CMAKE_CURRENT_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7.o
+        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${CMAKE_CURRENT_SOURCE_DIR}/include/rte -I${APG_M7_CLI_TEST_DIR} -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7.o
 )
 set_tests_properties(test_apg_v2_cli_m7_export_object PROPERTIES
         LABELS v2
@@ -472,7 +472,7 @@ endif()
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     add_test(
             NAME test_apg_v2_cli_m7_export_stack_usage
-            COMMAND /bin/sh -c "${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_CURRENT_SOURCE_DIR}/inc -I${CMAKE_CURRENT_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.su"
+            COMMAND /bin/sh -c "${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${CMAKE_CURRENT_SOURCE_DIR}/include/rte -I${APG_M7_CLI_TEST_DIR} -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_stack.su"
     )
     set_tests_properties(test_apg_v2_cli_m7_export_stack_usage PROPERTIES
             LABELS v2
@@ -492,7 +492,7 @@ endif()
 
 add_test(
         NAME test_apg_v2_cli_m7_export_link_smoke
-        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_CURRENT_SOURCE_DIR}/inc -I${CMAKE_CURRENT_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_bundle_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static_smoke
+        COMMAND ${CMAKE_C_COMPILER} -std=c11 -D_GNU_SOURCE -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${CMAKE_CURRENT_SOURCE_DIR}/include/rte -I${APG_M7_CLI_TEST_DIR} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_CURRENT_SOURCE_DIR}/test/test_m7_static_bundle_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static_smoke
 )
 set_tests_properties(test_apg_v2_cli_m7_export_link_smoke PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -565,7 +565,7 @@ endif()
 if(APG_M7_C_COMPILER)
     add_test(
             NAME test_apg_v2_cli_m7_export_arm_syntax
-            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_CURRENT_SOURCE_DIR}/inc -I${CMAKE_CURRENT_SOURCE_DIR}/inc/rte -fsyntax-only ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c
+            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${CMAKE_CURRENT_SOURCE_DIR}/include/rte -fsyntax-only ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c
     )
     set_tests_properties(test_apg_v2_cli_m7_export_arm_syntax PROPERTIES
             LABELS v2
@@ -573,7 +573,7 @@ if(APG_M7_C_COMPILER)
     )
     add_test(
             NAME test_apg_v2_cli_m7_export_arm_stack_usage
-            COMMAND /bin/sh -c "${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_CURRENT_SOURCE_DIR}/inc -I${CMAKE_CURRENT_SOURCE_DIR}/inc/rte -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.su"
+            COMMAND /bin/sh -c "${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -ffreestanding -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${CMAKE_CURRENT_SOURCE_DIR}/include/rte -fstack-usage -c ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c -o ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.o && awk '/apg_m7_project_process_block/ { print; found=1; if ($2 > 128) exit 2 } END { exit found ? 0 : 1 }' ${APG_M7_CLI_TEST_DIR}/apg_project_m7_arm_stack.su"
     )
     set_tests_properties(test_apg_v2_cli_m7_export_arm_stack_usage PROPERTIES
             LABELS v2
@@ -594,7 +594,7 @@ endif()
 if(APG_M7_C_COMPILER AND APG_M7_LINKER_SCRIPT)
     add_test(
             NAME test_apg_v2_cli_m7_export_arm_link
-            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -D_GNU_SOURCE -DM_PI=3.14159265358979323846 -DM_SQRT1_2=0.70710678118654752440 -ffreestanding -I${CMAKE_CURRENT_SOURCE_DIR}/inc -I${CMAKE_CURRENT_SOURCE_DIR}/inc/rte -I${APG_M7_CLI_TEST_DIR} -T ${APG_M7_LINKER_SCRIPT} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_SOURCE_DIR}/test/test_m7_static_link_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -Wl,-Map=${APG_M7_CLI_TEST_DIR}/apg_m7_static.map -Wl,--gc-sections -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static.elf
+            COMMAND ${APG_M7_C_COMPILER} -mcpu=cortex-m7 -mthumb -std=c11 -D_GNU_SOURCE -DM_PI=3.14159265358979323846 -DM_SQRT1_2=0.70710678118654752440 -ffreestanding -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${CMAKE_CURRENT_SOURCE_DIR}/include/rte -I${APG_M7_CLI_TEST_DIR} -T ${APG_M7_LINKER_SCRIPT} ${APG_M7_CLI_TEST_DIR}/apg_project_m7.c ${CMAKE_CURRENT_SOURCE_DIR}/test/test_m7_static_link_smoke.c ${ATOM_SOURCES} ${ATOM_REGISTRY_SOURCE} ${ATOM_THUNK_SOURCE} -Wl,-Map=${APG_M7_CLI_TEST_DIR}/apg_m7_static.map -Wl,--gc-sections -lm -o ${APG_M7_CLI_TEST_DIR}/apg_m7_static.elf
     )
     set_tests_properties(test_apg_v2_cli_m7_export_arm_link PROPERTIES
             LABELS v2

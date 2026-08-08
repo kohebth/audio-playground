@@ -38,7 +38,11 @@ if (NOT miniaudio_source_POPULATED)
 endif ()
 
 add_library(apg_terminal_domain STATIC
-        src/domain/project_document.cpp
+        src/domain/project_document_base.cpp
+        src/domain/project_document_parser.cpp
+        src/domain/project_document_chain.cpp
+        src/domain/project_document_scenes.cpp
+        src/domain/project_document_topology.cpp
 )
 target_include_directories(apg_terminal_domain PUBLIC include)
 target_link_libraries(apg_terminal_domain PUBLIC apgcore yaml-cpp::yaml-cpp nlohmann_json::nlohmann_json)

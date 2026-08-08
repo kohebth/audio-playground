@@ -1,4 +1,5 @@
 #include "apg_terminal/io/session.hpp"
+#include "apg_terminal/runtime/runtime.hpp"
 
 #include <miniaudio.h>
 
@@ -103,7 +104,7 @@ struct SessionCore {
         return true;
     }
 
-    RealtimeProjectEngine             engine;
+    ApgEngine                         engine;
     AudioDeviceConfig                 config;
     std::optional<ApgPackageDocument> document;
     std::map<std::string, bool>       bypass;

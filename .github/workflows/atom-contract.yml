@@ -6,9 +6,9 @@ on:
       - 'v2.0-beta[0-9]+'
   pull_request:
     paths:
-      - 'apg-core/inc/atom/**'
-      - 'apg-core/inc/apgcore/dsp/**'
-      - 'apg-core/inc/rte/atom_registry.h'
+      - '../../apg-core/include/atom/**'
+      - '../../apg-core/include/apgcore/dsp/**'
+      - '../../apg-core/include/rte/atom_registry.h'
       - 'apg-core/src/atom/**'
       - 'apg-core/src/rte/atom_register.c'
       - 'test/test_atom_basic*.c'

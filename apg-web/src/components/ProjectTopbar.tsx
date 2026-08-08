@@ -12,6 +12,7 @@ import type {
 import { ModeToggle } from './ModeToggle';
 import { ProjectReadinessPanel } from './ProjectReadinessPanel';
 import { AudioIoDrawer } from './AudioIoDrawer';
+import { FlashHardwareModal } from './FlashHardwareModal';
 import { useLiveBypass } from '../lib/liveBypass';
 
 type Props = {
@@ -78,6 +79,7 @@ export function ProjectTopbar({
   const { controller: liveAudio } = useLiveBypass();
   const [readinessOpen, setReadinessOpen] = useState(false);
   const [audioIoOpen, setAudioIoOpen] = useState(false);
+  const [flashOpen, setFlashOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const closeAudioIo = useCallback(() => setAudioIoOpen(false), []);
   const draftStateClass = workspaceSaveError ? 'status-pill--bad' : hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
@@ -222,6 +224,16 @@ export function ProjectTopbar({
           }}
           type="file"
         />
+        <button
+          className="btn btn--ghost"
+          data-testid="topbar-flash"
+          onClick={() => setFlashOpen(true)}
+          title="Flash Preset or Firmware to STM32 Hardware"
+          type="button"
+        >
+          <i className="fa-solid fa-microchip" style={{ marginRight: '6px' }} />
+          Flash M7
+        </button>
         <button className="btn btn--ghost" data-testid="topbar-export" onClick={onExportWorkspace} type="button">
           Export .apg
         </button>
@@ -233,6 +245,7 @@ export function ProjectTopbar({
       <AudioIoDrawer onClose={closeAudioIo} open={audioIoOpen} />
       <ProjectReadinessPanel onClose={() => setReadinessOpen(false)} open={readinessOpen} readiness={readiness} />
       </header>
+      <FlashHardwareModal open={flashOpen} onClose={() => setFlashOpen(false)} workspaceFiles={workspaceFiles} />
       {workspaceSaveError || editorError || readinessBlocked || audioIssue ? (
         <section aria-label="Project issues" className="project-issue-banner" data-testid="project-issue-banner">
           {workspaceSaveError ? (

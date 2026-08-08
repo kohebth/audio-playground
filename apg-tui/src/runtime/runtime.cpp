@@ -273,7 +273,7 @@ class CompiledProjectGraph {
 
 } // namespace
 
-class RealtimeProjectEngine::Impl {
+class ApgEngine::Impl {
   public:
     explicit Impl(AudioDeviceConfig config)
         : config_(std::move(config)), zero_input_(config_.maximum_frames, 0.0f),
@@ -528,45 +528,42 @@ class RealtimeProjectEngine::Impl {
     std::atomic<bool>          clipped_{false};
 };
 
-RealtimeProjectEngine::RealtimeProjectEngine(AudioDeviceConfig config)
-    : impl_(std::make_unique<Impl>(std::move(config))) {}
+ApgEngine::ApgEngine(AudioDeviceConfig config) : impl_(std::make_unique<Impl>(std::move(config))) {}
 
-RealtimeProjectEngine::~RealtimeProjectEngine() = default;
+ApgEngine::~ApgEngine() = default;
 
-bool RealtimeProjectEngine::configure(const AudioDeviceConfig &config) { return impl_->configure(config); }
+bool ApgEngine::configure(const AudioDeviceConfig &config) { return impl_->configure(config); }
 
-AudioDeviceConfig RealtimeProjectEngine::config() const { return impl_->config(); }
+AudioDeviceConfig ApgEngine::config() const { return impl_->config(); }
 
-bool RealtimeProjectEngine::synchronize(const RuntimeProjectSpec &spec, bool structural, std::string &diagnostic) {
+bool ApgEngine::synchronize(const RuntimeProjectSpec &spec, bool structural, std::string &diagnostic) {
     return impl_->synchronize(spec, structural, diagnostic);
 }
 
-bool RealtimeProjectEngine::set_param(const std::string &path, float value) { return impl_->set_param(path, value); }
+bool ApgEngine::set_param(const std::string &path, float value) { return impl_->set_param(path, value); }
 
-bool RealtimeProjectEngine::set_bypass(const std::string &instance, bool bypassed) {
-    return impl_->set_bypass(instance, bypassed);
-}
+bool ApgEngine::set_bypass(const std::string &instance, bool bypassed) { return impl_->set_bypass(instance, bypassed); }
 
-void RealtimeProjectEngine::set_mute(bool muted) { impl_->set_mute(muted); }
+void ApgEngine::set_mute(bool muted) { impl_->set_mute(muted); }
 
-bool RealtimeProjectEngine::muted() const { return impl_->muted(); }
+bool ApgEngine::muted() const { return impl_->muted(); }
 
-void RealtimeProjectEngine::set_running(bool running) { impl_->set_running(running); }
+void ApgEngine::set_running(bool running) { impl_->set_running(running); }
 
-bool RealtimeProjectEngine::running() const { return impl_->running(); }
+bool ApgEngine::running() const { return impl_->running(); }
 
-bool RealtimeProjectEngine::process(const float *input, float *output, std::uint32_t frames) noexcept {
+bool ApgEngine::process(const float *input, float *output, std::uint32_t frames) noexcept {
     return impl_->process(input, output, frames);
 }
 
-void RealtimeProjectEngine::service() { impl_->service(); }
+void ApgEngine::service() { impl_->service(); }
 
-void RealtimeProjectEngine::settle_stopped() { impl_->settle_stopped(); }
+void ApgEngine::settle_stopped() { impl_->settle_stopped(); }
 
-MeterSnapshot RealtimeProjectEngine::meter() const { return impl_->meter(); }
+MeterSnapshot ApgEngine::meter() const { return impl_->meter(); }
 
-bool RealtimeProjectEngine::swap_in_flight() const { return impl_->swap_in_flight(); }
+bool ApgEngine::swap_in_flight() const { return impl_->swap_in_flight(); }
 
-bool RealtimeProjectEngine::has_active_graph() const { return impl_->has_active_graph(); }
+bool ApgEngine::has_active_graph() const { return impl_->has_active_graph(); }
 
 } // namespace apg::terminal
