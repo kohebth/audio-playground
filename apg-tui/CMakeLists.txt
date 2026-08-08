@@ -174,10 +174,62 @@ set_tests_properties(
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 else()
-    apg_ide_sources(apg_tui_sources
+    # --- IDE-only path: fetch dependencies for include resolution -----------
+    include(FetchContent)
+
+    FetchContent_Declare(
+            ftxui
+            GIT_REPOSITORY https://github.com/ArthurSonzogni/ftxui.git
+            GIT_TAG v7.0.1
+    )
+    FetchContent_MakeAvailable(ftxui)
+
+    FetchContent_Declare(
+            yaml_cpp
+            GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+            GIT_TAG yaml-cpp-0.9.0
+    )
+    set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(yaml_cpp)
+
+    set(JSON_BuildTests OFF CACHE INTERNAL "")
+    FetchContent_Declare(
+            nlohmann_json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.12.0
+            GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(nlohmann_json)
+
+    FetchContent_Declare(
+            miniaudio_source
+            GIT_REPOSITORY https://github.com/mackron/miniaudio.git
+            GIT_TAG 0.11.25
+            GIT_SHALLOW TRUE
+    )
+    FetchContent_GetProperties(miniaudio_source)
+    if (NOT miniaudio_source_POPULATED)
+        FetchContent_Populate(miniaudio_source)
+    endif ()
+
+    apg_ide_sources(apg_tui_sources CXX
             ${CMAKE_CURRENT_SOURCE_DIR}/src/*
             ${CMAKE_CURRENT_SOURCE_DIR}/include/*
             ${CMAKE_CURRENT_SOURCE_DIR}/test/*
             ${CMAKE_CURRENT_SOURCE_DIR}/README.md
     )
+    target_include_directories(apg_tui_sources PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${miniaudio_source_SOURCE_DIR}
+    )
+    target_link_libraries(apg_tui_sources PRIVATE
+            apgcore
+            ftxui::component
+            ftxui::dom
+            ftxui::screen
+            yaml-cpp::yaml-cpp
+            nlohmann_json::nlohmann_json
+    )
+    target_compile_features(apg_tui_sources PRIVATE cxx_std_20)
 endif()

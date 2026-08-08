@@ -14,9 +14,13 @@
 # would suppress their compilation there too.
 #
 # Usage:
-#   apg_ide_sources(<target_name> <glob>...)
+#   apg_ide_sources(<target_name> [CXX] <glob>...)
+#
+# Pass CXX to generate a C++ stub so the compile group language is C++,
+# giving IDEs proper symbol resolution for C++ HEADER_FILE_ONLY sources.
 function(apg_ide_sources TARGET_NAME)
-    set(_globs ${ARGN})
+    cmake_parse_arguments(_IDE "CXX" "" "" ${ARGN})
+    set(_globs ${_IDE_UNPARSED_ARGUMENTS})
     if(NOT _globs)
         message(FATAL_ERROR "apg_ide_sources: no source globs provided for ${TARGET_NAME}")
     endif()
@@ -29,9 +33,15 @@ function(apg_ide_sources TARGET_NAME)
     list(FILTER _sources EXCLUDE REGEX "/(node_modules|dist|build|\\.git|public/wasm)/|/CMakeLists\\.txt$")
     list(REMOVE_DUPLICATES _sources)
 
-    set(_stub "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_stub.c")
+    if(_IDE_CXX)
+        set(_ext "cpp")
+    else()
+        set(_ext "c")
+    endif()
+    set(_stub "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_stub.${_ext}")
     file(WRITE "${_stub}" "int apg_ide_sources_${TARGET_NAME}_stub(void) { return 0; }\n")
 
     add_library(${TARGET_NAME} STATIC "${_stub}" ${_sources})
     set_source_files_properties(${_sources} PROPERTIES HEADER_FILE_ONLY TRUE)
 endfunction()
+
