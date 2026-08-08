@@ -1,0 +1,135 @@
+kind: apg.project
+schema: apg.project.v2
+name: guitar-pedalboard-rhodes
+version: 2.1.0
+
+units:
+  - id: noise_gate_unit
+    file: ../units-v2/noise_gate.unit.v2.yaml
+  - id: rhodes_synth_unit
+    file: ../units-v2/rhodes_synth.unit.v2.yaml
+  - id: phaser_unit
+    file: ../units-v2/phaser.unit.v2.yaml
+  - id: overdrive_unit
+    file: ../units-v2/overdrive.unit.v2.yaml
+  - id: tone_stack_unit
+    file: ../units-v2/tone_stack.unit.v2.yaml
+  - id: tremolo_unit
+    file: ../units-v2/tremolo.unit.v2.yaml
+  - id: chorus_unit
+    file: ../units-v2/chorus.unit.v2.yaml
+  - id: delay_unit
+    file: ../units-v2/delay.unit.v2.yaml
+  - id: reverb_unit
+    file: ../units-v2/schroeder_reverb.unit.v2.yaml
+
+chain:
+  nodes:
+    - id: gate1
+      unit: noise_gate_unit
+      params:
+        threshold: 0.15
+        attack: 0.005
+        release: 0.15
+    - id: rhodes1
+      unit: rhodes_synth_unit
+      params:
+        sensitivity: 0.05
+        tine_decay: 0.08
+        volume: 0.85
+    - id: phaser1
+      unit: phaser_unit
+      params:
+        rate: 0.55
+        depth: 0.68
+        center: 850.0
+        feedback: 0.22
+        mix: 0.45
+    - id: drive1
+      unit: overdrive_unit
+      params:
+        drive: 2.2
+        tone: 0.9
+        level: 0.8
+    - id: tone1
+      unit: tone_stack_unit
+      params:
+        gain: 1.3
+        bass: 0.65
+        mid: 0.45
+        treble: 0.72
+        presence: 0.22
+        volume: 0.68
+    - id: trem1
+      unit: tremolo_unit
+      params:
+        rate: 4.0
+        depth: 0.25
+    - id: chorus1
+      unit: chorus_unit
+      params:
+        rate: 0.8
+        depth: 384.0
+        mix: 0.3
+    - id: delay1
+      unit: delay_unit
+      params:
+        time_samples: 12000
+        feedback: 0.35
+        mix: 0.3
+    - id: reverb1
+      unit: reverb_unit
+      params:
+        decay: 0.72
+        mix: 0.22
+
+  routes:
+    - from: system.input
+      to: gate1.input
+    - from: gate1.output
+      to: rhodes1.input
+    - from: rhodes1.output
+      to: phaser1.input
+    - from: phaser1.output
+      to: drive1.input
+    - from: drive1.output
+      to: tone1.input
+    - from: tone1.output
+      to: trem1.input
+    - from: trem1.output
+      to: chorus1.input
+    - from: chorus1.output
+      to: delay1.input
+    - from: delay1.output
+      to: reverb1.input
+    - from: reverb1.output
+      to: system.output
+
+scenes:
+  - name: RhodesClean
+    params:
+      gate1.threshold: 0.12
+      rhodes1.sensitivity: 0.04
+      rhodes1.tine_decay: 0.08
+      rhodes1.volume: 0.85
+      phaser1.rate: 0.35
+      chorus1.rate: 0.65
+      delay1.time_samples: 14400
+      delay1.feedback: 0.25
+      delay1.mix: 0.15
+  - name: RhodesDrive
+    params:
+      gate1.threshold: 0.18
+      rhodes1.sensitivity: 0.06
+      rhodes1.tine_decay: 0.12
+      rhodes1.volume: 0.95
+      drive1.drive: 3.5
+      tone1.gain: 1.8
+      chorus1.rate: 1.1
+      reverb1.decay: 0.82
+
+targets:
+  default: desktop_full
+  export:
+    - wasm_realtime
+    - offline_render

@@ -1,0 +1,160 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: rhodes_synth
+version: 2.0.0
+
+meta:
+  title: Rhodes Synth
+  category: synthesis
+  description: Guitar-triggered Rhodes electric piano synthesizer using autocorrelation pitch detection and FM voice generation.
+
+params:
+  sensitivity:
+    type: float
+    default: 0.05
+    min: 0.005
+    max: 0.5
+    smoothing_ms: 5
+    ui:
+      label: Sensitivity
+      control: knob
+      scale: linear
+      display_precision: 3
+  tine_decay:
+    type: float
+    default: 0.08
+    min: 0.01
+    max: 0.5
+    smoothing_ms: 10
+    ui:
+      label: Tine Decay
+      control: knob
+      unit: s
+      scale: linear
+      display_precision: 2
+  volume:
+    type: float
+    default: 0.85
+    min: 0.0
+    max: 2.0
+    smoothing_ms: 5
+    ui:
+      label: Volume
+      control: knob
+      unit: x
+      scale: linear
+      display_precision: 2
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - pitch
+    - env
+    - gate
+    - voice_env
+    - carrier
+    - voiced
+    - barked
+    - level_value
+    - output
+
+  nodes:
+    - id: pitch_tracker
+      atom: detect_pitch
+      in:
+        signal: input
+      out:
+        pitch: pitch
+      config:
+        max_lag: 512
+
+    - id: env_detector
+      atom: detect_envelope
+      in:
+        signal: input
+      out:
+        envelope: env
+      config:
+        attack: 0.005
+        release: 0.15
+
+    - id: gate_trigger
+      atom: detect_threshold
+      in:
+        signal: env
+      out:
+        gate: gate
+      config:
+        threshold: ${params.sensitivity}
+
+    - id: voice_adsr
+      atom: generation_envelope
+      in:
+        gate: gate
+      out:
+        signal: voice_env
+      config:
+        attack: 0.004
+        decay: ${params.tine_decay}
+        sustain: 0.65
+        release: 0.25
+
+    - id: synth_oscillator
+      atom: generation_oscillator
+      in:
+        frequency: pitch
+      out:
+        signal: carrier
+      config:
+        frequency: 440.0
+        waveform: 0
+        phase_offset: 0.0
+
+    - id: apply_voice_env
+      atom: amplitude_multiply
+      in:
+        signal_a: carrier
+        signal_b: voice_env
+      out:
+        signal: voiced
+
+    - id: soft_bark_clipper
+      atom: amplitude_clip_soft
+      in:
+        signal: voiced
+      out:
+        signal: barked
+      config:
+        threshold: 0.85
+        curve: 1
+
+    - id: level_value
+      atom: generation_dc
+      out:
+        signal: level_value
+      config:
+        value: ${params.volume}
+
+    - id: apply_level
+      atom: amplitude_multiply
+      in:
+        signal_a: barked
+        signal_b: level_value
+      out:
+        signal: output
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: false
+  offline_render: true
