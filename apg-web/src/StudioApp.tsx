@@ -12,11 +12,11 @@ import {
 import {
   apgPackageFileName,
   createApgProjectPackageFromFiles,
-  parseApgProjectPackage,
   serializeApgProjectPackage,
   type ApgProjectPackage,
   type StudioMode,
 } from './lib/projectPackage';
+import { parseYamlOrPackage } from './lib/projectYamlImporter';
 import {
   createEmptyProjectPackage,
   createWorkspaceTemplateProjectPackage,
@@ -208,7 +208,8 @@ export default function StudioApp() {
 
   const importProject = useCallback((file: File) => {
     void file.text().then(text => {
-      const migration = migrateApgProjectRouting(parseApgProjectPackage(text), ROUTING_MIGRATION_HELPERS);
+      // parseApgProjectPackage(text) is invoked inside parseYamlOrPackage to support both .apg packages and raw YAML
+      const migration = migrateApgProjectRouting(parseYamlOrPackage(text, file.name, initialWorkspaceFiles), ROUTING_MIGRATION_HELPERS);
       const imported = migration.project;
       if (migration.migratedSections > 0 || migration.ambiguousSections > 0) {
         setMigrationNotice([
@@ -226,7 +227,7 @@ export default function StudioApp() {
         project,
         ...current.filter(item => item.manifest.id !== project.manifest.id),
       ]));
-    }).catch(caught => setError(caught instanceof Error ? caught.message : 'That .apg project could not be imported.'));
+    }).catch(caught => setError(caught instanceof Error ? caught.message : 'That file could not be imported.'));
   }, [projects, repository]);
 
   const updateWorkspace = useCallback((workspace: WorkspacePayload) => {

@@ -73,9 +73,9 @@ export function ProjectHome({
         </div>
         <div className="project-home__header-actions">
           <label className="btn btn--ghost project-home__import">
-            Import .apg
+            Import
             <input
-              accept=".apg,application/json"
+              accept=".apg,.yaml,.yml,application/json"
               onChange={event => {
                 const file = event.target.files?.[0];
                 if (file) onImport(file);

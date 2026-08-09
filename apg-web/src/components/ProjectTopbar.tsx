@@ -6,6 +6,7 @@ import type { ParamOverride } from '../lib/projectParams';
 import type { WorkspaceFile } from '../lib/backendSamples';
 import type {
   ApgAudioAsset,
+  ApgProjectPackage,
   ProjectReadinessSnapshot,
   StudioMode,
 } from '../lib/projectPackage';
@@ -13,6 +14,7 @@ import { ModeToggle } from './ModeToggle';
 import { ProjectReadinessPanel } from './ProjectReadinessPanel';
 import { AudioIoDrawer } from './AudioIoDrawer';
 import { FlashHardwareModal } from './FlashHardwareModal';
+import { MarketplaceFlasherModal } from './MarketplaceFlasherModal';
 import { useLiveBypass } from '../lib/liveBypass';
 
 type Props = {
@@ -44,6 +46,7 @@ type Props = {
   onReadinessUpdate: (update: Partial<ProjectReadinessSnapshot>) => void;
   editorError: string | null;
   onDismissEditorError: () => void;
+  onLoadPackage?: (pkg: ApgProjectPackage) => void;
 };
 
 export function ProjectTopbar({
@@ -75,11 +78,13 @@ export function ProjectTopbar({
   onReadinessUpdate,
   editorError,
   onDismissEditorError,
+  onLoadPackage,
 }: Props) {
   const { controller: liveAudio } = useLiveBypass();
   const [readinessOpen, setReadinessOpen] = useState(false);
   const [audioIoOpen, setAudioIoOpen] = useState(false);
   const [flashOpen, setFlashOpen] = useState(false);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const closeAudioIo = useCallback(() => setAudioIoOpen(false), []);
   const draftStateClass = workspaceSaveError ? 'status-pill--bad' : hasDirtyParamDrafts ? 'status-pill--warn' : 'status-pill--ok';
@@ -216,7 +221,7 @@ export function ProjectTopbar({
         <input
           ref={importInputRef}
           data-testid="topbar-import-input"
-          accept=".apg,application/json"
+          accept=".apg,.yaml,.yml,application/json"
           onChange={event => {
             const file = event.target.files?.[0];
             if (file) onImportWorkspace(file);
@@ -224,6 +229,16 @@ export function ProjectTopbar({
           }}
           type="file"
         />
+        <button
+          className="btn btn--ghost"
+          data-testid="topbar-marketplace"
+          onClick={() => setMarketplaceOpen(true)}
+          title="Local Marketplace & Device Flasher"
+          type="button"
+        >
+          <i className="fa-solid fa-store" style={{ marginRight: '6px' }} />
+          Marketplace
+        </button>
         <button
           className="btn btn--ghost"
           data-testid="topbar-flash"
@@ -246,6 +261,16 @@ export function ProjectTopbar({
       <ProjectReadinessPanel onClose={() => setReadinessOpen(false)} open={readinessOpen} readiness={readiness} />
       </header>
       <FlashHardwareModal open={flashOpen} onClose={() => setFlashOpen(false)} workspaceFiles={workspaceFiles} />
+      {marketplaceOpen ? (
+        <MarketplaceFlasherModal
+          activeEntryProject={entryProject}
+          activeWorkspaceFiles={workspaceFiles}
+          onClose={() => setMarketplaceOpen(false)}
+          onLoadPackage={pkg => {
+            onLoadPackage?.(pkg);
+          }}
+        />
+      ) : null}
       {workspaceSaveError || editorError || readinessBlocked || audioIssue ? (
         <section aria-label="Project issues" className="project-issue-banner" data-testid="project-issue-banner">
           {workspaceSaveError ? (

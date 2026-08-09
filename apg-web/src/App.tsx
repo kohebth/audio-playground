@@ -22,6 +22,8 @@ import {
   pathPanner2WorkspaceFile,
   type WorkspaceFile,
 } from './lib/backendSamples';
+import { builtinGuitarUnits } from './lib/builtinGuitarUnits';
+import { RHODES_SYNTH_CONTENT } from './lib/projectYamlImporter.ts';
 import { buildProjectGraph, type ProjectNodeData, type ProjectParamControl } from './lib/projectGraph';
 import { LiveBypassContext, type LiveBypassController } from './lib/liveBypass';
 import {
@@ -153,13 +155,25 @@ function resolveWorkspacePath(baseFile: string, reference: string): string {
   for (const segment of reference.split('/')) {
     if (!segment || segment === '.') continue;
     if (segment === '..') {
-      if (segments.length === 0) throw new Error(`Workspace reference "${reference}" escapes its root.`);
-      segments.pop();
+      if (segments.length > 0) segments.pop();
     } else {
       segments.push(segment);
     }
   }
   return segments.join('/');
+}
+
+function findWorkspaceUnitFile(
+  workspaceFiles: WorkspaceFile[],
+  projectPath: string,
+  referenceFile: string,
+): WorkspaceFile | undefined {
+  const path = resolveWorkspacePath(projectPath, referenceFile);
+  const exact = workspaceFiles.find(item => item.path === path && item.role === 'unit');
+  if (exact) return exact;
+  const baseName = referenceFile.split('/').pop();
+  if (!baseName) return undefined;
+  return workspaceFiles.find(item => item.role === 'unit' && (item.path.endsWith('/' + baseName) || item.path === baseName));
 }
 
 function relativeWorkspaceReference(baseFile: string, targetFile: string): string {
@@ -236,38 +250,32 @@ type EditorWorkspaceProps = {
   onWorkspaceChange: (workspace: WorkspacePayload) => void;
 };
 
-const effectLibraryCopy: Record<string, Omit<EffectLibraryItem, 'id' | 'scope' | 'recordId'>> = {
-  noise_gate: { title: 'Noise Gate', category: 'dynamics', description: 'Tames background noise between notes.' },
-  phaser: { title: 'Phaser', category: 'modulation', description: 'Adds a moving, liquid sweep.' },
-  overdrive: { title: 'Overdrive', category: 'drive', description: 'Warm saturation and extra bite.' },
-  tone_stack: { title: 'Amp & Tone', category: 'amp', description: 'Shapes gain, EQ, presence, and level.' },
-  tremolo: { title: 'Tremolo', category: 'modulation', description: 'Creates a rhythmic volume pulse.' },
-  chorus: { title: 'Chorus', category: 'modulation', description: 'Adds width and gentle movement.' },
-  delay: { title: 'Delay', category: 'delay', description: 'Repeats notes with feedback and blend.' },
-  schroeder_reverb: { title: 'Reverb', category: 'reverb', description: 'Places the sound in a smooth room.' },
-};
-
-const builtInSimpleEffectLibrary: EffectLibraryItem[] = initialWorkspaceFiles
-  .filter(file => file.role === 'unit')
-  .map(file => {
-    const id = file.path.split('/').at(-1)?.replace(/\.unit\.v2\.yaml$/i, '') ?? file.path;
-    return {
-      id,
-      ...(effectLibraryCopy[id] ?? { title: id.replace(/_/g, ' '), category: 'other', description: 'Custom effect.' }),
-      scope: 'built-in' as const,
-    };
-  });
-
-function libraryWorkspaceSource(item: EffectLibraryItem, personalUnits: PersonalUnitRecord[]): WorkspaceFile | null {
+function libraryWorkspaceSource(
+  item: EffectLibraryItem,
+  personalUnits: PersonalUnitRecord[],
+  workspaceFiles: WorkspaceFile[],
+): WorkspaceFile | null {
   if (item.scope === 'personal') {
     const personal = personalUnits.find(unit => unit.id === item.recordId);
     if (!personal) return null;
     const path = `personal/${personal.name}.unit.v2.yaml`;
     return { path, role: 'unit', content: personal.content, originalContent: personal.content };
   }
-  return initialWorkspaceFiles.find(file => (
+  return workspaceFiles.find(file => (
+    file.role === 'unit' && (
+      file.path.endsWith(`/${item.id}.unit.v2.yaml`) ||
+      file.path === `${item.id}.unit.v2.yaml`
+    )
+  )) ?? initialWorkspaceFiles.find(file => (
     file.role === 'unit' && file.path.endsWith(`/${item.id}.unit.v2.yaml`)
-  )) ?? null;
+  )) ?? builtinGuitarUnits.find(file => (
+    file.role === 'unit' && file.path.endsWith(`/${item.id}.unit.v2.yaml`)
+  )) ?? (item.id === 'rhodes_synth' ? {
+    path: 'test/fixtures/units-v2/rhodes_synth.unit.v2.yaml',
+    role: 'unit',
+    content: RHODES_SYNTH_CONTENT,
+    originalContent: RHODES_SYNTH_CONTENT,
+  } : null);
 }
 
 function personalUnitWorkspacePath(unit: PersonalUnitRecord): string {
@@ -349,29 +357,7 @@ export function EditorWorkspace({
   const [tourOpen, setTourOpen] = useState(() => (
     mode === 'simple' && typeof window !== 'undefined' && !window.localStorage.getItem('apg.studio.tour.v1')
   ));
-  const simpleEffectLibrary = useMemo<EffectLibraryItem[]>(() => {
-    const items: EffectLibraryItem[] = [
-      ...builtInSimpleEffectLibrary,
-      ...personalUnits.map(unit => ({
-        id: unit.name,
-        title: unit.title,
-        category: unit.category,
-        description: unit.description,
-        scope: 'personal' as const,
-        recordId: unit.id,
-      })),
-    ];
-    return items.map(item => {
-      const source = libraryWorkspaceSource(item, personalUnits);
-      if (!source) return { ...item, placementError: 'Unit source is unavailable.' };
-      try {
-        const policy = classifyUserEffectContent(source.content);
-        return policy.userPlaceable ? item : { ...item, placementError: policy.reason ?? 'Not a mono effect.' };
-      } catch {
-        return { ...item, placementError: 'Unit ports are invalid.' };
-      }
-    });
-  }, [personalUnits]);
+
   const initialContractUnit = personalUnitFromRoute(location.pathname, personalUnits);
   const initialProjectInspect = useMemo(() => {
     try {
@@ -435,6 +421,59 @@ export function EditorWorkspace({
     incrementPerfCounter('state.workspace.dispatches');
     setWorkspaceFilesState(update);
   }, []);
+
+  const simpleEffectLibrary = useMemo<EffectLibraryItem[]>(() => {
+    const allUnits = [...workspaceFiles, ...builtinGuitarUnits];
+    const workspaceUnitItems: EffectLibraryItem[] = allUnits
+      .filter(file => file.role === 'unit')
+      .map(file => {
+        try {
+          const draft = parseUnitGraphDraft(file.content);
+          const id = draft.name || file.path.split('/').pop()?.replace(/\.unit\.v2\.yaml$/i, '') || 'unit';
+          return {
+            id,
+            title: draft.meta.title || id.replace(/_/g, ' '),
+            category: draft.meta.category || 'other',
+            description: draft.meta.description || 'Workspace effect.',
+            scope: 'built-in' as const,
+          };
+        } catch {
+          const id = file.path.split('/').pop()?.replace(/\.unit\.v2\.yaml$/i, '') || 'unit';
+          return {
+            id,
+            title: id.replace(/_/g, ' '),
+            category: 'other',
+            description: 'Custom effect.',
+            scope: 'built-in' as const,
+          };
+        }
+      });
+
+    const personalUnitItems: EffectLibraryItem[] = personalUnits.map(unit => ({
+      id: unit.name,
+      title: unit.title,
+      category: unit.category,
+      description: unit.description,
+      scope: 'personal' as const,
+      recordId: unit.id,
+    }));
+
+    const map = new Map<string, EffectLibraryItem>();
+    for (const item of [...workspaceUnitItems, ...personalUnitItems]) {
+      if (!map.has(item.id)) map.set(item.id, item);
+    }
+
+    return [...map.values()].map(item => {
+      const source = libraryWorkspaceSource(item, personalUnits, workspaceFiles);
+      if (!source) return { ...item, placementError: 'Unit source is unavailable.' };
+      try {
+        const policy = classifyUserEffectContent(source.content);
+        return policy.userPlaceable ? item : { ...item, placementError: policy.reason ?? 'Not a mono effect.' };
+      } catch {
+        return { ...item, placementError: 'Unit ports are invalid.' };
+      }
+    });
+  }, [personalUnits, workspaceFiles]);
   const [selectedWorkspacePath, setSelectedWorkspacePath] = useState(
     initialContractUnit ? personalUnitWorkspacePath(initialContractUnit) : initialWorkspace.entryProject,
   );
@@ -541,8 +580,7 @@ export function EditorWorkspace({
       ...inspect,
       units: inspect.units.map(unit => {
         const reference = projectDraft.units.find(item => item.id === unit.id);
-        const path = reference ? resolveWorkspacePath(projectWorkspaceFile.path, reference.file) : null;
-        const file = path ? workspaceFiles.find(item => item.path === path && item.role === 'unit') : null;
+        const file = reference ? findWorkspaceUnitFile(workspaceFiles, projectWorkspaceFile.path, reference.file) : null;
         if (!file) return unit;
         try {
           const draft = parseUnitGraphDraft(file.content);
@@ -566,8 +604,7 @@ export function EditorWorkspace({
   const selectedUnitWorkspaceFile = useMemo(() => {
     if (selectedNode?.kind !== 'unit') return selectedWorkspaceFile;
 
-    const path = resolveWorkspacePath(project.file, selectedNode.unit.file);
-    return workspaceFiles.find(file => file.path === path) ?? selectedWorkspaceFile;
+    return (selectedNode?.unit ? findWorkspaceUnitFile(workspaceFiles, project.file, selectedNode.unit.file) : null) ?? selectedWorkspaceFile;
   }, [project.file, selectedNode, selectedWorkspaceFile, workspaceFiles]);
   const selectedUnitGraph = useMemo(() => {
     try {
@@ -631,8 +668,7 @@ export function EditorWorkspace({
   }, [entryProject, location.pathname, mode, navigate, onModeChange, personalUnits, selectActiveContractUnit]);
 
   const projectPorts = useMemo<ProjectPortCatalog>(() => Object.fromEntries(projectDraft.units.map(reference => {
-    const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
-    const file = workspaceFiles.find(item => item.path === path);
+    const file = findWorkspaceUnitFile(workspaceFiles, projectWorkspaceFile.path, reference.file);
     if (file?.role !== 'unit') return [reference.id, { inputs: [], outputs: [] }];
     try {
       return [reference.id, parseUnitPortNames(file.content)];
@@ -664,7 +700,7 @@ export function EditorWorkspace({
 
   const editLibraryContract = useCallback(async (item: EffectLibraryItem) => {
     try {
-      const source = libraryWorkspaceSource(item, personalUnits);
+      const source = libraryWorkspaceSource(item, personalUnits, workspaceFiles);
       if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
       assertUserPlaceableUnit(source.content);
       const existing = item.scope === 'personal'
@@ -768,8 +804,7 @@ export function EditorWorkspace({
 
   const projectParamControls = useMemo<Record<string, ProjectParamControl[]>>(() => Object.fromEntries(
     projectDraft.units.map(reference => {
-      const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
-      const file = workspaceFiles.find(item => item.path === path);
+      const file = findWorkspaceUnitFile(workspaceFiles, projectWorkspaceFile.path, reference.file);
       if (file?.role !== 'unit') return [reference.id, []];
       try {
         return [reference.id, parseUnitGraphDraft(file.content).params.map(param => ({
@@ -948,8 +983,7 @@ export function EditorWorkspace({
     markPerfSpan('graph.add.projectNode', () => {
       const reference = projectDraft.units.find(unit => unit.id === unitId);
       if (!reference) return;
-      const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
-      const unitFile = workspaceFiles.find(file => file.path === unitPath);
+      const unitFile = findWorkspaceUnitFile(workspaceFiles, projectWorkspaceFile.path, reference.file);
       if (unitFile?.role !== 'unit') throw new Error(`Unit source for "${unitId}" is unavailable.`);
       assertUserPlaceableUnit(unitFile.content);
       const defaults = unitFile?.role === 'unit'
@@ -976,8 +1010,7 @@ export function EditorWorkspace({
     markPerfSpan('graph.insert.projectNode', () => {
       const reference = projectDraft.units.find(unit => unit.id === unitId);
       if (!reference) return;
-      const unitPath = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
-      const unitFile = workspaceFiles.find(file => file.path === unitPath);
+      const unitFile = findWorkspaceUnitFile(workspaceFiles, projectWorkspaceFile.path, reference.file);
       if (unitFile?.role !== 'unit') throw new Error(`Unit source for "${unitId}" is unavailable.`);
       assertUserPlaceableUnit(unitFile.content);
       const defaults = unitFile?.role === 'unit'
@@ -1003,7 +1036,7 @@ export function EditorWorkspace({
   const addSimpleEffect = useCallback((item: EffectLibraryItem, requestedRouteIndex?: number) => {
     markPerfSpan('graph.add.simpleEffect', () => {
       try {
-        const source = libraryWorkspaceSource(item, personalUnits);
+        const source = libraryWorkspaceSource(item, personalUnits, workspaceFiles);
         if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
         assertUserPlaceableUnit(source.content);
         const fallbackRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
@@ -1011,29 +1044,41 @@ export function EditorWorkspace({
         if (!project.routes[routeIndex]) {
           throw new Error(requestedRouteIndex === undefined
             ? 'Connect the board to Output before adding another effect.'
-            : 'Drop that effect on a connected rail.');
-        }
-        const existing = projectDraft.units.find(reference => reference.id === `${item.id}_unit`
-          || reference.file.endsWith(`/${item.id}.unit.v2.yaml`));
-        if (existing) {
-          insertProjectNodeOnRoute(existing.id, routeIndex);
-          return;
+            : 'That route index is unavailable.');
         }
 
-        const unitId = `${item.id}_unit`;
-        const instanceId = uniqueInstanceId(project.nodes.map(node => node.id), unitId);
         const targetPath = item.scope === 'personal'
           ? `personal/${item.id}.unit.v2.yaml`
           : `units/${item.id}.unit.v2.yaml`;
         const reference = relativeWorkspaceReference(projectWorkspaceFile.path, targetPath);
+        const existingRef = projectDraft.units.find(ref => (
+          ref.id === `${item.id}_unit` ||
+          ref.file.endsWith(`/${item.id}.unit.v2.yaml`) ||
+          resolveWorkspacePath(projectWorkspaceFile.path, ref.file) === resolveWorkspacePath(projectWorkspaceFile.path, targetPath)
+        ));
+
+        let unitId = existingRef?.id ?? `${item.id}_unit`;
+        let registeredContent = projectWorkspaceFile.content;
+
+        if (!existingRef) {
+          const usedUnitIds = new Set(projectDraft.units.map(ref => ref.id));
+          let candidateId = unitId;
+          let suffix = 2;
+          while (usedUnitIds.has(candidateId)) {
+            candidateId = `${item.id}_${suffix++}_unit`;
+          }
+          unitId = candidateId;
+          registeredContent = addProjectUnitReference(projectWorkspaceFile.content, unitId, reference);
+        }
+
+        const instanceId = uniqueInstanceId(project.nodes.map(node => node.id), unitId);
         const defaults = Object.fromEntries(parseUnitGraphDraft(source.content).params.map(param => [
           param.name,
           param.default,
         ]));
         const ports = parseUnitPortNames(source.content);
-        const registered = addProjectUnitReference(projectWorkspaceFile.content, unitId, reference);
         const result = insertProjectInstanceOnRoute(
-          registered,
+          registeredContent,
           { ...projectPorts, [unitId]: ports },
           unitId,
           instanceId,
@@ -1086,7 +1131,7 @@ export function EditorWorkspace({
   const addSimpleParallelEffect = useCallback((item: EffectLibraryItem, requestedRouteIndex?: number) => {
     markPerfSpan('graph.add.simpleParallelEffect', () => {
       try {
-        const source = libraryWorkspaceSource(item, personalUnits);
+        const source = libraryWorkspaceSource(item, personalUnits, workspaceFiles);
         if (!source) throw new Error(`Effect "${item.title}" is unavailable.`);
         assertUserPlaceableUnit(source.content);
         const fallbackRouteIndex = project.routes.findIndex(route => route.to === 'system.output');
@@ -1164,11 +1209,16 @@ export function EditorWorkspace({
           pannerDefaults,
           mixerDefaults,
         );
+
         pushHistory();
-        setWorkspaceFiles(files => {
-          const updated = files.map(file => file.path === projectWorkspaceFile.path ? { ...file, content: result.content } : file);
-          return filesToAdd.reduce((current, file) => (
-            current.some(item => item.path === file.path) ? current : [...current, file]
+        setWorkspaceFiles(current => {
+          const updated = current.map(file => file.path === projectWorkspaceFile.path
+            ? { ...file, content: result.content }
+            : file);
+          return filesToAdd.reduce((acc, file) => (
+            acc.some(existing => existing.path === file.path)
+              ? acc
+              : [...acc, file]
           ), updated);
         });
         const values = Object.fromEntries([
@@ -1194,6 +1244,7 @@ export function EditorWorkspace({
     pushHistory,
     selectedRouteIndex,
     setWorkspaceFiles,
+    workspaceFiles,
   ]);
 
   const addParallelEffectAtRoute = useCallback((unitId: string, routeIndex: number) => {
@@ -1330,8 +1381,7 @@ export function EditorWorkspace({
       try {
         const reference = projectDraft.units.find(unit => unit.id === nextUnitId);
         if (!reference) throw new Error(`Project unit "${nextUnitId}" was not found.`);
-        const path = resolveWorkspacePath(projectWorkspaceFile.path, reference.file);
-        const file = workspaceFiles.find(item => item.path === path);
+        const file = findWorkspaceUnitFile(workspaceFiles, projectWorkspaceFile.path, reference.file);
         if (file?.role !== 'unit') throw new Error(`Unit source for "${nextUnitId}" is unavailable.`);
         const current = projectDraft.nodes.find(node => node.id === instanceId);
         if (!current) throw new Error(`Project instance "${instanceId}" was not found.`);
@@ -1743,53 +1793,59 @@ export function EditorWorkspace({
     });
   }, [entryProject, onExportProject, workspaceFiles]);
 
+  const loadPackageIntoStudio = useCallback((pkg: ApgProjectPackage) => {
+    try {
+      const importedPackage = migrateApgProjectRouting(pkg, ROUTING_MIGRATION_HELPERS).project;
+      const importedFiles = hydrateWorkspaceFiles(importedPackage.workspace, initialWorkspaceFiles);
+      const importedProject = importedFiles.find(item => item.path === importedPackage.workspace.entryProject);
+      if (!importedProject) throw new Error('The package has no entry project.');
+      const importedDraft = parseProjectGraphDraft(importedProject.content);
+      const importedInspect = projectDraftToInspect(
+        importedDraft,
+        backendSamples.project,
+        importedPackage.workspace.entryProject,
+      );
+
+      pushHistory();
+      setWorkspaceFiles(importedFiles);
+      setEntryProject(importedPackage.workspace.entryProject);
+      setSelectedWorkspacePath(importedPackage.workspace.entryProject);
+      setParamDrafts(buildParamDrafts(importedInspect));
+      setParamOriginals(buildParamOriginals(importedInspect));
+      setSelectedId(null);
+      setSelectedRouteIndex(null);
+      setSelectedAtomId(null);
+      setCanvasMode('project');
+      setInspectorView('project');
+      setGraphEditError(null);
+      navigate(PROJECT_ROUTE);
+
+      const now = new Date().toISOString();
+      onProjectPackageChange(current => ({
+        ...importedPackage,
+        manifest: {
+          ...importedPackage.manifest,
+          id: current.manifest.id,
+          createdAt: current.manifest.createdAt,
+          updatedAt: now,
+          lastMode: mode,
+        },
+      }));
+    } catch (error) {
+      setGraphEditError(error instanceof Error ? error.message : 'Package loading failed.');
+    }
+  }, [mode, navigate, onProjectPackageChange, pushHistory, setWorkspaceFiles]);
+
   const importWorkspace = useCallback((file: File) => {
     void markPerfSpan('workspace.import', async () => {
       try {
-        const importedPackage = migrateApgProjectRouting(
-          parseApgProjectPackage(await file.text()),
-          ROUTING_MIGRATION_HELPERS,
-        ).project;
-        const importedFiles = hydrateWorkspaceFiles(importedPackage.workspace, initialWorkspaceFiles);
-        const importedProject = importedFiles.find(item => item.path === importedPackage.workspace.entryProject);
-        if (!importedProject) throw new Error('The imported package has no entry project.');
-        const importedDraft = parseProjectGraphDraft(importedProject.content);
-        const importedInspect = projectDraftToInspect(
-          importedDraft,
-          backendSamples.project,
-          importedPackage.workspace.entryProject,
-        );
-
-        pushHistory();
-        setWorkspaceFiles(importedFiles);
-        setEntryProject(importedPackage.workspace.entryProject);
-        setSelectedWorkspacePath(importedPackage.workspace.entryProject);
-        setParamDrafts(buildParamDrafts(importedInspect));
-        setParamOriginals(buildParamOriginals(importedInspect));
-        setSelectedId(null);
-        setSelectedRouteIndex(null);
-        setSelectedAtomId(null);
-        setCanvasMode('project');
-        setInspectorView('project');
-        setGraphEditError(null);
-        navigate(PROJECT_ROUTE);
-
-        const now = new Date().toISOString();
-        onProjectPackageChange(current => ({
-          ...importedPackage,
-          manifest: {
-            ...importedPackage.manifest,
-            id: current.manifest.id,
-            createdAt: current.manifest.createdAt,
-            updatedAt: now,
-            lastMode: mode,
-          },
-        }));
+        const pkg = parseApgProjectPackage(await file.text());
+        loadPackageIntoStudio(pkg);
       } catch (error) {
         setGraphEditError(error instanceof Error ? error.message : 'Project import failed.');
       }
     });
-  }, [mode, navigate, onProjectPackageChange, pushHistory, setWorkspaceFiles]);
+  }, [loadPackageIntoStudio]);
 
   const updateReadiness = useCallback((update: Partial<ApgProjectPackage['readiness']>) => {
     onProjectPackageChange(current => {
@@ -1909,6 +1965,7 @@ export function EditorWorkspace({
           onReadinessUpdate={updateReadiness}
           editorError={graphEditError}
           onDismissEditorError={() => setGraphEditError(null)}
+          onLoadPackage={loadPackageIntoStudio}
         />
 
       <div className="layout">
