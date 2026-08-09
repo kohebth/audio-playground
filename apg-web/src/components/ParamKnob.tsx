@@ -47,6 +47,54 @@ function percentForValue(value: string, minValue: string | undefined, maxValue: 
   return clampValue(((current - min) / (max - min)) * 100, 0, 100);
 }
 
+function polarToCartesian(cx: number, cy: number, r: number, angleInDegrees: number) {
+  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
+  return {
+    x: cx + r * Math.cos(angleInRadians),
+    y: cy + r * Math.sin(angleInRadians),
+  };
+}
+
+function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
+  const start = polarToCartesian(cx, cy, r, startAngle);
+  const end = polarToCartesian(cx, cy, r, endAngle);
+  const sweep = endAngle - startAngle;
+  if (sweep <= 0.001) return '';
+  const largeArcFlag = sweep > 180 ? 1 : 0;
+
+  return [
+    'M', start.x.toFixed(3), start.y.toFixed(3),
+    'A', r, r, 0, largeArcFlag, 1, end.x.toFixed(3), end.y.toFixed(3),
+  ].join(' ');
+}
+
+function SvgKnobDial({ percent }: { percent: number }) {
+  const cx = 22;
+  const cy = 22;
+  const r = 17;
+  const trackPath = describeArc(cx, cy, r, 225, 495);
+  const sweepAngle = (percent / 100) * 270;
+  const valuePath = describeArc(cx, cy, r, 225, 225 + sweepAngle);
+  const pointerAngle = 225 + sweepAngle;
+  const pointerStart = polarToCartesian(cx, cy, r - 13, pointerAngle);
+  const pointerEnd = polarToCartesian(cx, cy, r - 5, pointerAngle);
+
+  return (
+    <svg viewBox="0 0 44 44" className="knob-svg" aria-hidden="true">
+      <path d={trackPath} className="knob-track-svg" />
+      {valuePath ? <path d={valuePath} className="knob-value-svg" /> : null}
+      <circle cx={cx} cy={cy} r="12.5" className="knob-cap-svg" />
+      <line
+        x1={pointerStart.x.toFixed(3)}
+        y1={pointerStart.y.toFixed(3)}
+        x2={pointerEnd.x.toFixed(3)}
+        y2={pointerEnd.y.toFixed(3)}
+        className="knob-pointer-svg"
+      />
+    </svg>
+  );
+}
+
 export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = false, integer = false, onChange }: Props) {
   const [draft, setDraft] = useState(value);
   const minValue = numberOrNull(min);
@@ -128,41 +176,7 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
       dragState.current = null;
     },
   };
-  const control = compact ? (
-    <div
-      aria-label={`${ariaLabel} percent`}
-      aria-valuemax={100}
-      aria-valuemin={0}
-      aria-valuenow={Math.round(percent)}
-      className="knob"
-      data-testid={`param-knob-${toTestId(ariaLabel)}`}
-      role="slider"
-      style={{
-        '--knob-percent': `${percent}%`,
-        '--knob-sweep': `${percent * 2.7}deg`,
-        '--knob-angle': `${percent * 2.7 - 135}deg`,
-      } as CSSProperties}
-      tabIndex={0}
-      title="Drag left or right to adjust"
-      {...pointerEvents}
-    >
-      <div className="knob-ring" />
-      <div className="knob-cap">
-        <div className="knob-pointer" />
-      </div>
-    </div>
-  ) : (
-    <input
-      aria-label={`${ariaLabel} percent`}
-      className="param-list__knob-input"
-      data-testid={`param-knob-${toTestId(ariaLabel)}-dial`}
-      inputMode="decimal"
-      readOnly
-      style={{ '--knob-percent': `${percent}%`, '--knob-sweep': `${percent * 2.7}deg` } as CSSProperties}
-      value={`${Math.round(percent)}%`}
-      {...pointerEvents}
-    />
-  );
+
   const knobTestId = `param-knob-${toTestId(ariaLabel)}`;
 
   if (compact) {
@@ -176,19 +190,12 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
           className="knob"
           data-testid={knobTestId}
           role="slider"
-          style={{
-            '--knob-percent': `${percent}%`,
-            '--knob-sweep': `${percent * 2.7}deg`,
-            '--knob-angle': `${percent * 2.7 - 135}deg`,
-          } as CSSProperties}
+          style={{ '--knob-percent': `${percent}%`, '--knob-sweep': `${percent * 2.7}deg` } as CSSProperties}
           tabIndex={0}
           title="Drag left or right to adjust"
           {...pointerEvents}
         >
-          <div className="knob-ring" />
-          <div className="knob-cap">
-            <div className="knob-pointer" />
-          </div>
+          <SvgKnobDial percent={percent} />
         </div>
         <span className="knob-label">{label ?? ariaLabel}</span>
         <output className="knob-value">{draft}{unit ? ` ${unit}` : ''}</output>
@@ -198,7 +205,21 @@ export function ParamKnob({ ariaLabel, value, min, max, unit, label, compact = f
 
   return (
     <div className="param-list__control">
-      {control}
+      <div
+        aria-label={`${ariaLabel} percent`}
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={Math.round(percent)}
+        className="knob"
+        data-testid={`${knobTestId}-dial`}
+        role="slider"
+        style={{ '--knob-percent': `${percent}%`, '--knob-sweep': `${percent * 2.7}deg` } as CSSProperties}
+        tabIndex={0}
+        title="Drag left or right to adjust"
+        {...pointerEvents}
+      >
+        <SvgKnobDial percent={percent} />
+      </div>
       <label className="param-list__value-field">
         <input
           aria-label={ariaLabel}

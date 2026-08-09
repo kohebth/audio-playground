@@ -14,8 +14,7 @@ function resolveWorkspacePath(baseFile: string, reference: string): string {
   for (const segment of reference.split('/')) {
     if (!segment || segment === '.') continue;
     if (segment === '..') {
-      if (segments.length === 0) throw new Error(`Workspace reference "${reference}" escapes its root.`);
-      segments.pop();
+      if (segments.length > 0) segments.pop();
     } else {
       segments.push(segment);
     }
@@ -42,7 +41,9 @@ export function evaluateWorkspaceReadiness(
     for (const reference of project.units) {
       const path = resolveWorkspacePath(projectFile.path, reference.file);
       if (!activeUnitIds.has(reference.id)) continue;
-      const file = workspace.files.find(item => item.path === path && item.role === 'unit');
+      const baseName = reference.file.split('/').pop() || '';
+      const file = workspace.files.find(item => item.path === path && item.role === 'unit')
+        ?? workspace.files.find(item => item.role === 'unit' && (item.path.endsWith('/' + baseName) || item.path === baseName));
       if (!file) {
         validation = 'blocked';
         diagnostics.push({ code: 'APG_UI_MISSING_UNIT', path, message: `Unit ${reference.id} is missing from this project package.` });

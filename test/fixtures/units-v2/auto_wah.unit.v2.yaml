@@ -1,0 +1,104 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: auto_wah
+version: 2.0.0
+
+meta:
+  title: Auto-Wah Filter
+  category: filter
+  unit_family: filter, dynamics
+  description: Dynamic envelope-controlled resonant bandpass filter.
+
+params:
+  sensitivity:
+    type: float
+    default: 0.4
+    min: 0.01
+    max: 1.0
+    ui:
+      label: Sens
+      control: knob
+      unit: ''
+  center_freq:
+    type: float
+    default: 1200.0
+    min: 200.0
+    max: 4000.0
+    ui:
+      label: Freq
+      control: knob
+      unit: Hz
+  resonance:
+    type: float
+    default: 3.5
+    min: 0.5
+    max: 10.0
+    ui:
+      label: Q
+      control: knob
+      unit: ''
+  mix:
+    type: float
+    default: 0.8
+    min: 0.0
+    max: 1.0
+    ui:
+      label: Mix
+      control: knob
+      unit: ''
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - output
+    - env_val
+    - filtered
+
+  nodes:
+    - id: env_val
+      atom: detect_envelope
+      in:
+        signal: input
+      out:
+        envelope: env_val
+      config:
+        attack: 0.01
+        release: 0.08
+
+    - id: filtered
+      atom: filter_biquad
+      in:
+        signal: input
+      out:
+        signal: filtered
+      config:
+        cutoff: ${params.center_freq}
+        q: ${params.resonance}
+        mode: 1
+        smoothing_ms: 10
+
+    - id: blend
+      atom: mix_wet_dry
+      in:
+        dry: input
+        wet: filtered
+      out:
+        signal: output
+      config:
+        mix: ${params.mix}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

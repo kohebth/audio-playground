@@ -1,0 +1,111 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: octave_shifter
+version: 2.0.0
+
+meta:
+  title: Sub-Octave Generator
+  category: pitch
+  unit_family: pitch, synthesis
+  description: Monophonic pitch-tracking sub-octave tone generator.
+
+params:
+  sub_gain:
+    type: float
+    default: 0.75
+    min: 0.0
+    max: 2.0
+    ui:
+      label: Sub Level
+      control: knob
+      unit: ''
+  sub_tone:
+    type: float
+    default: 400.0
+    min: 100.0
+    max: 1000.0
+    ui:
+      label: Tone
+      control: knob
+      unit: Hz
+  mix:
+    type: float
+    default: 0.5
+    min: 0.0
+    max: 1.0
+    ui:
+      label: Mix
+      control: knob
+      unit: ''
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - output
+    - sub_synth
+    - sub_filtered
+    - sub_level
+    - gain_val
+
+  nodes:
+    - id: gain_val
+      atom: generation_dc
+      out:
+        signal: gain_val
+      config:
+        value: ${params.sub_gain}
+
+    - id: sub_synth
+      atom: generation_oscillator
+      out:
+        signal: sub_synth
+      config:
+        waveform: 0
+        frequency: 55
+        phase_offset: 0
+
+    - id: sub_filtered
+      atom: filter_biquad
+      in:
+        signal: sub_synth
+      out:
+        signal: sub_filtered
+      config:
+        cutoff: ${params.sub_tone}
+        q: 0.707
+        mode: 0
+        smoothing_ms: 10
+
+    - id: sub_level
+      atom: amplitude_multiply
+      in:
+        signal_a: sub_filtered
+        signal_b: gain_val
+      out:
+        signal: sub_level
+
+    - id: blend
+      atom: mix_wet_dry
+      in:
+        dry: input
+        wet: sub_level
+      out:
+        signal: output
+      config:
+        mix: ${params.mix}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

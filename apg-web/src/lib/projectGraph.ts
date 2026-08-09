@@ -2,6 +2,7 @@ import type { Edge, Node } from '@xyflow/react';
 import dagre from 'dagre';
 import type { ProjectInspect, ProjectInstance, ProjectRoute, ProjectUnit } from './backendSamples';
 import type { ProjectPortCatalog, ProjectRoutingRole, ProjectUnitPorts } from './projectV2Graph';
+import { unitFamiliesGradient } from './unitColors.ts';
 
 export type ProjectNodeData =
   | {
@@ -79,7 +80,6 @@ const ROUTING_PATH_GAP = 98;
 const ROUTING_PATH_PADDING = 84;
 const SYSTEM_NODE_WIDTH = 100;
 const SYSTEM_NODE_HEIGHT = 109;
-const UNIT_COLORS = ['#3b82f6', '#059669', '#2563eb', '#db2777', '#7c3aed', '#dc2626'];
 
 type NodeGeometry = {
   left: number;
@@ -405,7 +405,7 @@ export function buildProjectGraph(
         instance,
         unit,
         index,
-        color: UNIT_COLORS[index % UNIT_COLORS.length],
+        color: unitFamiliesGradient(unitPorts?.family ?? 'custom'),
         ports: unitPorts,
         visualLayout: {
           ...dimensions,

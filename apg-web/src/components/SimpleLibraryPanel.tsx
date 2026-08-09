@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { UNIT_DRAG_TYPE, type ProjectLibraryPointerDrag } from '../lib/graphDragTypes';
 import { markPerfSpan } from '../lib/perfTelemetry';
+import { parseUnitFamilies, unitFamiliesGradient, UNIT_FAMILY_COLORS } from '../lib/unitColors.ts';
 import { GraphContextMenu, GraphMenuButton, type ContextMenuPoint } from './GraphContextMenu';
 
 export type EffectLibraryItem = {
@@ -26,18 +27,21 @@ const categoryColor: Record<string, string> = {
   modulation: 'violet',
   drive: 'coral',
   amp: 'amber',
+  filter: 'lime',
+  pitch: 'orange',
   delay: 'blue',
   reverb: 'cyan',
+  spatial: 'teal',
+  synthesis: 'magenta',
+  looper: 'rose',
+  routing: 'slate',
+  utility: 'slate',
+  custom: 'purple',
 };
 
 const categoryBadgeColor: Record<string, string> = {
-  all: '#34d399',
-  dynamics: '#9be6bf',
-  modulation: '#c4a7ff',
-  drive: '#ff9b75',
-  amp: '#f1c56e',
-  delay: '#a9c7ff',
-  reverb: '#83e6d1',
+  all: 'var(--accent, #34d399)',
+  ...UNIT_FAMILY_COLORS,
 };
 
 type PointerDragSession = {
@@ -61,11 +65,28 @@ export function SimpleLibraryPanel({
   const [draggingItemKey, setDraggingItemKey] = useState<string | null>(null);
   const pointerDragRef = useRef<PointerDragSession | null>(null);
   const picksContract = purpose === 'contract';
-  const categories = useMemo(() => ['All', ...new Set(items.map(item => item.category))], [items]);
-  const filtered = useMemo(() => items.filter(item => (
-    (category === 'All' || item.category === category)
-    && `${item.title} ${item.description}`.toLowerCase().includes(query.toLowerCase())
-  )), [category, items, query]);
+
+  const categories = useMemo(() => {
+    const familySet = new Set<string>();
+    for (const item of items) {
+      const fams = parseUnitFamilies(item.category);
+      if (fams.length > 0) {
+        fams.forEach(f => familySet.add(f.charAt(0).toUpperCase() + f.slice(1)));
+      } else if (item.category) {
+        familySet.add(item.category);
+      }
+    }
+    return ['All', ...Array.from(familySet)];
+  }, [items]);
+
+  const filtered = useMemo(() => items.filter(item => {
+    const itemFamilies = parseUnitFamilies(item.category);
+    const matchesCategory = category === 'All'
+      || itemFamilies.includes(category.toLowerCase())
+      || item.category.toLowerCase() === category.toLowerCase();
+    const matchesQuery = `${item.title} ${item.description}`.toLowerCase().includes(query.toLowerCase());
+    return matchesCategory && matchesQuery;
+  }), [category, items, query]);
   const [menu, setMenu] = useState<(ContextMenuPoint & { item: EffectLibraryItem }) | null>(null);
 
   const startPointerDrag = (event: ReactPointerEvent<HTMLElement>, item: EffectLibraryItem) => {
@@ -210,7 +231,10 @@ export function SimpleLibraryPanel({
             onPointerUp={event => finishPointerDrag(event, 'drop')}
             title={item.placementError ?? (picksContract ? `Edit ${item.title} Contract` : 'Drag onto the Pipeline or a rail')}
           >
-            <i className={`effect-library-card__icon effect-library-card__icon--${categoryColor[item.category] ?? 'blue'}`}>
+            <i
+              className={`effect-library-card__icon effect-library-card__icon--${categoryColor[parseUnitFamilies(item.category)[0]] ?? 'blue'}`}
+              style={{ background: unitFamiliesGradient(item.category) }}
+            >
               <span />
             </i>
             <span>

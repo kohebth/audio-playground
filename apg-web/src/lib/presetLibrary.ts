@@ -77,6 +77,9 @@ export const BUILT_IN_UNIT_PRESETS: readonly UnitPreset[] = [
   builtInPreset('tremolo-slow-pulse', 'Slow Pulse', 'A rounded pulse with moderate depth.', 'tremolo', {
     rate: '2.4', depth: '0.42',
   }),
+  builtInPreset('rhodes-mellow-tine', 'Mellow Tine', 'Warm, dynamic electric piano tone triggered by guitar.', 'rhodes_synth', {
+    sensitivity: '0.05', tine_decay: '0.08', volume: '0.85',
+  }),
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {

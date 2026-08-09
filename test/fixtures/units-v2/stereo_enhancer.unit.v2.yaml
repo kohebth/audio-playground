@@ -1,0 +1,81 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: stereo_enhancer
+version: 2.0.0
+
+meta:
+  title: Stereo Spatial Enhancer
+  category: spatial
+  unit_family: spatial, modulation
+  description: Micro-delay Haas 3D stereo width enhancer.
+
+params:
+  delay_ms:
+    type: float
+    default: 14.0
+    min: 1.0
+    max: 35.0
+    ui:
+      label: Delay
+      control: knob
+      unit: ms
+  width:
+    type: float
+    default: 0.7
+    min: 0.0
+    max: 1.0
+    ui:
+      label: Width
+      control: knob
+      unit: ''
+  mix:
+    type: float
+    default: 0.6
+    min: 0.0
+    max: 1.0
+    ui:
+      label: Mix
+      control: knob
+      unit: ''
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - output
+    - delayed
+
+  nodes:
+    - id: delayed
+      atom: delay_line
+      in:
+        signal: input
+      out:
+        signal: delayed
+      config:
+        length: 672
+
+    - id: blend
+      atom: mix_wet_dry
+      in:
+        dry: input
+        wet: delayed
+      out:
+        signal: output
+      config:
+        mix: ${params.mix}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true

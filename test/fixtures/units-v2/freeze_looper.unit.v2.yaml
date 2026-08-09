@@ -1,0 +1,95 @@
+kind: apg.unit
+schema: apg.unit.v2
+name: freeze_looper
+version: 2.0.0
+
+meta:
+  title: Freeze Drone Sustainer
+  category: looper
+  unit_family: looper, reverb
+  description: Captures and endlessly sustains audio into a drone pad soundscape.
+
+params:
+  decay:
+    type: float
+    default: 0.92
+    min: 0.1
+    max: 0.99
+    ui:
+      label: Decay
+      control: knob
+      unit: ''
+  tone:
+    type: float
+    default: 3200.0
+    min: 500.0
+    max: 8000.0
+    ui:
+      label: Tone
+      control: knob
+      unit: Hz
+  mix:
+    type: float
+    default: 0.5
+    min: 0.0
+    max: 1.0
+    ui:
+      label: Mix
+      control: knob
+      unit: ''
+
+ports:
+  inputs:
+    - name: input
+      type: audio
+      channels: 1
+  outputs:
+    - name: output
+      type: audio
+      channels: 1
+
+graph:
+  signals:
+    - input
+    - output
+    - comb_out
+    - tone_out
+
+  nodes:
+    - id: comb_out
+      atom: filter_comb_fb
+      in:
+        signal: input
+      out:
+        signal: comb_out
+      config:
+        delay_samples: 1920
+        coefficient: 0.92
+
+    - id: tone_out
+      atom: filter_biquad
+      in:
+        signal: comb_out
+      out:
+        signal: tone_out
+      config:
+        cutoff: ${params.tone}
+        q: 0.707
+        mode: 0
+        smoothing_ms: 10
+
+    - id: blend
+      atom: mix_wet_dry
+      in:
+        dry: input
+        wet: tone_out
+      out:
+        signal: output
+      config:
+        mix: ${params.mix}
+
+compatibility:
+  desktop_full: true
+  wasm_realtime: true
+  m7_static: true
+  offline_render: true
