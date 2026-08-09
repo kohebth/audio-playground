@@ -170,6 +170,8 @@ const bridgeUnit = `kind: apg.unit
 schema: apg.unit.v2
 name: bridge_unit
 version: 1.0.0
+meta:
+  unit_family: utility
 ports:
   inputs:
     - name: input

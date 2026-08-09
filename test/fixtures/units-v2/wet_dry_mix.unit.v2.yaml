@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Wet/Dry Mix
   category: mix
+  unit_family: utility
   description: Blends separate dry and wet mono inputs with a smoothed mix control.
 
 params:

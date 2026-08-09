@@ -166,3 +166,4 @@ meta:
   title: Perf unit perf_fanwide
   description: Synthetic deterministic fixture unit for performance generation.
   category: test
+  unit_family: utility

@@ -6,6 +6,7 @@ version: 2.1.0
 meta:
   title: Plexi Tone Stage
   category: amp
+  unit_family: amp
   description: Adds Plexi-inspired preamp and power saturation, interactive tone filters, presence, cabinet roll-off, and master volume.
 
 params:

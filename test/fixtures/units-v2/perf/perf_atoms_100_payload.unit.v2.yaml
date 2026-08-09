@@ -6,6 +6,7 @@ meta:
   title: Performance 100 atom payload graph
   description: Deterministic payload contract-canvas performance fixture.
   category: test
+  unit_family: utility
   perf:
     profile: medium
     topology: payload

@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Simple Clip
   category: dynamics
+  unit_family: dynamics
   description: Applies mono gain and hard clipping with literal threshold config.
 
 params:

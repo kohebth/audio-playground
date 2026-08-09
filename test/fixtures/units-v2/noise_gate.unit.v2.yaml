@@ -6,6 +6,7 @@ version: 2.1.0
 meta:
   title: Noise Gate
   category: dynamics
+  unit_family: dynamics
   description: Uses full-wave level detection and adjustable attack and release to suppress low-level noise without hard switching.
 
 params:

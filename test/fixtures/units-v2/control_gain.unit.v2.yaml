@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Control Gain
   category: utility
+  unit_family: utility
   description: Maps a control input port to a gain parameter used by the graph.
 
 params:

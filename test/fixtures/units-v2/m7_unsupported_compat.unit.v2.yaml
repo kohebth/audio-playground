@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: M7 Missing Compatibility Flag
   category: test
+  unit_family: dynamics
   description: Exercises M7 export rejection when a required target compatibility flag is missing.
 
 params: {}

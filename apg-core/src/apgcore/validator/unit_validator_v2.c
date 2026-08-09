@@ -62,6 +62,23 @@ static const char *optional_scalar_path(const uc_node *map, const char *key, con
     return node->text;
 }
 
+static const char *required_scalar_path(const uc_node *map, const char *key, const char *path, uc_error *err) {
+    const uc_node *node = uc_node_find(map, key);
+    if (!node) {
+        char msg[160];
+        snprintf(msg, sizeof(msg), "%s is required", path ? path : key);
+        set_error(err, UC_E_MISSING, msg);
+        return NULL;
+    }
+    if (node->kind != UC_NODE_SCALAR) {
+        char msg[160];
+        snprintf(msg, sizeof(msg), "%s must be a scalar", path ? path : key);
+        set_error(err, UC_E_TYPE, msg);
+        return NULL;
+    }
+    return node->text;
+}
+
 static bool map_has_key(const uc_node *map, const char *key) { return uc_node_find(map, key) != NULL; }
 
 static bool signal_list_contains(const char **signals, size_t signals_len, const char *value) {
@@ -193,6 +210,7 @@ static uc_status validate_and_fill_meta(const uc_node *root, apg_unit_v2_t *out,
 
     out->meta.title       = optional_scalar_path(meta, "title", "meta.title", err);
     out->meta.category    = optional_scalar_path(meta, "category", "meta.category", err);
+    out->meta.unit_family = required_scalar_path(meta, "unit_family", "meta.unit_family", err);
     out->meta.description = optional_scalar_path(meta, "description", "meta.description", err);
     return err->status == UC_OK ? UC_OK : err->status;
 }

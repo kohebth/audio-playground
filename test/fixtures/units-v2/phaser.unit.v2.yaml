@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Phaser
   category: modulation
+  unit_family: modulation
   description: Sweeps six first-order all-pass stages to create resonant moving notches.
 
 params:

@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Pan 2
   category: routing
+  unit_family: routing
   description: Splits one mono signal into two independently levelled paths.
 
 routing:

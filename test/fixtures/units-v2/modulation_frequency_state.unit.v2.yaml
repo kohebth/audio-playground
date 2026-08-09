@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Frequency Modulation State
   category: modulation
+  unit_family: modulation
   description: Exercises modulation delay-line state and reset behavior with deterministic inputs.
 
 params:

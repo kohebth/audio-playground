@@ -10,6 +10,7 @@ import {
   serializeApgProjectPackage,
   validateApgProjectPackage,
 } from '../src/lib/projectPackage.ts';
+import { parseYamlOrPackage } from '../src/lib/projectYamlImporter.ts';
 import {
   createEmptyProjectPackage,
   createWorkspaceTemplateProjectPackage,
@@ -280,5 +281,20 @@ assert.equal(
   parseApgProjectPackage(serializeApgProjectPackage(terminalFixture)).manifest.id,
   'simple-gain-terminal-fixture',
 );
+
+const importedYamlProject = parseYamlOrPackage(
+  readFileSync(resolve(repo, 'test/fixtures/projects-v2/guitar-pedalboard-rhodes.project.v2.yaml'), 'utf8'),
+  'guitar-pedalboard-rhodes.project.v2.yaml',
+);
+assert.equal(importedYamlProject.manifest.name, 'guitar-pedalboard-rhodes');
+assert(importedYamlProject.workspace.files.some(file => file.path.includes('rhodes_synth')));
+assert.equal(evaluateWorkspaceReadiness(importedYamlProject.workspace).validation, 'ready');
+
+const importedYamlUnit = parseYamlOrPackage(
+  readFileSync(resolve(repo, 'test/fixtures/units-v2/rhodes_synth.unit.v2.yaml'), 'utf8'),
+  'rhodes_synth.unit.v2.yaml',
+);
+assert.equal(importedYamlUnit.manifest.name, 'rhodes_synth Unit');
+assert(importedYamlUnit.workspace.files.some(file => file.path.includes('rhodes_synth')));
 
 console.log('studio data tests passed');

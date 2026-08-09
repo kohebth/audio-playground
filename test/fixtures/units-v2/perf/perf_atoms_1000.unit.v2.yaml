@@ -6,6 +6,7 @@ meta:
   title: Performance 1000 atom chain
   description: Deterministic contract-canvas performance fixture.
   category: test
+  unit_family: utility
   perf:
     profile: extreme
     atoms: 1000

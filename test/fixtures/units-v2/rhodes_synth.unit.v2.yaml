@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Rhodes Synth
   category: synthesis
+  unit_family: synthesis
   description: Guitar-triggered Rhodes electric piano synthesizer using autocorrelation pitch detection and FM voice generation.
 
 params:

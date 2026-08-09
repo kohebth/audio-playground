@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Tremolo
   category: modulation
+  unit_family: modulation
   description: Uses an LFO to modulate mono signal amplitude.
 
 params:

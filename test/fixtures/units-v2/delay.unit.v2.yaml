@@ -6,6 +6,7 @@ version: 2.1.0
 meta:
   title: Delay
   category: delay
+  unit_family: delay
   description: Produces a repeating mono echo train with feedback and an internal wet/dry blend.
 
 params:

@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Spectral Overlap
   category: test
+  unit_family: utility
   description: Exercises runtime-sized overlap-save and overlap-add state.
 
 params: {}

@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Schroeder Reverb
   category: reverb
+  unit_family: reverb
   description: Builds a mono reverb tail from four feedback combs, two allpass diffusers, and a wet/dry blend.
 
 params:

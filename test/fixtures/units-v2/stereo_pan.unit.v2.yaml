@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Stereo Pan
   category: mix
+  unit_family: routing
   description: Splits mono input into deterministic left and right output ports.
 
 params:

@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Chorus
   category: modulation
+  unit_family: modulation
   description: Thickens mono input with an LFO-modulated short delay and an internal wet/dry blend.
 
 params:

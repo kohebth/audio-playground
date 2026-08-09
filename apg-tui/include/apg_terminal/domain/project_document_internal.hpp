@@ -429,6 +429,7 @@ version: 2.0.0
 meta:
   title: Pan 2
   category: routing
+  unit_family: routing
   description: Splits one mono signal into two independently levelled paths.
 
 routing:
@@ -516,6 +517,7 @@ version: 2.0.0
 meta:
   title: Mix 2
   category: routing
+  unit_family: routing
   description: Sums two mono paths with an independent level for each input.
 
 routing:

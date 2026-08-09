@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Simple Mix
   category: utility
+  unit_family: utility
   description: Adds two mono audio inputs into one mono output.
 
 params:

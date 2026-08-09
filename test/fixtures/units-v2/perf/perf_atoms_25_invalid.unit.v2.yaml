@@ -6,6 +6,7 @@ meta:
   title: Performance 25 atom invalid graph
   description: Deterministic invalid contract-canvas performance fixture.
   category: test
+  unit_family: utility
   perf:
     profile: small
     topology: invalid

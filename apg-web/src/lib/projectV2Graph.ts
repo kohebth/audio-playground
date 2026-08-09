@@ -42,6 +42,7 @@ export type ProjectGraphDraft = {
 export type ProjectUnitPorts = {
   inputs: string[];
   outputs: string[];
+  family: string;
   routing?: ProjectRoutingContract;
   userPlaceable?: boolean;
   reason?: string | null;
@@ -204,13 +205,14 @@ export function projectDraftToInspect(
 
 export function parseUnitPortNames(content: string): ProjectUnitPorts {
   const policy = classifyUserEffectContent(content);
-  const routing = parseUnitGraphDraft(content).routing;
+  const draft = parseUnitGraphDraft(content);
   return {
     inputs: policy.audioInputs.map(port => port.name),
     outputs: policy.audioOutputs.map(port => port.name),
-    routing: routing ? { role: routing.role, paths: routing.paths.map(path => ({ ...path })) } : undefined,
-    userPlaceable: routing ? false : policy.userPlaceable,
-    reason: routing ? 'Routing helpers are placed by Add in parallel.' : policy.reason,
+    family: draft.meta.unit_family,
+    routing: draft.routing ? { role: draft.routing.role, paths: draft.routing.paths.map(path => ({ ...path })) } : undefined,
+    userPlaceable: draft.routing ? false : policy.userPlaceable,
+    reason: draft.routing ? 'Routing helpers are placed by Add in parallel.' : policy.reason,
   };
 }
 

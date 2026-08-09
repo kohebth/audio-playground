@@ -63,6 +63,7 @@ export type UnitGraphDraft = {
   meta: {
     title: string;
     category: string;
+    unit_family: string;
     description: string;
   };
   compatibility: Record<string, boolean>;
@@ -114,6 +115,7 @@ export type CreateUnitOptions = {
   name: string;
   title?: string;
   category?: string;
+  unit_family?: string;
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -206,6 +208,14 @@ function parseGraphFromDocument(doc: UnitDocument): UnitGraphDraft {
     : [];
   const nodes = Array.isArray(graph.nodes) ? graph.nodes.map(parseNode) : [];
   const meta = isObject(doc.meta) ? doc.meta : {};
+  const rawFamily = Array.isArray(meta.unit_family)
+    ? meta.unit_family.map(String).join(', ')
+    : typeof meta.unit_family === 'string'
+      ? meta.unit_family
+      : '';
+  if (!rawFamily.trim()) {
+    throw new Error('Unit meta section must specify unit_family.');
+  }
   const compatibility = isObject(doc.compatibility)
     ? Object.fromEntries(Object.entries(doc.compatibility).flatMap(([target, enabled]) => (
       typeof enabled === 'boolean' ? [[target, enabled]] : []
@@ -227,6 +237,7 @@ function parseGraphFromDocument(doc: UnitDocument): UnitGraphDraft {
     meta: {
       title: String(meta.title ?? doc.name ?? 'Unnamed unit'),
       category: String(meta.category ?? 'custom'),
+      unit_family: rawFamily.trim(),
       description: String(meta.description ?? ''),
     },
     compatibility,
@@ -504,11 +515,12 @@ function portSignals(value: unknown): string[] {
   return name ? [name] : [];
 }
 
-export function createUnitV2({ name, title, category }: CreateUnitOptions): string {
+export function createUnitV2({ name, title, category, unit_family }: CreateUnitOptions): string {
   const normalized = name.trim();
   if (!/^[a-z][a-z0-9_]*$/.test(normalized)) {
     throw new Error('Unit name must use lowercase snake_case and start with a letter.');
   }
+  const resolvedCategory = category?.trim() || 'custom';
   const doc: UnitDocument = {
     kind: 'apg.unit',
     schema: 'apg.unit.v2',
@@ -516,7 +528,8 @@ export function createUnitV2({ name, title, category }: CreateUnitOptions): stri
     version: '1.0.0',
     meta: {
       title: title?.trim() || normalized.replace(/_/g, ' '),
-      category: category?.trim() || 'custom',
+      category: resolvedCategory,
+      unit_family: unit_family?.trim() || resolvedCategory,
       description: '',
     },
     params: {

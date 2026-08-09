@@ -100,6 +100,7 @@ const overdriveContent = readFileSync(resolve(repo, 'test/fixtures/units-v2/over
 assert.deepEqual(parseUnitPortNames(overdriveContent), {
   inputs: ['input'],
   outputs: ['output'],
+  family: 'drive',
   routing: undefined,
   userPlaceable: true,
   reason: null,
@@ -609,5 +610,18 @@ assert.equal(replaced.routes[5].from, 'trem1.output');
 assert.equal(replaced.routes[5].to, 'drive2.input');
 const reorderedRoutes = parseProjectGraphDraft(moveProjectRoute(project, 8, 0));
 assert.equal(reorderedRoutes.routes[0].to, 'system.output');
+
+// Multi-instance unit placement test (e.g. adding multiple delay pedals reusing existing unit references)
+const secondDelayResult = insertProjectInstanceOnRoute(
+  project,
+  ports,
+  'delay_unit',
+  'delay2',
+  7,
+  { time_samples: '24000', feedback: '0.4', mix: '0.35' },
+);
+const secondDelayDraft = parseProjectGraphDraft(secondDelayResult.content);
+assert(secondDelayDraft.nodes.some(node => node.id === 'delay2' && node.unit === 'delay_unit'));
+assert.equal(secondDelayDraft.units.filter(unit => unit.id === 'delay_unit').length, 1);
 
 console.log('project v2 graph transformer tests passed');

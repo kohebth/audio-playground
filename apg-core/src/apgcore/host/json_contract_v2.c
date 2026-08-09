@@ -264,6 +264,8 @@ static void write_unit_inspect(FILE *out, const char *path, const apg_unit_v2_t 
     write_json_string(out, unit->meta.title);
     fputs(",\"category\":", out);
     write_json_string(out, unit->meta.category);
+    fputs(",\"unit_family\":", out);
+    write_json_string(out, unit->meta.unit_family);
     fputs(",\"description\":", out);
     write_json_string(out, unit->meta.description);
     fputc('}', out);

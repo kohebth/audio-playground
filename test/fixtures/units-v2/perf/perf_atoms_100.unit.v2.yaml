@@ -6,6 +6,7 @@ meta:
   title: Performance 100 atom chain
   description: Deterministic contract-canvas performance fixture.
   category: test
+  unit_family: utility
   perf:
     profile: medium
     atoms: 100

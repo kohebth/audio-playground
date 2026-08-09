@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Overdrive
   category: drive
+  unit_family: drive
   description: Boosts mono guitar input, soft clips it, shapes tone, and applies output level.
 
 params:

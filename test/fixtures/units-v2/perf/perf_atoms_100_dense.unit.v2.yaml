@@ -6,6 +6,7 @@ meta:
   title: Performance 100 atom dense graph
   description: Deterministic dense contract-canvas performance fixture.
   category: test
+  unit_family: utility
   perf:
     profile: medium
     topology: dense

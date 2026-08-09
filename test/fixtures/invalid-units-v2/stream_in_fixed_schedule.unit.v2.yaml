@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Stream Atom In Fixed Schedule
   category: test
+  unit_family: utility
   description: Exercises fixed-rate compiler rejection for variable-rate stream atoms.
 
 params: {}

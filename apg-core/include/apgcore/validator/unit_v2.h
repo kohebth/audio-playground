@@ -12,6 +12,7 @@ typedef struct uc_node uc_node;
 typedef struct {
     const char *title;
     const char *category;
+    const char *unit_family;
     const char *description;
 } apg_unit_v2_meta_t;
 

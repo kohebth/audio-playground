@@ -6,6 +6,7 @@ version: 2.0.0
 meta:
   title: Delay Line State
   category: delay
+  unit_family: delay
   description: Exercises deterministic delay-line state and reset behavior.
 
 params:
